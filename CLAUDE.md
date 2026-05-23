@@ -112,13 +112,15 @@ JSON 入出力は `QJsonDocument`（外部依存なし）。データモデル�
 
 ### Codex 指摘への対応
 
-- Codex のレビューコメントが付いた PR に対して、ユーザーが「Codex の指摘を修正して」と指示したら、Claude は当該ブランチで対応コミットを追加 push する。
+- Codex のレビュー結果（ChatGPT の chat 画面 or PR コメント）をユーザーが Claude に転送し「Codex の指摘を修正して」と指示したら、Claude は当該ブランチで対応コミットを追加 push する。
 - 大きな方針差し戻しになる場合は新タスクとして切り出すかを相談する。
 
-### 前提
+### 前提（Codex 側のセットアップ）
 
-- Codex GitHub App が `hang-up33/hmi-platform` にインストール済みであること。
-- 未インストールなら https://github.com/marketplace から導入し、本リポジトリへのアクセス権を付与する。
+- **ChatGPT Codex（Web 版エージェント）** を使用する。
+- chatgpt.com の **Codex** → **Settings** から GitHub を OAuth 連携し、`hang-up33/hmi-platform` への権限を付与しておく。
+- GitHub の Installed Apps 一覧には "ChatGPT" / "OpenAI Codex" などの名前で出現する（マーケットプレイス検索ではヒットしない）。
+- レビューは Claude が作成した PR の URL を ChatGPT Codex に渡し、ユーザーが Codex 側で「この PR をレビューして」と指示する形で開始される（PR への自動コメントは Codex 側の設定次第）。
 
 ---
 
