@@ -76,7 +76,49 @@ JSON 入出力は `QJsonDocument`（外部依存なし）。データモデル�
 
 ### コードレビューの担当分け
 
-本プロジェクトの **コードレビューは ChatGPT Codex** が担当する。Claude 側でレビュー専用エージェント / スキル（読み取り＋指摘のみのもの）は作らない。実装・ビルド修正・ドキュメント更新など **能動的な作業** に限ってエージェント化する。
+本プロジェクトの **コードレビューは ChatGPT Codex（GitHub App）** が担当する。Claude 側でレビュー専用エージェント / スキル（読み取り＋指摘のみのもの）は作らない。実装・ビルド修正・ドキュメント更新など **能動的な作業** に限ってエージェント化する。
+
+---
+
+## Codex 連携 / PR ワークフロー
+
+本プロジェクトはレビューを Codex GitHub App に委ねるため、**MVP タスクは PR 経由で main に取り込む**。Claude は以下のフローに従う。
+
+### ブランチ命名
+
+- `task/<N>-<短い名>` 形式（例：`task/2-canvas`, `task/3-widget-schema`, `task/6-json-save`）
+- 1 タスク = 1 ブランチ = 1 PR
+
+### タスク完了時のフロー
+
+1. 実装 → `cmake --build build` で緑を確認 → 動作確認
+2. README の進捗表を更新
+3. [kaizen-close](.claude/skills/kaizen-close/SKILL.md) スキルを実行
+4. `task/<N>-<短い名>` ブランチを作成し、コミット
+5. `gh pr create` で **ready-for-review** の PR を作成（draft にしない — Codex GitHub App に即レビューさせるため）
+6. PR URL をユーザーに提示
+
+詳細は [codex-pr](.claude/skills/codex-pr/SKILL.md) スキルを参照。
+
+### PR タイトル / 本文
+
+- **タイトル**：`Task N: <短い説明>`（コミット先頭行と同じ）
+- **本文**：Summary / 変更点 / Test plan / Codex 向け補足（不安な観点や重点的に見てほしい箇所）を含める
+
+### マージ戦略
+
+- **Squash and merge**。1 タスク = main 上の 1 コミットになるよう統合する。
+- マージは **ユーザーが行う**（Codex のレビュー指摘を反映してから）。Claude は勝手にマージしない。
+
+### Codex 指摘への対応
+
+- Codex のレビューコメントが付いた PR に対して、ユーザーが「Codex の指摘を修正して」と指示したら、Claude は当該ブランチで対応コミットを追加 push する。
+- 大きな方針差し戻しになる場合は新タスクとして切り出すかを相談する。
+
+### 前提
+
+- Codex GitHub App が `hang-up33/hmi-platform` にインストール済みであること。
+- 未インストールなら https://github.com/marketplace から導入し、本リポジトリへのアクセス権を付与する。
 
 ---
 
@@ -85,6 +127,7 @@ JSON 入出力は `QJsonDocument`（外部依存なし）。データモデル�
 | スキル | 用途 |
 |---|---|
 | [mvp-next-task](.claude/skills/mvp-next-task/SKILL.md) | MVP の次タスクを進める標準ワークフロー |
+| [codex-pr](.claude/skills/codex-pr/SKILL.md) | Codex レビュー前提の PR 作成手順 |
 | [qt6-build](.claude/skills/qt6-build/SKILL.md) | Qt6 + CMake セットアップ・ビルド手順と既知の罠 |
 | [kaizen-close](.claude/skills/kaizen-close/SKILL.md) | タスク完了直前に学びをドキュメントに反映する手順 |
 
@@ -106,7 +149,7 @@ JSON 入出力は `QJsonDocument`（外部依存なし）。データモデル�
 - フォルダ構成を変更する（`Editor/ Simulator/ Runtime/ Shared/Schema/ Shared/Widgets/ Docs/` を維持）。
 - 既存コードを削除する（例外：後述のプレースホルダー 2 件のみ）。
 - qmake その他の代替ビルドシステムを導入する。
-- main ブランチに直接 push する（ユーザーの明示的指示があるまではコミット止まり）。
+- main ブランチに直接 push / コミットする。タスクは必ず `task/<N>-<短い名>` ブランチ + PR で取り込む。
 - 設計書未承認のフレームワーク / ライブラリを独断で追加する。
 
 ---
