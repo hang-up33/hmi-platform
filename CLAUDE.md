@@ -84,6 +84,8 @@ JSON 入出力は `QJsonDocument`（外部依存なし）。データモデル�
 
 本プロジェクトはレビューを Codex GitHub App に委ねるため、**MVP タスクは PR 経由で main に取り込む**。Claude は以下のフローに従う。
 
+Codex 向けの永続的な指示は **リポジトリ直下の [AGENTS.md](AGENTS.md)** に記述する（Codex 公式推奨形式）。レビューを日本語化するための `## Review guidelines` セクションを含み、Codex GitHub App / Codex CLI の両方がレビュー時に参照する。Codex 関連で「全 PR に効かせたい」指示が増えたら、CLAUDE.md ではなく AGENTS.md 側に追記すること。
+
 ### ブランチ命名
 
 - MVP タスク：`task/<N>-<短い名>` 形式（例：`task/2-canvas`, `task/3-widget-schema`, `task/6-json-save`）
