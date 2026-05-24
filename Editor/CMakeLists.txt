@@ -7,6 +7,7 @@ qt_add_qml_module(hmi_editor
     VERSION 1.0
     QML_FILES
         qml/Main.qml
+        qml/Canvas.qml
 )
 
 target_link_libraries(hmi_editor
