@@ -169,11 +169,7 @@ Codex 向けの永続的な指示は **リポジトリ直下の [AGENTS.md](AGEN
 
 ## 削除可能なプレースホルダー（タスク到達時のみ削除）
 
-| ファイル | 削除タイミング |
-|---|---|
-| `Shared/Widgets/qml/Placeholder.qml` | Task 4 で最初の共有 Widget を追加する時 |
-
-（`Shared/Schema/src/schema_placeholder.cpp` は Task 3 で削除済み。）
+削除可能なプレースホルダーは現在ありません（`Shared/Schema/src/schema_placeholder.cpp` は Task 3、`Shared/Widgets/qml/Placeholder.qml` は Task 4 で削除済み）。
 
 実ソース追加と同時に対応する `CMakeLists.txt` の `QML_FILES` / ソース一覧を更新し、スタブを削除する。
 
@@ -201,6 +197,12 @@ Task 3 で定着したスタイル。新しいデータ型を追加するとき�
   - **プレフィックス命名**（推奨）：`EditorCanvas.qml` / `HmiButton.qml` のように接頭辞を付ける。
   - **自モジュールを明示 import**：`Canvas.qml` のような名前を採用した場合、利用側 QML に `import HmiEditor`（または `HmiWidgets`）を必ず記述する。
 - 共有 Widget（`HmiWidgets`）を新規追加する際は、上記の命名衝突に特に注意する（`Button` / `Label` / `Slider` 等は Controls と衝突しうる）。
+- **共有 QML モジュールは `STATIC` でビルドし、利用側アプリで plugin ターゲットをリンクする**。これは Qt 公式の「Multiple QML Modules in One Binary」推奨構成：
+  - 共有側（`Shared/Widgets/CMakeLists.txt`）：`qt_add_qml_module(hmi_widgets STATIC URI HmiWidgets ...)`
+  - 利用側（`Editor` / `Simulator`）：`target_link_libraries(<app> PRIVATE hmi_widgetsplugin)`
+  - 動的ビルド（`STATIC` を付けない）だと plugin が `MODULE_LIBRARY` になり `target_link_libraries` がエラーになる。
+  - 代替として利用側で `IMPORTS HmiWidgets` を宣言する書き方もあるが、本プロジェクトの Qt 6.11（Homebrew）構成では自モジュール（`HmiEditor`）のリソース解決と競合して `No module named "HmiEditor"` で起動失敗した実績がある。STATIC plugin + 直リンクが唯一動作確認済みの方法。
+  - Yocto / i.MX8MP の組み込みデプロイでも静的リンクの方が dylib 配布パスの問題を避けられて好都合。
 
 ---
 
