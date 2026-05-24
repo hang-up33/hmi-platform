@@ -14,6 +14,7 @@ target_link_libraries(hmi_editor
     PRIVATE
         Qt6::Quick
         hmi_schema
+        hmi_widgetsplugin
 )
 
 set_target_properties(hmi_editor PROPERTIES
