@@ -1,5 +1,7 @@
 qt_add_executable(hmi_editor
     src/main.cpp
+    src/ProjectIo.cpp
+    src/ProjectIo.h
 )
 
 qt_add_qml_module(hmi_editor

@@ -23,6 +23,13 @@ Item {
     // ドラッグ中かどうか（将来：選択ハンドルや座標表示の切替に使う想定）
     readonly property bool dragging: dragArea.drag.active
 
+    // Shared/Schema の WidgetData に書き出すためのメタ情報。
+    // Task 6（JSON 保存）で参照する。子の HmiButton 等はこの値をバインディングで参照する。
+    property string widgetId: ""
+    property string widgetType: "Button"
+    property string widgetText: ""
+    property string widgetTag: ""
+
     MouseArea {
         id: dragArea
         anchors.fill: parent
