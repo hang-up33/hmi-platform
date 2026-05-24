@@ -14,6 +14,9 @@ Item {
     // 子要素は widgetLayer に直接配置する
     default property alias content: widgetLayer.data
 
+    // 配置されている Widget 群（Task 6 の JSON 保存で走査するため公開）
+    property alias widgetItems: widgetLayer.children
+
     implicitWidth: canvasWidth
     implicitHeight: canvasHeight
     width: canvasWidth

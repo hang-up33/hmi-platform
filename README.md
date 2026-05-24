@@ -123,7 +123,7 @@ cmake --build build-mingw
 | 3 | Widget データ構造定義 | ✅ 完了 |
 | 4 | Button 配置 | ✅ 完了 |
 | 5 | ドラッグ | ✅ 完了 |
-| 6 | JSON 保存 | ⬜ 未着手 |
+| 6 | JSON 保存 | ✅ 完了 |
 | 7 | JSON 読込 | ⬜ 未着手 |
 | 8 | Simulator 表示 | ⬜ 未着手 |
 
