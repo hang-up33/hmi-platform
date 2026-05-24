@@ -181,6 +181,10 @@ JSON 入出力は `QJsonDocument`（外部依存なし）。データモデル�
 - `Shared/Widgets` は `OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/HmiWidgets` を指定し、ビルドパスを URI と一致させる（Qt の警告防止）。
 - QML ロードは `loadFromModule(URI, "Main")` を使用し、`qrc:` パス指定は避ける。
 - QML import は Qt6 形式（`import QtQuick` — バージョン番号無し）。
+- **QtQuick 標準型と同名の QML ファイルを作らない**（`Canvas.qml` / `Rectangle.qml` / `Item.qml` / `Text.qml` / `Image.qml` / `Window.qml` / `Button.qml`〔Controls〕等）。`import QtQuick` だけでは標準型が優先解決され、`Cannot assign to non-existent property` 等のエラーになる。回避策はいずれか：
+  - **プレフィックス命名**（推奨）：`EditorCanvas.qml` / `HmiButton.qml` のように接頭辞を付ける。
+  - **自モジュールを明示 import**：`Canvas.qml` のような名前を採用した場合、利用側 QML に `import HmiEditor`（または `HmiWidgets`）を必ず記述する。
+- 共有 Widget（`HmiWidgets`）を新規追加する際は、上記の命名衝突に特に注意する（`Button` / `Label` / `Slider` 等は Controls と衝突しうる）。
 
 ---
 
