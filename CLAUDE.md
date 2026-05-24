@@ -86,8 +86,9 @@ JSON 入出力は `QJsonDocument`（外部依存なし）。データモデル�
 
 ### ブランチ命名
 
-- `task/<N>-<短い名>` 形式（例：`task/2-canvas`, `task/3-widget-schema`, `task/6-json-save`）
-- 1 タスク = 1 ブランチ = 1 PR
+- MVP タスク：`task/<N>-<短い名>` 形式（例：`task/2-canvas`, `task/3-widget-schema`, `task/6-json-save`）
+- ドキュメント・設定変更：`docs/<短い名>` 形式（例：`docs/codex-auto-review`, `docs/qml-canvas-structure`）
+- 1 単位 = 1 ブランチ = 1 PR。いずれも main から派生させる
 
 ### タスク完了時のフロー
 
