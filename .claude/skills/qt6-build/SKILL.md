@@ -117,7 +117,18 @@ cmake --build build-mingw
 **原因**：Windows 既定の ExecutionPolicy は Restricted で、未署名 `.ps1` の直接起動を禁止する。VSCode のターミナルや素の `powershell.exe` で `.\scripts\windows\build.ps1` を叩くと `UnauthorizedAccess` が出る。
 **対処**：初回セットアップ時に一度だけ `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force` を実行する（CurrentUser スコープなので管理者権限不要）。設定後は VSCode のターミナルを開き直す。
 
-### 8. Windows PowerShell 5.1: BOM 無し UTF-8 スクリプトが文字化けする
+### 8. Windows PowerShell 5.1: `-DKEY=$var` 形式で変数が展開されない
+
+**原因**：PS 5.1 の native コマンド引数渡しでは、`-DCMAKE_BUILD_TYPE=$BuildType` のように **裸で `=$var` を書くと `$var` がリテラル文字列として渡される**。結果として CMakeCache.txt に `CMAKE_BUILD_TYPE:STRING=$BuildType` のような壊れた値が入り、Ninja の rule 名にもリテラル展開されて `ninja: error: expected newline, got lexing error` が出る。
+**対処**：引数全体を **ダブルクォートで囲む**（PS 側に文字列補間を強制）：
+
+```powershell
+cmake ... "-DCMAKE_BUILD_TYPE=$BuildType" "-DCMAKE_PREFIX_PATH=$env:QT_DIR"
+```
+
+シングルクォートで囲むと展開されないので注意。値に `:` を含む変数（`$env:QT_DIR` など）も同様にダブルクォート化が必要。
+
+### 9. Windows PowerShell 5.1: BOM 無し UTF-8 スクリプトが文字化けする
 
 **原因**：Windows PowerShell 5.1 は BOM 無し UTF-8 を ANSI（cp932）として解釈し、日本語コメントを含むスクリプトでパースエラー（`The string is missing the terminator`）になる。
 **対処**：日本語を含む `.ps1` ファイルは **UTF-8 with BOM** で保存する。Edit/Write 直後は BOM が付かないことがあるので、必要に応じて以下で付け直す：
