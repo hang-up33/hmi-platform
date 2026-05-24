@@ -169,10 +169,23 @@ JSON 入出力は `QJsonDocument`（外部依存なし）。データモデル�
 
 | ファイル | 削除タイミング |
 |---|---|
-| `Shared/Schema/src/schema_placeholder.cpp` | Task 3 で `WidgetData` / `ScreenData` / `ProjectData` を追加する時 |
 | `Shared/Widgets/qml/Placeholder.qml` | Task 4 で最初の共有 Widget を追加する時 |
 
+（`Shared/Schema/src/schema_placeholder.cpp` は Task 3 で削除済み。）
+
 実ソース追加と同時に対応する `CMakeLists.txt` の `QML_FILES` / ソース一覧を更新し、スタブを削除する。
+
+---
+
+## Schema 実装規約（`Shared/Schema`）
+
+Task 3 で定着したスタイル。新しいデータ型を追加するときも踏襲する。
+
+- **型は struct + namespace `hmi::schema`** で表現する（Q_GADGET / Q_OBJECT は必要になるまで付けない。Task 3 時点では QML 直接 expose しないため）。
+- **ヘッダ配置**：`Shared/Schema/include/hmi/schema/<TypeName>.h`。利用側は `#include "hmi/schema/<TypeName>.h"`。
+- **ソース**：`Shared/Schema/src/<TypeName>.cpp`。新規追加時は `Shared/Schema/CMakeLists.txt` の `qt_add_library(hmi_schema STATIC ...)` 一覧にも追記する。
+- **JSON I/O**：各型に `QJsonObject toJson() const;` と `static <T> fromJson(const QJsonObject &);` を持たせる（メンバ関数 + 静的ファクトリ）。`QJsonDocument` は最上位（Project）でのみ使用する想定。
+- **省略可能フィールド**：`toJson()` で `isEmpty()` 判定して書き出しを省略する（Widget の `text` / `tag` が前例）。
 
 ---
 
