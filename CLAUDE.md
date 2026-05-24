@@ -25,6 +25,8 @@ Yocto / i.MX8M Plus 向け Qt6 HMI ランタイムを対象に、HMI 作画ツ�
 
 ## ビルドと実行
 
+### macOS
+
 ```sh
 # 構成（Qt 6.8 以上を指す。後述「Qt バージョンの罠」参照）
 cmake -S . -B build -DCMAKE_PREFIX_PATH=/opt/homebrew/opt/qt
@@ -43,7 +45,23 @@ cmake --build build --target hmi_widgets
 ./build/Simulator/hmi_simulator.app/Contents/MacOS/hmi_simulator
 ```
 
-テスト・lint・フォーマッタは未整備。詳細手順は [qt6-build](.claude/skills/qt6-build/SKILL.md) スキル参照。
+### Windows（PowerShell）
+
+```powershell
+# configure + build （build-mingw/ に出力）
+.\scripts\windows\build.ps1
+.\scripts\windows\build.ps1 -Target hmi_editor
+.\scripts\windows\build.ps1 -Reconfigure
+
+# 起動（build.ps1 実行後はそのまま起動可。新シェルなら setup-env.ps1 を dot-source）
+. .\scripts\windows\setup-env.ps1
+.\build-mingw\hmi_editor.exe
+.\build-mingw\hmi_simulator.exe
+```
+
+Windows は **Qt 6.11.0 MinGW 64-bit kit + 付属 MinGW 13.1 + Ninja** を前提とする（MSVC kit は未使用）。`scripts/windows/setup-env.ps1` が Qt 付属ツールチェイン（MinGW / Ninja / CMake）を PATH 先頭に挿入することで、システム側の VS `cl.exe` や別 MinGW を回避する。詳細・罠は [qt6-build](.claude/skills/qt6-build/SKILL.md) スキル参照。
+
+テスト・lint・フォーマッタは未整備。
 
 ---
 
@@ -165,6 +183,15 @@ Codex 向けの永続的な指示は **リポジトリ直下の [AGENTS.md](AGEN
 
 → **Homebrew Qt 6.11.1（`/opt/homebrew/opt/qt`）または Qt 6.8+ を使用すること**。`AGL` 関連のリンクエラーが出たら、コードではなく `CMAKE_PREFIX_PATH` を疑う。詳細・他の罠は [qt6-build](.claude/skills/qt6-build/SKILL.md) と [cmake-build-resolver](.claude/agents/cmake-build-resolver.md) を参照。
 
+## Windows 環境の罠（要注意）
+
+- **PowerShell の ExecutionPolicy が Restricted だと `.ps1` を直接起動できない**。VSCode のターミナルや素の `powershell.exe` で `.\scripts\windows\build.ps1` を叩くと `UnauthorizedAccess` で拒否される。初回セットアップ時に一度だけ `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force` を実行する（CurrentUser スコープなので管理者権限不要、Microsoft 推奨の開発者向け設定）。設定後は VSCode のターミナルを開き直して反映させる。
+- **日本語コメントを含む `.ps1` は UTF-8 with BOM で保存する**。Windows PowerShell 5.1 は BOM 無し UTF-8 を cp932 と誤認し、`The string is missing the terminator` でパースエラーになる。Edit/Write 直後は BOM 無しになることがあるので、`scripts/windows/` 配下の `.ps1` を新規作成・更新したら `[System.IO.File]::WriteAllText($path, $content, [System.Text.UTF8Encoding]::new($true))` で付け直す。
+- **`-DKEY=$var` 形式の native コマンド引数は変数展開されない**。`cmake ... -DCMAKE_BUILD_TYPE=$BuildType` のように裸で書くと、PS 5.1 は `$BuildType` をリテラルとして cmake に渡す。引数全体を `"-DCMAKE_BUILD_TYPE=$BuildType"` のように **ダブルクォートで囲む** こと（シングルクォートだと展開されない）。
+- **CMake が VS の `cl.exe` を掴まないようにする**。Windows には Visual Studio Build Tools が同居していることが多く、PATH 先頭に Qt 付属 MinGW を入れないと CMake が MSVC を選んで Qt MinGW kit と ABI 不一致になる。`scripts/windows/setup-env.ps1` がこれを担保する。
+- **EXE の出力先が macOS と違う**。Windows は `build-mingw\hmi_<name>.exe`（ビルドツリーのトップ）に出る。macOS は `build/Editor/hmi_editor.app/Contents/MacOS/hmi_editor`。
+- 詳細・他の罠は [qt6-build](.claude/skills/qt6-build/SKILL.md) を参照。
+
 ---
 
 ## 削除可能なプレースホルダー（タスク到達時のみ削除）
@@ -217,4 +244,4 @@ Task 3 で定着したスタイル。新しいデータ型を追加するとき�
 
 ## 対象プラットフォーム
 
-現状の開発・動作確認は **macOS のみ**。Yocto / i.MX8MP クロスビルドは MVP 完了後に `Runtime/` で対応する。
+開発・動作確認は **macOS と Windows の両方**で実施（Editor / Simulator ともに GUI 起動確認済み）。Yocto / i.MX8MP クロスビルドは MVP 完了後に `Runtime/` で対応する。

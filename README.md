@@ -16,7 +16,7 @@ Yocto 上で動作する i.MX8M Plus 向け Qt/QML HMI ランタイムを対象�
 
 - **言語 / フレームワーク**: Qt 6 (Qt Quick / QML), C++17
 - **ビルド**: CMake (≥ 3.21)
-- **ホスト OS（開発）**: macOS（現在動作確認済み）
+- **ホスト OS（開発）**: macOS / Windows（共に動作確認済み）
 - **ターゲット OS（最終）**: Yocto on i.MX8MP
 
 ## フォルダ構成
@@ -56,7 +56,11 @@ macOS で Homebrew Qt を使う場合：
 brew install qt
 ```
 
+Windows は Qt Online Installer から **Qt 6.11.0 MinGW 64-bit** kit と付属 MinGW 13.1 / Ninja / CMake をインストール（既定パス `C:\Qt`）。
+
 ## ビルド
+
+### macOS
 
 ```sh
 cmake -S . -B build -DCMAKE_PREFIX_PATH=/opt/homebrew/opt/qt
@@ -65,15 +69,50 @@ cmake --build build
 
 `CMAKE_PREFIX_PATH` は環境に合わせて変更してください（例: `~/Qt/6.8.0/macos`）。
 
+### Windows（PowerShell）
+
+リポジトリ同梱の補助スクリプトを使うのが最も簡単：
+
+```powershell
+# configure + build を一発実行（build-mingw/ に出力）
+.\scripts\windows\build.ps1
+
+# 個別ターゲットや再 configure
+.\scripts\windows\build.ps1 -Target hmi_editor
+.\scripts\windows\build.ps1 -Reconfigure
+```
+
+手動で実行する場合は、まず PATH を整える（dot-source）：
+
+```powershell
+. .\scripts\windows\setup-env.ps1
+cmake -S . -B build-mingw -G Ninja `
+  -DCMAKE_PREFIX_PATH=C:\Qt\6.11.0\mingw_64 `
+  -DCMAKE_CXX_COMPILER=C:/Qt/Tools/mingw1310_64/bin/g++.exe
+cmake --build build-mingw
+```
+
+詳細・罠は [.claude/skills/qt6-build/SKILL.md](.claude/skills/qt6-build/SKILL.md) を参照。
+
 ## 起動
 
-```sh
-# Editor
-./build/Editor/hmi_editor.app/Contents/MacOS/hmi_editor
+### macOS
 
-# Simulator
+```sh
+./build/Editor/hmi_editor.app/Contents/MacOS/hmi_editor
 ./build/Simulator/hmi_simulator.app/Contents/MacOS/hmi_simulator
 ```
+
+### Windows
+
+`build.ps1` で通すと PATH に Qt の bin が乗るため、そのまま実行できる：
+
+```powershell
+.\build-mingw\hmi_editor.exe
+.\build-mingw\hmi_simulator.exe
+```
+
+新しいシェルから起動する場合は `. .\scripts\windows\setup-env.ps1` で PATH を通してから実行。
 
 ## MVP タスク進捗
 
