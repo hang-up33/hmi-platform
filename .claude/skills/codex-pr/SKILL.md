@@ -19,7 +19,7 @@ origin: hmi-platform
 - `gh` CLI で認証済み（`gh auth status` で確認）
 - リモート `origin` が GitHub の本リポジトリを指していること
 
-レビューは Claude が PR を作って URL を提示 → ユーザーが ChatGPT Codex 側に PR URL を渡してレビューさせる、という流れ。Claude 側は **PR をきれいに作るところまで** が責任範囲。
+レビューは Claude が PR を `ready-for-review` で push した時点で **Codex が自動でレビューコメントを PR に投稿** する（Codex 側の自動レビュー設定が有効）。Claude 側は **PR をきれいに作るところまで** が責任範囲。ユーザーが Codex に URL を貼る手動操作は不要。
 
 ## 規約
 
@@ -118,8 +118,8 @@ EOF
 ユーザーから「Codex の指摘を修正して」と指示が来たら：
 
 1. 指摘内容を取得：
-   - Codex が PR にコメントを残している場合：`gh pr view <番号> --comments`
-   - Codex が ChatGPT の chat 画面にだけ出した場合：ユーザーから貼ってもらう
+   - 基本は `gh pr view <番号> --comments`（Codex は自動レビューで PR コメントに残す）
+   - もし PR コメントに無く ChatGPT の chat 画面にしか出ていない場合のみ、ユーザーから貼ってもらう
 2. 当該ブランチに `git checkout`
 3. 指摘ごとに修正コミットを追加し、`git push`（force-push は基本しない）
 4. 完了したらユーザーに「Codex 指摘 N 件を修正、再レビュー依頼可能」と報告
