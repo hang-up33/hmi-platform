@@ -5,3 +5,7 @@ qt_add_qml_module(hmi_widgets STATIC
     QML_FILES
         qml/HmiButton.qml
 )
+
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()

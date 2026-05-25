@@ -123,6 +123,26 @@ add_test(NAME tst_project_io COMMAND tst_project_io)
 - **同じ `.cpp` をアプリと複数テスト実行体で共有して衝突しない**。AUTOMOC はターゲットごとに独立して走るため、`hmi_editor` 側と `tst_project_io` 側でそれぞれ moc が生成される。
 - **実ファイル経由のテストは `QTemporaryDir` を使う**。`dir.filePath("name.json")` でテスト終了時に自動クリーンアップされるパスが得られる。FileDialog 由来の `QUrl` を再現するには `QUrl::fromLocalFile(path)` で包む。
 
+### Task 12 で確立したパターン（Qt Quick Test ハーネス）
+
+Task 13 / 14 で踏襲する。
+
+- **ハーネス C++ は最小 1 ファイル**：`main.cpp` に `#include <QtQuickTest>` と `QUICK_TEST_MAIN(<unique_name>)` のみ。QML テストを追加するときも C++ 側は触らない。新しい `tst_*.qml` を同ディレクトリに置くだけで自動的に走査される（Qt 公式ドキュメント推奨）。
+- **`QUICK_TEST_SOURCE_DIR` は CMake で `target_compile_definitions` 経由 -D 定義** する：
+  ```cmake
+  target_compile_definitions(tst_<name>_qml PRIVATE
+      QUICK_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+  ```
+  これによりハーネスがソースツリーの `tst_*.qml` を走査するようになる。`add_definitions` は古い API なので使わない。
+- **`add_test(NAME ... COMMAND ...)` でテスト名はソースに渡した `QUICK_TEST_MAIN(<unique_name>)` ではなく、CMake target 名と揃える**。ctest の出力は `<unique_name>::<TestCase>::<func>()` 形式になるので、target/test 名と内部識別子は別物として運用する。
+- **リンクは `Qt6::QuickTest` + `Qt6::Qml` + `Qt6::Quick`**。`QuickTest` と `Qml` が必須、`Quick` は実行時に動的ロードされるが明示リンクしておくとプラットフォーム差の事故が減る（Qt 公式の最小例に対して保険を一つ足した形）。
+- **`find_package(... QuickTest)` も `BUILD_TESTING` で条件化** する（Task 9 で `Qt6::Test` に対して定着させた方針と同じ）。Yocto デプロイ時の `-DBUILD_TESTING=OFF` で QuickTest 不在環境でも configure が落ちないように。
+- **import は `QtTest` のみ**（`import QtQuickTest` ではない）。`tst_*.qml` 側で `import QtQuick` と `import QtTest` を書き、`TestCase { ... }` をルート要素にする。
+- **macOS Homebrew Qt 6.11.1 で動作確認済み**。`tst_hmi_widgets_qml` は 4 関数（initTestCase + 2 test + cleanupTestCase）が PASS、実行時間は約 1.2 秒（QML エンジン初期化に大半を費やす）。
+- **QML テスト用 import の追加は QtQuick.Controls / QtQuick.Dialogs と同様に CMake 明示不要**（Qt 6.5+）。CLAUDE.md「QtQuick.Controls / QtQuick.Dialogs は QML import だけで動く」原則の延長で、`QtTest` の import も plugin が動的ロードされる。
+
+Task 13 / 14 で **HmiWidgets / HmiEditor モジュールを QML テストから import する** 場合は、対応する plugin（`hmi_widgetsplugin` 等）をテスト実行体に `target_link_libraries` するか、QML プラグインパスを実行時に通す必要がある。Task 13 着手時に詳細を確定する。
+
 ### 重複と原則の整合
 
 CLAUDE.md「**Editor / Simulator で同等の C++ ヘルパーが必要になる場合、Shared に移さず両方に独立して持つ**」原則はテストにも適用する。`ProjectIo` と `ProjectLoader` は別タスクではなく **Task 11 でまとめて** テストするが、テストコード自体は各モジュールの `tests/` に分離する（重複を許容、利用側完結）。
@@ -156,7 +176,7 @@ Phase 2 は GUI 変化を伴わないため、原則スクリーンショット�
 | 9 | Qt Test 基盤構築 | ✅ 完了 |
 | 10 | Schema JSON I/O テスト | ✅ 完了 |
 | 11 | ファイル I/O テスト（ProjectIo / ProjectLoader） | ✅ 完了 |
-| 12 | Qt Quick Test 基盤構築 | 未着手 |
+| 12 | Qt Quick Test 基盤構築 | ✅ 完了 |
 | 13 | 共有 Widget テスト | 未着手 |
 | 14 | Editor QML テスト | 未着手 |
 | 15 | CI 整備（GitHub Actions） | 未着手（任意） |
