@@ -141,7 +141,7 @@ cmake --build build-mingw
 | 11 | ファイル I/O テスト（ProjectIo / ProjectLoader） | ✅ 完了 |
 | 12 | Qt Quick Test 基盤構築 | ✅ 完了 |
 | 13 | 共有 Widget テスト | ✅ 完了 |
-| 14 | Editor QML テスト | ⬜ 未着手 |
+| 14 | Editor QML テスト | ✅ 完了 |
 | 15 | CI 整備（GitHub Actions） | ⬜ 未着手（任意） |
 
 ### Phase 3 候補（未承認）
