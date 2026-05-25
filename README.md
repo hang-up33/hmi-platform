@@ -17,6 +17,7 @@ Yocto 上で動作する i.MX8M Plus 向け Qt/QML HMI ランタイムを対象�
 - **言語 / フレームワーク**: Qt 6 (Qt Quick / QML), C++17
 - **ビルド**: CMake (≥ 3.21)
 - **ホスト OS（開発）**: macOS / Windows（共に動作確認済み）
+  - **Claude Code on the web は非対応**（コンテナのネットワークポリシーが Qt 公式ミラーを遮断するため Qt 6.5+ を取得できない。詳細は [CLAUDE.md](CLAUDE.md) の「Claude Code on the web は非対応」節）。
 - **ターゲット OS（最終）**: Yocto on i.MX8MP
 
 ## フォルダ構成

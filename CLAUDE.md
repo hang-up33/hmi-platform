@@ -176,6 +176,7 @@ Codex 向けの永続的な指示は **リポジトリ直下の [AGENTS.md](AGEN
 - qmake その他の代替ビルドシステムを導入する。
 - main ブランチに直接 push / コミットする。タスクは必ず `task/<N>-<短い名>` ブランチ + PR で取り込む。
 - 設計書未承認のフレームワーク / ライブラリを独断で追加する。
+- Claude Code on the web で MVP 実装 / Codex 指摘対応 / ビルド検証を進める（理由は「Claude Code on the web は非対応」節を参照）。
 
 ---
 
@@ -292,3 +293,15 @@ kill %1
 ## 対象プラットフォーム
 
 開発・動作確認は **macOS と Windows の両方**で実施（Editor / Simulator ともに GUI 起動確認済み）。Yocto / i.MX8MP クロスビルドは MVP 完了後に `Runtime/` で対応する。
+
+### Claude Code on the web は非対応
+
+**Claude Code on the web では本プロジェクトの実装作業を行わない**。MVP タスクや Codex 指摘対応は必ず macOS / Windows のローカル環境で実施する。
+
+理由（2026-05 時点で調査済）：
+
+- 本プロジェクトは Qt 6.5+ を要求するが、Web 版コンテナ（Ubuntu 24.04）の apt は Qt 6.4.2 までしか提供しない。
+- aqtinstall で公式 Qt を取得しようとすると、コンテナの既定ネットワークポリシーが `download.qt.io` / `ftp.jaist.ac.jp` / `mirrors.dotsrc.org` 等 Qt ミラーを `host_not_allowed` (HTTP 403) で全遮断する。
+- 結果、`cmake --build` が通せずビルド検証ができない。GUI 動作確認も不可のため、ビルドが通ったとしても MVP の受け入れ基準を満たせない。
+
+Web 版で実装を進める運用は採用しない。Claude Code on the web のセッションを開いてしまった場合も、MVP タスクや Codex 指摘対応に着手せず、ローカル環境に切り替えてから作業すること。
