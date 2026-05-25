@@ -237,6 +237,41 @@ Task 3 で定着したスタイル。新しいデータ型を追加するとき�
 
 ---
 
+## 動作証跡スクリーンショット運用
+
+GUI に変化がある PR（MVP Task 2 / 4 / 5 / 8 のような Editor / Simulator の見た目が変わるもの、UI 系の bugfix）には **スクリーンショットを必ず添付する**。Codex / 人間レビュアーの両方が、コードを脳内実行せず「実際にこう見える」を確認できるようにするため。
+
+### 撮影手順（macOS）
+
+```sh
+# 1) ビルド済みアプリを起動
+./build/Editor/hmi_editor.app/Contents/MacOS/hmi_editor &
+
+# 2) ウィンドウだけキャプチャ（数秒待ってから）
+sleep 2
+scripts/capture-app-window.sh hmi_editor Docs/screenshots/task-<N>-<短い名>.png
+
+# 3) アプリ終了
+kill %1
+```
+
+- `scripts/capture-app-window.sh` は Swift で `CGWindowListCopyWindowInfo` を呼び対象プロセスのウィンドウ ID を取得し、`screencapture -l<wid>` で当該ウィンドウのみを切り出す（Retina 倍率は自動考慮、アクセシビリティ権限不要、**画面収録権限のみ**が必要）。
+- **初回のみ macOS の画面収録権限を Claude Code 親プロセス（Visual Studio Code / ターミナル）に付与する必要がある**。システム設定 > プライバシーとセキュリティ > 画面収録 で対象アプリを ON にし、再起動。
+- Windows でのキャプチャは未対応（必要になったタスクで `scripts/windows/` 配下に PowerShell 版を追加する）。
+
+### ファイル配置と PR への埋め込み
+
+- 出力先：`Docs/screenshots/task-<N>-<短い名>.png`（branch 名と揃える）
+- PR 本文には **commit SHA 固定の raw URL** で参照する。タスクブランチ削除後も生きる：
+  ```markdown
+  ## Screenshot
+  ![Task N: <短い説明>](https://raw.githubusercontent.com/hang-up33/hmi-platform/<commit-sha>/Docs/screenshots/task-<N>-<短い名>.png)
+  ```
+- SHA は push 後 `git rev-parse HEAD` で取得。PR 本文を `gh pr edit <N> --body-file ...` で更新する場合も同じ SHA を使い続ける（後続の修正コミットでスクショ自体を撮り直したら SHA も更新する）。
+- GUI 変化が無いタスク（純粋な Schema / docs / CMake のみ）はスクショ省略可。
+
+---
+
 ## ファイル命名規約
 
 - 小文字 + ハイフン区切り（例：`mvp-task-runner.md`, `qt6-build/SKILL.md`）

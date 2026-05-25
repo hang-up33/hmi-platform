@@ -44,8 +44,17 @@ origin: hmi-platform
    ```
    - 失敗時は [cmake-build-resolver](../../agents/cmake-build-resolver.md) エージェントに委譲
 
-7. **動作確認**
+7. **動作確認 + スクリーンショット**
    - UI 系タスクなら Editor / Simulator を起動して目視（または PID 確認程度の自動検証）
+   - **GUI に変化があるタスクは `scripts/capture-app-window.sh` で必ずスクリーンショットを撮る**：
+     ```sh
+     ./build/Editor/hmi_editor.app/Contents/MacOS/hmi_editor &
+     sleep 2
+     scripts/capture-app-window.sh hmi_editor Docs/screenshots/task-<N>-<短い名>.png
+     kill %1
+     ```
+   - 撮ったスクショは Read ツールで内容を確認してから採用する（黒画面・他ウィンドウが混入していないか）
+   - 詳細運用は [CLAUDE.md](../../../CLAUDE.md) の「動作証跡スクリーンショット運用」セクション参照
 
 8. **進捗反映**
    - README.md の進捗表の該当行を ⬜ → ✅ に更新

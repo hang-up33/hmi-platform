@@ -73,18 +73,29 @@ git push -u origin task/<N>-<短い名>
 
 ### 5. PR 作成
 
+GUI 変化がある場合は事前に push 済み SHA を控えておく（スクショ URL 用）：
+
 ```sh
-gh pr create --title "Task N: <短い説明>" --body "$(cat <<'EOF'
+SHA=$(git rev-parse HEAD)
+```
+
+```sh
+gh pr create --title "Task N: <短い説明>" --body "$(cat <<EOF
 ## Summary
 - <変更点の箇条書き 1>
 - <変更点の箇条書き 2>
+
+## Screenshot
+![Task N: <短い説明>](https://raw.githubusercontent.com/hang-up33/hmi-platform/${SHA}/Docs/screenshots/task-<N>-<短い名>.png)
+
+<スクショの簡単な説明：何が描画されている画面か>
 
 ## 設計書との対応
 - MVP Task N: <タスク名>
 - 完了基準: <ビルド成功・動作確認内容>
 
 ## Test plan
-- [ ] `cmake --build build` 成功
+- [ ] \`cmake --build build\` 成功
 - [ ] <UI 確認手順がある場合はそれ>
 - [ ] README の進捗表が ✅ に更新されている
 
@@ -100,6 +111,8 @@ EOF
 
 - `--draft` を **付けない**（Codex がレビュー対象として扱いやすい状態にする）
 - 不安な観点があれば `Codex 向け補足` セクションを具体的に書く（汎用的な「全体的に見てほしい」より、特定の観点を 1〜3 個提示）
+- `## Screenshot` セクションは **GUI 変化があるタスクで必須**（純粋な Schema / docs / CMake のみのタスクは省略可）。撮影方法と運用の詳細は [CLAUDE.md](../../../CLAUDE.md) の「動作証跡スクリーンショット運用」を参照。
+- HEREDOC をシングルクォート `'EOF'` ではなく素の `EOF` にしているのは、`${SHA}` を展開させるため。本文に bash 構文を含めるリテラル箇所は `\`...\`` のように個別エスケープする。
 
 ### 6. PR URL を完了報告に含める
 
