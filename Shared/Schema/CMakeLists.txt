@@ -10,3 +10,7 @@ target_link_libraries(hmi_schema
     PUBLIC
         Qt6::Core
 )
+
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()

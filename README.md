@@ -136,7 +136,7 @@ cmake --build build-mingw
 
 | # | タスク | 状態 |
 |---|---|---|
-| 9 | Qt Test 基盤構築 | ⬜ 未着手 |
+| 9 | Qt Test 基盤構築 | ✅ 完了 |
 | 10 | Schema JSON I/O テスト | ⬜ 未着手 |
 | 11 | ファイル I/O テスト（ProjectIo / ProjectLoader） | ⬜ 未着手 |
 | 12 | Qt Quick Test 基盤構築 | ⬜ 未着手 |
