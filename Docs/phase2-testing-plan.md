@@ -71,6 +71,7 @@ hmi-platform/
   - **A. ライブラリリンク方式**：対象が既に STATIC ライブラリ化されている場合（`hmi_schema` / `hmi_widgets`）はテスト実行体から `target_link_libraries` でリンクするだけ。**Task 10 / 13 はこの方式**。
   - **B. ソース直接 include 方式**：対象がアプリ実行体（`hmi_editor` / `hmi_simulator`）に直接コンパイルされていて再利用可能なライブラリが無い場合（`ProjectIo` / `ProjectLoader`）は、テスト実行体の `qt_add_executable` SOURCES に対象 `.cpp` / `.h` を直接含める。**Task 11 はこの方式**。ライブラリ分離は本フェーズではやらず、後続タスクで必要になれば切り出す。
 - `BUILD_TESTING=ON`（CTest 標準）が ON のときのみ tests/ を `add_subdirectory` する。Yocto デプロイ時に OFF で外せるよう備える。
+- **`find_package(Qt6 ... COMPONENTS Test)` も BUILD_TESTING で条件化** する（ルート `CMakeLists.txt`）。Qt Test が同梱されていないクロス環境（Yocto 等）で `-DBUILD_TESTING=OFF` 構成にしたとき configure が落ちないようにするため。`Qt6::QuickTest` を Task 12 で追加する時も同じ条件下に置く。
 
 ### テスト命名規約
 
