@@ -37,10 +37,14 @@ int main(int argc, char *argv[])
         startupUrl = QUrl::fromLocalFile(fi.absoluteFilePath());
     }
 
-    QQmlApplicationEngine engine;
-
-    // Task 8: QML から呼ぶ JSON 読込ヘルパーと、起動時自動ロード用 URL を公開
+    // Task 8: QML から呼ぶ JSON 読込ヘルパー。
+    // `setContextProperty` で渡した QObject* の所有権は QQmlContext が持たないため、
+    // engine よりも先に破棄されると終了時に QML 側が無効ポインタを参照するリスクが
+    // ある。C++ の destruction order は LIFO なので、`projectLoader` を `engine` より
+    // **前に** 宣言することで `engine` が先に破棄されることを保証する。
     ProjectLoader projectLoader;
+
+    QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty(QStringLiteral("projectLoader"),
                                              &projectLoader);
     engine.rootContext()->setContextProperty(QStringLiteral("initialJsonUrl"),
