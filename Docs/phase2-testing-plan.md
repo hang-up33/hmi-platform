@@ -165,6 +165,19 @@ Task 14 で踏襲する。HmiButton のクリック検証で踏んだ罠を含�
 
 - **macOS Homebrew Qt 6.11.1 で動作確認済み**。`tst_hmi_widgets_qml` は 10 関数 PASS（smoke 4 + HmiButton 6: initTestCase + 4 test + cleanupTestCase）、実行時間 0.27 秒。
 
+### Task 14 で確立したパターン（実行体ベース QML モジュールのテスト）
+
+将来 HmiSimulator QML テストを足す場合にも踏襲する。
+
+- **本体実行体が `qt_add_qml_module(... <URI>)` を内部に閉じている場合、テストから直接 `import <URI>` は使えない**。`hmi_editor` は `qt_add_executable` + `qt_add_qml_module(URI HmiEditor)` の構成だが、`hmi_editor` 実行体自体に閉じた QML モジュールなので、別実行体（テスト）から再利用できない。Task 13 の `hmi_widgets`（STATIC ライブラリ + `hmi_widgetsplugin`）とは構造が違う点に注意。
+- **対処：テスト QML 側で `Qt.createComponent(Qt.resolvedUrl("../qml/<file>.qml"))` を使って本体 QML ファイルを直接ロード** する。`QUICK_TEST_SOURCE_DIR` がテストディレクトリを指しているので `../qml/<file>.qml` で本体 QML に届く。本体構造（実行体ベース qt_add_qml_module）を一切変更せずにテストが書けるため、Phase 2 plan「テストのために本体を変えない」原則に整合する。
+- **`Loader` でロードした Item は Loader のサイズに張り付くため、`drag.maximumX = parent.width - root.width` が 0 になりドラッグ不能**になる。EditableWidget のような **親領域内ドラッグ系を検証する Item は `createComponent + createObject(stage, { x, y, width, height })` で stage の直接の子として配置** する。stage を 400x400、対象を 100x50 にすれば drag.maximumX = 300 となりドラッグ可能。
+- **本体 QML が `import HmiWidgets` を含む場合、テスト実行体に `hmi_widgetsplugin` を `target_link_libraries` する**。Task 13 で確立した運用そのまま。Canvas.qml が `import HmiWidgets` を持つため、`tst_hmi_editor_qml` は plugin リンクが必須。
+- **`init()` で対象 Item のプロパティを毎回リセットする**。test 関数は alphabetical 実行のため、前のテストが残した状態（例：`test_canvas_size_can_be_overridden` で変えた `canvasWidth`）が次の `test_default_canvas_size` で漏れる。**サイズや model など可変プロパティを全て init() で既定に戻す**。プロパティ宣言の初期値だけに頼らないこと。
+- **Repeater 配下を検証するときは `widgetItems`（widgetLayer.children alias）に Repeater 自身が含まれる点に注意**。`widgetId !== undefined` で EditableWidget だけを抽出するヘルパーを用意する。
+- **`mouseDrag(item, x, y, dx, dy)` は drag.filterChildren モードでも閾値超過を自動的に処理してくれる**。明示的な mousePress + 複数 mouseMove + mouseRelease は不要。クランプ検証は dx/dy を意図的に過大（±500）にして minimumX/maximumX/Y を踏ませる。
+- **`tst_hmi_editor_qml` は 14 関数 PASS（Canvas 6 + EditableWidget 6 + 各 TestCase の init/cleanup）、実行時間 0.21 秒**。
+
 ### 重複と原則の整合
 
 CLAUDE.md「**Editor / Simulator で同等の C++ ヘルパーが必要になる場合、Shared に移さず両方に独立して持つ**」原則はテストにも適用する。`ProjectIo` と `ProjectLoader` は別タスクではなく **Task 11 でまとめて** テストするが、テストコード自体は各モジュールの `tests/` に分離する（重複を許容、利用側完結）。
@@ -200,5 +213,5 @@ Phase 2 は GUI 変化を伴わないため、原則スクリーンショット�
 | 11 | ファイル I/O テスト（ProjectIo / ProjectLoader） | ✅ 完了 |
 | 12 | Qt Quick Test 基盤構築 | ✅ 完了 |
 | 13 | 共有 Widget テスト | ✅ 完了 |
-| 14 | Editor QML テスト | 未着手 |
+| 14 | Editor QML テスト | ✅ 完了 |
 | 15 | CI 整備（GitHub Actions） | 未着手（任意） |
