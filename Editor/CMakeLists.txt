@@ -24,3 +24,7 @@ set_target_properties(hmi_editor PROPERTIES
     MACOSX_BUNDLE TRUE
     WIN32_EXECUTABLE TRUE
 )
+
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
