@@ -9,7 +9,7 @@
 
 Yocto / i.MX8M Plus 向け Qt6 HMI ランタイムを対象に、HMI 作画ツール（Editor）・PC 試験環境（Simulator）・実機ランタイム（Runtime）・JSON スキーマ（Shared/Schema）・共有 Widget（Shared/Widgets）を統合した開発基盤。詳細は [README.md](README.md)。
 
-**現在のフェーズ**：MVP（Editor で配置・保存／Simulator で表示）を 1 タスクずつ完成させている段階。
+**現在のフェーズ**：MVP（Task 1〜8）完了。Editor で配置・ドラッグ・JSON 保存／読込、Simulator で同じ JSON の表示まで通る。次フェーズは Phase 2 テスト基盤導入（メモリ `project_phase2_testing_plan` 参照）と Runtime（i.MX8MP / Yocto）対応。新規タスクの順序・優先度はユーザー指示を待つ。
 
 ---
 
@@ -236,6 +236,8 @@ Task 3 で定着したスタイル。新しいデータ型を追加するとき�
   - Yocto / i.MX8MP の組み込みデプロイでも静的リンクの方が dylib 配布パスの問題を避けられて好都合。
 - **`default property alias content: <inner>.data` で受けた子要素の `parent` は内部 Item を指す**。たとえば `EditableWidget` は内部 `container` に子を流し込むため、Main.qml で `EditableWidget { HmiButton { text: parent.widgetText } }` と書くと `parent` は `container` を指してしまい、`widgetText`（root のプロパティ）が undefined になる。回避策：外側 Item に `id` を付け、子からは `id` 経由で参照する（例：`EditableWidget { id: btn; HmiButton { text: btn.widgetText } }`）。Canvas.qml も同じ構造のため同様の注意が必要。
 - **C++ ヘルパーを QML に公開するときは `setContextProperty` が最も軽い**。Editor 側に存在する一時的なコントローラ（例：`ProjectIo`）は `engine.rootContext()->setContextProperty("projectIo", &io)` でグローバル変数として QML から呼べる。`qmlRegisterType` / QML_ELEMENT は型インスタンス化が必要な場合に使う。**`hmi_schema` 等の Shared ライブラリは QML を一切知らないことを保ち**、QML 連携クラスは利用側アプリ（Editor / Simulator）に置く。
+- **Editor / Simulator で同等の C++ ヘルパーが必要になる場合、Shared に移さず両方に独立して持つ**（Task 8 で確立）。Editor `ProjectIo`（save + load）と Simulator `ProjectLoader`（load のみ）は load() の実装がほぼ同一だが、責務（編集 vs 読み取り専用）が異なるため Shared に統合しない。Shared への昇格を検討するのは、3 つ目の利用側（Runtime 等）が同じヘルパーを欲しがった時、または save 側にも同等の機能差が現れた時。それまでは「重複を許容、利用側完結」を優先する。
+- **Simulator のような起動時自動ロード機能が欲しい時は CLI 引数 + `setContextProperty` の組み合わせが軽い**（Task 8 で確立）。`main.cpp` で `QCommandLineParser` から取った `QUrl` を `initialJsonUrl` 等の名前で context に詰め、QML 側 `Component.onCompleted` で空判定して `projectLoader.load()` を呼ぶ。これは FileDialog の自動操作が AppleScript で不可能な問題（動作証跡セクション参照）を回避する正攻法でもある。
 - **QtQuick.Controls / QtQuick.Dialogs は QML `import` だけで動く**（Qt 6.5+）。CMake で `Qt6::QuickControls2` 等を明示リンクしなくても plugin が動的にロードされるため、`target_link_libraries` への追加は不要。デプロイ時のみ `windeployqt` / `macdeployqt` で plugin 同梱を確認する。
 - **`FileDialog.selectedFile` は `file:///...` 形式の `QUrl`**。C++ で受けるときは `QUrl::toLocalFile()` で OS パスに変換してから `QFile` / `QSaveFile` に渡すこと（`toString()` だと `file://` が残って書き込みに失敗する）。書き込みは `QSaveFile` を使い `commit()` で原子的に保存するのが安全。
 
