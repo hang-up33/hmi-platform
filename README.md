@@ -125,7 +125,7 @@ cmake --build build-mingw
 | 4 | Button 配置 | ✅ 完了 |
 | 5 | ドラッグ | ✅ 完了 |
 | 6 | JSON 保存 | ✅ 完了 |
-| 7 | JSON 読込 | ⬜ 未着手 |
+| 7 | JSON 読込 | ✅ 完了 |
 | 8 | Simulator 表示 | ⬜ 未着手 |
 
 ## 共通データ仕様（Project Format）

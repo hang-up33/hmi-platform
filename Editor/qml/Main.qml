@@ -16,7 +16,7 @@ Window {
         anchors.fill: parent
         color: "#e0e0e0"
 
-        // 上部ツールバー（Task 6: Save ボタンを設置）
+        // 上部ツールバー（Task 6: 保存 / Task 7: 開く）
         Row {
             id: toolbar
             anchors.top: parent.top
@@ -25,41 +25,24 @@ Window {
             spacing: 8
 
             Button {
+                text: qsTr("開く")
+                onClicked: openDialog.open()
+            }
+
+            Button {
                 text: qsTr("保存")
                 onClicked: saveDialog.open()
             }
         }
 
-        // キャンバスを中央配置
+        // キャンバスを中央配置。
+        // Task 7 で Widget 表示は Canvas 内部の Repeater + widgetModel に移譲した。
+        // 初期表示の btn001 もモデル初期値で再現している。
         Canvas {
             id: canvas
             anchors.centerIn: parent
             canvasWidth: 800
             canvasHeight: 600
-
-            // Task 4: 共有 Button Widget をハードコード配置。
-            // Task 5: EditableWidget でラップしてドラッグ可能に。
-            // Task 6: EditableWidget にメタ情報（id/type/text/tag）を持たせ JSON 保存対象とする。
-            // Task 7（JSON 読込）で動的化する。
-            EditableWidget {
-                id: btn001
-                widgetId: "btn001"
-                widgetType: "Button"
-                widgetText: "Start"
-                widgetTag: "PLC.START"
-                x: 100
-                y: 50
-                width: 120
-                height: 40
-
-                HmiButton {
-                    anchors.fill: parent
-                    // parent は EditableWidget 内部の container Item を指すため、
-                    // メタ情報は id 経由で取りに行く。
-                    text: btn001.widgetText
-                    tag: btn001.widgetTag
-                }
-            }
         }
     }
 
@@ -77,7 +60,7 @@ Window {
             for (let i = 0; i < items.length; ++i) {
                 const item = items[i]
                 if (item.widgetId === undefined) {
-                    continue // EditableWidget 以外（将来の補助要素など）はスキップ
+                    continue // EditableWidget 以外（Repeater 自身など）はスキップ
                 }
                 widgets.push({
                     id: item.widgetId,
@@ -96,6 +79,25 @@ Window {
             } else {
                 console.log("プロジェクト保存:", saveDialog.selectedFile)
             }
+        }
+    }
+
+    // Task 7: JSON 読込ダイアログ
+    FileDialog {
+        id: openDialog
+        title: qsTr("プロジェクトを開く")
+        fileMode: FileDialog.OpenFile
+        nameFilters: [qsTr("JSON files (*.json)"), qsTr("All files (*)")]
+        onAccepted: {
+            const result = projectIo.load(openDialog.selectedFile)
+            if (!result || !result.ok) {
+                console.warn("プロジェクト読込に失敗:", openDialog.selectedFile)
+                return
+            }
+            // Repeater の model を差し替えて Widget 群を再構築する
+            canvas.widgetModel = result.widgets
+            console.log("プロジェクト読込:", openDialog.selectedFile,
+                        "widgets =", result.widgets.length)
         }
     }
 }

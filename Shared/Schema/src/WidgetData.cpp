@@ -34,4 +34,12 @@ WidgetData WidgetData::fromJson(const QJsonObject &obj)
     return w;
 }
 
+bool WidgetData::isValidJson(const QJsonObject &obj)
+{
+    return obj.value("id").isString()
+        && obj.value("type").isString()
+        && obj.value("width").isDouble()
+        && obj.value("height").isDouble();
+}
+
 } // namespace hmi::schema
