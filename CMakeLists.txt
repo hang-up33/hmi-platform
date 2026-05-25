@@ -10,11 +10,11 @@ qt_standard_project_setup(REQUIRES 6.5)
 
 include(CTest)
 
-# Qt6::Test は BUILD_TESTING=ON のときだけ要求する。Yocto 等 Qt Test
-# が同梱されていないクロス環境で BUILD_TESTING=OFF にしたとき configure
-# が落ちないようにするため。
+# Qt6::Test / Qt6::QuickTest は BUILD_TESTING=ON のときだけ要求する。
+# Yocto 等 Qt Test / QuickTest が同梱されていないクロス環境で
+# BUILD_TESTING=OFF にしたとき configure が落ちないようにするため。
 if(BUILD_TESTING)
-    find_package(Qt6 6.5 REQUIRED COMPONENTS Test)
+    find_package(Qt6 6.5 REQUIRED COMPONENTS Test QuickTest)
 endif()
 
 add_subdirectory(Shared/Schema)
