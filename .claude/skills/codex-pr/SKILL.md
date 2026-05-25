@@ -73,11 +73,22 @@ git push -u origin task/<N>-<短い名>
 
 ### 5. PR 作成
 
+**HEREDOC は必ず `'EOF'`（quoted）で書き、本文中のシェル展開を完全に止める**。`${SHA}` のような可変値はプレースホルダで書いておき、後で `sed` 置換 → `--body-file` で渡す（PR 本文に `$VAR` / `$(...)` / バッククォートが混ざっても安全な構成）。
+
 ```sh
-gh pr create --title "Task N: <短い説明>" --body "$(cat <<'EOF'
+# GUI 変化がある場合は事前に push 済み SHA を控えておく（スクショ URL 用）
+SHA=$(git rev-parse HEAD)
+
+# 本文テンプレートをファイルに書き出す（HEREDOC 内は完全リテラル）
+cat <<'EOF' | sed "s|__SHA__|${SHA}|g" > /tmp/pr_body.md
 ## Summary
 - <変更点の箇条書き 1>
 - <変更点の箇条書き 2>
+
+## Screenshot
+![Task N: <短い説明>](https://raw.githubusercontent.com/hang-up33/hmi-platform/__SHA__/Docs/screenshots/task-<N>-<短い名>.png)
+
+<スクショの簡単な説明：何が描画されている画面か>
 
 ## 設計書との対応
 - MVP Task N: <タスク名>
@@ -95,13 +106,28 @@ gh pr create --title "Task N: <短い説明>" --body "$(cat <<'EOF'
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF
-)"
+
+# --body-file で渡す（--body "$(...)" は使わない）
+gh pr create --title "Task N: <短い説明>" --body-file /tmp/pr_body.md
 ```
 
 - `--draft` を **付けない**（Codex がレビュー対象として扱いやすい状態にする）
 - 不安な観点があれば `Codex 向け補足` セクションを具体的に書く（汎用的な「全体的に見てほしい」より、特定の観点を 1〜3 個提示）
+- `## Screenshot` セクションは **GUI 変化があるタスクで必須**（純粋な Schema / docs / CMake のみのタスクは省略可）。撮影方法と運用の詳細は [CLAUDE.md](../../../CLAUDE.md) の「動作証跡スクリーンショット運用」を参照。
+- **`gh pr create --body "$(cat <<EOF ... EOF)"` で unquoted HEREDOC を使うのは禁止**。本文中の `$VAR` / `$(...)` / バッククォートが全てシェルに展開されて意図しないコマンド実行・本文破壊を招く。可変値は必ずプレースホルダ + 後置換で扱う。
 
-### 6. PR URL を完了報告に含める
+### 6. `@codex review` コメントで明示的にレビュー依頼
+
+`gh pr create` 直後と、Codex 指摘修正の `git push` 直後の **両方** で必ず実行：
+
+```sh
+gh pr comment <PR番号> --body "@codex review"
+```
+
+- Codex の自動レビュートリガ（Open / Ready / `@codex review` コメント）のうち、最後のコメント方式を毎回明示的に発火させる。
+- 自動レビューに任せると、push の差分内容によっては Codex が再レビューを判断せず黙ることがあるため、push のたびに必ずコメントを入れて取りこぼしを防ぐ。
+
+### 7. PR URL を完了報告に含める
 
 `gh pr create` の戻り値の URL をユーザーへの完了報告に貼る。
 

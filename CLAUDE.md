@@ -117,7 +117,8 @@ Codex 向けの永続的な指示は **リポジトリ直下の [AGENTS.md](AGEN
 3. [kaizen-close](.claude/skills/kaizen-close/SKILL.md) スキルを実行
 4. `task/<N>-<短い名>` ブランチを作成し、コミット
 5. `gh pr create` で **ready-for-review** の PR を作成（draft にしない — Codex GitHub App に即レビューさせるため）
-6. PR URL をユーザーに提示
+6. **`gh pr comment <N> --body "@codex review"` で明示的にレビュー依頼**（自動レビュー任せにせず毎回コメントで発火）
+7. PR URL をユーザーに提示
 
 詳細は [codex-pr](.claude/skills/codex-pr/SKILL.md) スキルを参照。
 
@@ -133,7 +134,8 @@ Codex 向けの永続的な指示は **リポジトリ直下の [AGENTS.md](AGEN
 
 ### Codex 指摘への対応
 
-- Codex のレビュー結果は **PR コメントとして自動投稿される**。ユーザーから「Codex の指摘を修正して」と指示が来たら、Claude は `gh pr view <番号> --comments` で内容を取得し、当該ブランチで対応コミットを追加 push する。
+- Codex のレビュー結果は **PR コメントとして自動投稿される**。ユーザーから「Codex の指摘を修正して」と指示が来たら、Claude は `gh pr view <番号> --comments` と `gh api repos/.../pulls/<番号>/comments` で内容を取得し、当該ブランチで対応コミットを追加 push する。
+- 修正 push の **直後にも必ず** `gh pr comment <N> --body "@codex review"` で再レビューを依頼する（PR 作成時と同じ運用）。
 - 大きな方針差し戻しになる場合は新タスクとして切り出すかを相談する。
 
 ### 前提（Codex 側のセットアップ）
@@ -234,6 +236,47 @@ Task 3 で定着したスタイル。新しいデータ型を追加するとき�
 - **C++ ヘルパーを QML に公開するときは `setContextProperty` が最も軽い**。Editor 側に存在する一時的なコントローラ（例：`ProjectIo`）は `engine.rootContext()->setContextProperty("projectIo", &io)` でグローバル変数として QML から呼べる。`qmlRegisterType` / QML_ELEMENT は型インスタンス化が必要な場合に使う。**`hmi_schema` 等の Shared ライブラリは QML を一切知らないことを保ち**、QML 連携クラスは利用側アプリ（Editor / Simulator）に置く。
 - **QtQuick.Controls / QtQuick.Dialogs は QML `import` だけで動く**（Qt 6.5+）。CMake で `Qt6::QuickControls2` 等を明示リンクしなくても plugin が動的にロードされるため、`target_link_libraries` への追加は不要。デプロイ時のみ `windeployqt` / `macdeployqt` で plugin 同梱を確認する。
 - **`FileDialog.selectedFile` は `file:///...` 形式の `QUrl`**。C++ で受けるときは `QUrl::toLocalFile()` で OS パスに変換してから `QFile` / `QSaveFile` に渡すこと（`toString()` だと `file://` が残って書き込みに失敗する）。書き込みは `QSaveFile` を使い `commit()` で原子的に保存するのが安全。
+
+---
+
+## 動作証跡スクリーンショット運用
+
+GUI に変化がある PR（MVP Task 2 / 4 / 5 / 8 のような Editor / Simulator の見た目が変わるもの、UI 系の bugfix）には **スクリーンショットを必ず添付する**。Codex / 人間レビュアーの両方が、コードを脳内実行せず「実際にこう見える」を確認できるようにするため。
+
+### 撮影手順（macOS）
+
+対象アプリ（Editor / Simulator）に応じて起動バイナリとプロセス名を切り替える：
+
+```sh
+# Editor の変更を撮る場合
+./build/Editor/hmi_editor.app/Contents/MacOS/hmi_editor &
+sleep 2
+scripts/capture-app-window.sh hmi_editor Docs/screenshots/task-<N>-<短い名>.png
+kill %1
+
+# Simulator の変更を撮る場合
+./build/Simulator/hmi_simulator.app/Contents/MacOS/hmi_simulator &
+sleep 2
+scripts/capture-app-window.sh hmi_simulator Docs/screenshots/task-<N>-<短い名>.png
+kill %1
+```
+
+両方の見た目が同時に変わるタスク（例：Task 8 で Editor の保存形式と Simulator の表示を同時に検証したい場合）は両方のスクショを撮り、`Docs/screenshots/task-<N>-<短い名>-editor.png` と `-simulator.png` のように suffix を付けて両方コミットする。
+
+- `scripts/capture-app-window.sh` は Swift で `CGWindowListCopyWindowInfo` を呼び対象プロセスのウィンドウ ID を取得し、`screencapture -l<wid>` で当該ウィンドウのみを切り出す（Retina 倍率は自動考慮、アクセシビリティ権限不要、**画面収録権限のみ**が必要）。
+- **初回のみ macOS の画面収録権限を Claude Code 親プロセス（Visual Studio Code / ターミナル）に付与する必要がある**。システム設定 > プライバシーとセキュリティ > 画面収録 で対象アプリを ON にし、再起動。
+- Windows でのキャプチャは未対応（必要になったタスクで `scripts/windows/` 配下に PowerShell 版を追加する）。
+
+### ファイル配置と PR への埋め込み
+
+- 出力先：`Docs/screenshots/task-<N>-<短い名>.png`（branch 名と揃える）
+- PR 本文には **commit SHA 固定の raw URL** で参照する。タスクブランチ削除後も生きる：
+  ```markdown
+  ## Screenshot
+  ![Task N: <短い説明>](https://raw.githubusercontent.com/hang-up33/hmi-platform/<commit-sha>/Docs/screenshots/task-<N>-<短い名>.png)
+  ```
+- SHA は push 後 `git rev-parse HEAD` で取得。PR 本文を `gh pr edit <N> --body-file ...` で更新する場合も同じ SHA を使い続ける（後続の修正コミットでスクショ自体を撮り直したら SHA も更新する）。
+- GUI 変化が無いタスク（純粋な Schema / docs / CMake のみ）はスクショ省略可。
 
 ---
 
