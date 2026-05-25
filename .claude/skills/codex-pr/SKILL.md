@@ -134,23 +134,29 @@ gh pr comment <PR番号> --body "@codex review"
 ループ手順：
 
 1. **待機**：`sleep 180`〜`sleep 240`（Codex は通常 1〜5 分でレビューを返す）
-2. **取得**：直近 push の commit_id に紐づくレビューと inline comment を取得
+2. **取得**：3 種類すべてを取る（Codex は指摘の有無で投稿先 API が変わる）。
    ```sh
-   # commit ベースで最新だけを見るのが堅い（古い review/comment を再ヒットしないため）
-   # `--paginate` を必ず付ける：gh api の per_page 既定値は 30 で、指摘が多い PR では
-   # 先頭ページ以外を取りこぼし「指摘なし」と誤判定してループが早期終了する恐れがある
+   # 1) reviews API：指摘ありの review summary が来る（state や本文）
    gh api --paginate repos/<owner>/<repo>/pulls/<N>/reviews \
      --jq '.[] | select(.commit_id == "<HEAD-SHA>") | {state, body}'
+   # 2) review comments API：inline コメント本体（指摘の中身）
    gh api --paginate repos/<owner>/<repo>/pulls/<N>/comments \
      --jq '.[] | select(.commit_id == "<HEAD-SHA>") | {path, line, body}'
+   # 3) issue comments API：PR 会話タブのコメント。Codex は **指摘なしのときここに
+   #    "Didn't find any major issues" を投稿する** ことが多く、reviews API に
+   #    クリーン文言が載らないラウンドがあるため、必ず併せて見る
+   gh api --paginate repos/<owner>/<repo>/issues/<N>/comments \
+     --jq '.[] | select(.user.login == "chatgpt-codex-connector[bot]") | {created_at, body}'
    ```
+   - `--paginate` を必ず付ける：gh api の per_page 既定値は 30 で、指摘が多い PR では先頭ページ以外を取りこぼし「指摘なし」と誤判定してループが早期終了する恐れがある
    - 全文長い場合は `--jq '.[] | "[\(.path):\(.line)]\n\(.body)\n---"'` 等で整形
    - 件数だけ確認したいときも `gh api --paginate ... --jq 'length'` ではなく `... | wc -l` 等で全ページ通算する（`--jq 'length'` はページ単位の長さを各ページごとに出力する点に注意）
 3. **判定**：以下を **state 優先** で評価する。「badge / 文言の有無」だけで判断すると、本文に badge が付かない `CHANGES_REQUESTED` を取りこぼしてループが早期終了する。
-   - レビュー `state` が `CHANGES_REQUESTED` → **必ず** 修正フロー (4) へ。badge や文言は見ない
-   - `state` が `COMMENTED` でも inline comment が当該 HEAD-SHA で 1 件以上ある → 修正フロー (4) へ
-   - inline comment が 0 件で、review body / inline 本文に P0〜P3 / Major / Minor / `[Major]` / `[Minor]` 等の指摘 badge が含まれる → 修正フロー (4) へ
-   - 上のいずれにも該当しない（典型的には `state == "COMMENTED"` + inline 0 件 + 本文が `"Didn't find any major issues"` などのクリーン文言）→ ループ脱出して完了報告
+   - reviews API の `state` が `CHANGES_REQUESTED` → **必ず** 修正フロー (4) へ。badge や文言は見ない
+   - `state` が `COMMENTED` でも review comments（inline）が当該 HEAD-SHA で 1 件以上ある → 修正フロー (4) へ
+   - inline 0 件で、reviews 本文 / inline 本文に P0〜P3 / Major / Minor / `[Major]` / `[Minor]` 等の指摘 badge が含まれる → 修正フロー (4) へ
+   - 上のいずれにも該当せず、かつ Codex が当該 HEAD 以降に issue comments / reviews のどちらかへ `"Didn't find any major issues"` 等のクリーン文言を投稿 → ループ脱出して完了報告
+   - **どのシグナルも出ていない**（reviews も inline も issue comment もまだ無い）→ Codex がまだレビュー中。手順 1 の待機に戻る（ループは脱出しない）
 4. **修正**：該当箇所を編集 → `cmake --build build` 成功確認 → 修正ファイルを明示的に `git add` → コミット
 5. **push**：`git push`（force-push は基本しない、追加コミットで対応）
 6. **再依頼**：`gh pr comment <N> --body "@codex review"`
