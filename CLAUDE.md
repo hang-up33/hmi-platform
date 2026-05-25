@@ -261,4 +261,4 @@ Task 3 で定着したスタイル。新しいデータ型を追加するとき�
 - aqtinstall で公式 Qt を取得しようとすると、コンテナの既定ネットワークポリシーが `download.qt.io` / `ftp.jaist.ac.jp` / `mirrors.dotsrc.org` 等 Qt ミラーを `host_not_allowed` (HTTP 403) で全遮断する。
 - 結果、`cmake --build` が通せずビルド検証ができない。GUI 動作確認も不可のため、ビルドが通ったとしても MVP の受け入れ基準を満たせない。
 
-将来的に Web 版を有効化したい場合は、code.claude.com の Environment 設定で Qt ミラー（最低 `download.qt.io`）を許可リストに加えたうえで、`.claude/hooks/session-start.sh` を新設して aqtinstall 経由で Qt をセットアップする。調査履歴はブランチ `claude/web-dev-environment-QTRaG` を参照。
+Web 版で実装を進める運用は採用しない。Claude Code on the web のセッションを開いてしまった場合も、MVP タスクや Codex 指摘対応に着手せず、ローカル環境に切り替えてから作業すること。
