@@ -31,7 +31,9 @@ Window {
 
             Label {
                 anchors.verticalCenter: parent.verticalCenter
-                text: canvas.widgetModel.length > 0
+                // `loaded` フラグで「未読込」と「読込成功（空含む）」を区別する。
+                // widgets が 0 件でも読込成功なら "widgets: 0" を表示する。
+                text: canvas.loaded
                       ? qsTr("widgets: %1").arg(canvas.widgetModel.length)
                       : qsTr("JSON 未読込")
                 color: "#444444"
@@ -56,6 +58,7 @@ Window {
             const result = projectLoader.load(initialJsonUrl)
             if (result && result.ok) {
                 canvas.widgetModel = result.widgets
+                canvas.loaded = true
                 console.log("起動時 JSON 読込:", initialJsonUrl,
                             "widgets =", result.widgets.length)
             } else {
@@ -76,6 +79,7 @@ Window {
                 return
             }
             canvas.widgetModel = result.widgets
+            canvas.loaded = true
             console.log("プロジェクト読込:", openDialog.selectedFile,
                         "widgets =", result.widgets.length)
         }

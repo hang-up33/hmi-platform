@@ -19,6 +19,11 @@ Item {
     // Widget 配置情報。Main.qml から projectLoader.load() の結果を流し込む。
     property var widgetModel: []
 
+    // JSON 読込が一度でも成功したか。widgetModel.length では「空 widgets の
+    // 有効 JSON」と「未読込」を区別できないため独立フラグで持つ
+    // （ScreenData::isValidJson は空 widgets 配列を許容する仕様のため）。
+    property bool loaded: false
+
     implicitWidth: canvasWidth
     implicitHeight: canvasHeight
     width: canvasWidth
