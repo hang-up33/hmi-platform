@@ -119,8 +119,11 @@ Codex 向けの永続的な指示は **リポジトリ直下の [AGENTS.md](AGEN
 5. `gh pr create` で **ready-for-review** の PR を作成（draft にしない — Codex GitHub App に即レビューさせるため）
 6. **`gh pr comment <N> --body "@codex review"` で明示的にレビュー依頼**（自動レビュー任せにせず毎回コメントで発火）
 7. PR URL をユーザーに提示
+8. **Codex レビュー結果が返るまで自走で待つ**（ユーザー指示を待たない。詳細は次節「Codex 指摘への対応」）
 
 詳細は [codex-pr](.claude/skills/codex-pr/SKILL.md) スキルを参照。
+
+**重要**：Step 7 で PR URL を提示しても、Codex レビューが返るまでは「完了」と報告しない。Codex が「Didn't find any major issues. 👍」のクリーンレビューを返した時点で初めて完了報告する。
 
 ### PR タイトル / 本文
 
@@ -134,9 +137,25 @@ Codex 向けの永続的な指示は **リポジトリ直下の [AGENTS.md](AGEN
 
 ### Codex 指摘への対応
 
-- Codex のレビュー結果は **PR コメントとして自動投稿される**。ユーザーから「Codex の指摘を修正して」と指示が来たら、Claude は `gh pr view <番号> --comments` と `gh api repos/.../pulls/<番号>/comments` で内容を取得し、当該ブランチで対応コミットを追加 push する。
+- Codex のレビュー結果は **PR コメントとして自動投稿される**。Claude は **ユーザー指示を待たず自走で待機** し、レビューが返り次第 `gh pr view <番号> --comments` と `gh api repos/.../pulls/<番号>/comments` で内容を取得する。指摘があれば当該ブランチで対応コミットを追加 push する。
 - 修正 push の **直後にも必ず** `gh pr comment <N> --body "@codex review"` で再レビューを依頼する（PR 作成時と同じ運用）。
-- 大きな方針差し戻しになる場合は新タスクとして切り出すかを相談する。
+- **指摘 0 件のクリーンレビュー（`Codex Review: Didn't find any major issues. 👍`）になるまで** 自走でループする。0 件になって初めて「完了」とユーザーに報告できる。
+- 大きな方針差し戻しになる場合は新タスクとして切り出すかをユーザーに相談する。
+
+#### 自走待機の具体手段
+
+Codex レビュー（issue comment or inline）は手動操作なしには通知されないため、Claude は Bash のバックグラウンドポーリングで待つ。30 秒間隔・最大 10 分（= 20 回）が現実的なバランス：
+
+```sh
+LAST_TS=$(gh api repos/<owner>/<repo>/issues/<N>/comments --jq 'sort_by(.created_at) | last | .created_at')
+for i in $(seq 1 20); do
+  sleep 30
+  NEW=$(gh api repos/<owner>/<repo>/issues/<N>/comments --jq 'sort_by(.created_at) | last | .created_at')
+  [ "$NEW" != "$LAST_TS" ] && break
+done
+```
+
+inline review は `gh api repos/<owner>/<repo>/pulls/<N>/comments` 側にも来るので両方監視する。10 分で返らなかった場合のみユーザーに状況報告して指示を仰ぐ。
 
 ### 前提（Codex 側のセットアップ）
 
