@@ -115,7 +115,9 @@ cmake --build build-mingw
 
 新しいシェルから起動する場合は `. .\scripts\windows\setup-env.ps1` で PATH を通してから実行。
 
-## MVP タスク進捗
+## フェーズ進捗
+
+### Phase 1: MVP（Editor / Simulator の作画 → 保存 → 読込）
 
 | # | タスク | 状態 |
 |---|---|---|
@@ -127,6 +129,25 @@ cmake --build build-mingw
 | 6 | JSON 保存 | ✅ 完了 |
 | 7 | JSON 読込 | ✅ 完了 |
 | 8 | Simulator 表示 | ✅ 完了 |
+
+### Phase 2: テスト基盤導入
+
+詳細は [Docs/phase2-testing-plan.md](Docs/phase2-testing-plan.md)。
+
+| # | タスク | 状態 |
+|---|---|---|
+| 9 | Qt Test 基盤構築 | ⬜ 未着手 |
+| 10 | Schema JSON I/O テスト | ⬜ 未着手 |
+| 11 | ファイル I/O テスト（ProjectIo / ProjectLoader） | ⬜ 未着手 |
+| 12 | Qt Quick Test 基盤構築 | ⬜ 未着手 |
+| 13 | 共有 Widget テスト | ⬜ 未着手 |
+| 14 | Editor QML テスト | ⬜ 未着手 |
+| 15 | CI 整備（GitHub Actions） | ⬜ 未着手（任意） |
+
+### Phase 3 候補（未承認）
+
+- E2E テスト
+- Runtime（i.MX8MP / Yocto）対応
 
 ## 共通データ仕様（Project Format）
 

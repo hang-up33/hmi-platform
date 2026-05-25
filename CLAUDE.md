@@ -9,7 +9,7 @@
 
 Yocto / i.MX8M Plus 向け Qt6 HMI ランタイムを対象に、HMI 作画ツール（Editor）・PC 試験環境（Simulator）・実機ランタイム（Runtime）・JSON スキーマ（Shared/Schema）・共有 Widget（Shared/Widgets）を統合した開発基盤。詳細は [README.md](README.md)。
 
-**現在のフェーズ**：MVP（Task 1〜8）完了。Editor で配置・ドラッグ・JSON 保存／読込、Simulator で同じ JSON の表示まで通る。次フェーズは Phase 2 テスト基盤導入（メモリ `project_phase2_testing_plan` 参照）と Runtime（i.MX8MP / Yocto）対応。新規タスクの順序・優先度はユーザー指示を待つ。
+**現在のフェーズ**：**Phase 1 / MVP（Task 1〜8）完了 → Phase 2 / テスト基盤導入 着手前**。Editor で配置・ドラッグ・JSON 保存／読込、Simulator で同じ JSON の表示まで通る。次は Phase 2（Task 9〜15）で Qt Test → Qt Quick Test の順にテスト整備。タスク分割と完了基準は [Docs/phase2-testing-plan.md](Docs/phase2-testing-plan.md) を参照。Phase 3 候補は E2E テストと Runtime（i.MX8MP / Yocto）対応。新規タスクの順序・優先度はユーザー指示を待つ。
 
 ---
 
@@ -162,7 +162,7 @@ Codex 向けの永続的な指示は **リポジトリ直下の [AGENTS.md](AGEN
 
 ### Must Always
 
-- 設計書由来の MVP タスク順を守る（Qt6 プロジェクト → キャンバス → Widget データ構造 → Button → ドラッグ → JSON 保存 → JSON 読込 → Simulator 表示）。
+- 現フェーズのタスク順を守る。Phase 1 / MVP（Qt6 プロジェクト → キャンバス → Widget データ構造 → Button → ドラッグ → JSON 保存 → JSON 読込 → Simulator 表示）は完了。**Phase 2 は [Docs/phase2-testing-plan.md](Docs/phase2-testing-plan.md) の Task 9〜15 順**（Qt Test 基盤 → Schema テスト → ファイル I/O テスト → Qt Quick Test 基盤 → 共有 Widget → Editor QML → CI）を厳守。
 - Widget / Screen / Project 型と JSON I/O は `Shared/Schema` にのみ実装。
 - 完了報告の直前に [kaizen-close](.claude/skills/kaizen-close/SKILL.md) を実行し、得た知見を反映する。
 - QML モジュール URI とアプリの `loadFromModule()` 引数を一致させる。
@@ -170,7 +170,7 @@ Codex 向けの永続的な指示は **リポジトリ直下の [AGENTS.md](AGEN
 
 ### Must Never
 
-- 複数の MVP タスクを 1 回で実装する。
+- 複数のフェーズタスク（Phase 1 / Phase 2 / Phase 3）を 1 回で実装する。
 - フォルダ構成を変更する（`Editor/ Simulator/ Runtime/ Shared/Schema/ Shared/Widgets/ Docs/` を維持）。
 - 既存コードを削除する（例外：後述のプレースホルダー 2 件のみ）。
 - qmake その他の代替ビルドシステムを導入する。
