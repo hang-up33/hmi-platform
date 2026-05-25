@@ -101,6 +101,28 @@ Task 10 / 11 で踏襲する。Qt Quick Test（Task 12〜14）は別パターン
 
 似た形のパターンを大量に並べる検証（必須キー欠落 4 件・型誤り 4 件等）は **`QTest::addColumn` + `QFETCH` のデータ駆動テスト** を使う。テスト関数を 1 つ書いて `_data()` 側でケースを列挙する形になり、PASS/FAIL も `caseName(rowName)` の単位で見えるので失敗時の特定が早い。`tst_widget_data.cpp` の `isValidJsonRejectsMissingRequired_data` / `isValidJsonRejectsWrongTypes_data` が前例。`QJsonValue` 等をカラムに渡すときは `Q_DECLARE_METATYPE` 不要（Qt 側で登録済み）。
 
+### Task 11 で確立したパターン（方式 B / Q_OBJECT を含むソースの直接 SOURCES 共有）
+
+`ProjectIo` / `ProjectLoader` のように **アプリ実行体（`hmi_editor` / `hmi_simulator`）と同じ Q_OBJECT 派生クラスをテストから呼ぶ** 場合、ライブラリ分離せず方式 B（ソース直接）でテスト実行体に取り込める：
+
+```cmake
+add_executable(tst_project_io
+    tst_project_io.cpp
+    ../src/ProjectIo.cpp
+    ../src/ProjectIo.h
+)
+target_include_directories(tst_project_io PRIVATE ../src)
+target_link_libraries(tst_project_io PRIVATE Qt6::Test Qt6::Core hmi_schema)
+add_test(NAME tst_project_io COMMAND tst_project_io)
+```
+
+押さえどころ：
+
+- **SOURCES に `.cpp` と `.h` の両方** を入れる。`.h` が無いと AUTOMOC が moc 対象を見落とす場合がある（被テストクラスが `.cpp` 内に Q_OBJECT を持たない通常パターン）。
+- **`target_include_directories` でテストから `../src` を public/private 区別なく見えるようにする**。テストソース側は `#include "ProjectIo.h"` の素のインクルードで済む。
+- **同じ `.cpp` をアプリと複数テスト実行体で共有して衝突しない**。AUTOMOC はターゲットごとに独立して走るため、`hmi_editor` 側と `tst_project_io` 側でそれぞれ moc が生成される。
+- **実ファイル経由のテストは `QTemporaryDir` を使う**。`dir.filePath("name.json")` でテスト終了時に自動クリーンアップされるパスが得られる。FileDialog 由来の `QUrl` を再現するには `QUrl::fromLocalFile(path)` で包む。
+
 ### 重複と原則の整合
 
 CLAUDE.md「**Editor / Simulator で同等の C++ ヘルパーが必要になる場合、Shared に移さず両方に独立して持つ**」原則はテストにも適用する。`ProjectIo` と `ProjectLoader` は別タスクではなく **Task 11 でまとめて** テストするが、テストコード自体は各モジュールの `tests/` に分離する（重複を許容、利用側完結）。
@@ -133,7 +155,7 @@ Phase 2 は GUI 変化を伴わないため、原則スクリーンショット�
 |---|---|---|
 | 9 | Qt Test 基盤構築 | ✅ 完了 |
 | 10 | Schema JSON I/O テスト | ✅ 完了 |
-| 11 | ファイル I/O テスト（ProjectIo / ProjectLoader） | 未着手 |
+| 11 | ファイル I/O テスト（ProjectIo / ProjectLoader） | ✅ 完了 |
 | 12 | Qt Quick Test 基盤構築 | 未着手 |
 | 13 | 共有 Widget テスト | 未着手 |
 | 14 | Editor QML テスト | 未着手 |
