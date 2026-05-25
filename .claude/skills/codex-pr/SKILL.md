@@ -137,10 +137,15 @@ gh pr comment <PR番号> --body "@codex review"
 2. **取得**：直近 push の commit_id に紐づくレビューと inline comment を取得
    ```sh
    # commit ベースで最新だけを見るのが堅い（古い review/comment を再ヒットしないため）
-   gh api repos/<owner>/<repo>/pulls/<N>/reviews --jq '.[] | select(.commit_id == "<HEAD-SHA>") | {state, body}'
-   gh api repos/<owner>/<repo>/pulls/<N>/comments --jq '.[] | select(.commit_id == "<HEAD-SHA>") | {path, line, body}'
+   # `--paginate` を必ず付ける：gh api の per_page 既定値は 30 で、指摘が多い PR では
+   # 先頭ページ以外を取りこぼし「指摘なし」と誤判定してループが早期終了する恐れがある
+   gh api --paginate repos/<owner>/<repo>/pulls/<N>/reviews \
+     --jq '.[] | select(.commit_id == "<HEAD-SHA>") | {state, body}'
+   gh api --paginate repos/<owner>/<repo>/pulls/<N>/comments \
+     --jq '.[] | select(.commit_id == "<HEAD-SHA>") | {path, line, body}'
    ```
    - 全文長い場合は `--jq '.[] | "[\(.path):\(.line)]\n\(.body)\n---"'` 等で整形
+   - 件数だけ確認したいときも `gh api --paginate ... --jq 'length'` ではなく `... | wc -l` 等で全ページ通算する（`--jq 'length'` はページ単位の長さを各ページごとに出力する点に注意）
 3. **判定**：
    - 指摘あり（inline comment / review body に P0〜P3 / Major / Minor などの badge）→ 4 へ
    - 指摘なし（`"Didn't find any major issues"` 等のクリーン文言）→ ループ脱出して完了報告
