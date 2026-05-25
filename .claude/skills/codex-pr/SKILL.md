@@ -136,19 +136,26 @@ gh pr comment <PR番号> --body "@codex review"
 1. **待機**：`sleep 180`〜`sleep 240`（Codex は通常 1〜5 分でレビューを返す）
 2. **取得**：3 種類すべてを取る（Codex は指摘の有無で投稿先 API が変わる）。
    ```sh
-   # 1) reviews API：指摘ありの review summary が来る（state や本文）
+   # 直前の `git push` ＋ @codex review 投稿の **直後** に基準時刻を控えておく
+   # （issue comments は commit_id を持たないため、HEAD 単位の絞り込みが時刻に依存する）
+   SINCE=$(date -u +%Y-%m-%dT%H:%M:%SZ)   # 例: 2026-05-25T04:20:00Z
+
+   # 1) reviews API：指摘ありの review summary が来る（state / 本文）。commit_id で絞る
    gh api --paginate repos/<owner>/<repo>/pulls/<N>/reviews \
      --jq '.[] | select(.commit_id == "<HEAD-SHA>") | {state, body}'
-   # 2) review comments API：inline コメント本体（指摘の中身）
+   # 2) review comments API：inline コメント本体（指摘の中身）。commit_id で絞る
    gh api --paginate repos/<owner>/<repo>/pulls/<N>/comments \
      --jq '.[] | select(.commit_id == "<HEAD-SHA>") | {path, line, body}'
    # 3) issue comments API：PR 会話タブのコメント。Codex は **指摘なしのときここに
    #    "Didn't find any major issues" を投稿する** ことが多く、reviews API に
-   #    クリーン文言が載らないラウンドがあるため、必ず併せて見る
-   gh api --paginate repos/<owner>/<repo>/issues/<N>/comments \
+   #    クリーン文言が載らないラウンドがあるため必ず併せて見る。
+   #    **commit_id を持たないので必ず時刻で絞る**。過去ラウンドのクリーン文言を
+   #    拾うと、最新 HEAD のレビューが未完了でもループを誤終了する。
+   gh api --paginate "repos/<owner>/<repo>/issues/<N>/comments?since=${SINCE}" \
      --jq '.[] | select(.user.login == "chatgpt-codex-connector[bot]") | {created_at, body}'
    ```
    - `--paginate` を必ず付ける：gh api の per_page 既定値は 30 で、指摘が多い PR では先頭ページ以外を取りこぼし「指摘なし」と誤判定してループが早期終了する恐れがある
+   - issue comments の `?since=...` は `updated_at >= since` のフィルタとして GitHub 側で適用される。`--jq 'select(.created_at >= "<SINCE>")'` で同等のクライアント側絞り込みも可（両方付けて二重防御するのが堅い）
    - 全文長い場合は `--jq '.[] | "[\(.path):\(.line)]\n\(.body)\n---"'` 等で整形
    - 件数だけ確認したいときも `gh api --paginate ... --jq 'length'` ではなく `... | wc -l` 等で全ページ通算する（`--jq 'length'` はページ単位の長さを各ページごとに出力する点に注意）
 3. **判定**：以下を **state 優先** で評価する。「badge / 文言の有無」だけで判断すると、本文に badge が付かない `CHANGES_REQUESTED` を取りこぼしてループが早期終了する。
