@@ -6,8 +6,10 @@
 
 #include <QFile>
 #include <QFileInfo>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonParseError>
+#include <QJsonValue>
 #include <QSaveFile>
 #include <QVariantList>
 #include <QVariantMap>
@@ -89,10 +91,42 @@ QVariantMap ProjectIo::load(const QUrl &fileUrl)
         return result;
     }
 
-    const ProjectData proj = ProjectData::fromJson(doc.object());
+    // Codex 指摘（Task 7 PR）対応：ProjectData::fromJson はキー欠落時に既定値で埋めるため、
+    // 構造検証なしに ok=true を返すと `{}` や別形式の JSON でも成功扱いになり、
+    // QML 側で widgetModel が空配列に差し替わって既存表示が消えてしまう。
+    // ここで raw QJsonObject の段階で Project 形式かどうかを検証する。
+    // 検証は load 固有の関心事なので Shared/Schema には追加せず、本クラス内に閉じる。
+    const QJsonObject root = doc.object();
+    if (!root.value(QStringLiteral("screens")).isArray()) {
+        return result;
+    }
+    const QJsonArray screensArr = root.value(QStringLiteral("screens")).toArray();
+    if (screensArr.isEmpty() || !screensArr.first().isObject()) {
+        return result;
+    }
+    const QJsonObject firstScreenObj = screensArr.first().toObject();
+    if (!firstScreenObj.value(QStringLiteral("widgets")).isArray()) {
+        return result;
+    }
+    // 各 widget は最低限 id / type / width / height を持つこと（空 widgets 自体は許容）。
+    const QJsonArray widgetsArr = firstScreenObj.value(QStringLiteral("widgets")).toArray();
+    for (const QJsonValue &wv : widgetsArr) {
+        if (!wv.isObject()) {
+            return result;
+        }
+        const QJsonObject wo = wv.toObject();
+        if (!wo.value(QStringLiteral("id")).isString()
+            || !wo.value(QStringLiteral("type")).isString()
+            || !wo.value(QStringLiteral("width")).isDouble()
+            || !wo.value(QStringLiteral("height")).isDouble()) {
+            return result;
+        }
+    }
+
+    const ProjectData proj = ProjectData::fromJson(root);
 
     // MVP では先頭スクリーンのみを編集対象とする（save 側も "Main" 単一スクリーン構成）。
-    const ScreenData screen = proj.screens.isEmpty() ? ScreenData{} : proj.screens.first();
+    const ScreenData screen = proj.screens.first();
 
     QVariantList widgetsVar;
     widgetsVar.reserve(screen.widgets.size());
