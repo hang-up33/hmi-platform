@@ -78,6 +78,24 @@ hmi-platform/
 - ファイル名：実行体名と同名（`tst_widget_data.cpp`）
 - QML テスト：`tst_<対象>.qml`
 
+### Task 9 で確立した C++ テスト実装パターン
+
+Task 10 / 11 で踏襲する。Qt Quick Test（Task 12〜14）は別パターンになる予定。
+
+- **テスト実行体は `add_executable`**（`qt_add_executable` ではない）。`qt_add_executable` は macOS で `.app` バンドルを作るため、CLI で実行する ctest には不向き。
+- **AUTOMOC はルートの `qt_standard_project_setup` で全プロジェクトに有効**になっているので、各 tests/CMakeLists.txt で `set(CMAKE_AUTOMOC ON)` を書く必要はない。
+- **Qt Core のみのテストは `QTEST_APPLESS_MAIN(<TestClass>)`** を使う（`QCoreApplication` を要求しない）。`QApplication` が必要なテスト（QML / Widgets）は将来 `QTEST_MAIN` / `QTEST_GUILESS_MAIN` を使い分ける。
+- **`Q_OBJECT` を持つテストクラスを単一 cpp に書く場合、末尾に `#include "tst_<name>.moc"` を必ず書く**（AUTOMOC が同一ファイル内 Q_OBJECT の moc を期待する）。
+- `tests/CMakeLists.txt` の最小形：
+
+  ```cmake
+  add_executable(tst_<name> tst_<name>.cpp)
+  target_link_libraries(tst_<name> PRIVATE Qt6::Test <被テストライブラリ>)
+  add_test(NAME tst_<name> COMMAND tst_<name>)
+  ```
+
+- 各モジュールの `CMakeLists.txt` には `if(BUILD_TESTING) add_subdirectory(tests) endif()` を 1 行加える（`include(CTest)` で BUILD_TESTING は既定 ON）。
+
 ### 重複と原則の整合
 
 CLAUDE.md「**Editor / Simulator で同等の C++ ヘルパーが必要になる場合、Shared に移さず両方に独立して持つ**」原則はテストにも適用する。`ProjectIo` と `ProjectLoader` は別タスクではなく **Task 11 でまとめて** テストするが、テストコード自体は各モジュールの `tests/` に分離する（重複を許容、利用側完結）。
@@ -108,7 +126,7 @@ Phase 2 は GUI 変化を伴わないため、原則スクリーンショット�
 
 | # | タスク | 状態 |
 |---|---|---|
-| 9 | Qt Test 基盤構築 | 未着手 |
+| 9 | Qt Test 基盤構築 | ✅ 完了 |
 | 10 | Schema JSON I/O テスト | 未着手 |
 | 11 | ファイル I/O テスト（ProjectIo / ProjectLoader） | 未着手 |
 | 12 | Qt Quick Test 基盤構築 | 未着手 |
