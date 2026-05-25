@@ -1,0 +1,117 @@
+# Phase 2: テスト基盤導入
+
+Phase 1（MVP / Task 1〜8）完了を受け、Phase 2 では Qt Test → Qt Quick Test の順でテスト基盤を整備する。MVP と同じく **1 タスク = 1 ブランチ = 1 PR**、完了基準は `cmake --build` 緑 ＋ 新規 `ctest` 緑。
+
+```mermaid
+flowchart LR
+    A["Phase 1 / MVP<br/>Task 1〜8<br/>(完了)"] --> B["Phase 2-A<br/>Qt Test<br/>(C++ ロジック)"]
+    B --> C["Phase 2-B<br/>Qt Quick Test<br/>(QML)"]
+    C --> D["Phase 2-C<br/>CI<br/>(任意)"]
+    D --> E["Phase 3 候補<br/>E2E / Runtime"]
+```
+
+---
+
+## タスク一覧
+
+### Phase 2-A: Qt Test 導入（C++ ロジック層）
+
+| # | タスク | スコープ | 完了基準 |
+|---|---|---|---|
+| 9 | Qt Test 基盤構築 | ルート CMake に `enable_testing()` + `include(CTest)`、`tests/` 配置決定、`Qt6::Test` find、smoke 1 件（`tst_smoke`） | `ctest` で 1 件緑 |
+| 10 | Schema JSON I/O テスト | `WidgetData` / `ScreenData` / `ProjectData` の `toJson` / `fromJson` ラウンドトリップ、`isValidJson` の正常／異常系 | `ctest` で全件緑 |
+| 11 | ファイル I/O テスト | Editor `ProjectIo`（save + load）、Simulator `ProjectLoader`（load）。`QTemporaryDir` で実ファイル経由、不正 JSON 拒否を含む。`ProjectIo` / `ProjectLoader` は現状アプリ実行体（`hmi_editor` / `hmi_simulator`）に直接コンパイルされているため、**テスト実行体に `ProjectIo.cpp` / `ProjectLoader.cpp` を直接 `qt_add_executable` の SOURCES に追加** する方式を採る。ライブラリ分離（`hmi_editor_core` 等の STATIC 化）は本タスクではやらない（必要になれば後続タスクで切り出す） | `ctest` で全件緑 |
+
+### Phase 2-B: Qt Quick Test 導入（QML 層）
+
+| # | タスク | スコープ | 完了基準 |
+|---|---|---|---|
+| 12 | Qt Quick Test 基盤構築 | `Qt6::QuickTest` 統合、`tst_*.qml` 実行ハーネス、ctest 連携、smoke 1 件 | `ctest` で 1 件緑 |
+| 13 | 共有 Widget テスト | `HmiButton` のプロパティ反映・クリックシグナル。今後追加される共有 Widget の雛形を兼ねる | `ctest` で全件緑 |
+| 14 | Editor QML テスト | `Canvas` / `EditableWidget` のドラッグ動作、子要素レイアウト | `ctest` で全件緑 |
+
+### Phase 2-C: CI（任意）
+
+| # | タスク | スコープ | 完了基準 |
+|---|---|---|---|
+| 15 | GitHub Actions 整備 | macOS / Windows runner で `cmake --build` + `ctest` を回す。Qt は公式 install action か aqtinstall | PR 上で全 job 緑 |
+
+> **Note**: Task 15 は CI ランナーの Qt バージョン差や `aqtinstall` の罠が多いため、Phase 2-A/B が安定してから着手する。先に手動で macOS / Windows 両方で `ctest` を回せることを確認しておく。
+
+### Phase 3 候補（Phase 2 完了後に別途承認）
+
+- **E2E テスト**：Squish / 内製の Python 自動操作等。Task 7 で確認した通り AppleScript からの QML 自動操作は不可なので、別アプローチが必要。
+- **Runtime（i.MX8MP / Yocto）対応**：クロスビルド・デプロイ。
+
+---
+
+## 設計指針
+
+### テストフォルダ配置
+
+```
+hmi-platform/
+├─ Shared/Schema/
+│   └─ tests/                 # Schema 単体（Task 10）
+├─ Editor/
+│   └─ tests/                 # ProjectIo + QML（Task 11, 14）
+├─ Simulator/
+│   └─ tests/                 # ProjectLoader（Task 11）
+└─ Shared/Widgets/
+    └─ tests/                 # 共有 Widget QML（Task 13）
+```
+
+各モジュール直下に `tests/` を置く。Task 9 でこの配置を決定し、smoke テストで動線を確認する。
+
+### CMake 統合方針
+
+- ルート `CMakeLists.txt` に `enable_testing()` + `include(CTest)` を 1 回だけ宣言。
+- 各サブプロジェクトの `tests/CMakeLists.txt` で `qt_add_executable` ベースのテスト実行体を定義し、`add_test(NAME ... COMMAND ...)` で ctest に登録。
+- テスト対象とアプリ実行体の関係は 2 パターンを許容する：
+  - **A. ライブラリリンク方式**：対象が既に STATIC ライブラリ化されている場合（`hmi_schema` / `hmi_widgets`）はテスト実行体から `target_link_libraries` でリンクするだけ。**Task 10 / 13 はこの方式**。
+  - **B. ソース直接 include 方式**：対象がアプリ実行体（`hmi_editor` / `hmi_simulator`）に直接コンパイルされていて再利用可能なライブラリが無い場合（`ProjectIo` / `ProjectLoader`）は、テスト実行体の `qt_add_executable` SOURCES に対象 `.cpp` / `.h` を直接含める。**Task 11 はこの方式**。ライブラリ分離は本フェーズではやらず、後続タスクで必要になれば切り出す。
+- `BUILD_TESTING=ON`（CTest 標準）が ON のときのみ tests/ を `add_subdirectory` する。Yocto デプロイ時に OFF で外せるよう備える。
+
+### テスト命名規約
+
+- 実行体名：`tst_<対象>`（例：`tst_widget_data`, `tst_project_io`, `tst_hmi_button`）
+- ファイル名：実行体名と同名（`tst_widget_data.cpp`）
+- QML テスト：`tst_<対象>.qml`
+
+### 重複と原則の整合
+
+CLAUDE.md「**Editor / Simulator で同等の C++ ヘルパーが必要になる場合、Shared に移さず両方に独立して持つ**」原則はテストにも適用する。`ProjectIo` と `ProjectLoader` は別タスクではなく **Task 11 でまとめて** テストするが、テストコード自体は各モジュールの `tests/` に分離する（重複を許容、利用側完結）。
+
+### スクリーンショット運用
+
+Phase 2 は GUI 変化を伴わないため、原則スクリーンショット不要。**Task 14**（Editor QML テスト）でテスト失敗時のデバッグ画面を撮るケースのみ任意で添付する。
+
+---
+
+## ルール（Phase 2 限定 / 既存ルールの上に追加）
+
+### Must Always
+
+- 各タスク完了時に **新規テストが `ctest` で緑** であることを完了基準に含める（`cmake --build` 緑だけでは不十分）。
+- 新規テストは **既存の Schema / アプリのコードを変更せずに書ける** ことを優先する。テストのために本体コードを変える必要が出たら、別タスクとして切り出してユーザーに相談する。
+- Codex レビュー前提のため、追加した依存（Qt6::Test / Qt6::QuickTest 等）は PR 本文で明示する。
+
+### Must Never
+
+- テスト基盤導入のために MVP で確立した型・API（`hmi::schema` の `toJson` / `fromJson` / `isValidJson` シグネチャ）を変更しない。
+- Qt Test / Qt Quick Test 以外のテストフレームワーク（GoogleTest, Catch2 等）を独断で追加しない。Qt 公式の枠内に閉じる。
+- ctest が落ちる状態で `gh pr create` しない。
+
+---
+
+## 進捗
+
+| # | タスク | 状態 |
+|---|---|---|
+| 9 | Qt Test 基盤構築 | 未着手 |
+| 10 | Schema JSON I/O テスト | 未着手 |
+| 11 | ファイル I/O テスト（ProjectIo / ProjectLoader） | 未着手 |
+| 12 | Qt Quick Test 基盤構築 | 未着手 |
+| 13 | 共有 Widget テスト | 未着手 |
+| 14 | Editor QML テスト | 未着手 |
+| 15 | CI 整備（GitHub Actions） | 未着手（任意） |
