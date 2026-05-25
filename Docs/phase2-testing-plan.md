@@ -176,6 +176,7 @@ Task 14 で踏襲する。HmiButton のクリック検証で踏んだ罠を含�
 - **`init()` で対象 Item のプロパティを毎回リセットする**。test 関数は alphabetical 実行のため、前のテストが残した状態（例：`test_canvas_size_can_be_overridden` で変えた `canvasWidth`）が次の `test_default_canvas_size` で漏れる。**サイズや model など可変プロパティを全て init() で既定に戻す**。プロパティ宣言の初期値だけに頼らないこと。
 - **Repeater 配下を検証するときは `widgetItems`（widgetLayer.children alias）に Repeater 自身が含まれる点に注意**。`widgetId !== undefined` で EditableWidget だけを抽出するヘルパーを用意する。
 - **`mouseDrag(item, x, y, dx, dy)` は drag.filterChildren モードでも閾値超過を自動的に処理してくれる**。明示的な mousePress + 複数 mouseMove + mouseRelease は不要。クランプ検証は dx/dy を意図的に過大（±500）にして minimumX/maximumX/Y を踏ませる。
+- **Repeater の delegate 生成/破棄は段階的に進むため、`widgetModel` 差替直後の `length` 即時比較は flaky**（Codex P2 指摘で確立）。`tryVerify(function() { return ...length === N; }, 1000, msg)` で件数安定を待ってから検証する。`init()` 内の model リセット直後にも tryVerify を入れて、後続テストが中間状態を拾わないようにする。
 - **`tst_hmi_editor_qml` は 14 関数 PASS（Canvas 6 + EditableWidget 6 + 各 TestCase の init/cleanup）、実行時間 0.21 秒**。
 
 ### 重複と原則の整合

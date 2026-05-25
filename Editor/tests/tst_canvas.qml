@@ -51,6 +51,10 @@ TestCase {
             { id: "btn001", type: "Button", x: 100, y: 50, width: 120, height: 40,
               text: "Start", tag: "PLC.START" }
         ];
+        // Repeater の delegate 生成は非同期/段階的なので、初期 model の
+        // 反映完了を待ってから各 test_* に渡す。
+        tryVerify(function() { return editableChildren().length === 1; }, 1000,
+                  "init: 初期 widgetModel が Repeater に反映されない");
     }
 
     // widgetItems から EditableWidget だけを抽出する（Repeater 自身を除く）
@@ -72,6 +76,9 @@ TestCase {
     }
 
     function test_initial_model_creates_one_editable_widget() {
+        // init() で初期 model 反映完了を待っているが、本テストは件数を
+        // 直接検証するため tryVerify をここでも明示する。
+        tryVerify(function() { return editableChildren().length === 1; }, 1000);
         const widgets = editableChildren();
         compare(widgets.length, 1);
 
@@ -93,8 +100,12 @@ TestCase {
             { id: "c", type: "Button", x: 200, y: 0, width: 80, height: 30, text: "C", tag: "" }
         ];
 
+        // Repeater の delegate 生成/破棄は段階的に進むため、件数が安定する
+        // まで tryVerify で待つ。即時 length 比較は CI 負荷次第で flaky になる
+        // （Codex P2 指摘より）。
+        tryVerify(function() { return editableChildren().length === 3; }, 1000,
+                  "widgetModel 差替後 3 件にならない");
         const widgets = editableChildren();
-        compare(widgets.length, 3);
 
         const ids = widgets.map(function(w) { return w.widgetId; });
         verify(ids.indexOf("a") !== -1, "a が無い: " + ids);
@@ -105,8 +116,9 @@ TestCase {
     function test_empty_model_creates_no_widgets() {
         canvas.widgetModel = [];
 
-        const widgets = editableChildren();
-        compare(widgets.length, 0);
+        // 空配列への差替も Repeater の破棄完了を tryVerify で待つ。
+        tryVerify(function() { return editableChildren().length === 0; }, 1000,
+                  "widgetModel 空配列差替後 0 件にならない");
     }
 
     function test_canvas_size_can_be_overridden() {
