@@ -97,6 +97,10 @@ Task 10 / 11 で踏襲する。Qt Quick Test（Task 12〜14）は別パターン
 
 - 各モジュールの `CMakeLists.txt` には `if(BUILD_TESTING) add_subdirectory(tests) endif()` を 1 行加える（`include(CTest)` で BUILD_TESTING は既定 ON）。
 
+### Task 10 で確立したパターン（データ駆動テスト）
+
+似た形のパターンを大量に並べる検証（必須キー欠落 4 件・型誤り 4 件等）は **`QTest::addColumn` + `QFETCH` のデータ駆動テスト** を使う。テスト関数を 1 つ書いて `_data()` 側でケースを列挙する形になり、PASS/FAIL も `caseName(rowName)` の単位で見えるので失敗時の特定が早い。`tst_widget_data.cpp` の `isValidJsonRejectsMissingRequired_data` / `isValidJsonRejectsWrongTypes_data` が前例。`QJsonValue` 等をカラムに渡すときは `Q_DECLARE_METATYPE` 不要（Qt 側で登録済み）。
+
 ### 重複と原則の整合
 
 CLAUDE.md「**Editor / Simulator で同等の C++ ヘルパーが必要になる場合、Shared に移さず両方に独立して持つ**」原則はテストにも適用する。`ProjectIo` と `ProjectLoader` は別タスクではなく **Task 11 でまとめて** テストするが、テストコード自体は各モジュールの `tests/` に分離する（重複を許容、利用側完結）。
@@ -128,7 +132,7 @@ Phase 2 は GUI 変化を伴わないため、原則スクリーンショット�
 | # | タスク | 状態 |
 |---|---|---|
 | 9 | Qt Test 基盤構築 | ✅ 完了 |
-| 10 | Schema JSON I/O テスト | 未着手 |
+| 10 | Schema JSON I/O テスト | ✅ 完了 |
 | 11 | ファイル I/O テスト（ProjectIo / ProjectLoader） | 未着手 |
 | 12 | Qt Quick Test 基盤構築 | 未着手 |
 | 13 | 共有 Widget テスト | 未着手 |
