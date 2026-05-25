@@ -16,6 +16,11 @@ target_link_libraries(tst_hmi_widgets_qml
         Qt6::QuickTest
         Qt6::Qml
         Qt6::Quick
+        # HmiWidgets QML モジュールの STATIC plugin。テスト QML 側で
+        # "import HmiWidgets" を解決するために必須。Editor / Simulator と
+        # 同じ運用（CLAUDE.md「共有 QML モジュールは STATIC でビルドし、利用側
+        # アプリで plugin ターゲットをリンクする」）。
+        hmi_widgetsplugin
 )
 
 # headless 環境（CI コンテナ等で DISPLAY が無い）でも実行できるよう

@@ -142,7 +142,28 @@ Task 13 / 14 で踏襲する。
 - **`add_test COMMAND` に `-platform offscreen` を必ず明示する**。CI コンテナ等の DISPLAY 無し環境では Qt Quick Test の既定プラットフォームでウィンドウ生成に失敗する。macOS / Windows のローカル開発でも `-platform offscreen` で動作し、むしろ実行時間が短縮される（macOS で 1.56s → 0.63s）。Task 15（CI 整備）でも追加設定なしで動くようにするための必須プラクティス。Task 13 / 14 でも同じパターンを踏襲する。
 - **QML テスト用 import の追加は QtQuick.Controls / QtQuick.Dialogs と同様に CMake 明示不要**（Qt 6.5+）。CLAUDE.md「QtQuick.Controls / QtQuick.Dialogs は QML import だけで動く」原則の延長で、`QtTest` の import も plugin が動的ロードされる。
 
-Task 13 / 14 で **HmiWidgets / HmiEditor モジュールを QML テストから import する** 場合は、対応する plugin（`hmi_widgetsplugin` 等）をテスト実行体に `target_link_libraries` するか、QML プラグインパスを実行時に通す必要がある。Task 13 着手時に詳細を確定する。
+Task 13 で実証：**STATIC QML モジュールはテスト実行体に `<モジュール名>plugin` を `target_link_libraries` するだけで `import` が解決される**。Editor / Simulator と同じ運用（CLAUDE.md「共有 QML モジュールは STATIC でビルドし、利用側アプリで plugin ターゲットをリンクする」）がテストでも有効。QML プラグインパスを実行時に追加する必要はない。
+
+### Task 13 で確立したパターン（QML テストの「動く」インタラクションパターン）
+
+Task 14 で踏襲する。HmiButton のクリック検証で踏んだ罠を含む：
+
+- **TestCase に `visible: true` を必ず明示する**。これが本タスク最大の罠。
+  - 症状：`mouseClick(item)` がイベント発火しない（`SignalSpy.count` が 0 のまま）。`when: windowShown` を入れていても再現する。
+  - 原因：TestCase は内部的に `QQuickView` 上に配置されるが、デフォルトでは `visible: false` で生成される。子要素の effective visible も false になり、MouseArea がクリックイベントを受けない。Window 自体（`item.Window.window`）は `visibility: 2` (Visible) で active なのに、TestCase でブロックされている形。
+  - 解決：`TestCase { visible: true; ... }` を明示する。これで配下 Item ツリー全体の effective visible が true になり mouseClick が正しく届く。
+  - 検出方法：`console.log("testCase.visible:", testCase.visible, "btn.visible:", btn.visible)` で `false` が見えたら本問題。
+  - Task 12 の smoke は MouseArea を持たないため踏まなかった。**インタラクション系（mouseClick / keyClick / drag）を使うすべての QML テストで `TestCase.visible: true` を入れる**。
+
+- **対象 Item は `createTemporaryObject` ではなく TestCase 直下に静的に宣言する**。`createTemporaryObject` で生成した Item は QML scene 上に物理配置されないため `mouseClick` の座標が外れる。プロパティをリセットしたい場合は `function init() { btn.text = ...; clickedSpy.clear() }` を使う（QtTest の `init()` は各 test_* 実行前に呼ばれる）。
+
+- **`SignalSpy` で発火検証**：`SignalSpy { target: btn; signalName: "clicked" }` を宣言し、`clickedSpy.count` を `compare(spy.count, 1)` で見る。`spy.clear()` で `init()` 時にカウンタをリセット。
+
+- **内部 QML 要素の検査は `children` を再帰探索**：HmiButton 内部の `Text` 要素を取りたい場合、`children` を辿って `toString().indexOf("QQuickText") === 0` で判定する `findChildOfType(item, typeName)` ヘルパーが使える。`Component.objectName` や `id` でアクセスする方が綺麗だが、本タスクでは Widget 内部を弄らず外から検査するため再帰探索を選んだ。
+
+- **mouseClick の座標は明示する**：`mouseClick(item)` でも届くケースは多いが、安全側に倒すなら `mouseClick(item, item.width / 2, item.height / 2)`。明示すると Item の中央が「クリックされる」ことが読み手に伝わる。
+
+- **macOS Homebrew Qt 6.11.1 で動作確認済み**。`tst_hmi_widgets_qml` は 10 関数 PASS（smoke 4 + HmiButton 6: initTestCase + 4 test + cleanupTestCase）、実行時間 0.27 秒。
 
 ### 重複と原則の整合
 
@@ -178,6 +199,6 @@ Phase 2 は GUI 変化を伴わないため、原則スクリーンショット�
 | 10 | Schema JSON I/O テスト | ✅ 完了 |
 | 11 | ファイル I/O テスト（ProjectIo / ProjectLoader） | ✅ 完了 |
 | 12 | Qt Quick Test 基盤構築 | ✅ 完了 |
-| 13 | 共有 Widget テスト | 未着手 |
+| 13 | 共有 Widget テスト | ✅ 完了 |
 | 14 | Editor QML テスト | 未着手 |
 | 15 | CI 整備（GitHub Actions） | 未着手（任意） |
