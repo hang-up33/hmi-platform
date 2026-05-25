@@ -108,7 +108,8 @@ Codex 向けの永続的な指示は **リポジトリ直下の [AGENTS.md](AGEN
 
 - MVP タスク：`task/<N>-<短い名>` 形式（例：`task/2-canvas`, `task/3-widget-schema`, `task/6-json-save`）
 - ドキュメント・設定変更：`docs/<短い名>` 形式（例：`docs/codex-auto-review`, `docs/qml-canvas-structure`）
-- 1 単位 = 1 ブランチ = 1 PR。いずれも main から派生させる
+- 1 単位 = 1 ブランチ = 1 PR。原則として main から派生させる
+- **例外：直前タスクの PR がまだ main にマージされていない状態で次タスクに着手する場合**、当該依存ブランチ（例：`task/9-qt-test-setup`）から派生させ、`gh pr create --base <依存ブランチ>` で PR の base も依存ブランチに合わせる。依存ブランチが main にマージされたら、`git fetch origin && git rebase --onto main <依存ブランチ> task/<N>-...` で main にリベースし、PR の base も `gh pr edit <N> --base main` で main に切り替える。Task 10 着手時に Task 9 PR #18 が未マージだったため確立（2026-05）
 
 ### タスク完了時のフロー
 
