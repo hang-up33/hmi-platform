@@ -138,7 +138,8 @@ Task 13 / 14 で踏襲する。
 - **リンクは `Qt6::QuickTest` + `Qt6::Qml` + `Qt6::Quick`**。`QuickTest` と `Qml` が必須、`Quick` は実行時に動的ロードされるが明示リンクしておくとプラットフォーム差の事故が減る（Qt 公式の最小例に対して保険を一つ足した形）。
 - **`find_package(... QuickTest)` も `BUILD_TESTING` で条件化** する（Task 9 で `Qt6::Test` に対して定着させた方針と同じ）。Yocto デプロイ時の `-DBUILD_TESTING=OFF` で QuickTest 不在環境でも configure が落ちないように。
 - **import は `QtTest` のみ**（`import QtQuickTest` ではない）。`tst_*.qml` 側で `import QtQuick` と `import QtTest` を書き、`TestCase { ... }` をルート要素にする。
-- **macOS Homebrew Qt 6.11.1 で動作確認済み**。`tst_hmi_widgets_qml` は 4 関数（initTestCase + 2 test + cleanupTestCase）が PASS、実行時間は約 1.2 秒（QML エンジン初期化に大半を費やす）。
+- **macOS Homebrew Qt 6.11.1 で動作確認済み**。`tst_hmi_widgets_qml` は 4 関数（initTestCase + 2 test + cleanupTestCase）が PASS、実行時間は約 0.6 秒（offscreen 指定後）。
+- **`add_test COMMAND` に `-platform offscreen` を必ず明示する**。CI コンテナ等の DISPLAY 無し環境では Qt Quick Test の既定プラットフォームでウィンドウ生成に失敗する。macOS / Windows のローカル開発でも `-platform offscreen` で動作し、むしろ実行時間が短縮される（macOS で 1.56s → 0.63s）。Task 15（CI 整備）でも追加設定なしで動くようにするための必須プラクティス。Task 13 / 14 でも同じパターンを踏襲する。
 - **QML テスト用 import の追加は QtQuick.Controls / QtQuick.Dialogs と同様に CMake 明示不要**（Qt 6.5+）。CLAUDE.md「QtQuick.Controls / QtQuick.Dialogs は QML import だけで動く」原則の延長で、`QtTest` の import も plugin が動的ロードされる。
 
 Task 13 / 14 で **HmiWidgets / HmiEditor モジュールを QML テストから import する** 場合は、対応する plugin（`hmi_widgetsplugin` 等）をテスト実行体に `target_link_libraries` するか、QML プラグインパスを実行時に通す必要がある。Task 13 着手時に詳細を確定する。

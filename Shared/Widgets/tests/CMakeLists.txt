@@ -18,4 +18,7 @@ target_link_libraries(tst_hmi_widgets_qml
         Qt6::Quick
 )
 
-add_test(NAME tst_hmi_widgets_qml COMMAND tst_hmi_widgets_qml)
+# headless 環境（CI コンテナ等で DISPLAY が無い）でも実行できるよう
+# -platform offscreen を明示する。macOS / Windows のローカル開発でも
+# 正常に動作する（Qt の offscreen プラットフォームは Qt Quick をサポート）。
+add_test(NAME tst_hmi_widgets_qml COMMAND tst_hmi_widgets_qml -platform offscreen)
