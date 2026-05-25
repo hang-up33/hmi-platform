@@ -20,7 +20,7 @@ flowchart LR
 |---|---|---|---|
 | 9 | Qt Test 基盤構築 | ルート CMake に `enable_testing()` + `include(CTest)`、`tests/` 配置決定、`Qt6::Test` find、smoke 1 件（`tst_smoke`） | `ctest` で 1 件緑 |
 | 10 | Schema JSON I/O テスト | `WidgetData` / `ScreenData` / `ProjectData` の `toJson` / `fromJson` ラウンドトリップ、`isValidJson` の正常／異常系 | `ctest` で全件緑 |
-| 11 | ファイル I/O テスト | Editor `ProjectIo`（save + load）、Simulator `ProjectLoader`（load）。`QTemporaryDir` で実ファイル経由、不正 JSON 拒否を含む | `ctest` で全件緑 |
+| 11 | ファイル I/O テスト | Editor `ProjectIo`（save + load）、Simulator `ProjectLoader`（load）。`QTemporaryDir` で実ファイル経由、不正 JSON 拒否を含む。`ProjectIo` / `ProjectLoader` は現状アプリ実行体（`hmi_editor` / `hmi_simulator`）に直接コンパイルされているため、**テスト実行体に `ProjectIo.cpp` / `ProjectLoader.cpp` を直接 `qt_add_executable` の SOURCES に追加** する方式を採る。ライブラリ分離（`hmi_editor_core` 等の STATIC 化）は本タスクではやらない（必要になれば後続タスクで切り出す） | `ctest` で全件緑 |
 
 ### Phase 2-B: Qt Quick Test 導入（QML 層）
 
@@ -67,7 +67,9 @@ hmi-platform/
 
 - ルート `CMakeLists.txt` に `enable_testing()` + `include(CTest)` を 1 回だけ宣言。
 - 各サブプロジェクトの `tests/CMakeLists.txt` で `qt_add_executable` ベースのテスト実行体を定義し、`add_test(NAME ... COMMAND ...)` で ctest に登録。
-- テストは **既存ターゲットを再ビルドせず、対象ライブラリ（`hmi_schema` 等）をリンクするだけ** で組む。
+- テスト対象とアプリ実行体の関係は 2 パターンを許容する：
+  - **A. ライブラリリンク方式**：対象が既に STATIC ライブラリ化されている場合（`hmi_schema` / `hmi_widgets`）はテスト実行体から `target_link_libraries` でリンクするだけ。**Task 10 / 13 はこの方式**。
+  - **B. ソース直接 include 方式**：対象がアプリ実行体（`hmi_editor` / `hmi_simulator`）に直接コンパイルされていて再利用可能なライブラリが無い場合（`ProjectIo` / `ProjectLoader`）は、テスト実行体の `qt_add_executable` SOURCES に対象 `.cpp` / `.h` を直接含める。**Task 11 はこの方式**。ライブラリ分離は本フェーズではやらず、後続タスクで必要になれば切り出す。
 - `BUILD_TESTING=ON`（CTest 標準）が ON のときのみ tests/ を `add_subdirectory` する。Yocto デプロイ時に OFF で外せるよう備える。
 
 ### テスト命名規約

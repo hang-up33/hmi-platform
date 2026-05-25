@@ -162,7 +162,7 @@ Codex 向けの永続的な指示は **リポジトリ直下の [AGENTS.md](AGEN
 
 ### Must Always
 
-- 現フェーズのタスク順を守る。Phase 1 / MVP（Qt6 プロジェクト → キャンバス → Widget データ構造 → Button → ドラッグ → JSON 保存 → JSON 読込 → Simulator 表示）は完了。**Phase 2 は [Docs/phase2-testing-plan.md](Docs/phase2-testing-plan.md) の Task 9〜15 順**（Qt Test 基盤 → Schema テスト → ファイル I/O テスト → Qt Quick Test 基盤 → 共有 Widget → Editor QML → CI）を厳守。
+- 現フェーズのタスク順を守る。Phase 1 / MVP（Qt6 プロジェクト → キャンバス → Widget データ構造 → Button → ドラッグ → JSON 保存 → JSON 読込 → Simulator 表示）は完了。**Phase 2 は [Docs/phase2-testing-plan.md](Docs/phase2-testing-plan.md) の Task 9〜14 を順守**（Qt Test 基盤 → Schema テスト → ファイル I/O テスト → Qt Quick Test 基盤 → 共有 Widget → Editor QML）。**Task 15 / CI は任意**で、Task 9〜14 完了後に着手有無を判断する。
 - Widget / Screen / Project 型と JSON I/O は `Shared/Schema` にのみ実装。
 - 完了報告の直前に [kaizen-close](.claude/skills/kaizen-close/SKILL.md) を実行し、得た知見を反映する。
 - QML モジュール URI とアプリの `loadFromModule()` 引数を一致させる。
