@@ -243,17 +243,23 @@ GUI に変化がある PR（MVP Task 2 / 4 / 5 / 8 のような Editor / Simulat
 
 ### 撮影手順（macOS）
 
-```sh
-# 1) ビルド済みアプリを起動
-./build/Editor/hmi_editor.app/Contents/MacOS/hmi_editor &
+対象アプリ（Editor / Simulator）に応じて起動バイナリとプロセス名を切り替える：
 
-# 2) ウィンドウだけキャプチャ（数秒待ってから）
+```sh
+# Editor の変更を撮る場合
+./build/Editor/hmi_editor.app/Contents/MacOS/hmi_editor &
 sleep 2
 scripts/capture-app-window.sh hmi_editor Docs/screenshots/task-<N>-<短い名>.png
+kill %1
 
-# 3) アプリ終了
+# Simulator の変更を撮る場合
+./build/Simulator/hmi_simulator.app/Contents/MacOS/hmi_simulator &
+sleep 2
+scripts/capture-app-window.sh hmi_simulator Docs/screenshots/task-<N>-<短い名>.png
 kill %1
 ```
+
+両方の見た目が同時に変わるタスク（例：Task 8 で Editor の保存形式と Simulator の表示を同時に検証したい場合）は両方のスクショを撮り、`Docs/screenshots/task-<N>-<短い名>-editor.png` と `-simulator.png` のように suffix を付けて両方コミットする。
 
 - `scripts/capture-app-window.sh` は Swift で `CGWindowListCopyWindowInfo` を呼び対象プロセスのウィンドウ ID を取得し、`screencapture -l<wid>` で当該ウィンドウのみを切り出す（Retina 倍率は自動考慮、アクセシビリティ権限不要、**画面収録権限のみ**が必要）。
 - **初回のみ macOS の画面収録権限を Claude Code 親プロセス（Visual Studio Code / ターミナル）に付与する必要がある**。システム設定 > プライバシーとセキュリティ > 画面収録 で対象アプリを ON にし、再起動。

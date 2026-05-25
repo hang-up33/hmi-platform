@@ -46,13 +46,21 @@ origin: hmi-platform
 
 7. **動作確認 + スクリーンショット**
    - UI 系タスクなら Editor / Simulator を起動して目視（または PID 確認程度の自動検証）
-   - **GUI に変化があるタスクは `scripts/capture-app-window.sh` で必ずスクリーンショットを撮る**：
+   - **GUI に変化があるタスクは `scripts/capture-app-window.sh` で必ずスクリーンショットを撮る**。**タスクが変化させる対象アプリ（Editor / Simulator）を判断し、起動バイナリとプロセス名を切り替えること**：
      ```sh
+     # Editor を変えた場合
      ./build/Editor/hmi_editor.app/Contents/MacOS/hmi_editor &
      sleep 2
      scripts/capture-app-window.sh hmi_editor Docs/screenshots/task-<N>-<短い名>.png
      kill %1
+
+     # Simulator を変えた場合
+     ./build/Simulator/hmi_simulator.app/Contents/MacOS/hmi_simulator &
+     sleep 2
+     scripts/capture-app-window.sh hmi_simulator Docs/screenshots/task-<N>-<短い名>.png
+     kill %1
      ```
+   - 両方の見た目が同時に変わるタスクは両方撮り、`-editor.png` / `-simulator.png` の suffix を付けてコミットする
    - 撮ったスクショは Read ツールで内容を確認してから採用する（黒画面・他ウィンドウが混入していないか）
    - 詳細運用は [CLAUDE.md](../../../CLAUDE.md) の「動作証跡スクリーンショット運用」セクション参照
 
