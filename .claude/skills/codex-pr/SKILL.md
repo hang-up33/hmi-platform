@@ -114,7 +114,18 @@ EOF
 - `## Screenshot` セクションは **GUI 変化があるタスクで必須**（純粋な Schema / docs / CMake のみのタスクは省略可）。撮影方法と運用の詳細は [CLAUDE.md](../../../CLAUDE.md) の「動作証跡スクリーンショット運用」を参照。
 - HEREDOC をシングルクォート `'EOF'` ではなく素の `EOF` にしているのは、`${SHA}` を展開させるため。本文に bash 構文を含めるリテラル箇所は `\`...\`` のように個別エスケープする。
 
-### 6. PR URL を完了報告に含める
+### 6. `@codex review` コメントで明示的にレビュー依頼
+
+`gh pr create` 直後と、Codex 指摘修正の `git push` 直後の **両方** で必ず実行：
+
+```sh
+gh pr comment <PR番号> --body "@codex review"
+```
+
+- Codex の自動レビュートリガ（Open / Ready / `@codex review` コメント）のうち、最後のコメント方式を毎回明示的に発火させる。
+- 自動レビューに任せると、push の差分内容によっては Codex が再レビューを判断せず黙ることがあるため、push のたびに必ずコメントを入れて取りこぼしを防ぐ。
+
+### 7. PR URL を完了報告に含める
 
 `gh pr create` の戻り値の URL をユーザーへの完了報告に貼る。
 

@@ -117,7 +117,8 @@ Codex 向けの永続的な指示は **リポジトリ直下の [AGENTS.md](AGEN
 3. [kaizen-close](.claude/skills/kaizen-close/SKILL.md) スキルを実行
 4. `task/<N>-<短い名>` ブランチを作成し、コミット
 5. `gh pr create` で **ready-for-review** の PR を作成（draft にしない — Codex GitHub App に即レビューさせるため）
-6. PR URL をユーザーに提示
+6. **`gh pr comment <N> --body "@codex review"` で明示的にレビュー依頼**（自動レビュー任せにせず毎回コメントで発火）
+7. PR URL をユーザーに提示
 
 詳細は [codex-pr](.claude/skills/codex-pr/SKILL.md) スキルを参照。
 
@@ -133,7 +134,8 @@ Codex 向けの永続的な指示は **リポジトリ直下の [AGENTS.md](AGEN
 
 ### Codex 指摘への対応
 
-- Codex のレビュー結果は **PR コメントとして自動投稿される**。ユーザーから「Codex の指摘を修正して」と指示が来たら、Claude は `gh pr view <番号> --comments` で内容を取得し、当該ブランチで対応コミットを追加 push する。
+- Codex のレビュー結果は **PR コメントとして自動投稿される**。ユーザーから「Codex の指摘を修正して」と指示が来たら、Claude は `gh pr view <番号> --comments` と `gh api repos/.../pulls/<番号>/comments` で内容を取得し、当該ブランチで対応コミットを追加 push する。
+- 修正 push の **直後にも必ず** `gh pr comment <N> --body "@codex review"` で再レビューを依頼する（PR 作成時と同じ運用）。
 - 大きな方針差し戻しになる場合は新タスクとして切り出すかを相談する。
 
 ### 前提（Codex 側のセットアップ）
