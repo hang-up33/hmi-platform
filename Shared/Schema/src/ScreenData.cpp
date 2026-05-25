@@ -1,6 +1,7 @@
 #include "hmi/schema/ScreenData.h"
 
 #include <QJsonArray>
+#include <QJsonValue>
 
 namespace hmi::schema {
 
@@ -26,6 +27,20 @@ ScreenData ScreenData::fromJson(const QJsonObject &obj)
         s.widgets.append(WidgetData::fromJson(v.toObject()));
     }
     return s;
+}
+
+bool ScreenData::isValidJson(const QJsonObject &obj)
+{
+    if (!obj.value("widgets").isArray()) {
+        return false;
+    }
+    const QJsonArray arr = obj.value("widgets").toArray();
+    for (const QJsonValue &v : arr) {
+        if (!v.isObject() || !WidgetData::isValidJson(v.toObject())) {
+            return false;
+        }
+    }
+    return true;
 }
 
 } // namespace hmi::schema

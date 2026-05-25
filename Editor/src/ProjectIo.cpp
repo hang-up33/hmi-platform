@@ -6,10 +6,8 @@
 
 #include <QFile>
 #include <QFileInfo>
-#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonParseError>
-#include <QJsonValue>
 #include <QSaveFile>
 #include <QVariantList>
 #include <QVariantMap>
@@ -91,40 +89,18 @@ QVariantMap ProjectIo::load(const QUrl &fileUrl)
         return result;
     }
 
-    // Codex 指摘（Task 7 PR）対応：ProjectData::fromJson はキー欠落時に既定値で埋めるため、
-    // 構造検証なしに ok=true を返すと `{}` や別形式の JSON でも成功扱いになり、
-    // QML 側で widgetModel が空配列に差し替わって既存表示が消えてしまう。
-    // ここで raw QJsonObject の段階で Project 形式かどうかを検証する。
-    // 検証は load 固有の関心事なので Shared/Schema には追加せず、本クラス内に閉じる。
+    // JSON 構造の妥当性検証は Shared/Schema を唯一の真実とする方針に従い、
+    // ProjectData::isValidJson（再帰的に Screen / Widget まで検査）に委ねる。
+    // fromJson はキー欠落時に既定値で埋める緩い設計のため、これを通さないと
+    // `{}` や別形式の JSON でも成功扱いになってしまう。
     const QJsonObject root = doc.object();
-    if (!root.value(QStringLiteral("screens")).isArray()) {
+    if (!ProjectData::isValidJson(root)) {
         return result;
-    }
-    const QJsonArray screensArr = root.value(QStringLiteral("screens")).toArray();
-    if (screensArr.isEmpty() || !screensArr.first().isObject()) {
-        return result;
-    }
-    const QJsonObject firstScreenObj = screensArr.first().toObject();
-    if (!firstScreenObj.value(QStringLiteral("widgets")).isArray()) {
-        return result;
-    }
-    // 各 widget は最低限 id / type / width / height を持つこと（空 widgets 自体は許容）。
-    const QJsonArray widgetsArr = firstScreenObj.value(QStringLiteral("widgets")).toArray();
-    for (const QJsonValue &wv : widgetsArr) {
-        if (!wv.isObject()) {
-            return result;
-        }
-        const QJsonObject wo = wv.toObject();
-        if (!wo.value(QStringLiteral("id")).isString()
-            || !wo.value(QStringLiteral("type")).isString()
-            || !wo.value(QStringLiteral("width")).isDouble()
-            || !wo.value(QStringLiteral("height")).isDouble()) {
-            return result;
-        }
     }
 
     const ProjectData proj = ProjectData::fromJson(root);
 
+    // isValidJson が screens 配列に最低 1 件含まれていることを保証している。
     // MVP では先頭スクリーンのみを編集対象とする（save 側も "Main" 単一スクリーン構成）。
     const ScreenData screen = proj.screens.first();
 
