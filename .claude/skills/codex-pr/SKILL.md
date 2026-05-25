@@ -146,9 +146,11 @@ gh pr comment <PR番号> --body "@codex review"
    ```
    - 全文長い場合は `--jq '.[] | "[\(.path):\(.line)]\n\(.body)\n---"'` 等で整形
    - 件数だけ確認したいときも `gh api --paginate ... --jq 'length'` ではなく `... | wc -l` 等で全ページ通算する（`--jq 'length'` はページ単位の長さを各ページごとに出力する点に注意）
-3. **判定**：
-   - 指摘あり（inline comment / review body に P0〜P3 / Major / Minor などの badge）→ 4 へ
-   - 指摘なし（`"Didn't find any major issues"` 等のクリーン文言）→ ループ脱出して完了報告
+3. **判定**：以下を **state 優先** で評価する。「badge / 文言の有無」だけで判断すると、本文に badge が付かない `CHANGES_REQUESTED` を取りこぼしてループが早期終了する。
+   - レビュー `state` が `CHANGES_REQUESTED` → **必ず** 修正フロー (4) へ。badge や文言は見ない
+   - `state` が `COMMENTED` でも inline comment が当該 HEAD-SHA で 1 件以上ある → 修正フロー (4) へ
+   - inline comment が 0 件で、review body / inline 本文に P0〜P3 / Major / Minor / `[Major]` / `[Minor]` 等の指摘 badge が含まれる → 修正フロー (4) へ
+   - 上のいずれにも該当しない（典型的には `state == "COMMENTED"` + inline 0 件 + 本文が `"Didn't find any major issues"` などのクリーン文言）→ ループ脱出して完了報告
 4. **修正**：該当箇所を編集 → `cmake --build build` 成功確認 → 修正ファイルを明示的に `git add` → コミット
 5. **push**：`git push`（force-push は基本しない、追加コミットで対応）
 6. **再依頼**：`gh pr comment <N> --body "@codex review"`
