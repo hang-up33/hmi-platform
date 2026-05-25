@@ -131,15 +131,20 @@ gh pr comment <PR番号> --body "@codex review"
 
 **`gh pr create` 直後に完了報告して放置するのは禁止**。ユーザーから「Codex 指摘を修正して」と再指示を待たず、Claude 側が自走で Codex のレビュー結果をポーリングし、指摘があれば修正コミット → push → `@codex review` 再依頼 を繰り返す。
 
+**ループ前の確定（毎ラウンド必須）**：直前の `git push` と `gh pr comment <N> --body "@codex review"` を **投稿し終えた直後** に、以降のラウンド全体で使う基準時刻を確定する：
+
+```sh
+SINCE=$(date -u +%Y-%m-%dT%H:%M:%SZ)   # 例: 2026-05-25T04:20:00Z
+HEAD_SHA=$(git rev-parse HEAD)
+```
+
+`SINCE` を待機後（手順 2 内）に取得すると、待機中に Codex が投稿したクリーン文言を `?since=` で除外してしまい「シグナルなし」と誤判定して 30 分無反応扱いになる。**必ず待機の前に確定**する。
+
 ループ手順：
 
 1. **待機**：`sleep 180`〜`sleep 240`（Codex は通常 1〜5 分でレビューを返す）
-2. **取得**：3 種類すべてを取る（Codex は指摘の有無で投稿先 API が変わる）。
+2. **取得**：3 種類すべてを取る（Codex は指摘の有無で投稿先 API が変わる）。`SINCE` と `HEAD_SHA` はループ前に確定した値を使う。
    ```sh
-   # 直前の `git push` ＋ @codex review 投稿の **直後** に基準時刻を控えておく
-   # （issue comments は commit_id を持たないため、HEAD 単位の絞り込みが時刻に依存する）
-   SINCE=$(date -u +%Y-%m-%dT%H:%M:%SZ)   # 例: 2026-05-25T04:20:00Z
-
    # 1) reviews API：指摘ありの review summary が来る（state / 本文）。commit_id で絞る
    gh api --paginate repos/<owner>/<repo>/pulls/<N>/reviews \
      --jq '.[] | select(.commit_id == "<HEAD-SHA>") | {state, body}'
@@ -167,7 +172,7 @@ gh pr comment <PR番号> --body "@codex review"
 4. **修正**：該当箇所を編集 → `cmake --build build` 成功確認 → 修正ファイルを明示的に `git add` → コミット
 5. **push**：`git push`（force-push は基本しない、追加コミットで対応）
 6. **再依頼**：`gh pr comment <N> --body "@codex review"`
-7. **1 へ戻る**
+7. **「ループ前の確定」に戻る** — `SINCE` と `HEAD_SHA` を **必ず再取得** してから手順 1 の待機へ。再取得しないと旧ラウンドの値で判定して誤動作する
 
 ループ中の中間報告は不要（ユーザーは「次のレビュー結果が来るまでに何度修正したか」を後で PR の commit 履歴で確認できる）。
 
