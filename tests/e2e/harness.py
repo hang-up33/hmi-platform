@@ -16,8 +16,10 @@ import os
 import socket
 import subprocess
 import time
+import urllib.request
 from contextlib import contextmanager
 from typing import Iterator, Sequence
+from xml.sax.saxutils import escape as _xml_escape
 
 
 def _wait_for_port(host: str, port: int, timeout: float = 15.0) -> bool:
@@ -68,3 +70,43 @@ def spix_app(
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait(timeout=2)
+
+
+def _encode_param(value) -> str:
+    """単純な XML-RPC 引数を <param>...</param> 文字列にエンコードする。"""
+    if isinstance(value, bool):
+        return f"<param><value><boolean>{1 if value else 0}</boolean></value></param>"
+    if isinstance(value, int):
+        return f"<param><value><int>{value}</int></value></param>"
+    if isinstance(value, float):
+        return f"<param><value><double>{value!r}</double></value></param>"
+    if isinstance(value, str):
+        return f"<param><value><string>{_xml_escape(value)}</string></value></param>"
+    raise TypeError(
+        f"Unsupported XML-RPC parameter type: {type(value).__name__}"
+    )
+
+
+def call_method(url: str, method: str, *params, timeout: float = 10.0) -> str:
+    """Spix の XML-RPC メソッドを呼び、レスポンス XML 文字列を返す。
+
+    ``xmlrpc.client`` を使わず ``urllib.request`` で生 XML-RPC を投げる
+    ことで Homebrew Python 3.14 の ``_pyexpat`` 不整合を回避する
+    （詳細は CLAUDE.md「Spix（E2E）統合の罠」節）。
+    引数は ``bool``/``int``/``float``/``str`` のみサポート。複雑な型を
+    扱いたくなったら ``xmlrpc.client`` の利用と引き換えに検討する。
+    """
+    payload = (
+        '<?xml version="1.0"?>'
+        '<methodCall>'
+        f'<methodName>{_xml_escape(method)}</methodName>'
+        f'<params>{"".join(_encode_param(p) for p in params)}</params>'
+        '</methodCall>'
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=payload,
+        headers={"Content-Type": "text/xml"},
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as response:
+        return response.read().decode("utf-8", errors="replace")
