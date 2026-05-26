@@ -39,12 +39,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # macOS / Windows ともに同じ Qt バージョンで揃える。ローカル開発環境（macOS Homebrew Qt 6.11.1 /
-      # Windows Qt 6.11.0 MinGW）とパッチバージョン差はあるが、Qt 6.11.x の範囲で挙動同等を想定。
+      # ローカル開発環境（macOS Homebrew Qt 6.11.1 / Windows Qt 6.11.0 MinGW）よりマイナーが
+      # 1 下の 6.10.0 を CI では使う。Qt 6.11.0 は本 PR 初回ランで aqtinstall mirror
+      # （download.qt.io）の Updates.xml にメタデータが見つからず failed to locate XML data
+      # で落ちた。Qt 6.10.0 は aqtinstall で安定取得できるため CI 用の基準バージョンに据える。
+      # API 互換性は Qt 6.x の minor 範囲で保たれており、本プロジェクトのテスト対象（Schema 単体
+      # ＋ Qt Quick Test）は Qt 6.8+ の機能しか使っていないため、6.10 でビルド・テスト緑なら
+      # 6.11 ローカルでも同等を期待できる。
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
-          version: "6.11.0"
+          version: "6.10.0"
           host: ${{ matrix.qt_host }}
           target: desktop
           arch: ${{ matrix.qt_arch }}
@@ -56,12 +61,13 @@ jobs:
 
       # Windows: jurplel/install-qt-action は tools を <Qt_root>/../../Tools/ 配下に入れるが
       # PATH には自動で追加してくれない。ローカルの setup-env.ps1 と同じく PATH 先頭に挿す。
+      # QT_ROOT_DIR は .../Qt/<version>/<arch> を指すので、Tools/ には 2 階層上がる。
       - name: Add MinGW + Ninja to PATH (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $qtRoot = $env:QT_ROOT_DIR
-          $toolsRoot = Resolve-Path (Join-Path $qtRoot '..\..\..\Tools')
+          $toolsRoot = Resolve-Path (Join-Path $qtRoot '..\..\Tools')
           $mingwBin = Join-Path $toolsRoot 'mingw1310_64\bin'
           $ninjaBin = Join-Path $toolsRoot 'Ninja'
           Write-Host "Tools root: $toolsRoot"
