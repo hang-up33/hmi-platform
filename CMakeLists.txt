@@ -107,3 +107,9 @@ add_subdirectory(Shared/Schema)
 add_subdirectory(Shared/Widgets)
 add_subdirectory(Editor)
 add_subdirectory(Simulator)
+
+# Task 17: Phase 3-A E2E テスト。BUILD_TESTING=OFF / HMI_ENABLE_E2E=OFF では
+# tests/e2e 内の CMakeLists が return して何も登録しない。
+if(BUILD_TESTING)
+    add_subdirectory(tests/e2e)
+endif()
