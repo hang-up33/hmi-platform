@@ -133,7 +133,7 @@ Editor / Simulator 内の `tests/` には **モジュール単体の Qt Quick Te
 
 - ルート `CMakeLists.txt` に `if(BUILD_TESTING) add_subdirectory(tests/e2e) endif()` を 1 行追加。
 - Spix の取り込みは Task 16 で **FetchContent を第一候補**として評価する（submodule より CI 再現性が高い）。フォールバックとして submodule。
-- E2E は本体ビルドプロダクトに依存するので、`add_test` の `DEPENDS` プロパティで `hmi_editor` / `hmi_simulator` の build 完了を担保する。
+- E2E は本体ビルドプロダクト（`hmi_editor` / `hmi_simulator`）に依存するため、**`ctest` 実行前に `cmake --build` を完了させておく前提**で運用する。Phase 2 で確立した運用（README / CLAUDE.md の「ビルドと実行」節）と同じく、`cmake --build build && ctest --test-dir build` の順序を README に明示する。CMake の `add_test` ＋ `set_tests_properties(... DEPENDS ...)` は **他テストの run-after 順序のみを制御** しビルドターゲット依存は保証しないため、ここでは使わない。**Python テストランナー側の起動時にバイナリパスを直接渡し、存在しなければ即 fail させる**（Phase 2 Task 11 の方式 B / `target_include_directories` 経由のソース共有と同じく「テスト実行体に必要なリソースは明示的に渡す」原則）。
 
 ### スクリーンショット運用
 
