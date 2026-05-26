@@ -49,7 +49,7 @@ flowchart LR
 
 | # | タスク | スコープ | 完了基準 |
 |---|---|---|---|
-| 16 | Spix 取り込み + Editor 統合 | `third_party/spix/`（submodule or FetchContent）で Spix を取り込む。Editor `main.cpp` に `--e2e [<port>]` CLI フラグを追加し、引数があるときだけ `spix::AnchorManager` を起動。通常起動には影響なし | `hmi_editor --e2e` で Spix エンドポイントが listen している（`nc localhost <port>` 等で接続確認）。`cmake --build` 緑 |
+| 16 | Spix 取り込み + Editor 統合 | `third_party/spix/`（submodule or FetchContent）で Spix を取り込む。Editor `main.cpp` に **真偽フラグ `--e2e`** と **値オプション `--e2e-port <port>`（既定 9876）** の 2 つの CLI 引数を追加し、`--e2e` が立っているときだけ `spix::AnchorManager` を起動。通常起動には影響なし | `hmi_editor --e2e` で Spix エンドポイントが既定ポート 9876 を listen している（`nc localhost 9876` 等で接続確認）。`hmi_editor --e2e --e2e-port 10000` で 10000 番に切り替わる。`cmake --build` 緑 |
 | 17 | E2E ハーネス雛形 + smoke 1 件 | `tests/e2e/` ディレクトリを作成。テストランナー（Python or C++）を整備して Editor を subprocess で起動 → Spix 経由で接続 → 既存ボタンの存在確認 → 終了。ctest 統合 | `ctest` 上に E2E smoke 1 件登録、緑 |
 
 ### Phase 3-A-2: 主要シナリオ E2E
@@ -78,20 +78,26 @@ flowchart LR
 
 ### Spix 統合パターン
 
-- Editor / Simulator は **`--e2e [<port>]` CLI フラグを受けたときだけ** Spix エンドポイントを有効化する：
+- Editor / Simulator は **真偽フラグ `--e2e` と値オプション `--e2e-port <port>`（既定 9876）の 2 つに分けた CLI 引数** を持ち、`--e2e` が立っているときだけ Spix エンドポイントを有効化する。`QCommandLineParser` は optional value（`--e2e [<port>]` のような任意値）をサポートしないため、フラグと値オプションを明示的に分割する：
 
   ```cpp
   // Editor/src/main.cpp（疑似コード）
-  if (parser.isSet("e2e")) {
-      auto port = parser.value("e2e").toUShort();
-      if (port == 0) port = 9876;  // 既定
+  QCommandLineOption e2eOpt("e2e", "E2E テスト用エンドポイントを有効化する");
+  QCommandLineOption e2ePortOpt("e2e-port",
+      "E2E エンドポイントの listen ポート（既定 9876）", "port", "9876");
+  parser.addOption(e2eOpt);
+  parser.addOption(e2ePortOpt);
+  // ... parser.process(app);
+
+  if (parser.isSet(e2eOpt)) {
+      const quint16 port = parser.value(e2ePortOpt).toUShort();
       static spix::AnchorManager anchor;
       anchor.startServer(port);
   }
   ```
 
 - これにより **通常起動時は Spix の依存関係がランタイムにロードされない**（厳密にはリンクされているだけだが、ネットワークは開かない）。本番影響ゼロ。
-- **CLI フラグの命名は `--e2e` で統一**（Task 16 で確立予定）。`--listen` 等は紛らわしいので避ける。
+- **CLI 命名は `--e2e` / `--e2e-port` で統一**（Task 16 で確立予定）。`--listen` 等は紛らわしいので避ける。**`--e2e [<port>]` のような optional value 表記は使わない**（Codex P1 指摘で確立、QCommandLineParser 制約）。
 
 ### QML 側の準備
 
