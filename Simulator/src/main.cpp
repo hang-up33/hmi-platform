@@ -2,6 +2,7 @@
 
 #include <QCommandLineOption>
 #include <QCommandLineParser>
+#include <QDebug>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
@@ -78,7 +79,16 @@ int main(int argc, char *argv[])
     // QtQmlBot は process 終了まで生存させたいので heap allocate（OS 回収）。
     // AnyRpcServer は static ローカルにして、if スコープを抜けても破棄させない。
     if (parser.isSet(e2eOpt)) {
-        const quint16 port = parser.value(e2ePortOpt).toUShort();
+        // `toUShort` は変換失敗時 0 を返す。0 のままサーバを起動すると AnyRPC が
+        // OS 任せのエフェメラルポートを取りに行き、テスト側が接続先を見失う。
+        // 不正値は明示的に弾く（Codex Task 16 P2 指摘）。
+        bool ok = false;
+        const quint16 port = parser.value(e2ePortOpt).toUShort(&ok);
+        if (!ok || port == 0) {
+            qCritical().noquote()
+                << "Invalid --e2e-port value:" << parser.value(e2ePortOpt);
+            return 1;
+        }
         static spix::AnyRpcServer server(port);
         auto *bot = new spix::QtQmlBot();
         bot->runTestServer(server);
