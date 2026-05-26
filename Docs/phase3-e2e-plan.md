@@ -21,7 +21,7 @@ flowchart LR
 | ライセンス | MIT |
 | Qt サポート | Qt 5 / Qt 6 |
 | 統合方法 | 本体に `spix::AnchorManager` を C++ で生やす（数行） |
-| 操作方法 | 外部プロセスから TCP/JSON で `mouseClick` / `setProperty` / `drag` / `inputText` を発火 |
+| 操作方法 | 外部プロセスから Spix が提供する RPC 経由で `mouseClick` / `setProperty` / `drag` / `inputText` を発火（具体的なエンコーディングは Task 16 で Spix 最新版の README / examples を確認して確定する） |
 | Item 指定 | `mainQuickItem/objectName` 形式のパス |
 | Yocto / クロスビルド | 可能（CMake / FetchContent or submodule で取り込み） |
 
@@ -49,7 +49,7 @@ flowchart LR
 
 | # | タスク | スコープ | 完了基準 |
 |---|---|---|---|
-| 16 | Spix 取り込み + Editor 統合 | `third_party/spix/`（submodule or FetchContent）で Spix を取り込む。Editor `main.cpp` に **真偽フラグ `--e2e`** と **値オプション `--e2e-port <port>`（既定 9876）** の 2 つの CLI 引数を追加し、`--e2e` が立っているときだけ `spix::AnchorManager` を起動。通常起動には影響なし | `hmi_editor --e2e` で Spix エンドポイントが既定ポート 9876 を listen している（`nc localhost 9876` 等で接続確認）。`hmi_editor --e2e --e2e-port 10000` で 10000 番に切り替わる。`cmake --build` 緑 |
+| 16 | Spix 取り込み + Editor / Simulator 統合 | `third_party/spix/`（submodule or FetchContent）で Spix を取り込む。Editor `main.cpp` と Simulator `main.cpp` の **両方** に **真偽フラグ `--e2e`** と **値オプション `--e2e-port <port>`（既定は Editor=9876 / Simulator=9877 等の別ポート）** の 2 つの CLI 引数を追加し、`--e2e` が立っているときだけ `spix::AnchorManager` を起動。通常起動には影響なし。CLI 引数の追加コードは Editor と Simulator で重複するが、CLAUDE.md「Editor / Simulator で同等の C++ ヘルパーが必要になる場合、Shared に移さず両方に独立して持つ」原則に従い Shared に移さない | `hmi_editor --e2e` / `hmi_simulator --e2e` で Spix エンドポイントが各既定ポートを listen している（`nc localhost <port>` 等で接続確認）。`--e2e --e2e-port <port>` で任意ポートに切り替わる。`cmake --build` 緑 |
 | 17 | E2E ハーネス雛形 + smoke 1 件 | `tests/e2e/` ディレクトリを作成。テストランナー（Python or C++）を整備して Editor を subprocess で起動 → Spix 経由で接続 → 既存ボタンの存在確認 → 終了。ctest 統合 | `ctest` 上に E2E smoke 1 件登録、緑 |
 
 ### Phase 3-A-2: 主要シナリオ E2E
@@ -112,8 +112,8 @@ flowchart LR
 
 ### テストランナー
 
-- **Python ベースを推奨**。`subprocess.Popen` で Editor を起動 → ソケット接続 → Spix コマンド送信 → 結果検証 → プロセス終了の流れを Python で書ける。
-- Spix の Python クライアントがあればそれを使う。無ければ素の `socket` + `json` で十分（プロトコルは軽量）。
+- **Python ベースを推奨**。`subprocess.Popen` で Editor / Simulator を起動 → Spix エンドポイントへ接続 → Spix コマンド送信 → 結果検証 → プロセス終了の流れを Python で書ける。
+- **Spix の RPC プロトコルは Task 16 着手時に最新 README / examples を確認して確定する**。エンコーディングは独自に推測せず（XML-RPC / HTTP / JSON-RPC など Spix のバージョンで変わる可能性がある）、**Spix が公式に提供する Python クライアントまたは examples のクライアント実装をそのまま採用**する。素のソケット + 自前エンコーディングは使わない（Codex P1 指摘で確立、誤実装で接続失敗するリスクを避ける）。
 - 起動時は **必ず `-platform offscreen`** を付ける（Phase 2 Task 12 で確立した CI 互換原則と同じ）。
 
 ### ファイル配置
