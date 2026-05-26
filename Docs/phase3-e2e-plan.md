@@ -78,7 +78,8 @@ flowchart LR
 
 ### Spix 統合パターン
 
-- Editor / Simulator は **真偽フラグ `--e2e` と値オプション `--e2e-port <port>`（既定 9876）の 2 つに分けた CLI 引数** を持ち、`--e2e` が立っているときだけ Spix エンドポイントを有効化する。`QCommandLineParser` は optional value（`--e2e [<port>]` のような任意値）をサポートしないため、フラグと値オプションを明示的に分割する：
+- Editor / Simulator は **真偽フラグ `--e2e` と値オプション `--e2e-port <port>` の 2 つに分けた CLI 引数** を持ち、`--e2e` が立っているときだけ Spix エンドポイントを有効化する。`QCommandLineParser` は optional value（`--e2e [<port>]` のような任意値）をサポートしないため、フラグと値オプションを明示的に分割する。
+- **既定ポートは Editor=9876 / Simulator=9877 のようにアプリごとに別値を取る**。Editor / Simulator を同一マシンで同時起動する E2E シナリオ（Task 20）でポート競合を起こさないため。`QCommandLineOption` のデフォルト引数自体を main.cpp 側でアプリ別に書き分ける：
 
   ```cpp
   // Editor/src/main.cpp（疑似コード）
@@ -95,6 +96,8 @@ flowchart LR
       anchor.startServer(port);
   }
   ```
+
+  `Simulator/src/main.cpp` 側は `QCommandLineOption e2ePortOpt(..., "port", "9877")` のように既定値だけ 9877 に差し替える。重複コードを Shared に移さない原則（CLAUDE.md）に従い、アプリごとに main.cpp に書く。
 
 - これにより **通常起動時は Spix の依存関係がランタイムにロードされない**（厳密にはリンクされているだけだが、ネットワークは開かない）。本番影響ゼロ。
 - **CLI 命名は `--e2e` / `--e2e-port` で統一**（Task 16 で確立予定）。`--listen` 等は紛らわしいので避ける。**`--e2e [<port>]` のような optional value 表記は使わない**（Codex P1 指摘で確立、QCommandLineParser 制約）。
