@@ -215,4 +215,4 @@ Phase 2 は GUI 変化を伴わないため、原則スクリーンショット�
 | 12 | Qt Quick Test 基盤構築 | ✅ 完了 |
 | 13 | 共有 Widget テスト | ✅ 完了 |
 | 14 | Editor QML テスト | ✅ 完了 |
-| 15 | CI 整備（GitHub Actions） | 未着手（任意） |
+| 15 | CI 整備（GitHub Actions） | ✅ 完了 |
