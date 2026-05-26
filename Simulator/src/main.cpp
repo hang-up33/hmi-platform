@@ -8,13 +8,16 @@
 #include <QQmlContext>
 #include <QUrl>
 
+#include <Spix/AnyRpcServer.h>
+#include <Spix/QtQmlBot.h>
+
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
     app.setApplicationName("hmi_simulator");
 
     // 起動時に表示する JSON を CLI で指定できるようにする（任意）。
-    //   hmi_simulator [--open <path>] [path]
+    //   hmi_simulator [--open <path>] [--e2e] [--e2e-port <port>] [path]
     // 位置引数として渡すこともできる（FileDialog で後から開くことも可）。
     QCommandLineParser parser;
     parser.setApplicationDescription("HMI Simulator (read-only)");
@@ -25,6 +28,16 @@ int main(int argc, char *argv[])
     parser.addOption(openOpt);
     parser.addPositionalArgument("path",
                                  "Optional project JSON path to load on startup.");
+    // Task 16: E2E テスト用 Spix エンドポイント。Editor (9876) との同時起動時に
+    // ポート競合させないため、Simulator は既定ポート 9877 を取る。
+    QCommandLineOption e2eOpt(QStringLiteral("e2e"),
+                              QStringLiteral("E2E テスト用エンドポイントを有効化する"));
+    QCommandLineOption e2ePortOpt(QStringLiteral("e2e-port"),
+                                  QStringLiteral("E2E エンドポイントの listen ポート（既定 9877）"),
+                                  QStringLiteral("port"),
+                                  QStringLiteral("9877"));
+    parser.addOption(e2eOpt);
+    parser.addOption(e2ePortOpt);
     parser.process(app);
 
     QString startupPath = parser.value(openOpt);
@@ -58,6 +71,18 @@ int main(int argc, char *argv[])
         Qt::QueuedConnection);
 
     engine.loadFromModule("HmiSimulator", "Main");
+
+    // `--e2e` 指定時のみ Spix を起動。通常起動時は AnyRpcServer / QtQmlBot を
+    // 一切構築しないため、ネットワークを開かない。
+    // 構造は Spix `examples/qtquick/RemoteCtrl/main.cpp` に準拠：
+    // QtQmlBot は process 終了まで生存させたいので heap allocate（OS 回収）。
+    // AnyRpcServer は static ローカルにして、if スコープを抜けても破棄させない。
+    if (parser.isSet(e2eOpt)) {
+        const quint16 port = parser.value(e2ePortOpt).toUShort();
+        static spix::AnyRpcServer server(port);
+        auto *bot = new spix::QtQmlBot();
+        bot->runTestServer(server);
+    }
 
     return app.exec();
 }

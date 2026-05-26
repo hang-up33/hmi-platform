@@ -18,6 +18,9 @@ target_link_libraries(hmi_editor
         Qt6::Quick
         hmi_schema
         hmi_widgetsplugin
+        # Task 16: E2E テスト用 Spix エンドポイント。`--e2e` 起動時のみ
+        # 実際にネットワークを開くため、リンクしても通常起動には影響しない。
+        Spix::QtQuick
 )
 
 set_target_properties(hmi_editor PROPERTIES
