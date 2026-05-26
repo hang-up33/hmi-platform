@@ -1,0 +1,171 @@
+# Phase 3-A: E2E テスト導入
+
+Phase 2 / テスト基盤導入（Task 9〜15）完了を受け、Phase 3-A では Editor / Simulator の操作を end-to-end で自動検証する仕組みを **Spix（OSS / MIT）** で導入する。MVP / Phase 2 と同じく **1 タスク = 1 ブランチ = 1 PR**、完了基準は `cmake --build` 緑 ＋ 新規 `ctest` 緑。
+
+```mermaid
+flowchart LR
+    A["Phase 2<br/>Task 9〜15<br/>(完了)"] --> B["Phase 3-A-1<br/>Spix 基盤<br/>(Task 16〜17)"]
+    B --> C["Phase 3-A-2<br/>主要シナリオ<br/>(Task 18〜20)"]
+    C --> D["Phase 3-A-3<br/>CI 統合<br/>(Task 21 任意)"]
+    D --> E["Phase 3-B 候補<br/>Runtime / Yocto"]
+```
+
+---
+
+## 採用フレームワーク：Spix
+
+[github.com/faaxm/spix](https://github.com/faaxm/spix)
+
+| 項目 | 内容 |
+|---|---|
+| ライセンス | MIT |
+| Qt サポート | Qt 5 / Qt 6 |
+| 統合方法 | 本体に `spix::AnchorManager` を C++ で生やす（数行） |
+| 操作方法 | 外部プロセスから TCP/JSON で `mouseClick` / `setProperty` / `drag` / `inputText` を発火 |
+| Item 指定 | `mainQuickItem/objectName` 形式のパス |
+| Yocto / クロスビルド | 可能（CMake / FetchContent or submodule で取り込み） |
+
+選定理由：
+
+- **本体侵蝕が最小**：Editor / Simulator は `--e2e` CLI フラグ付き起動時のみ Spix エンドポイントを listen させる構成にできる。通常起動への影響ゼロ。
+- **OSS で永続利用可**：Squish のようなライセンス更新リスクなし。
+- **CI 親和性**：`-platform offscreen` で起動でき、Phase 2 で確立した GitHub Actions ジョブにそのまま追加できる。
+- **objectName ベース**：QML 側に `objectName` を 1 行付けるだけで指定可能。Task 14 で Repeater delegate に `widgetId` を持たせた発想と同列。
+- **Phase 3-B との両立**：Yocto / i.MX8MP に持っていく際もクロスビルドできる。
+
+参考代替案（不採用）：
+
+- **Squish for Qt**：商用ライセンス費用、CI 取り回し負荷大。
+- **PyAutoGUI / pywinauto**：座標ベースで脆い。レイアウト変更で全壊。CI 不可。
+- **CLI 引数 + dump-screen フック自作**：E2E と呼べる範囲が狭く、操作系シナリオ（ドラッグ）が再現不能。Task 8 で確立した CLI 引数ロード機能の応用としては有用だが、E2E の正面手段にはしない。
+
+> **Note**：Spix の最新 README / API は Task 16 着手時に再確認する。本ドキュメントの操作 API 例は 2026-05 時点での想定値であり、最新版で関数名や CMake 統合方法が変わる可能性がある。
+
+---
+
+## タスク一覧
+
+### Phase 3-A-1: Spix 基盤構築
+
+| # | タスク | スコープ | 完了基準 |
+|---|---|---|---|
+| 16 | Spix 取り込み + Editor 統合 | `third_party/spix/`（submodule or FetchContent）で Spix を取り込む。Editor `main.cpp` に `--e2e [<port>]` CLI フラグを追加し、引数があるときだけ `spix::AnchorManager` を起動。通常起動には影響なし | `hmi_editor --e2e` で Spix エンドポイントが listen している（`nc localhost <port>` 等で接続確認）。`cmake --build` 緑 |
+| 17 | E2E ハーネス雛形 + smoke 1 件 | `tests/e2e/` ディレクトリを作成。テストランナー（Python or C++）を整備して Editor を subprocess で起動 → Spix 経由で接続 → 既存ボタンの存在確認 → 終了。ctest 統合 | `ctest` 上に E2E smoke 1 件登録、緑 |
+
+### Phase 3-A-2: 主要シナリオ E2E
+
+| # | タスク | スコープ | 完了基準 |
+|---|---|---|---|
+| 18 | Editor 配置 + ドラッグ E2E | E2E から「Button 追加」→ 既定位置に EditableWidget が出る → 任意座標へドラッグ → 座標が反映される | E2E ctest 緑 |
+| 19 | JSON 保存 → 読込ループ E2E | E2E から保存メニュー操作 → 別プロセス（同 Editor）を `--load <path>` で起動 → 同じ画面が再現 | E2E ctest 緑 |
+| 20 | Simulator 表示 E2E | Task 19 で作った JSON を Simulator `--load <path>` で起動 → 期待 Widget が描画 | E2E ctest 緑 |
+
+### Phase 3-A-3: CI 統合（任意）
+
+| # | タスク | スコープ | 完了基準 |
+|---|---|---|---|
+| 21 | E2E ジョブを GitHub Actions に追加 | 既存 `.github/workflows/ci.yml` に E2E ジョブを matrix で追加。Editor / Simulator を `-platform offscreen` + `--e2e` で起動 | macOS / Windows 両 OS で E2E ctest 緑 |
+
+> **Note**：Task 21 は CI 上での subprocess 制御と Spix 接続の安定性次第。Task 16〜20 が安定してから着手するか判断する（Phase 2 Task 15 と同じ「任意」扱い）。
+
+### Phase 3-B 候補（Phase 3-A 完了後に別途承認）
+
+- **Runtime（i.MX8MP / Yocto）対応**：クロスビルド・QtWayland・実機デプロイ手順整備。Spix もクロスビルドして実機 E2E に再利用できる構成を検討。
+
+---
+
+## 設計指針
+
+### Spix 統合パターン
+
+- Editor / Simulator は **`--e2e [<port>]` CLI フラグを受けたときだけ** Spix エンドポイントを有効化する：
+
+  ```cpp
+  // Editor/src/main.cpp（疑似コード）
+  if (parser.isSet("e2e")) {
+      auto port = parser.value("e2e").toUShort();
+      if (port == 0) port = 9876;  // 既定
+      static spix::AnchorManager anchor;
+      anchor.startServer(port);
+  }
+  ```
+
+- これにより **通常起動時は Spix の依存関係がランタイムにロードされない**（厳密にはリンクされているだけだが、ネットワークは開かない）。本番影響ゼロ。
+- **CLI フラグの命名は `--e2e` で統一**（Task 16 で確立予定）。`--listen` 等は紛らわしいので避ける。
+
+### QML 側の準備
+
+- 操作対象の Item に `objectName` を付与する。例：
+  ```qml
+  HmiButton { objectName: "btn_add_widget"; text: qsTr("追加"); }
+  ```
+- `objectName` の付与は CLAUDE.md「テストのために本体を変えない」原則の **例外として許容**する。理由：
+  - Phase 2 Task 14 でも Repeater delegate に `widgetId` プロパティを生やしており、テスト識別用の属性追加は前例がある
+  - `objectName` は QML 標準プロパティで、本体の挙動を変えない（純粋にメタデータ）
+  - レイアウト変更や API 変更とは性質が異なる
+
+### テストランナー
+
+- **Python ベースを推奨**。`subprocess.Popen` で Editor を起動 → ソケット接続 → Spix コマンド送信 → 結果検証 → プロセス終了の流れを Python で書ける。
+- Spix の Python クライアントがあればそれを使う。無ければ素の `socket` + `json` で十分（プロトコルは軽量）。
+- 起動時は **必ず `-platform offscreen`** を付ける（Phase 2 Task 12 で確立した CI 互換原則と同じ）。
+
+### ファイル配置
+
+```
+hmi-platform/
+├─ third_party/
+│   └─ spix/                 # submodule または FetchContent
+├─ Editor/
+│   └─ src/main.cpp          # --e2e フラグと spix::AnchorManager セットアップ
+├─ Simulator/
+│   └─ src/main.cpp          # 同上
+└─ tests/
+    └─ e2e/                  # 横断 E2E（Editor 単体 / Simulator 単体 / 連携シナリオ）
+        ├─ CMakeLists.txt
+        ├─ conftest.py 等
+        └─ test_*.py
+```
+
+Editor / Simulator 内の `tests/` には **モジュール単体の Qt Quick Test**（Phase 2 で導入済み）を残し、E2E はリポジトリ直下 `tests/e2e/` に集約する。Phase 2 の `Editor/tests/`、`Shared/Widgets/tests/` は手を入れない。
+
+### CMake 統合方針
+
+- ルート `CMakeLists.txt` に `if(BUILD_TESTING) add_subdirectory(tests/e2e) endif()` を 1 行追加。
+- Spix の取り込みは Task 16 で **FetchContent を第一候補**として評価する（submodule より CI 再現性が高い）。フォールバックとして submodule。
+- E2E は本体ビルドプロダクトに依存するので、`add_test` の `DEPENDS` プロパティで `hmi_editor` / `hmi_simulator` の build 完了を担保する。
+
+### スクリーンショット運用
+
+E2E は GUI 変化を伴うが、対象画面は Phase 1 / Phase 2 で確立済みのため、新規スクショは原則不要。**新規 Widget や新規メニューが増えるタスク**（Phase 3-A スコープ外）でのみ動作証跡スクショを撮る。
+
+---
+
+## ルール（Phase 3-A 限定 / 既存ルールの上に追加）
+
+### Must Always
+
+- Spix エンドポイントは **`--e2e` CLI フラグ付き起動時のみ** 有効化する（通常起動への影響ゼロ）。
+- E2E テストは **`-platform offscreen` で動く** ように書く（CI 互換）。
+- 各タスク完了時に **新規 E2E が `ctest` で緑** であることを完了基準に含める（`cmake --build` 緑だけでは不十分）。
+- 操作対象には `objectName` を付与する。直接の座標指定は避ける（レイアウト変更で壊れるため）。
+
+### Must Never
+
+- Spix を `Shared/Schema` / `Shared/Widgets` に依存させる（E2E は **利用側アプリ完結**）。
+- Editor / Simulator の通常起動パスに E2E 用コードを混ぜる。Spix の `AnchorManager` 生成は `--e2e` 分岐の中だけ。
+- `objectName` 以外のテスト用ハック（テスト用クラス継承、`#ifdef E2E_TEST` のような debug-only コードなど）を本体に入れる。
+- Spix 以外の E2E フレームワーク（Squish / pywinauto 等）を独断で追加する。
+
+---
+
+## 進捗
+
+| # | タスク | 状態 |
+|---|---|---|
+| 16 | Spix 取り込み + Editor 統合 | ⬜ 未着手 |
+| 17 | E2E ハーネス雛形 + smoke 1 件 | ⬜ 未着手 |
+| 18 | Editor 配置 + ドラッグ E2E | ⬜ 未着手 |
+| 19 | JSON 保存 → 読込ループ E2E | ⬜ 未着手 |
+| 20 | Simulator 表示 E2E | ⬜ 未着手 |
+| 21 | E2E ジョブを GitHub Actions に追加 | ⬜ 未着手（任意） |
