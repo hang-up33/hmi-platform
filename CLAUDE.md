@@ -9,7 +9,7 @@
 
 Yocto / i.MX8M Plus 向け Qt6 HMI ランタイムを対象に、HMI 作画ツール（Editor）・PC 試験環境（Simulator）・実機ランタイム（Runtime）・JSON スキーマ（Shared/Schema）・共有 Widget（Shared/Widgets）を統合した開発基盤。詳細は [README.md](README.md)。
 
-**現在のフェーズ**：**Phase 1 / MVP（Task 1〜8）完了 → Phase 2 / テスト基盤導入 着手前**。Editor で配置・ドラッグ・JSON 保存／読込、Simulator で同じ JSON の表示まで通る。次は Phase 2（Task 9〜15）で Qt Test → Qt Quick Test の順にテスト整備。タスク分割と完了基準は [Docs/phase2-testing-plan.md](Docs/phase2-testing-plan.md) を参照。Phase 3 候補は E2E テストと Runtime（i.MX8MP / Yocto）対応。新規タスクの順序・優先度はユーザー指示を待つ。
+**現在のフェーズ**：**Phase 2 / テスト基盤導入（Task 9〜15）完了**。Qt Test（Schema / ファイル I/O）→ Qt Quick Test（共有 Widget / Editor QML）→ GitHub Actions CI まで通り、macOS / Windows 両 OS で `cmake --build` + `ctest` が緑になる。Editor で配置・ドラッグ・JSON 保存／読込、Simulator で同じ JSON の表示まで通る（Phase 1 / MVP / Task 1〜8）。次の候補は Phase 3（E2E テスト、Runtime / i.MX8MP / Yocto 対応）で**未承認**。新規タスクの順序・優先度はユーザー指示を待つ。
 
 ---
 
@@ -182,7 +182,7 @@ inline review は `gh api repos/<owner>/<repo>/pulls/<N>/comments` 側にも来�
 
 ### Must Always
 
-- 現フェーズのタスク順を守る。Phase 1 / MVP（Qt6 プロジェクト → キャンバス → Widget データ構造 → Button → ドラッグ → JSON 保存 → JSON 読込 → Simulator 表示）は完了。**Phase 2 は [Docs/phase2-testing-plan.md](Docs/phase2-testing-plan.md) の Task 9〜14 を順守**（Qt Test 基盤 → Schema テスト → ファイル I/O テスト → Qt Quick Test 基盤 → 共有 Widget → Editor QML）。**Task 15 / CI は任意**で、Task 9〜14 完了後に着手有無を判断する。
+- 現フェーズのタスク順を守る。Phase 1 / MVP（Task 1〜8）と Phase 2 / テスト基盤導入（Task 9〜15）は完了。次は Phase 3 候補（E2E テスト / Runtime クロスビルド）だが **未承認**のため、新規タスクの順序・優先度はユーザー指示を待つ。過去のタスク分割と完了基準は [Docs/phase2-testing-plan.md](Docs/phase2-testing-plan.md) を参照。
 - Widget / Screen / Project 型と JSON I/O は `Shared/Schema` にのみ実装。
 - 完了報告の直前に [kaizen-close](.claude/skills/kaizen-close/SKILL.md) を実行し、得た知見を反映する。
 - QML モジュール URI とアプリの `loadFromModule()` 引数を一致させる。
@@ -205,6 +205,10 @@ inline review は `gh api repos/<owner>/<repo>/pulls/<N>/comments` 側にも来�
 同梱の `~/Qt/6.7.0/macos` は **macOS 14 以降（Darwin 25+）でリンク不可**。`FindWrapOpenGL.cmake` が常に `-framework AGL` をリンクするが、AGL は macOS 14 で SDK から削除されている。
 
 → **Homebrew Qt 6.11.1（`/opt/homebrew/opt/qt`）または Qt 6.8+ を使用すること**。`AGL` 関連のリンクエラーが出たら、コードではなく `CMAKE_PREFIX_PATH` を疑う。詳細・他の罠は [qt6-build](.claude/skills/qt6-build/SKILL.md) と [cmake-build-resolver](.claude/agents/cmake-build-resolver.md) を参照。
+
+## Qt バージョンの罠（CI / aqtinstall）
+
+**CI 用 Qt バージョンはローカル開発バージョン（6.11.x）と必ずしも一致させない**。Task 15 初回ランで `version: "6.11.0"` を `jurplel/install-qt-action@v4` に渡したら、両 OS で aqtinstall が `Failed to locate XML data for Qt version '6.11.0'`（`download.qt.io/online/qtsdkrepository/.../qt6_6110/Updates.xml` 不在）で落ちた。Qt 公式 mirror の最新リリースは Updates.xml の同期に遅れがあるため、CI では **1〜2 マイナー下げた安定取得可能なバージョン（現状 6.10.0）** を使うと信頼性が高い。Qt 6.x の minor 互換でテスト緑判定は維持される。バージョンを上げる時は事前に `aqt list-qt <host> desktop --spec "<X.Y>"` で取得可能性を確認する。詳細パターンは [Docs/phase2-testing-plan.md](Docs/phase2-testing-plan.md) の「Task 15 で確立したパターン」を参照。
 
 ## Windows 環境の罠（要注意）
 

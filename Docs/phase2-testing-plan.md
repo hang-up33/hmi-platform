@@ -179,6 +179,21 @@ Task 14 で踏襲する。HmiButton のクリック検証で踏んだ罠を含�
 - **Repeater の delegate 生成/破棄は段階的に進むため、`widgetModel` 差替直後の `length` 即時比較は flaky**（Codex P2 指摘で確立）。`tryVerify(function() { return ...length === N; }, 1000, msg)` で件数安定を待ってから検証する。`init()` 内の model リセット直後にも tryVerify を入れて、後続テストが中間状態を拾わないようにする。
 - **`tst_hmi_editor_qml` は 14 関数 PASS（Canvas 6 + EditableWidget 6 + 各 TestCase の init/cleanup）、実行時間 0.21 秒**。
 
+### Task 15 で確立したパターン（GitHub Actions CI）
+
+将来 CI を拡張する（Linux runner 追加 / Yocto クロスビルドジョブ / lint 追加 等）場合にも踏襲する。
+
+- **Qt インストールは `jurplel/install-qt-action@v4`**。内部で `actions/setup-python@v6` + `aqtinstall 3.3.x` を使う。matrix で macOS / Windows を 1 job に統合し、`host: mac|windows` と `arch: clang_64|win64_mingw` を切り替える。
+- **CI で指定する Qt バージョンは aqtinstall mirror の状態に左右される**（本タスク最大の罠）。本 PR 初回ランは `version: "6.11.0"` で aqt が `Failed to locate XML data for Qt version '6.11.0'` を返して両 OS で落ちた（`download.qt.io` 側の `qt6_6110/Updates.xml` が見つからない）。**ローカル開発バージョン（6.11.x）と一致させるより、aqt が確実に取得できる 1〜2 マイナー下の安定版（現状 6.10.0）を使う方が CI の信頼性が高い**。Qt 6.x の minor 互換でテスト緑判定は保たれる。Qt バージョンを上げる場合は事前にローカルで `aqt list-qt <host> desktop --spec "<X.Y>"` 等で取得可能性を確認する。
+- **Windows MinGW kit は `arch: win64_mingw` + `tools: tools_mingw1310 tools_ninja`**。`tools` はスペース区切り文字列で OK（カンマ区切りは不要）。`jurplel/install-qt-action` は **tools を PATH に追加しない**ため、別ステップで `GITHUB_PATH` に追記する必要がある（ローカルの `scripts/windows/setup-env.ps1` と等価な処理を CI でもやる）。
+- **`QT_ROOT_DIR` は `.../Qt/<version>/<arch>` を指す**。Tools 配置は `.../Qt/Tools/<tool-id>/` なので、PowerShell で参照するときは `Resolve-Path (Join-Path $env:QT_ROOT_DIR '..\..\Tools')` で **2 階層上**を取る（Codex P1 指摘で確立。初回実装で `..\..\..\Tools` と書いて 3 階層戻ってしまい aqt の置き場と一致しなかった）。
+- **CMake configure では `-DCMAKE_PREFIX_PATH="$QT_ROOT_DIR"` を明示**する。jurplel/install-qt-action は `CMAKE_PREFIX_PATH` 等を環境変数に詰めてくれるが、PowerShell の native コマンド引数では `-DKEY=$var` が展開されないことがある（CLAUDE.md「Windows 環境の罠」既知）ので、CI でもダブルクォートで囲む。
+- **Qt Quick Test は `add_test COMMAND ... -platform offscreen` を明示しておけば CI ランナー（GUI 無し）でそのまま動く**。Task 12 で確立したローカル運用が CI でも追加設定なしで実証された。
+- **`concurrency: { group: ci-${{ github.workflow }}-${{ github.ref }}, cancel-in-progress: true }` で同一ブランチへの連続 push が古い CI を自動キャンセル**。Codex 修正のたびに再 push する Phase 2 ワークフローと相性が良い。main 上の履歴 CI も理屈上はキャンセル対象になるが、main は通常 squash merge 1 コミットずつなので実害なし。
+- **失敗時 artifact upload は `Testing/Temporary/LastTest*.log`**。`if-no-files-found: ignore` を付けて、ビルド前の失敗（Install Qt 等）でファイルが無くてもジョブ全体を失敗させない。
+- **ジョブ表示名（matrix `name`）はバージョン文字列を含めない方が安全**。本タスクでは `macOS / Qt 6.11` と書いたが実際の CI は Qt 6.10.0 を使う形になり、ローカルとのバージョン差を都度追記する手間が発生する。今後は `macOS / Qt` 程度の汎用表記でも良い。
+- **CI 完了の自走待機は `gh run watch <run-id> --exit-status` を `run_in_background: true` で起動する**のが楽。完了通知がタスク通知として返るので、`gh pr checks` を 30 秒間隔でポーリングする必要がない。Codex レビュー待機（`gh api issue comments?since=...`）と並行起動できる。
+
 ### 重複と原則の整合
 
 CLAUDE.md「**Editor / Simulator で同等の C++ ヘルパーが必要になる場合、Shared に移さず両方に独立して持つ**」原則はテストにも適用する。`ProjectIo` と `ProjectLoader` は別タスクではなく **Task 11 でまとめて** テストするが、テストコード自体は各モジュールの `tests/` に分離する（重複を許容、利用側完結）。
