@@ -206,6 +206,27 @@ inline review は `gh api repos/<owner>/<repo>/pulls/<N>/comments` 側にも来�
 
 → **Homebrew Qt 6.11.1（`/opt/homebrew/opt/qt`）または Qt 6.8+ を使用すること**。`AGL` 関連のリンクエラーが出たら、コードではなく `CMAKE_PREFIX_PATH` を疑う。詳細・他の罠は [qt6-build](.claude/skills/qt6-build/SKILL.md) と [cmake-build-resolver](.claude/agents/cmake-build-resolver.md) を参照。
 
+## Spix（E2E）統合の罠
+
+Task 16 で **Spix（OSS / MIT / `faaxm/spix` v0.14）と AnyRPC（XML-RPC 依存）を FetchContent で取り込んだ際に踏んだ落とし穴**。Phase 3-A の Task 17 以降を進める時、または別環境で再ビルドする時に再発する可能性が高い。
+
+- **AnyRPC も FetchContent で取り込む必要がある**：Homebrew / apt の公式パッケージが存在しないため、Spix の `find_package(AnyRPC REQUIRED)` を満たすには `sgieseking/anyrpc` を自前でビルドする。Spix 単独 FetchContent では configure が落ちる。
+- **AnyRPC は `cmake_minimum_required(VERSION 2.8)`**：CMake 3.27+ で configure が落ちるため、ルート CMakeLists.txt で **`set(CMAKE_POLICY_VERSION_MINIMUM 3.5)` を `FetchContent_MakeAvailable(anyrpc)` の前に置く**。`CMAKE_POLICY_VERSION_MINIMUM` は CMake 3.27 で導入された変数で、サブプロジェクトの policy floor を上書きする。
+- **AnyRPC 内部の `include_directories(${CMAKE_SOURCE_DIR}/include)` が FetchContent 経由で誤動作する**：`CMAKE_SOURCE_DIR` はトップレベル（hmi-platform）を指すため、AnyRPC ヘッダが見つからない。**`FetchContent_MakeAvailable(anyrpc)` 直後に `target_include_directories(anyrpc PUBLIC $<BUILD_INTERFACE:${anyrpc_SOURCE_DIR}/include>)` を追加して補正**する。
+- **Spix の `FindAnyRPC.cmake` を欺くには CACHE 変数 + ALIAS**：
+  ```cmake
+  if(NOT TARGET AnyRPC::anyrpc)
+      add_library(AnyRPC::anyrpc ALIAS anyrpc)
+  endif()
+  set(AnyRPC_INCLUDE_DIRS "${anyrpc_SOURCE_DIR}/include" CACHE PATH "" FORCE)
+  set(AnyRPC_LIBRARIES anyrpc CACHE STRING "" FORCE)
+  ```
+- **Spix の `install(EXPORT SpixCoreTargets)` が AnyRPC::anyrpc を含むため、anyrpc を同じ export set に登録する必要がある**：登録しないと `target "SpixCore" requires target "anyrpc" that is not in any export set` で configure が落ちる。`FetchContent_MakeAvailable(spix)` の前に `install(TARGETS anyrpc EXPORT SpixCoreTargets)` を呼ぶ。`cmake --install` を実行しなければ副作用なし。
+- **Spix の `runTestServer` は非ブロッキング**：内部スレッドを立ち上げてすぐ return する。Spix の example は `auto bot = new spix::QtQmlBot();` で leak しているが意図的（process 終了まで生存させる、OS が回収）。本プロジェクトも同じパターンを採用しているが、`if (parser.isSet(e2eOpt))` 分岐の中で起動するため、`spix::AnyRpcServer` は **`static` ローカル**にして if スコープを抜けても破棄させない（`spix::AnyRpcServer` がローカル変数だと if 終了で destruct → サーバが即落ちる）。
+- **`--e2e [<port>]` のような optional value は使えない**：QCommandLineParser は単一オプションの optional value を非サポート。真偽フラグ `--e2e` と値オプション `--e2e-port` に分けて宣言する。既定ポートは Editor=9876 / Simulator=9877（両アプリ同時起動 E2E シナリオでポート競合を避ける）。各 `main.cpp` の `QCommandLineOption e2ePortOpt(..., "port", "9876")` のデフォルト値で書き分け。
+- **通常起動への影響はゼロを保つ**：Spix をリンク済みでも `--e2e` フラグが立っていなければ `AnyRpcServer` は構築されず、ネットワークも開かない。これを保つために Spix 起動コードを `if (parser.isSet(e2eOpt))` 分岐の中だけに置く（[Docs/phase3-e2e-plan.md](Docs/phase3-e2e-plan.md)「Must Never」の「通常起動パスに E2E 用コードを混ぜない」原則）。検証方法：`hmi_editor` 単独起動 → `nc -z localhost 9876` が **失敗**することを確認。
+- **Windows MinGW では Spix を opt-out**：AnyRPC は MinGW 検出時に `internal/mingw.mutex.h` / `mingw.condition_variable.h` を強制 include して `namespace std` 内に `recursive_mutex` / `timed_mutex` / `condition_variable` を再定義する。これは pthread 非対応の古い MinGW 向けのシムで、modern MinGW（`mingw1310_64` / POSIX threads モデル）の libstdc++ と `error: redefinition of 'class std::...'` で衝突する。AnyRPC upstream は 2022 年以降未メンテで修正されない見込みのため、ルート CMakeLists.txt で `option(HMI_ENABLE_E2E ...)` を **MinGW 検出時に既定 OFF** にする。CMake 側で `HMI_HAS_SPIX` define を渡し、`Editor/src/main.cpp` / `Simulator/src/main.cpp` 双方で `#ifdef HMI_HAS_SPIX` で Spix include + 起動コードを囲む。`--e2e` フラグは常に受け付け、Spix 無効ビルドで `--e2e` が指定された場合は `qCritical()` で明確なエラーを出して `return 1`（黙ってフラグを無視しない）。Windows ローカル開発で E2E を使いたい場合は MSVC kit に切り替えるか `-DHMI_ENABLE_E2E=ON` を明示的に指定する（が、後者は CI で既知のビルドエラーになる）。
+
 ## Qt バージョンの罠（CI / aqtinstall）
 
 **CI 用 Qt バージョンはローカル開発バージョン（6.11.x）と必ずしも一致させない**。Task 15 初回ランで `version: "6.11.0"` を `jurplel/install-qt-action@v4` に渡したら、両 OS で aqtinstall が `Failed to locate XML data for Qt version '6.11.0'`（`download.qt.io/online/qtsdkrepository/.../qt6_6110/Updates.xml` 不在）で落ちた。Qt 公式 mirror の最新リリースは Updates.xml の同期に遅れがあるため、CI では **1〜2 マイナー下げた安定取得可能なバージョン（現状 6.10.0）** を使うと信頼性が高い。Qt 6.x の minor 互換でテスト緑判定は維持される。バージョンを上げる時は事前に `aqt list-qt <host> desktop --spec "<X.Y>"` で取得可能性を確認する。詳細パターンは [Docs/phase2-testing-plan.md](Docs/phase2-testing-plan.md) の「Task 15 で確立したパターン」を参照。

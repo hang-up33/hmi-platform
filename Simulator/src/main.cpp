@@ -2,11 +2,20 @@
 
 #include <QCommandLineOption>
 #include <QCommandLineParser>
+#include <QDebug>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QUrl>
+
+// HMI_HAS_SPIX は CMake から `target_compile_definitions` で渡される。
+// Windows MinGW など Spix を有効化できないビルドでは未定義になり、
+// `--e2e` 指定時に明確なエラーで終了する（黙ってフラグを無視しない）。
+#ifdef HMI_HAS_SPIX
+#include <Spix/AnyRpcServer.h>
+#include <Spix/QtQmlBot.h>
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -14,7 +23,7 @@ int main(int argc, char *argv[])
     app.setApplicationName("hmi_simulator");
 
     // 起動時に表示する JSON を CLI で指定できるようにする（任意）。
-    //   hmi_simulator [--open <path>] [path]
+    //   hmi_simulator [--open <path>] [--e2e] [--e2e-port <port>] [path]
     // 位置引数として渡すこともできる（FileDialog で後から開くことも可）。
     QCommandLineParser parser;
     parser.setApplicationDescription("HMI Simulator (read-only)");
@@ -25,6 +34,16 @@ int main(int argc, char *argv[])
     parser.addOption(openOpt);
     parser.addPositionalArgument("path",
                                  "Optional project JSON path to load on startup.");
+    // Task 16: E2E テスト用 Spix エンドポイント。Editor (9876) との同時起動時に
+    // ポート競合させないため、Simulator は既定ポート 9877 を取る。
+    QCommandLineOption e2eOpt(QStringLiteral("e2e"),
+                              QStringLiteral("E2E テスト用エンドポイントを有効化する"));
+    QCommandLineOption e2ePortOpt(QStringLiteral("e2e-port"),
+                                  QStringLiteral("E2E エンドポイントの listen ポート（既定 9877）"),
+                                  QStringLiteral("port"),
+                                  QStringLiteral("9877"));
+    parser.addOption(e2eOpt);
+    parser.addOption(e2ePortOpt);
     parser.process(app);
 
     QString startupPath = parser.value(openOpt);
@@ -58,6 +77,34 @@ int main(int argc, char *argv[])
         Qt::QueuedConnection);
 
     engine.loadFromModule("HmiSimulator", "Main");
+
+    // `--e2e` 指定時のみ Spix を起動。通常起動時は AnyRpcServer / QtQmlBot を
+    // 一切構築しないため、ネットワークを開かない。
+    // 構造は Spix `examples/qtquick/RemoteCtrl/main.cpp` に準拠：
+    // QtQmlBot は process 終了まで生存させたいので heap allocate（OS 回収）。
+    // AnyRpcServer は static ローカルにして、if スコープを抜けても破棄させない。
+    if (parser.isSet(e2eOpt)) {
+#ifdef HMI_HAS_SPIX
+        // `toUShort` は変換失敗時 0 を返す。0 のままサーバを起動すると AnyRPC が
+        // OS 任せのエフェメラルポートを取りに行き、テスト側が接続先を見失う。
+        // 不正値は明示的に弾く（Codex Task 16 P2 指摘）。
+        bool ok = false;
+        const quint16 port = parser.value(e2ePortOpt).toUShort(&ok);
+        if (!ok || port == 0) {
+            qCritical().noquote()
+                << "Invalid --e2e-port value:" << parser.value(e2ePortOpt);
+            return 1;
+        }
+        static spix::AnyRpcServer server(port);
+        auto *bot = new spix::QtQmlBot();
+        bot->runTestServer(server);
+#else
+        qCritical().noquote()
+            << "This build does not include Spix (E2E support is disabled, "
+               "rebuild with -DHMI_ENABLE_E2E=ON to enable).";
+        return 1;
+#endif
+    }
 
     return app.exec();
 }

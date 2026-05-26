@@ -150,7 +150,7 @@ cmake --build build-mingw
 
 | # | タスク | 状態 |
 |---|---|---|
-| 16 | Spix 取り込み + Editor / Simulator 統合 | ⬜ 未着手 |
+| 16 | Spix 取り込み + Editor / Simulator 統合 | ✅ 完了 |
 | 17 | E2E ハーネス雛形 + smoke 1 件 | ⬜ 未着手 |
 | 18 | Editor 配置 + ドラッグ E2E | ⬜ 未着手 |
 | 19 | JSON 保存 → 読込ループ E2E | ⬜ 未着手 |

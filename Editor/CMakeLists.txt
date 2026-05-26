@@ -20,6 +20,15 @@ target_link_libraries(hmi_editor
         hmi_widgetsplugin
 )
 
+# Task 16: E2E テスト用 Spix エンドポイント。`--e2e` 起動時のみ
+# 実際にネットワークを開くため、リンクしても通常起動には影響しない。
+# Windows MinGW では AnyRPC の libstdc++ 衝突により無効化される
+# （HMI_ENABLE_E2E のデフォルトがルート CMakeLists.txt で OFF になる）。
+if(HMI_ENABLE_E2E)
+    target_compile_definitions(hmi_editor PRIVATE HMI_HAS_SPIX)
+    target_link_libraries(hmi_editor PRIVATE Spix::QtQuick)
+endif()
+
 set_target_properties(hmi_editor PROPERTIES
     MACOSX_BUNDLE TRUE
     WIN32_EXECUTABLE TRUE
