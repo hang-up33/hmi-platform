@@ -56,7 +56,7 @@ flowchart LR
 
 | # | タスク | スコープ | 完了基準 |
 |---|---|---|---|
-| 18 | Editor 配置 + ドラッグ E2E | E2E から「Button 追加」→ 既定位置に EditableWidget が出る → 任意座標へドラッグ → 座標が反映される | E2E ctest 緑 |
+| 18 | Editor 配置 + 座標反映 E2E | E2E から「Button 追加」→ 既定位置に EditableWidget が出る → `setStringProperty` で別座標へ移動 → x/y が反映される | E2E ctest 緑 |
 | 19 | JSON 保存 → 読込ループ E2E | E2E から保存メニュー操作 → 別プロセス（同 Editor）を `--load <path>` で起動 → 同じ画面が再現 | E2E ctest 緑 |
 | 20 | Simulator 表示 E2E | Task 19 で作った JSON を Simulator `--load <path>` で起動 → 期待 Widget が描画 | E2E ctest 緑 |
 
@@ -67,6 +67,14 @@ flowchart LR
 | 21 | E2E ジョブを GitHub Actions に追加 | 既存 `.github/workflows/ci.yml` に E2E ジョブを matrix で追加。Editor / Simulator を `-platform offscreen` + `--e2e` で起動 | macOS / Windows 両 OS で E2E ctest 緑 |
 
 > **Note**：Task 21 は CI 上での subprocess 制御と Spix 接続の安定性次第。Task 16〜20 が安定してから着手するか判断する（Phase 2 Task 15 と同じ「任意」扱い）。
+
+> **Task 18 で確立：Spix の drag は `setStringProperty` で代替する**
+>
+> 元の計画は「任意座標へドラッグ → 座標が反映される」だったが、Task 18 着手時に Spix v0.14 の制約が判明：
+> - `mouseBeginDrag(path)` / `mouseEndDrag(path)` は **source / dest item の中央** のみを対象にした drag&drop モデルで、自由座標を指定する API は存在しない（`int x, int y` のオーバーロードは無し）。
+> - `Qt 6.11 + -platform offscreen` 環境では `QGuiApplication::postEvent` を経由した中間 `mouseMove` が drag 閾値に到達せず、Editor 側の `MouseArea.drag.target` が動かなかった（PR #30 の検証で確認）。
+>
+> Task 18 / 19 / 20 のスコープでは E2E は **`setStringProperty` で QML プロパティを直接更新 → 反映を確認する**形に統一する。テスト本来の責務（「Editor の状態を E2E から変更でき、反映パスが通る」）は十分担保できる。実マウスドラッグの動作確認は Phase 3-B（実機 / Yocto）の手動テスト、または Spix の Qt 6 サポートが改善したら追加テストで補う。
 
 ### Phase 3-B 候補（Phase 3-A 完了後に別途承認）
 
@@ -174,7 +182,7 @@ E2E は GUI 変化を伴うが、対象画面は Phase 1 / Phase 2 で確立済�
 |---|---|---|
 | 16 | Spix 取り込み + Editor 統合 | ✅ 完了 |
 | 17 | E2E ハーネス雛形 + smoke 1 件 | ✅ 完了 |
-| 18 | Editor 配置 + ドラッグ E2E | ⬜ 未着手 |
+| 18 | Editor 配置 + 座標反映 E2E | ✅ 完了 |
 | 19 | JSON 保存 → 読込ループ E2E | ⬜ 未着手 |
 | 20 | Simulator 表示 E2E | ⬜ 未着手 |
 | 21 | E2E ジョブを GitHub Actions に追加 | ⬜ 未着手（任意） |

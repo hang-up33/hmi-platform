@@ -32,3 +32,15 @@ set_tests_properties(e2e_smoke PROPERTIES
     TIMEOUT 30
     LABELS e2e
 )
+
+# Task 18: Editor 配置 + ドラッグ E2E。smoke と同じハーネスを共有。
+add_test(
+    NAME e2e_place_and_drag
+    COMMAND ${Python3_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_place_and_drag.py
+        --editor-binary $<TARGET_FILE:hmi_editor>
+)
+set_tests_properties(e2e_place_and_drag PROPERTIES
+    TIMEOUT 30
+    LABELS e2e
+)

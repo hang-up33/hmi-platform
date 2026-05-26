@@ -10,19 +10,30 @@ Window {
     height: 768
     visible: true
     title: qsTr("HMI Editor")
+    // Task 18: Spix からのパス解決のため Window 自身に objectName を付与する。
+    // Spix のテストランナーは `hmiEditorWindow/<objectName>` の形で操作対象
+    // QML Item を指定する。
+    objectName: "hmiEditorWindow"
 
     // 薄いグレーの余白背景
     Rectangle {
         anchors.fill: parent
         color: "#e0e0e0"
 
-        // 上部ツールバー（Task 6: 保存 / Task 7: 開く）
+        // 上部ツールバー（Task 6: 保存 / Task 7: 開く / Task 18: 追加）
         Row {
             id: toolbar
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.margins: 8
             spacing: 8
+
+            // Task 18: Widget 追加。E2E からは objectName で参照する。
+            Button {
+                objectName: "addWidgetButton"
+                text: qsTr("追加")
+                onClicked: canvas.addWidget()
+            }
 
             Button {
                 text: qsTr("開く")
@@ -38,8 +49,11 @@ Window {
         // キャンバスを中央配置。
         // Task 7 で Widget 表示は Canvas 内部の Repeater + widgetModel に移譲した。
         // 初期表示の btn001 もモデル初期値で再現している。
+        // Task 18: E2E（Spix）からドラッグの drop 先として参照するため
+        // objectName を付与する。
         Canvas {
             id: canvas
+            objectName: "canvas"
             anchors.centerIn: parent
             canvasWidth: 800
             canvasHeight: 600
