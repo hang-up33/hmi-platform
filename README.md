@@ -144,9 +144,21 @@ cmake --build build-mingw
 | 14 | Editor QML テスト | ✅ 完了 |
 | 15 | CI 整備（GitHub Actions） | ✅ 完了 |
 
-### Phase 3 候補（未承認）
+### Phase 3-A: E2E テスト導入
 
-- E2E テスト
+詳細は [Docs/phase3-e2e-plan.md](Docs/phase3-e2e-plan.md)。E2E フレームワークに **Spix（OSS / MIT）** を採用。
+
+| # | タスク | 状態 |
+|---|---|---|
+| 16 | Spix 取り込み + Editor / Simulator 統合 | ⬜ 未着手 |
+| 17 | E2E ハーネス雛形 + smoke 1 件 | ⬜ 未着手 |
+| 18 | Editor 配置 + ドラッグ E2E | ⬜ 未着手 |
+| 19 | JSON 保存 → 読込ループ E2E | ⬜ 未着手 |
+| 20 | Simulator 表示 E2E | ⬜ 未着手 |
+| 21 | E2E ジョブを GitHub Actions に追加 | ⬜ 未着手（任意） |
+
+### Phase 3-B 候補（未承認）
+
 - Runtime（i.MX8MP / Yocto）対応
 
 ## 共通データ仕様（Project Format）
