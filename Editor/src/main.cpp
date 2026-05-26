@@ -7,8 +7,13 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 
+// HMI_HAS_SPIX は CMake から `target_compile_definitions` で渡される。
+// Windows MinGW など Spix を有効化できないビルドでは未定義になり、
+// `--e2e` 指定時に明確なエラーで終了する（黙ってフラグを無視しない）。
+#ifdef HMI_HAS_SPIX
 #include <Spix/AnyRpcServer.h>
 #include <Spix/QtQmlBot.h>
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -54,6 +59,7 @@ int main(int argc, char *argv[])
     // QtQmlBot は process 終了まで生存させたいので heap allocate（OS 回収）。
     // AnyRpcServer は static ローカルにして、if スコープを抜けても破棄させない。
     if (parser.isSet(e2eOpt)) {
+#ifdef HMI_HAS_SPIX
         // `toUShort` は変換失敗時 0 を返す。0 のままサーバを起動すると AnyRPC が
         // OS 任せのエフェメラルポートを取りに行き、テスト側が接続先を見失う。
         // 不正値は明示的に弾く（Codex Task 16 P2 指摘）。
@@ -67,6 +73,12 @@ int main(int argc, char *argv[])
         static spix::AnyRpcServer server(port);
         auto *bot = new spix::QtQmlBot();
         bot->runTestServer(server);
+#else
+        qCritical().noquote()
+            << "This build does not include Spix (E2E support is disabled, "
+               "rebuild with -DHMI_ENABLE_E2E=ON to enable).";
+        return 1;
+#endif
     }
 
     return app.exec();
