@@ -44,3 +44,16 @@ set_tests_properties(e2e_place_and_drag PROPERTIES
     TIMEOUT 30
     LABELS e2e
 )
+
+# Task 19: 保存 → 別プロセス --open → 再現の round-trip E2E。
+# Editor を 2 回起動するため TIMEOUT は smoke/place_and_drag より長めに取る。
+add_test(
+    NAME e2e_save_load_roundtrip
+    COMMAND ${Python3_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_save_load_roundtrip.py
+        --editor-binary $<TARGET_FILE:hmi_editor>
+)
+set_tests_properties(e2e_save_load_roundtrip PROPERTIES
+    TIMEOUT 60
+    LABELS e2e
+)

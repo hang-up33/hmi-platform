@@ -72,19 +72,31 @@ def spix_app(
             proc.wait(timeout=2)
 
 
-def _encode_param(value) -> str:
-    """単純な XML-RPC 引数を <param>...</param> 文字列にエンコードする。"""
+def _encode_value(value) -> str:
+    """単一の XML-RPC <value> 要素をエンコードする（params / array 共通）。"""
     if isinstance(value, bool):
-        return f"<param><value><boolean>{1 if value else 0}</boolean></value></param>"
+        return f"<value><boolean>{1 if value else 0}</boolean></value>"
     if isinstance(value, int):
-        return f"<param><value><int>{value}</int></value></param>"
+        return f"<value><int>{value}</int></value>"
     if isinstance(value, float):
-        return f"<param><value><double>{value!r}</double></value></param>"
+        return f"<value><double>{value!r}</double></value>"
     if isinstance(value, str):
-        return f"<param><value><string>{_xml_escape(value)}</string></value></param>"
+        return f"<value><string>{_xml_escape(value)}</string></value>"
+    if isinstance(value, (list, tuple)):
+        inner = "".join(_encode_value(v) for v in value)
+        # AnyRPC は <array><data>...</data></array> 形式を要求する。空配列も
+        # data タグは残す必要がある。
+        return f"<value><array><data>{inner}</data></array></value>"
     raise TypeError(
-        f"Unsupported XML-RPC parameter type: {type(value).__name__}"
+        f"Unsupported XML-RPC value type: {type(value).__name__}"
     )
+
+
+def _encode_param(value) -> str:
+    """単純な XML-RPC 引数を <param>...</param> 文字列にエンコードする。
+    invokeMethod の第 3 引数のように array が必要な場合は list / tuple を渡す。
+    """
+    return f"<param>{_encode_value(value)}</param>"
 
 
 def call_method(url: str, method: str, *params, timeout: float = 10.0) -> str:
