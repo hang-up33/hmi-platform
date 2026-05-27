@@ -185,4 +185,4 @@ E2E は GUI 変化を伴うが、対象画面は Phase 1 / Phase 2 で確立済�
 | 18 | Editor 配置 + 座標反映 E2E | ✅ 完了 |
 | 19 | JSON 保存 → 読込ループ E2E | ✅ 完了 |
 | 20 | Simulator 表示 E2E | ✅ 完了 |
-| 21 | E2E ジョブを GitHub Actions に追加 | ⬜ 未着手（任意） |
+| 21 | E2E ジョブを GitHub Actions に追加 | ✅ 完了 |
