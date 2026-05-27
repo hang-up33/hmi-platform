@@ -9,6 +9,9 @@ Window {
     height: 768
     visible: true
     title: qsTr("HMI Simulator")
+    // Task 20: Spix からの参照パス解決のため Window に objectName を付与する。
+    // Editor 側（hmiEditorWindow）と同じ命名規則。
+    objectName: "hmiSimulatorWindow"
 
     // 薄いグレーの余白背景
     Rectangle {

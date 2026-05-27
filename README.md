@@ -154,7 +154,7 @@ cmake --build build-mingw
 | 17 | E2E ハーネス雛形 + smoke 1 件 | ✅ 完了 |
 | 18 | Editor 配置 + 座標反映 E2E | ✅ 完了 |
 | 19 | JSON 保存 → 読込ループ E2E | ✅ 完了 |
-| 20 | Simulator 表示 E2E | ⬜ 未着手 |
+| 20 | Simulator 表示 E2E | ✅ 完了 |
 | 21 | E2E ジョブを GitHub Actions に追加 | ⬜ 未着手（任意） |
 
 ### Phase 3-B 候補（未承認）

@@ -57,3 +57,18 @@ set_tests_properties(e2e_save_load_roundtrip PROPERTIES
     TIMEOUT 60
     LABELS e2e
 )
+
+# Task 20: Simulator 表示 E2E。Editor で JSON を保存し、Simulator を
+# `--open <path>` で起動して描画を確認する cross-app テスト。Editor と
+# Simulator の 2 プロセスを順に起動するため TIMEOUT は roundtrip と同等に取る。
+add_test(
+    NAME e2e_simulator_display
+    COMMAND ${Python3_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_simulator_display.py
+        --editor-binary $<TARGET_FILE:hmi_editor>
+        --simulator-binary $<TARGET_FILE:hmi_simulator>
+)
+set_tests_properties(e2e_simulator_display PROPERTIES
+    TIMEOUT 60
+    LABELS e2e
+)
