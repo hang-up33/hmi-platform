@@ -39,12 +39,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Task 21: E2E テスト（tests/e2e/test_*.py）が Python ランナーで走る。
+      # GitHub Actions の macos-latest / windows-latest には Python3 が同梱されているが、
+      # 将来のランナー更新でバージョンが揺れるのを避けるため明示する。Windows MinGW では
+      # HMI_ENABLE_E2E=OFF で E2E テスト自体が登録されないが、Python セットアップ自体は
+      # 副作用がなく無条件で走らせて差分を減らす。
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       # ローカル開発環境（macOS Homebrew Qt 6.11.1 / Windows Qt 6.11.0 MinGW）よりマイナーが
       # 1 下の 6.10.0 を CI では使う。Qt 6.11.0 は本 PR 初回ランで aqtinstall mirror
       # （download.qt.io）の Updates.xml にメタデータが見つからず failed to locate XML data
       # で落ちた。Qt 6.10.0 は aqtinstall で安定取得できるため CI 用の基準バージョンに据える。
       # API 互換性は Qt 6.x の minor 範囲で保たれており、本プロジェクトのテスト対象（Schema 単体
-      # ＋ Qt Quick Test）は Qt 6.8+ の機能しか使っていないため、6.10 でビルド・テスト緑なら
+      # ＋ Qt Quick Test ＋ E2E）は Qt 6.8+ の機能しか使っていないため、6.10 でビルド・テスト緑なら
       # 6.11 ローカルでも同等を期待できる。
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
@@ -118,9 +128,20 @@ jobs:
         run: cmake --build ${{ matrix.build_dir }} --config Release --parallel
 
       # ctest は QML テストで -platform offscreen を明示済み（add_test COMMAND 側）。
-      # GUI ディスプレイの無い CI ランナーでもそのまま動く想定。
+      # E2E テスト（label "e2e"）も harness.py 側で QT_QPA_PLATFORM=offscreen を
+      # default 設定しているため GUI ディスプレイの無い CI ランナーでそのまま動く。
+      # Windows MinGW では tests/e2e/CMakeLists.txt 側で HMI_ENABLE_E2E=OFF を検出して
+      # add_test が呼ばれないため、E2E は自動スキップされる（Spix × AnyRPC の MinGW
+      # 衝突を回避するための既存設計、CLAUDE.md「Spix（E2E）統合の罠」節）。
       - name: Test
         run: ctest --test-dir ${{ matrix.build_dir }} --output-on-failure -C Release
+
+      # Task 21: E2E テストが実際に走ったことを CI 出力で見やすくする。
+      # macOS では 4 件（e2e_smoke / e2e_place_and_drag / e2e_save_load_roundtrip
+      # / e2e_simulator_display）が再実行される。Windows では 0 件（既知）でも
+      # ctest -L は no matching tests を warning 扱いで exit 0 を返すため fail しない。
+      - name: E2E tests (label only, for visibility)
+        run: ctest --test-dir ${{ matrix.build_dir }} -L e2e --output-on-failure -C Release
 
       - name: Upload test logs on failure
         if: failure()
