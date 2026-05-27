@@ -6,6 +6,7 @@ import HmiEditor
 import HmiWidgets
 
 Window {
+    id: rootWindow
     width: 1024
     height: 768
     visible: true
@@ -14,6 +15,59 @@ Window {
     // Spix のテストランナーは `hmiEditorWindow/<objectName>` の形で操作対象
     // QML Item を指定する。
     objectName: "hmiEditorWindow"
+
+    // Task 19: E2E（Spix の invokeMethod）から呼ぶ JSON 保存ラッパー。
+    // FileDialog は AppleScript / Spix から自動操作できないため、Canvas 上の
+    // EditableWidget 群を Shared/Schema 互換のリストへ変換 → ProjectIo.save に
+    // 直接渡す処理を関数化する。saveDialog.onAccepted と同じロジック。
+    // 戻り値は ProjectIo.save の bool をそのまま返し、Spix 側で
+    // <boolean>0/1</boolean> として受け取れる。
+    function saveTo(path) {
+        if (!path) {
+            return false
+        }
+        const items = canvas.widgetItems
+        const widgets = []
+        for (let i = 0; i < items.length; ++i) {
+            const item = items[i]
+            if (item.widgetId === undefined) {
+                continue
+            }
+            widgets.push({
+                id: item.widgetId,
+                type: item.widgetType,
+                x: Math.round(item.x),
+                y: Math.round(item.y),
+                width: Math.round(item.width),
+                height: Math.round(item.height),
+                text: item.widgetText,
+                tag: item.widgetTag
+            })
+        }
+        // ProjectIo.save は FileDialog 由来の `file:///` 形式 QUrl を期待する
+        // ため、絶対パスを `file://` プレフィックス付きで URL 化して渡す。
+        // E2E は macOS / Linux でのみ走る（Windows MinGW は HMI_ENABLE_E2E=OFF）
+        // ため POSIX 絶対パス前提でよい。
+        const url = Qt.resolvedUrl("file://" + path)
+        return projectIo.save(url, "Sample", "Main", widgets)
+    }
+
+    // Task 19: 起動時自動ロード。`--open <path>` で初期 JSON URL が渡された
+    // 場合のみ projectIo.load() を呼んで Canvas を再構築する。Simulator の
+    // Main.qml と同じパターン（Task 8 で確立）。E2E の「保存 → 別プロセスで
+    // 開いて再現」ループはこの分岐に依存する。
+    Component.onCompleted: {
+        if (initialJsonUrl && initialJsonUrl.toString() !== "") {
+            const result = projectIo.load(initialJsonUrl)
+            if (!result || !result.ok) {
+                console.warn("起動時プロジェクト読込に失敗:", initialJsonUrl)
+                return
+            }
+            canvas.widgetModel = result.widgets
+            console.log("起動時プロジェクト読込:", initialJsonUrl,
+                        "widgets =", result.widgets.length)
+        }
+    }
 
     // 薄いグレーの余白背景
     Rectangle {

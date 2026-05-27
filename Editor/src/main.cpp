@@ -3,9 +3,11 @@
 #include <QCommandLineOption>
 #include <QCommandLineParser>
 #include <QDebug>
+#include <QFileInfo>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QUrl>
 
 // HMI_HAS_SPIX は CMake から `target_compile_definitions` で渡される。
 // Windows MinGW など Spix を有効化できないビルドでは未定義になり、
@@ -20,11 +22,13 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
     app.setApplicationName("hmi_editor");
 
-    // Task 16: E2E テスト用 Spix エンドポイントの起動制御。
-    // `--e2e` フラグと `--e2e-port <port>` 値オプションを分けて受ける
-    // （QCommandLineParser は optional value を持つ単一オプションをサポート
-    // しないため）。既定ポートは Editor=9876、Simulator=9877 にし、両方を
-    // 同時起動する E2E シナリオでもポート競合を起こさないようにする。
+    // Task 16 / 19: CLI 引数のセットアップ。
+    //   --e2e             : E2E テスト用 Spix エンドポイントを有効化（Task 16）
+    //   --e2e-port <port> : Spix のリッスンポート（既定 9876、Simulator=9877）
+    //   --open <path>     : 起動時に表示する JSON を自動ロード（Task 19）
+    //                       ※ Simulator と同名 (`--open`) で命名を揃える
+    // `--e2e` をフラグ、`--e2e-port` を値オプションに分けるのは
+    // QCommandLineParser が単一オプションの optional value をサポートしないため。
     QCommandLineParser parser;
     parser.setApplicationDescription("HMI Editor");
     parser.addHelpOption();
@@ -34,15 +38,35 @@ int main(int argc, char *argv[])
                                   QStringLiteral("E2E エンドポイントの listen ポート（既定 9876）"),
                                   QStringLiteral("port"),
                                   QStringLiteral("9876"));
+    QCommandLineOption openOpt({QStringLiteral("o"), QStringLiteral("open")},
+                               QStringLiteral("起動時に読み込むプロジェクト JSON のパス"),
+                               QStringLiteral("path"));
     parser.addOption(e2eOpt);
     parser.addOption(e2ePortOpt);
+    parser.addOption(openOpt);
     parser.process(app);
+
+    // Task 19: 起動時自動ロード。Simulator/src/main.cpp と同じパターンで、
+    // QFileInfo で絶対パスに正規化してから QUrl::fromLocalFile に渡す
+    // （QML 側で QUrl のまま FileDialog 相当の API に流し込めるようにする）。
+    QUrl startupUrl;
+    if (parser.isSet(openOpt)) {
+        const QString startupPath = parser.value(openOpt);
+        if (!startupPath.isEmpty()) {
+            const QFileInfo fi(startupPath);
+            startupUrl = QUrl::fromLocalFile(fi.absoluteFilePath());
+        }
+    }
 
     QQmlApplicationEngine engine;
 
     // Task 6: QML から呼ぶ JSON 保存ヘルパー。setContextProperty で `projectIo` として公開。
     ProjectIo projectIo;
     engine.rootContext()->setContextProperty(QStringLiteral("projectIo"), &projectIo);
+    // Task 19: QML 側で Component.onCompleted から参照する起動時 JSON URL。
+    // 空 URL なら自動ロードは行われない（Main.qml 側で isValid() を判定）。
+    engine.rootContext()->setContextProperty(QStringLiteral("initialJsonUrl"),
+                                             startupUrl);
 
     QObject::connect(
         &engine,

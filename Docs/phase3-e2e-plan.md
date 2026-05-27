@@ -57,7 +57,7 @@ flowchart LR
 | # | タスク | スコープ | 完了基準 |
 |---|---|---|---|
 | 18 | Editor 配置 + 座標反映 E2E | E2E から「Button 追加」→ 既定位置に EditableWidget が出る → `setStringProperty` で別座標へ移動 → x/y が反映される | E2E ctest 緑 |
-| 19 | JSON 保存 → 読込ループ E2E | E2E から保存メニュー操作 → 別プロセス（同 Editor）を `--load <path>` で起動 → 同じ画面が再現 | E2E ctest 緑 |
+| 19 | JSON 保存 → 読込ループ E2E | E2E から `Main.qml.saveTo(path)` を `invokeMethod` で呼び出して JSON を書き出し → 別プロセス（同 Editor）を `--open <path>` で起動 → 同じ画面が再現。FileDialog は Spix から自動操作不能のため Window 直下の QML ラッパー関数を経由する。Editor の CLI 引数名は Simulator と揃えて `--open <path>` を採用（計画当初の `--load` から改名） | E2E ctest 緑 |
 | 20 | Simulator 表示 E2E | Task 19 で作った JSON を Simulator `--load <path>` で起動 → 期待 Widget が描画 | E2E ctest 緑 |
 
 ### Phase 3-A-3: CI 統合（任意）
@@ -183,6 +183,6 @@ E2E は GUI 変化を伴うが、対象画面は Phase 1 / Phase 2 で確立済�
 | 16 | Spix 取り込み + Editor 統合 | ✅ 完了 |
 | 17 | E2E ハーネス雛形 + smoke 1 件 | ✅ 完了 |
 | 18 | Editor 配置 + 座標反映 E2E | ✅ 完了 |
-| 19 | JSON 保存 → 読込ループ E2E | ⬜ 未着手 |
+| 19 | JSON 保存 → 読込ループ E2E | ✅ 完了 |
 | 20 | Simulator 表示 E2E | ⬜ 未着手 |
 | 21 | E2E ジョブを GitHub Actions に追加 | ⬜ 未着手（任意） |
