@@ -41,6 +41,9 @@ Item {
             delegate: Item {
                 id: wrapper
                 required property var modelData
+                // Task 20: Spix から `widget_<id>` で参照できるようにする
+                // （Editor 側 EditableWidget と同じ命名規則）。
+                objectName: "widget_" + (modelData.id !== undefined ? modelData.id : "")
                 x: modelData.x !== undefined ? modelData.x : 0
                 y: modelData.y !== undefined ? modelData.y : 0
                 width: modelData.width !== undefined ? modelData.width : 120
