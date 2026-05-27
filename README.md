@@ -123,6 +123,8 @@ cmake --build build-mingw
 
 ## フェーズ進捗
 
+Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入の全タスクが完了済み。Phase 3-B 候補（Runtime / i.MX8MP / Yocto）は未承認。
+
 ### Phase 1: MVP（Editor / Simulator の作画 → 保存 → 読込）
 
 | # | タスク | 状態 |
