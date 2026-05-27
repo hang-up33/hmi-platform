@@ -2,6 +2,12 @@
 
 Yocto 上で動作する i.MX8M Plus 向け Qt/QML HMI ランタイムを対象に、HMI 作画・シミュレーション・タグ管理・実機デプロイを統合した開発環境。
 
+## スクリーンショット
+
+![HMI Editor](Docs/screenshots/editor.png)
+
+Editor の現状画面。`追加` / `開く` / `保存` ボタンで Widget の配置と JSON 入出力を行う。
+
 ## 成果物
 
 | モジュール | 役割 |

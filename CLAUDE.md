@@ -339,6 +339,26 @@ kill %1
 - SHA は push 後 `git rev-parse HEAD` で取得。PR 本文を `gh pr edit <N> --body-file ...` で更新する場合も同じ SHA を使い続ける（後続の修正コミットでスクショ自体を撮り直したら SHA も更新する）。
 - GUI 変化が無いタスク（純粋な Schema / docs / CMake のみ）はスクショ省略可。
 
+### README 掲載スクショの同期
+
+README.md には **「常に最新」を表す固定ファイル名** のスクショを別途掲載している（[README.md](README.md) の「スクリーンショット」節）。
+
+| 固定ファイル | 対応アプリ |
+|---|---|
+| `Docs/screenshots/editor.png` | Editor |
+| `Docs/screenshots/simulator.png` | Simulator（必要になったタイミングで追加） |
+
+- **Editor / Simulator の見た目が変わる PR では、`task-<N>-<短い名>.png` を撮るのと同じコミットで `editor.png` / `simulator.png` も上書きで撮り直す**。`task-*.png` は SHA 固定で時系列の証跡を残す用途、`editor.png` / `simulator.png` は README から相対パス参照で「現状を見せる」用途。役割が違うので両方更新する。
+- 上書きコマンド例（Editor の場合）：
+  ```sh
+  ./build/Editor/hmi_editor.app/Contents/MacOS/hmi_editor &
+  sleep 2
+  scripts/capture-app-window.sh hmi_editor Docs/screenshots/editor.png
+  kill %1
+  ```
+- README から相対パス参照しているため、固定ファイル名はリネームしない（リネームすると README のリンクが切れる）。
+- 純粋に GUI 変化が無い PR（Schema / docs / CMake / テストのみ）は README スクショも更新不要。
+
 ---
 
 ## ファイル命名規約
