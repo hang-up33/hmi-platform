@@ -75,7 +75,7 @@ flowchart LR
 
 | # | タスク | スコープ | 完了基準 |
 |---|---|---|---|
-| 22 | Runtime/ で Simulator のソースを再利用して hmi_runtime バイナリを追加 | `Runtime/CMakeLists.txt` を作成し、**Simulator/ のソース（C++・QML・リソース）を完全再利用** して `hmi_runtime` ターゲットを add_executable する。Simulator/ の既存コード・ファイル構成には手を加えない。ルート `CMakeLists.txt` に `add_subdirectory(Runtime)` を追加。Simulator と Runtime で振る舞いを切り替える必要が出た場合（例：QPA platform の既定値）は CMake define `HMI_RUNTIME_BUILD` を立てて Simulator/src/main.cpp 内で `#ifdef HMI_RUNTIME_BUILD` で分岐する（Task 24 で実機差異が見えてから具体化、Task 22 段階では分岐ゼロのまま）。QML モジュール URI は **Simulator と同じ `HmiSimulator` を再利用**（モジュール名を変えるとソース共有が崩れるため）。バイナリ名のみ `hmi_runtime` で別。**ソース共有の具体的な CMake 技法**（`target_sources` で参照 / OBJECT ライブラリ抽出 / `add_subdirectory` 拡張 等）は Task 22 着手時に判断する。優先順位は「Simulator/ 側の既存記述を最小変更」。`Runtime/` 配下に `.gitkeep` 以外のソースは置かない方針 | `cmake --build` 緑、ホストで `hmi_simulator --open <path>` と `hmi_runtime --open <path>` の両方が同じレイアウトで JSON 描画する。動作証跡スクショ `Docs/screenshots/task-22-runtime-host.png`（hmi_runtime PC 版の起動画面）を保存 |
+| 22 | Simulator の QML module を STATIC library 化 + Runtime/ で hmi_runtime バイナリを追加 | **Simulator/CMakeLists.txt を再構成**し、QML module を STATIC library として切り出す（`qt_add_qml_module(hmi_simulator_qml STATIC URI HmiSimulator ...)`）。これは CLAUDE.md「共有 QML モジュールは `STATIC` でビルドし、利用側アプリで plugin ターゲットをリンクする」原則に従う既存パターン（`Shared/Widgets` と同じ構造）。Qt の `qt_add_qml_module` を実行ファイルに直接付けた場合、その QML resource は別の実行ファイルから再利用できないため、**実行ファイル 2 個（hmi_simulator / hmi_runtime）から共有するには STATIC library 化が必須**。Simulator 側 `qt_add_executable(hmi_simulator ...)` は STATIC plugin（`hmi_simulator_qmlplugin`）を `target_link_libraries` で取り込む構成に変更。C++ ソース（`Simulator/src/main.cpp` 等）は **共通ソースとして Simulator/ に残し**、`Runtime/CMakeLists.txt` でも同じソースを参照して `hmi_runtime` ターゲットを add_executable + 同じ STATIC plugin をリンクする。ルート `CMakeLists.txt` に `add_subdirectory(Runtime)` を追加。Simulator と Runtime で振る舞いを切り替える必要が出た場合（例：QPA platform の既定値）は CMake define `HMI_RUNTIME_BUILD` を立てて Simulator/src/main.cpp 内で `#ifdef HMI_RUNTIME_BUILD` で分岐する（Task 24 で実機差異が見えてから具体化、Task 22 段階では分岐ゼロのまま）。バイナリ名は `hmi_simulator` / `hmi_runtime` で別、QML モジュール URI は **`HmiSimulator` を共有**（モジュール名を変えるとソース共有が崩れる）。**C++ ソース共有の具体的な CMake 技法**（`target_sources` で参照 / OBJECT ライブラリ抽出 / 共通 CMake function 化 等）は Task 22 着手時に判断する（QML module の STATIC 化は確定）。`Runtime/` 配下に `.cpp` / `.qml` / `.h` は置かない方針 | `cmake --build` 緑、既存の Simulator 単体テスト（Phase 2 で導入）が引き続き緑、ホストで `hmi_simulator --open <path>` と `hmi_runtime --open <path>` の両方が同じレイアウトで JSON 描画する。動作証跡スクショ `Docs/screenshots/task-22-runtime-host.png`（hmi_runtime PC 版の起動画面）を保存 |
 
 ### Phase 3-B-2: Yocto SDK クロスビルド
 
@@ -101,6 +101,7 @@ flowchart LR
 - **Yocto レシピ化**：`hmi_runtime` を image に組み込む `.bb` レシピを `meta-hmi-platform` レイヤに整備（現在の scp 運用を image 焼込に移行）。
 - **CI への組込み**：self-hosted runner を立てて Yocto SDK クロスビルドを GitHub Actions に統合。
 - **Simulator / Runtime のソース統合の更なる最適化**：Phase 3-B-1 の方式（CMake glue で再利用）で運用してみて、もしソース重複や CMake の取り回しが煩雑になるようなら、`Shared/SimulatorCore` への共通ライブラリ抽出を検討する。
+- **Windows 向け画面キャプチャスクリプト**：`scripts/windows/capture-app-window.ps1` を追加し、Windows 母艦単独でも自動スクショが撮れるようにする（PowerShell + `System.Windows.Forms` か `Win32 API` で実装）。現状は macOS 環境か手動撮影で代替。
 
 ---
 
@@ -114,14 +115,15 @@ flowchart LR
 
 ### ソース共有の原則
 
-- **Simulator/ がソースの唯一の置き場**。Runtime/ には `.cpp` / `.qml` / `.h` を置かない（CMakeLists.txt のみ）。
-- これにより「Simulator を直すと Runtime にも自動反映」「Runtime に手を入れる場合も Simulator/ で編集する」がルール化される。
+- **Simulator/ がソースの唯一の置き場**（`.cpp` / `.qml` / `.h` はここに集中）。Runtime/ には CMakeLists.txt のみ。これにより「Simulator を直すと Runtime にも自動反映」「Runtime に手を入れる場合も Simulator/ で編集する」がルール化される。
+- ただし**Simulator/CMakeLists.txt は Task 22 で再構成される**（QML module を実行ファイル直結から STATIC library 化に変更、`Shared/Widgets` と同じパターン）。これは Qt の `qt_add_qml_module` を実行ファイルに直接付けると別の実行ファイルから共有できないという Qt CMake API の制約による必須変更。既存ファイル削除や C++ ソース変更は伴わない。
 - Simulator 側の変更が Runtime 動作を壊さないか確認するため、**ホストビルドで `hmi_runtime` PC 版を起動する sanity check** を CI（既存 macOS / Windows ジョブ）の動作確認に含める方針を検討（具体化は Task 22 着手時）。
 - CLAUDE.md「Editor / Simulator で同等の C++ ヘルパーが必要になる場合、Shared に移さず両方に独立して持つ」原則は **Simulator と Runtime には適用しない**（両者は本質的に同じアプリで、独立して持つ意味が無いため）。Editor との関係では引き続き適用。
 
 ### QML モジュール命名
 
 - `hmi_runtime` バイナリも **`HmiSimulator` モジュール URI を再利用**（共有ソースのため）、`loadFromModule("HmiSimulator", "Main")` で起動する（Simulator と完全同じ）。
+- 共有方法は **STATIC plugin リンク**（Task 22 のスコープ参照）。`Simulator/CMakeLists.txt` で `qt_add_qml_module(hmi_simulator_qml STATIC URI HmiSimulator ...)` のように STATIC で宣言し、`Simulator/CMakeLists.txt` の `hmi_simulator` ターゲットと `Runtime/CMakeLists.txt` の `hmi_runtime` ターゲットの両方が `target_link_libraries(<target> PRIVATE hmi_simulator_qmlplugin)` で取り込む。これは既存 `Shared/Widgets` で確立済みのパターン（CLAUDE.md「共有 QML モジュールは `STATIC` でビルドし、利用側アプリで plugin ターゲットをリンクする」原則）。
 - Window objectName は **`hmiSimulatorWindow` をそのまま使う**（CLAUDE.md「Window / Widget delegate の objectName はアプリごとに `<app>Window` / `widget_<id>` で命名統一」の例外として、Simulator と Runtime は同一視する）。実機 E2E を Phase 3-C で追加する時もこの命名で済む。
 
 ### Yocto SDK 連携
@@ -133,7 +135,9 @@ flowchart LR
 
 ### スクリーンショット運用
 
-- Task 22（ホストビルド）：既存スクショ運用（`scripts/capture-app-window.sh`）で macOS / Windows 母艦から `hmi_runtime` PC 版をキャプチャ。`Docs/screenshots/task-22-runtime-host.png`。
+- Task 22（ホストビルド）：`hmi_runtime` PC 版を起動してキャプチャ。`Docs/screenshots/task-22-runtime-host.png`。
+  - **macOS** 環境がある場合：既存スクリプト `scripts/capture-app-window.sh hmi_runtime Docs/screenshots/task-22-runtime-host.png` を使う（Swift + `screencapture` の macOS 専用実装）。
+  - **Windows のみ** で開発する場合：スクリプトが macOS 専用のため、PowerShell の `Add-Type` で `System.Windows.Forms` を使ったキャプチャか、`Snipping Tool` / `PrintScreen` 等で手動撮影し PNG として保存。`scripts/windows/` 配下に PowerShell 版キャプチャスクリプトを追加するのは Phase 3-B のスコープ外（Phase 3-C 候補に切り出す）。
 - Task 24（実機）：実機画面の **手動撮影写真**（スマホ等）を `Docs/screenshots/task-24-runtime-imx.jpg` 等で保存。`.png` でなく `.jpg` を許容する（写真なので）。README 用の固定ファイル `Docs/screenshots/runtime.jpg`（実機写真）も同コミットで更新。
 
 ### README 同期
@@ -163,6 +167,7 @@ flowchart LR
 - `Runtime/` 配下に `.cpp` / `.qml` / `.h` を直接置く（ソースは Simulator/ に集中、Runtime/ は CMake glue のみ）。
 - Runtime のために **Editor のソース** を共有する（Editor は PC のみで動作、Runtime / Simulator とは別系統）。
 - Runtime 用に Simulator と別の QML モジュール URI（`HmiRuntime` 等）を定義する（共有ソースで `HmiSimulator` を共用）。
+- Simulator の QML module を **実行ファイルに直結したまま**（`qt_add_qml_module(hmi_simulator URI HmiSimulator ...)` のままで、STATIC 化せず）Runtime/ を作る。Qt の CMake QML Module API では実行ファイルに付けた QML module は他の実行ファイルから共有できないため、必ず STATIC library 化する。
 - Yocto レシピ（`.bb` ファイル）を本リポジトリに追加する（Phase 3-C スコープ）。
 - Yocto SDK クロスビルドのために `CMAKE_CXX_FLAGS` をルート `CMakeLists.txt` でハードコードする（SDK 側 `environment-setup-*` の export に任せる）。
 - CI に self-hosted runner を追加する（Phase 3-C 以降の判断）。
