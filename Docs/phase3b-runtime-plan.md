@@ -97,6 +97,7 @@ flowchart LR
 
 - **物理 I/O 連携**：GPIO / CAN / シリアルを Widget から扱える Action 拡張。
 - **ネットワーク経由 JSON 配信**：実機が起動中に新しい JSON を受信して描画を切り替える。
+- **PC → 実機の JSON 転送パス整備（USB ケーブル + 暗号化通信）**：Phase 3-B では Runtime はファイルとして JSON を読むだけで、転送経路は scp / 手動コピー / 他何でも良いとしている。Phase 3-C で「USB ケーブル接続 + 暗号化通信」によるワークフローを整備する想定。具体的には USB Ethernet（CDC-ECM / RNDIS）のドライバを Yocto image に含める + SSH デーモンの有効化 + scp / sftp / 独自プロトコルの選定。**転送機能は Runtime バイナリではなく OS / Yocto image レイヤの責務**（Runtime 自体は読み取り専用 JSON 描画のまま）。既存ベンダ image に必要なドライバ・デーモンが入っているかを Phase 3-C 着手時に確認し、不足分はレシピ追加で対応する。
 - **実機 E2E（Spix のクロスビルド再利用）**：Phase 3-A の Spix を Yocto SDK でクロスビルドし、実機上で E2E を回す。**AnyRPC の libstdc++ 衝突問題**（Phase 3-A で Windows MinGW を opt-out にした原因）がクロスツールチェインで再発するか要検証。
 - **Yocto レシピ化**：`hmi_runtime` を image に組み込む `.bb` レシピを `meta-hmi-platform` レイヤに整備（現在の scp 運用を image 焼込に移行）。
 - **CI への組込み**：self-hosted runner を立てて Yocto SDK クロスビルドを GitHub Actions に統合。
@@ -109,9 +110,10 @@ flowchart LR
 
 ### Runtime の責務分離
 
-- Runtime は **読み取り専用**。Simulator と同じく `Shared/Schema` の保存系 API は呼ばない（そもそも Simulator/ のソースに保存系コードが無いはず）。
-- 編集 UI（ツールバー・FileDialog・配置プレビュー）は持たない（Simulator と同じ）。
+- Runtime は **読み取り専用**。Simulator と同じく `Shared/Schema` の保存系 API は呼ばない（そもそも Simulator/ のソースに保存系コードが無い）。
+- 編集 UI（ツールバー・FileDialog・配置プレビュー）は持たない（Simulator と同じ）。Editor の編集機能（`ProjectIo` / `EditableWidget` / `Canvas.qml`）は Runtime に一切含まれない（Simulator のソースに含まれていないため、共有しても混入しない）。
 - 起動時自動ロードは Simulator と同じ `--open <path>` 命名（共有ソースなのでそのまま継承）。
+- **転送機能は持たない**。Runtime バイナリは「ローカルファイルとして配置された JSON を読んで描画する」だけ。PC → 実機への JSON 転送は OS / Yocto image レイヤの責務（scp / 手動コピー / USB マスストレージ / 将来的に USB Ethernet + SSH 等、Phase 3-C 候補）。Runtime にネットワークリスナや暗号化通信処理を入れない。
 
 ### ソース共有の原則
 
@@ -167,7 +169,8 @@ flowchart LR
 ### Must Never
 
 - `Runtime/` 配下に `.cpp` / `.qml` / `.h` を直接置く（ソースは Simulator/ に集中、Runtime/ は CMake glue のみ）。
-- Runtime のために **Editor のソース** を共有する（Editor は PC のみで動作、Runtime / Simulator とは別系統）。
+- Runtime のために **Editor のソース** を共有する（Editor は PC のみで動作、Runtime / Simulator とは別系統）。Editor の編集系コード（`ProjectIo` / `EditableWidget` / `Canvas.qml` 等）は Runtime / Simulator に持ち込まない。
+- Runtime バイナリに **PC からの転送機能**（ネットワークリスナ・SSH デーモン・USB 通信プロトコル等）を実装する（転送は OS / Yocto image レイヤの責務、Phase 3-C 候補）。
 - Runtime 用に Simulator と別の QML モジュール URI（`HmiRuntime` 等）を定義する（共有ソースで `HmiSimulator` を共用）。
 - Simulator の QML module を **実行ファイルに直結したまま**（`qt_add_qml_module(hmi_simulator URI HmiSimulator ...)` のままで、STATIC 化せず）Runtime/ を作る。Qt の CMake QML Module API では実行ファイルに付けた QML module は他の実行ファイルから共有できないため、必ず STATIC library 化する。
 - Yocto レシピ（`.bb` ファイル）を本リポジトリに追加する（Phase 3-C スコープ）。
