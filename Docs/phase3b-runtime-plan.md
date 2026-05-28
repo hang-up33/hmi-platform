@@ -81,7 +81,7 @@ flowchart LR
 
 | # | タスク | スコープ | 完了基準 |
 |---|---|---|---|
-| 23 | Yocto SDK で hmi_runtime をクロスビルド | 既存 Yocto image から `bitbake meta-toolchain-qt6` で SDK を生成（**未生成の場合のみ**。既に存在する場合は手順だけ記録）。WSL2 / VM に install。`source environment-setup-aarch64-poky-linux` 後にルート `CMakeLists.txt` を **`-DHMI_ENABLE_E2E=OFF -DBUILD_TESTING=OFF`** 付きで configure → build（Phase 3-A 経緯で MinGW 以外は E2E が既定 ON のため Yocto 環境では明示 OFF が必要、Spix / AnyRPC のクロスビルド問題を回避）。**Editor / Simulator もクロスビルド対象になるが、生成物として実機に配布するのは `hmi_runtime` のみ**（Editor の不要なクロスビルドコストは許容、最小スコープを優先）。SDK パス・configure オプションを `scripts/yocto/` 配下に**最小限の Bash スクリプト + README**として整備（PowerShell 版は不要、WSL2 / VM 内で実行する想定）。Windows / macOS 側のホストビルドには影響を与えない | WSL2 / VM 内で `scripts/yocto/cross-build.sh` 相当を実行 → `build-yocto/Runtime/hmi_runtime` が aarch64 ELF として生成される（`file hmi_runtime` で確認）。ホストビルド（`build/` / `build-mingw/`）は引き続き緑 |
+| 23 | Yocto SDK で hmi_runtime をクロスビルド | 既存 Yocto image から `bitbake meta-toolchain-qt6` で SDK を生成（**未生成の場合のみ**。既に存在する場合は手順だけ記録）。WSL2 / VM に install。`source environment-setup-aarch64-poky-linux` 後にルート `CMakeLists.txt` を **`-DHMI_ENABLE_E2E=OFF -DBUILD_TESTING=OFF`** 付きで configure（Phase 3-A 経緯で MinGW 以外は E2E が既定 ON のため Yocto 環境では明示 OFF が必要、Spix / AnyRPC のクロスビルド問題を回避）。**ビルドは `cmake --build build-yocto --target hmi_runtime` のように `hmi_runtime` ターゲットのみ**（PC 専用の Editor / Simulator はクロスビルドしない、不要なビルドコストと潜在的な失敗要因を避ける）。`hmi_simulator` ターゲットも `hmi_simulator_qmlplugin`（STATIC plugin、Task 22 で導入）に依存するため、`hmi_runtime` ターゲットを build すれば必要な依存だけが build される。SDK パス・configure オプション・`--target hmi_runtime` の指定を `scripts/yocto/` 配下に**最小限の Bash スクリプト + README**として整備（PowerShell 版は不要、WSL2 / VM 内で実行する想定）。Windows / macOS 側のホストビルドには影響を与えない | WSL2 / VM 内で `scripts/yocto/cross-build.sh` 相当を実行 → `build-yocto/Runtime/hmi_runtime` が aarch64 ELF として生成される（`file hmi_runtime` で確認）。`build-yocto/Editor/hmi_editor` `build-yocto/Simulator/hmi_simulator` は build されないこと（PC 専用ターゲットのクロスビルドコストを払わない）。ホストビルド（`build/` / `build-mingw/`）は引き続き緑 |
 
 ### Phase 3-B-3: 実機描画検証
 
@@ -131,6 +131,7 @@ flowchart LR
 - SDK インストール先・toolchain ファイルパスは **WSL2 / VM 内の絶対パス** をスクリプトに含める。Windows 側の PowerShell から呼ばない（クロスビルドは Linux 環境完結）。
 - CMake configure 時の toolchain / sysroot 系オプションは Yocto SDK の `environment-setup-*` が `CMAKE_TOOLCHAIN_FILE` 等を自動 export するので、本リポジトリ側で独自 toolchain ファイルは導入しない（`-DHMI_TARGET_YOCTO=ON` のような独自オプションも追加しない）。
 - ただし**ルート `CMakeLists.txt` は MinGW 以外で `HMI_ENABLE_E2E` を既定 ON にしている**（Phase 3-A 経緯）。Yocto SDK は MinGW ではないため、何も指定しないと Spix / AnyRPC を FetchContent で取得・クロスビルドしようとして AnyRPC のクロスツールチェイン互換問題で失敗する可能性が高い（Phase 3-A の Windows MinGW で踏んだ libstdc++ 衝突と同種のリスク）。**Task 23 のクロスビルド手順では `-DHMI_ENABLE_E2E=OFF -DBUILD_TESTING=OFF` を明示する**。これを `scripts/yocto/cross-build.sh` 相当のラッパーに固定値として埋め、ユーザーが option を意識せずクロスビルドできるようにする。実機 E2E の検討は Phase 3-C 候補に切り出し済み。
+- **ビルドターゲットは `hmi_runtime` のみ**（`cmake --build build-yocto --target hmi_runtime`）。PC 専用の `hmi_editor` / `hmi_simulator` は実機に不要で、クロスビルドすると所要時間と失敗要因が増える。`hmi_runtime` は `hmi_simulator_qmlplugin`（Task 22 で導入する STATIC plugin）に依存するので、`hmi_runtime` を build すれば必要な依存ライブラリだけが build される。`scripts/yocto/cross-build.sh` には `--target hmi_runtime` を固定で埋める。
 - ビルドツリーは `build-yocto/`（macOS の `build/`、Windows の `build-mingw/` に倣う）に分ける。`.gitignore` への追加も Task 23 内で実施。
 
 ### スクリーンショット運用
@@ -159,6 +160,7 @@ flowchart LR
 - Runtime に追加機能が必要な場合も **Simulator/ 側で編集**し、必要なら `#ifdef HMI_RUNTIME_BUILD` で振る舞いを分岐する。
 - Yocto SDK クロスビルドは **WSL2 / VM 内で完結**。Windows 母艦の PowerShell からは呼ばない（PATH / 環境変数汚染を避ける）。
 - Yocto SDK でクロスビルドする時は **`-DHMI_ENABLE_E2E=OFF -DBUILD_TESTING=OFF` を必ず付ける**（Phase 3-A 経緯で MinGW 以外は E2E 既定 ON のため、明示 OFF にしないと Spix / AnyRPC のクロスビルド失敗を踏む）。これを `scripts/yocto/cross-build.sh` に固定値として埋め、ユーザーが option を意識しないでも済むようにする。
+- Yocto SDK でビルドする時は **`--target hmi_runtime` で対象を限定する**（PC 専用の hmi_editor / hmi_simulator をクロスビルドしない、ビルド時間と失敗要因を最小化）。`scripts/yocto/cross-build.sh` には `--target hmi_runtime` を固定で埋める。
 - ホストビルド（Windows / macOS）で `hmi_simulator` も `hmi_runtime` PC 版も Phase 3-B 完了後に引き続き緑であること。Runtime 追加のために Simulator を壊さない。
 - 各タスク完了時に **当該環境での動作確認** を完了基準に含める：Task 22=ホストで両バイナリ起動、Task 23=クロスビルド成果物の生成、Task 24=実機描画。
 
