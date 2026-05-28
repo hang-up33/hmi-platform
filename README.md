@@ -125,6 +125,8 @@ cmake --build build-mingw
 
 Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入の全タスクが完了済み。Phase 3-B（Runtime / i.MX8MP / Yocto）は計画策定済み（Task 22〜24）、Task 22 着手前。Simulator のソースを共有して `hmi_runtime` バイナリを生成する方針。
 
+> 各タスクで何をしたか・どの PR で入ったか・何を学んだかの **時系列まとめ** は [Docs/development-history.md](Docs/development-history.md) を参照。第三者への説明用。
+
 ### Phase 1: MVP（Editor / Simulator の作画 → 保存 → 読込）
 
 | # | タスク | 状態 |

@@ -7,7 +7,7 @@
 
 ## プロジェクト概要
 
-Yocto / i.MX8M Plus 向け Qt6 HMI ランタイムを対象に、HMI 作画ツール（Editor）・PC 試験環境（Simulator）・実機ランタイム（Runtime）・JSON スキーマ（Shared/Schema）・共有 Widget（Shared/Widgets）を統合した開発基盤。詳細は [README.md](README.md)。
+Yocto / i.MX8M Plus 向け Qt6 HMI ランタイムを対象に、HMI 作画ツール（Editor）・PC 試験環境（Simulator）・実機ランタイム（Runtime）・JSON スキーマ（Shared/Schema）・共有 Widget（Shared/Widgets）を統合した開発基盤。詳細は [README.md](README.md)。タスクごとの時系列まとめ（目的 / PR / 成果物 / 学び）は [Docs/development-history.md](Docs/development-history.md) — 第三者説明用で、タスク完了時に当該 Task のエントリを追記する運用候補。
 
 **現在のフェーズ**：**Phase 3-A / E2E テスト導入 完了**（Task 16〜21） + **Phase 3-B / Runtime 計画策定済み**（Task 22〜24・未着手）。Phase 1 / MVP（Task 1〜8）、Phase 2 / テスト基盤導入（Task 9〜15）、Phase 3-A / E2E テスト導入（Task 16〜21）まで全タスク完了済み。E2E フレームワークに **Spix（OSS / MIT）** を採用し、Editor 配置 → JSON 保存 → Simulator 表示までの cross-app 動作を `ctest -L e2e` で検証可能。**macOS は E2E まで含む `ctest` 緑、Windows MinGW は AnyRPC の libstdc++ 衝突回避のため `HMI_ENABLE_E2E` が既定 OFF・E2E は既知スキップで通常 ctest のみ緑**（詳細は後述「Spix（E2E）統合の罠」最終項）。GitHub Actions CI も同様にユニットは全 OS、E2E は macOS のみで実行する構成。タスク分割と完了基準は [Docs/phase3-e2e-plan.md](Docs/phase3-e2e-plan.md) を参照。**Phase 3-B（Runtime / i.MX8MP / Yocto）は計画策定済み**で、対象範囲は「Simulator と同じ JSON 描画機能を i.MX8MP 実機で動かす Runtime」。**Simulator と Runtime はソース完全共通**（Simulator/ にソース集中、Runtime/ は CMake glue で `hmi_runtime` バイナリを add_executable）。開発ホストは Windows VM + 既存 Yocto SDK クロスビルドを再利用。3 バイナリ構成（hmi_editor / hmi_simulator / hmi_runtime）を維持。Task 22 着手前なので CMake 対象に Runtime はまだ含まれない。タスク分割と完了基準は [Docs/phase3b-runtime-plan.md](Docs/phase3b-runtime-plan.md) を参照。
 
