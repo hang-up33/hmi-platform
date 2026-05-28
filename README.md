@@ -14,7 +14,7 @@ Editor の現状画面。`追加` / `開く` / `保存` ボタンで Widget の�
 |---|---|
 | **Editor** | HMI 作画ツール（Qt6 + QML） |
 | **Simulator** | PC 上での HMI 試験環境（Qt6 + QML） |
-| **Runtime** | i.MX8MP / Yocto 実機向けランタイム（MVP 後着手） |
+| **Runtime** | i.MX8MP / Yocto 実機向けランタイム。**Simulator のソースを共有**して `hmi_runtime` バイナリを生成（Phase 3-B / Task 22 以降、計画は [Docs/phase3b-runtime-plan.md](Docs/phase3b-runtime-plan.md)） |
 | **Shared/Schema** | プロジェクト JSON スキーマ / C++ データモデル（唯一の真実） |
 | **Shared/Widgets** | 共通 QML Widget（Button / Label 等） |
 
@@ -38,7 +38,7 @@ hmi-platform/
 │   ├─ CMakeLists.txt
 │   ├─ src/
 │   └─ qml/
-├─ Runtime/             i.MX8MP / Yocto 実機向け（MVP 後）
+├─ Runtime/             i.MX8MP / Yocto 実機向け。CMake glue のみ（ソースは Simulator/ を共有、Phase 3-B / Task 22 以降）
 ├─ Shared/
 │   ├─ Schema/          JSON スキーマ・C++ データモデル
 │   │   ├─ CMakeLists.txt
@@ -123,7 +123,7 @@ cmake --build build-mingw
 
 ## フェーズ進捗
 
-Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入の全タスクが完了済み。Phase 3-B 候補（Runtime / i.MX8MP / Yocto）は未承認。
+Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入の全タスクが完了済み。Phase 3-B（Runtime / i.MX8MP / Yocto）は計画策定済み（Task 22〜24）、Task 22 着手前。Simulator のソースを共有して `hmi_runtime` バイナリを生成する方針。
 
 ### Phase 1: MVP（Editor / Simulator の作画 → 保存 → 読込）
 
@@ -165,9 +165,15 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 | 20 | Simulator 表示 E2E | ✅ 完了 |
 | 21 | E2E ジョブを GitHub Actions に追加 | ✅ 完了 |
 
-### Phase 3-B 候補（未承認）
+### Phase 3-B: Runtime / i.MX8MP 対応
 
-- Runtime（i.MX8MP / Yocto）対応
+詳細は [Docs/phase3b-runtime-plan.md](Docs/phase3b-runtime-plan.md)。**Simulator と同じ JSON 描画機能を i.MX8MP 実機で動かす Runtime** を導入。Simulator/ のソースを共有して `hmi_runtime` バイナリを Yocto SDK でクロスビルド → 実機 scp。3 バイナリ構成（hmi_editor / hmi_simulator / hmi_runtime）を維持。
+
+| # | タスク | 状態 |
+|---|---|---|
+| 22 | Runtime/ で Simulator のソースを再利用して hmi_runtime バイナリを追加 | ⏳ 未着手 |
+| 23 | Yocto SDK で hmi_runtime をクロスビルド | ⏳ 未着手 |
+| 24 | i.MX8MP 実機で hmi_runtime を起動し JSON 描画 | ⏳ 未着手 |
 
 ## 共通データ仕様（Project Format）
 

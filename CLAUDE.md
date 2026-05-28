@@ -9,7 +9,7 @@
 
 Yocto / i.MX8M Plus 向け Qt6 HMI ランタイムを対象に、HMI 作画ツール（Editor）・PC 試験環境（Simulator）・実機ランタイム（Runtime）・JSON スキーマ（Shared/Schema）・共有 Widget（Shared/Widgets）を統合した開発基盤。詳細は [README.md](README.md)。
 
-**現在のフェーズ**：**Phase 3-A / E2E テスト導入 完了**（Task 16〜21）。Phase 1 / MVP（Task 1〜8）、Phase 2 / テスト基盤導入（Task 9〜15）、Phase 3-A / E2E テスト導入（Task 16〜21）まで全タスク完了済み。E2E フレームワークに **Spix（OSS / MIT）** を採用し、Editor 配置 → JSON 保存 → Simulator 表示までの cross-app 動作を `ctest -L e2e` で検証可能。**macOS は E2E まで含む `ctest` 緑、Windows MinGW は AnyRPC の libstdc++ 衝突回避のため `HMI_ENABLE_E2E` が既定 OFF・E2E は既知スキップで通常 ctest のみ緑**（詳細は後述「Spix（E2E）統合の罠」最終項）。GitHub Actions CI も同様にユニットは全 OS、E2E は macOS のみで実行する構成。タスク分割と完了基準は [Docs/phase3-e2e-plan.md](Docs/phase3-e2e-plan.md) を参照。**Phase 3-B 候補（Runtime / i.MX8MP / Yocto）は未承認**で、次フェーズの着手有無・タスク順はユーザー指示を待つ。
+**現在のフェーズ**：**Phase 3-A / E2E テスト導入 完了**（Task 16〜21） + **Phase 3-B / Runtime 計画策定済み**（Task 22〜24・未着手）。Phase 1 / MVP（Task 1〜8）、Phase 2 / テスト基盤導入（Task 9〜15）、Phase 3-A / E2E テスト導入（Task 16〜21）まで全タスク完了済み。E2E フレームワークに **Spix（OSS / MIT）** を採用し、Editor 配置 → JSON 保存 → Simulator 表示までの cross-app 動作を `ctest -L e2e` で検証可能。**macOS は E2E まで含む `ctest` 緑、Windows MinGW は AnyRPC の libstdc++ 衝突回避のため `HMI_ENABLE_E2E` が既定 OFF・E2E は既知スキップで通常 ctest のみ緑**（詳細は後述「Spix（E2E）統合の罠」最終項）。GitHub Actions CI も同様にユニットは全 OS、E2E は macOS のみで実行する構成。タスク分割と完了基準は [Docs/phase3-e2e-plan.md](Docs/phase3-e2e-plan.md) を参照。**Phase 3-B（Runtime / i.MX8MP / Yocto）は計画策定済み**で、対象範囲は「Simulator と同じ JSON 描画機能を i.MX8MP 実機で動かす Runtime」。**Simulator と Runtime はソース完全共通**（Simulator/ にソース集中、Runtime/ は CMake glue で `hmi_runtime` バイナリを add_executable）。開発ホストは Windows VM + 既存 Yocto SDK クロスビルドを再利用。3 バイナリ構成（hmi_editor / hmi_simulator / hmi_runtime）を維持。Task 22 着手前なので CMake 対象に Runtime はまだ含まれない。タスク分割と完了基準は [Docs/phase3b-runtime-plan.md](Docs/phase3b-runtime-plan.md) を参照。
 
 ---
 
@@ -75,7 +75,7 @@ Windows は **Qt 6.11.0 MinGW 64-bit kit + 付属 MinGW 13.1 + Ninja** を前提
 | Shared/Widgets | `hmi_widgets` | QML module | `HmiWidgets` | Editor/Simulator で共有する Widget 部品 |
 | Editor | `hmi_editor` | アプリ | `HmiEditor` | 作画アプリ。`loadFromModule("HmiEditor", "Main")` で起動 |
 | Simulator | `hmi_simulator` | アプリ | `HmiSimulator` | 読み取り専用の試験アプリ。同じ JSON を描画 |
-| Runtime | — | — | — | 予約フォルダ。i.MX8MP / Yocto 向け。**MVP 後着手・現状 CMake 対象外** |
+| Runtime | `hmi_runtime`（Task 22 以降） | アプリ（Simulator のソース共有） | `HmiSimulator`（再利用） | i.MX8MP / Yocto 向け。**Simulator/ のソースを共有して `hmi_runtime` バイナリを生成**（Runtime/ は CMake glue のみ）。**Task 22 着手前・現状 CMake 対象外**。詳細は [Docs/phase3b-runtime-plan.md](Docs/phase3b-runtime-plan.md) |
 
 JSON 入出力は `QJsonDocument`（外部依存なし）。データモデルは `QAbstractListModel` ベースで QML に公開する想定。
 
@@ -182,7 +182,7 @@ inline review は `gh api repos/<owner>/<repo>/pulls/<N>/comments` 側にも来�
 
 ### Must Always
 
-- 現フェーズのタスク順を守る。Phase 1 / MVP（Task 1〜8）、Phase 2 / テスト基盤導入（Task 9〜15）、Phase 3-A / E2E テスト導入（Task 16〜21）はすべて完了済み。**Phase 3-B 候補（Runtime / i.MX8MP / Yocto）は未承認**のため、次フェーズの着手有無・新規タスクの順序・優先度はユーザー指示を待つ。Phase 3-A の経緯と完了基準は [Docs/phase3-e2e-plan.md](Docs/phase3-e2e-plan.md) を参照。
+- 現フェーズのタスク順を守る。Phase 1 / MVP（Task 1〜8）、Phase 2 / テスト基盤導入（Task 9〜15）、Phase 3-A / E2E テスト導入（Task 16〜21）はすべて完了済み。**Phase 3-B（Runtime / i.MX8MP / Yocto）は計画策定済み**（[Docs/phase3b-runtime-plan.md](Docs/phase3b-runtime-plan.md)、Task 22〜24）。次セッションで「次のタスクを進めて」と指示があれば Task 22（Runtime/ で Simulator のソースを再利用して hmi_runtime バイナリを追加）から着手する。Phase 3-A の経緯と完了基準は [Docs/phase3-e2e-plan.md](Docs/phase3-e2e-plan.md) を参照。
 - Widget / Screen / Project 型と JSON I/O は `Shared/Schema` にのみ実装。
 - 完了報告の直前に [kaizen-close](.claude/skills/kaizen-close/SKILL.md) を実行し、得た知見を反映する。
 - QML モジュール URI とアプリの `loadFromModule()` 引数を一致させる。
@@ -292,7 +292,8 @@ Task 3 で定着したスタイル。新しいデータ型を追加するとき�
   - Yocto / i.MX8MP の組み込みデプロイでも静的リンクの方が dylib 配布パスの問題を避けられて好都合。
 - **`default property alias content: <inner>.data` で受けた子要素の `parent` は内部 Item を指す**。たとえば `EditableWidget` は内部 `container` に子を流し込むため、Main.qml で `EditableWidget { HmiButton { text: parent.widgetText } }` と書くと `parent` は `container` を指してしまい、`widgetText`（root のプロパティ）が undefined になる。回避策：外側 Item に `id` を付け、子からは `id` 経由で参照する（例：`EditableWidget { id: btn; HmiButton { text: btn.widgetText } }`）。Canvas.qml も同じ構造のため同様の注意が必要。
 - **C++ ヘルパーを QML に公開するときは `setContextProperty` が最も軽い**。Editor 側に存在する一時的なコントローラ（例：`ProjectIo`）は `engine.rootContext()->setContextProperty("projectIo", &io)` でグローバル変数として QML から呼べる。`qmlRegisterType` / QML_ELEMENT は型インスタンス化が必要な場合に使う。**`hmi_schema` 等の Shared ライブラリは QML を一切知らないことを保ち**、QML 連携クラスは利用側アプリ（Editor / Simulator）に置く。
-- **Editor / Simulator で同等の C++ ヘルパーが必要になる場合、Shared に移さず両方に独立して持つ**（Task 8 で確立）。Editor `ProjectIo`（save + load）と Simulator `ProjectLoader`（load のみ）は load() の実装がほぼ同一だが、責務（編集 vs 読み取り専用）が異なるため Shared に統合しない。Shared への昇格を検討するのは、3 つ目の利用側（Runtime 等）が同じヘルパーを欲しがった時、または save 側にも同等の機能差が現れた時。それまでは「重複を許容、利用側完結」を優先する。
+- **Editor / Simulator で同等の C++ ヘルパーが必要になる場合、Shared に移さず両方に独立して持つ**（Task 8 で確立）。Editor `ProjectIo`（save + load）と Simulator `ProjectLoader`（load のみ）は load() の実装がほぼ同一だが、責務（編集 vs 読み取り専用）が異なるため Shared に統合しない。Shared への昇格を検討するのは、save 側にも同等の機能差が現れた時のみ。それまでは「重複を許容、利用側完結」を優先する。
+- **Simulator と Runtime はソース完全共通**（Phase 3-B / Task 22 以降で確立予定）。Editor との関係（独立保持）とは別に、Runtime は Simulator/ のソースを `Runtime/CMakeLists.txt` の CMake glue で再利用して `hmi_runtime` バイナリを生成する。Runtime/ には `.cpp` / `.qml` / `.h` を置かない。Runtime に追加機能が必要な場合も Simulator/ 側で編集し、必要なら `#ifdef HMI_RUNTIME_BUILD` で振る舞いを分岐する。QML モジュール URI も Simulator と同じ `HmiSimulator` を再利用する（モジュール名を変えるとソース共有が崩れる）。詳細は [Docs/phase3b-runtime-plan.md](Docs/phase3b-runtime-plan.md)。
 - **Simulator のような起動時自動ロード機能が欲しい時は CLI 引数 + `setContextProperty` の組み合わせが軽い**（Task 8 で確立）。`main.cpp` で `QCommandLineParser` から取った `QUrl` を `initialJsonUrl` 等の名前で context に詰め、QML 側 `Component.onCompleted` で空判定して `projectLoader.load()` を呼ぶ。これは FileDialog の自動操作が AppleScript で不可能な問題（動作証跡セクション参照）を回避する正攻法でもある。
 - **QtQuick.Controls / QtQuick.Dialogs は QML `import` だけで動く**（Qt 6.5+）。CMake で `Qt6::QuickControls2` 等を明示リンクしなくても plugin が動的にロードされるため、`target_link_libraries` への追加は不要。デプロイ時のみ `windeployqt` / `macdeployqt` で plugin 同梱を確認する。
 - **`FileDialog.selectedFile` は `file:///...` 形式の `QUrl`**。C++ で受けるときは `QUrl::toLocalFile()` で OS パスに変換してから `QFile` / `QSaveFile` に渡すこと（`toString()` だと `file://` が残って書き込みに失敗する）。書き込みは `QSaveFile` を使い `commit()` で原子的に保存するのが安全。
@@ -372,7 +373,7 @@ README.md には **「常に最新」を表す固定ファイル名** のスク�
 
 ## 対象プラットフォーム
 
-開発・動作確認は **macOS と Windows の両方**で実施（Editor / Simulator ともに GUI 起動確認済み）。Yocto / i.MX8MP クロスビルドは MVP 完了後に `Runtime/` で対応する。
+開発・動作確認は **macOS と Windows の両方**で実施（Editor / Simulator ともに GUI 起動確認済み）。Phase 3-B（Task 22〜24）で **i.MX8MP / Yocto 向け Runtime** を追加予定（Simulator のソースを共有して `hmi_runtime` バイナリを生成、Yocto SDK でクロスビルド → 実機 scp）。詳細は [Docs/phase3b-runtime-plan.md](Docs/phase3b-runtime-plan.md)。
 
 ### Claude Code on the web は非対応
 
