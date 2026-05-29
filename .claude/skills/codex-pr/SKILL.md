@@ -6,11 +6,12 @@ origin: hmi-platform
 
 # Codex 向け PR 作成ワークフロー
 
-本プロジェクトのコードレビューは **Codex GitHub App** が担当する。本スキルは MVP タスク完了時に Codex がすぐレビューを開始できる形で PR を作る標準手順。
+本プロジェクトのコードレビューは **Codex GitHub App** が担当する。本スキルはフェーズタスク（MVP / Phase 2 / Phase 3-A / Phase 3-B …）完了時に Codex がすぐレビューを開始できる形で PR を作る標準手順。
 
 ## 適用タイミング（When to Use）
 
-- MVP タスクの実装・ビルド検証・README 進捗反映・kaizen-close が完了し、PR にする段階
+- フェーズタスクの実装・ビルド検証・README 進捗反映・kaizen-close が完了し、PR にする段階
+- ドキュメント・設定変更のみの場合は `task/<N>-...` ではなく `docs/<短い名>` ブランチで PR を作る運用も可（[CLAUDE.md](../../../CLAUDE.md)「ブランチ命名」節）
 - 既存 PR への追加コミットではなく、**新規 PR を作る** とき
 
 ## 前提
@@ -91,7 +92,7 @@ cat <<'EOF' | sed "s|__SHA__|${SHA}|g" > /tmp/pr_body.md
 <スクショの簡単な説明：何が描画されている画面か>
 
 ## 設計書との対応
-- MVP Task N: <タスク名>
+- Task N: <タスク名>（該当フェーズ：MVP / Phase 2 / Phase 3-A / Phase 3-B …）
 - 完了基準: <ビルド成功・動作確認内容>
 
 ## Test plan

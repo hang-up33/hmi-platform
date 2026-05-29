@@ -45,12 +45,14 @@ cmake --build build
 # 個別ターゲット
 cmake --build build --target hmi_editor
 cmake --build build --target hmi_simulator
+cmake --build build --target hmi_runtime    # Phase 3-B-1 / Task 22 以降。Simulator のソース共有 PC ビルド
 cmake --build build --target hmi_schema
 cmake --build build --target hmi_widgets
 
 # 起動
 ./build/Editor/hmi_editor.app/Contents/MacOS/hmi_editor
 ./build/Simulator/hmi_simulator.app/Contents/MacOS/hmi_simulator
+./build/Runtime/hmi_runtime.app/Contents/MacOS/hmi_runtime --open <path/to/project.json>
 ```
 
 ### Windows（PowerShell）
@@ -75,9 +77,10 @@ cmake --build build-mingw
 # 起動（setup-env.ps1 後）
 .\build-mingw\hmi_editor.exe
 .\build-mingw\hmi_simulator.exe
+.\build-mingw\hmi_runtime.exe --open <path\to\project.json>   # Phase 3-B-1 / Task 22 以降
 ```
 
-実行ファイル出力先は macOS とは異なり、ビルドツリーのトップ（`build-mingw\hmi_editor.exe`）になる。
+実行ファイル出力先は macOS とは異なり、ビルドツリーのトップ（`build-mingw\hmi_editor.exe`）になる（hmi_runtime も同じく `build-mingw\hmi_runtime.exe`）。
 
 ## 既知の罠（How It Works — pitfalls）
 

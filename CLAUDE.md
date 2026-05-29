@@ -15,7 +15,7 @@ Yocto / i.MX8M Plus 向け Qt6 HMI ランタイムを対象に、HMI 作画ツ�
 
 ## コア原則
 
-1. **1 タスクずつ完結** — 設計書の MVP タスク順を厳守し、各タスクは `cmake --build` 成功を完了基準とする。
+1. **1 タスクずつ完結** — 設計書のフェーズタスク順（MVP / Phase 2 / Phase 3-A / Phase 3-B …）を厳守し、各タスクは `cmake --build` 成功を完了基準とする。
 2. **Shared/Schema が唯一の真実** — Widget / Screen / Project に該当する型・JSON 入出力はここにのみ定義。
 3. **継続的改善（kaizen）の遵守** — タスク完了報告の前に、得た知見を CLAUDE.md / README / メモリ / 設定のいずれかに反映する（[kaizen-close](.claude/skills/kaizen-close/SKILL.md) スキルで標準化）。
 4. **既存資産の保護** — フォルダ構成変更禁止・既存コード削除禁止（例外は明示されたプレースホルダーのみ）。
@@ -77,7 +77,7 @@ Windows は **Qt 6.11.0 MinGW 64-bit kit + 付属 MinGW 13.1 + Ninja** を前提
 | Simulator | `hmi_simulator` | アプリ | `HmiSimulator` | 読み取り専用の試験アプリ。同じ JSON を描画 |
 | Runtime | `hmi_runtime` | アプリ（Simulator のソース共有） | `HmiSimulator`（再利用） | i.MX8MP / Yocto 向け。**Simulator/ のソースを共有して `hmi_runtime` バイナリを生成**（Runtime/ は CMake glue のみ）。Task 22 でホスト PC ビルドまで成立、Task 23（Yocto SDK クロスビルド）・Task 24（実機描画）未着手。詳細は [Docs/phase3b-runtime-plan.md](Docs/phase3b-runtime-plan.md) |
 
-JSON 入出力は `QJsonDocument`（外部依存なし）。データモデルは `QAbstractListModel` ベースで QML に公開する想定。
+JSON 入出力は `QJsonDocument`（外部依存なし）。Editor / Simulator の widget リストの現状実装は **QML の `var` 配列ベース**（Task 5 で確立、`widgetModel = widgetModel.concat([...])` で配列丸ごと差し替えて Repeater をリトリガする）。`QAbstractListModel` 化は Phase 3-B スコープ確定後に再評価予定（メモリ `project_widgetmodel_refactor_deferred` 参照、現状は deferred）。
 
 ---
 
@@ -87,7 +87,7 @@ JSON 入出力は `QJsonDocument`（外部依存なし）。データモデル�
 
 | エージェント | 役割 | 呼ぶタイミング |
 |---|---|---|
-| [mvp-task-runner](.claude/agents/mvp-task-runner.md) | MVP の次タスクを 1 つだけ実装 | 「次のタスクを進めて」「Task N をやる」 |
+| [mvp-task-runner](.claude/agents/mvp-task-runner.md) | フェーズタスク（MVP / Phase 2 / Phase 3-A / Phase 3-B …）の次タスクを 1 つだけ実装 | 「次のタスクを進めて」「Task N をやる」 |
 | [cmake-build-resolver](.claude/agents/cmake-build-resolver.md) | CMake/Qt ビルドエラー解決 | `cmake --build` 失敗時 |
 
 独立したタスクは並列起動して効率化する。
@@ -100,13 +100,13 @@ JSON 入出力は `QJsonDocument`（外部依存なし）。データモデル�
 
 ## Codex 連携 / PR ワークフロー
 
-本プロジェクトはレビューを Codex GitHub App に委ねるため、**MVP タスクは PR 経由で main に取り込む**。Claude は以下のフローに従う。
+本プロジェクトはレビューを Codex GitHub App に委ねるため、**フェーズタスク（MVP / Phase 2 / Phase 3-A / Phase 3-B …）はすべて PR 経由で main に取り込む**。Claude は以下のフローに従う。
 
 Codex 向けの永続的な指示は **リポジトリ直下の [AGENTS.md](AGENTS.md)** に記述する（Codex 公式推奨形式）。レビューを日本語化するための `## Review guidelines` セクションを含み、Codex GitHub App / Codex CLI の両方がレビュー時に参照する。Codex 関連で「全 PR に効かせたい」指示が増えたら、CLAUDE.md ではなく AGENTS.md 側に追記すること。
 
 ### ブランチ命名
 
-- MVP タスク：`task/<N>-<短い名>` 形式（例：`task/2-canvas`, `task/3-widget-schema`, `task/6-json-save`）
+- フェーズタスク（MVP / Phase 2 / Phase 3-A / Phase 3-B …）：`task/<N>-<短い名>` 形式（例：`task/2-canvas`, `task/16-spix-bootstrap`, `task/22-runtime-glue`）
 - ドキュメント・設定変更：`docs/<短い名>` 形式（例：`docs/codex-auto-review`, `docs/qml-canvas-structure`）
 - 1 単位 = 1 ブランチ = 1 PR。原則として main から派生させる
 - **例外：直前タスクの PR がまだ main にマージされていない状態で次タスクに着手する場合**、当該依存ブランチ（例：`task/9-qt-test-setup`）から派生させ、`gh pr create --base <依存ブランチ>` で PR の base も依存ブランチに合わせる。依存ブランチが main にマージされたら、`git fetch origin && git rebase --onto main <依存ブランチ> task/<N>-...` で main にリベースし、PR の base も `gh pr edit <N> --base main` で main に切り替える。Task 10 着手時に Task 9 PR #18 が未マージだったため確立（2026-05）
@@ -171,7 +171,7 @@ inline review は `gh api repos/<owner>/<repo>/pulls/<N>/comments` 側にも来�
 
 | スキル | 用途 |
 |---|---|
-| [mvp-next-task](.claude/skills/mvp-next-task/SKILL.md) | MVP の次タスクを進める標準ワークフロー |
+| [mvp-next-task](.claude/skills/mvp-next-task/SKILL.md) | フェーズタスクの次を進める標準ワークフロー（MVP / Phase 2 / Phase 3-A / Phase 3-B …） |
 | [codex-pr](.claude/skills/codex-pr/SKILL.md) | Codex レビュー前提の PR 作成手順 |
 | [qt6-build](.claude/skills/qt6-build/SKILL.md) | Qt6 + CMake セットアップ・ビルド手順と既知の罠 |
 | [kaizen-close](.claude/skills/kaizen-close/SKILL.md) | タスク完了直前に学びをドキュメントに反映する手順 |
@@ -196,7 +196,7 @@ inline review は `gh api repos/<owner>/<repo>/pulls/<N>/comments` 側にも来�
 - qmake その他の代替ビルドシステムを導入する。
 - main ブランチに直接 push / コミットする。タスクは必ず `task/<N>-<短い名>` ブランチ + PR で取り込む。
 - 設計書未承認のフレームワーク / ライブラリを独断で追加する。
-- Claude Code on the web で MVP 実装 / Codex 指摘対応 / ビルド検証を進める（理由は「Claude Code on the web は非対応」節を参照）。
+- Claude Code on the web でフェーズタスクの実装 / Codex 指摘対応 / ビルド検証を進める（理由は「Claude Code on the web は非対応」節を参照）。
 
 ---
 
@@ -284,17 +284,18 @@ Task 3 で定着したスタイル。新しいデータ型を追加するとき�
   - **プレフィックス命名**（推奨）：`EditorCanvas.qml` / `HmiButton.qml` のように接頭辞を付ける。
   - **自モジュールを明示 import**：`Canvas.qml` のような名前を採用した場合、利用側 QML に `import HmiEditor`（または `HmiWidgets`）を必ず記述する。
 - 共有 Widget（`HmiWidgets`）を新規追加する際は、上記の命名衝突に特に注意する（`Button` / `Label` / `Slider` 等は Controls と衝突しうる）。
-- **共有 QML モジュールは `STATIC` でビルドし、利用側アプリで plugin ターゲットをリンクする**。これは Qt 公式の「Multiple QML Modules in One Binary」推奨構成：
-  - 共有側（`Shared/Widgets/CMakeLists.txt`）：`qt_add_qml_module(hmi_widgets STATIC URI HmiWidgets ...)`
-  - 利用側（`Editor` / `Simulator`）：`target_link_libraries(<app> PRIVATE hmi_widgetsplugin)`
+- **複数バイナリ間で共有する QML モジュールは `STATIC` でビルドし、利用側アプリで plugin ターゲットをリンクする**。これは Qt 公式の「Multiple QML Modules in One Binary」推奨構成：
+  - 共有側（`Shared/Widgets/CMakeLists.txt`、`Simulator/CMakeLists.txt` の `hmi_simulator_qml`）：`qt_add_qml_module(<name> STATIC URI <Uri> ...)`
+  - 利用側（`Editor` / `Simulator` / `Runtime`）：`target_link_libraries(<app> PRIVATE <name>plugin)`
   - 動的ビルド（`STATIC` を付けない）だと plugin が `MODULE_LIBRARY` になり `target_link_libraries` がエラーになる。
+  - **単一バイナリ専用** の QML モジュール（例：`HmiEditor` URI）は実行ファイル直結（`qt_add_qml_module(hmi_editor URI HmiEditor ...)`）のままで OK。STATIC 化は別バイナリと共有する場合のみ必須。
   - 代替として利用側で `IMPORTS HmiWidgets` を宣言する書き方もあるが、本プロジェクトの Qt 6.11（Homebrew）構成では自モジュール（`HmiEditor`）のリソース解決と競合して `No module named "HmiEditor"` で起動失敗した実績がある。STATIC plugin + 直リンクが唯一動作確認済みの方法。
   - Yocto / i.MX8MP の組み込みデプロイでも静的リンクの方が dylib 配布パスの問題を避けられて好都合。
 - **`default property alias content: <inner>.data` で受けた子要素の `parent` は内部 Item を指す**。たとえば `EditableWidget` は内部 `container` に子を流し込むため、Main.qml で `EditableWidget { HmiButton { text: parent.widgetText } }` と書くと `parent` は `container` を指してしまい、`widgetText`（root のプロパティ）が undefined になる。回避策：外側 Item に `id` を付け、子からは `id` 経由で参照する（例：`EditableWidget { id: btn; HmiButton { text: btn.widgetText } }`）。Canvas.qml も同じ構造のため同様の注意が必要。
 - **C++ ヘルパーを QML に公開するときは `setContextProperty` が最も軽い**。Editor 側に存在する一時的なコントローラ（例：`ProjectIo`）は `engine.rootContext()->setContextProperty("projectIo", &io)` でグローバル変数として QML から呼べる。`qmlRegisterType` / QML_ELEMENT は型インスタンス化が必要な場合に使う。**`hmi_schema` 等の Shared ライブラリは QML を一切知らないことを保ち**、QML 連携クラスは利用側アプリ（Editor / Simulator）に置く。
 - **Editor / Simulator で同等の C++ ヘルパーが必要になる場合、Shared に移さず両方に独立して持つ**（Task 8 で確立）。Editor `ProjectIo`（save + load）と Simulator `ProjectLoader`（load のみ）は load() の実装がほぼ同一だが、責務（編集 vs 読み取り専用）が異なるため Shared に統合しない。Shared への昇格を検討するのは、save 側にも同等の機能差が現れた時のみ。それまでは「重複を許容、利用側完結」を優先する。
 - **Simulator と Runtime はソース完全共通**（Phase 3-B / Task 22 で確立済み）。Editor との関係（独立保持）とは別に、Runtime は Simulator/ のソースを `Runtime/CMakeLists.txt` の CMake glue で再利用して `hmi_runtime` バイナリを生成する。Runtime/ には `.cpp` / `.qml` / `.h` を置かない。Runtime に追加機能が必要な場合も Simulator/ 側で編集し、必要なら `#ifdef HMI_RUNTIME_BUILD` で振る舞いを分岐する。QML モジュール URI も Simulator と同じ `HmiSimulator` を再利用する（モジュール名を変えるとソース共有が崩れる）。詳細は [Docs/phase3b-runtime-plan.md](Docs/phase3b-runtime-plan.md)。
-- **ソース共有の具体的 CMake 技法は「共通 function + `CMAKE_CURRENT_FUNCTION_LIST_DIR`」を採用**（Task 22 で確立）。`Simulator/CMakeLists.txt` で `function(hmi_add_simulator_like_executable target)` を定義し、関数内で `qt_add_executable(${target} ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/src/main.cpp ...)` のように **関数定義位置のディレクトリ** を絶対パス基準にする。`Runtime/CMakeLists.txt` は `hmi_add_simulator_like_executable(hmi_runtime)` の 1 行だけ。CMake function はグローバルスコープなので、ルート `CMakeLists.txt` で `add_subdirectory(Simulator)` を `add_subdirectory(Runtime)` より **前** に置く必要がある（順序を逆にすると関数未定義エラー）。`CMAKE_CURRENT_FUNCTION_LIST_DIR` は CMake 3.17+ の機能なので、**Yocto SDK の CMake バージョンが 3.17 未満だと使えない**（Task 23 着手時に SDK の CMake バージョンを確認する）。QML module 側は同じ Simulator/CMakeLists.txt で `qt_add_qml_module(hmi_simulator_qml STATIC URI HmiSimulator ...)` として STATIC plugin 化し、function 内の `target_link_libraries` で両バイナリに `hmi_simulator_qmlplugin` を取り込む（CLAUDE.md 既出の Shared/Widgets と同パターン）。実行ファイルに直結したまま QML module を宣言した状態では別バイナリから共有できないため、STATIC 化は必須。
+- **ソース共有の具体的 CMake 技法は「共通 function + `CMAKE_CURRENT_FUNCTION_LIST_DIR`」を採用**（Task 22 で確立）。`Simulator/CMakeLists.txt` で `function(hmi_add_simulator_like_executable target)` を定義し、関数内で `qt_add_executable(${target} ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/src/main.cpp ...)` のように **関数定義位置のディレクトリ** を絶対パス基準にする。`Runtime/CMakeLists.txt` は `hmi_add_simulator_like_executable(hmi_runtime)` の 1 行だけ。CMake function はグローバルスコープなので、ルート `CMakeLists.txt` で `add_subdirectory(Simulator)` を `add_subdirectory(Runtime)` より **前** に置く必要がある（順序を逆にすると関数未定義エラー）。`CMAKE_CURRENT_FUNCTION_LIST_DIR` 自体は CMake 3.17+ で導入された機能だが、**本リポジトリは root `CMakeLists.txt` で `cmake_minimum_required(VERSION 3.21)` を指定しているため、Yocto SDK 側の CMake は 3.21 以上が必須**（3.17〜3.20 だと configure 時点で落ちる。Task 23 着手時に SDK の `cmake --version` を確認する）。QML module 側は同じ Simulator/CMakeLists.txt で `qt_add_qml_module(hmi_simulator_qml STATIC URI HmiSimulator ...)` として STATIC plugin 化し、function 内の `target_link_libraries` で両バイナリに `hmi_simulator_qmlplugin` を取り込む（CLAUDE.md 既出の Shared/Widgets と同パターン）。実行ファイルに直結したまま QML module を宣言した状態では別バイナリから共有できないため、STATIC 化は必須。
 - **Task 22 時点では `hmi_runtime` のウィンドウタイトル・applicationName は `hmi_simulator` と同じ**（[Simulator/qml/Main.qml](Simulator/qml/Main.qml) の `Window.title = "HMI Simulator"`、[Simulator/src/main.cpp](Simulator/src/main.cpp) の `setApplicationName("hmi_simulator")`）。これは計画書「Task 22 段階では分岐ゼロのまま、Task 24 で実機差異が見えてから `#ifdef HMI_RUNTIME_BUILD` を入れる」方針に従った意図的な現状。Task 24 で実機初期化を入れる時に分岐すれば良い。Codex レビューでウィンドウタイトルが Simulator のままなことを指摘されたら本方針を根拠に説明する。
 - **Simulator のような起動時自動ロード機能が欲しい時は CLI 引数 + `setContextProperty` の組み合わせが軽い**（Task 8 で確立）。`main.cpp` で `QCommandLineParser` から取った `QUrl` を `initialJsonUrl` 等の名前で context に詰め、QML 側 `Component.onCompleted` で空判定して `projectLoader.load()` を呼ぶ。これは FileDialog の自動操作が AppleScript で不可能な問題（動作証跡セクション参照）を回避する正攻法でもある。
 - **QtQuick.Controls / QtQuick.Dialogs は QML `import` だけで動く**（Qt 6.5+）。CMake で `Qt6::QuickControls2` 等を明示リンクしなくても plugin が動的にロードされるため、`target_link_libraries` への追加は不要。デプロイ時のみ `windeployqt` / `macdeployqt` で plugin 同梱を確認する。
@@ -375,11 +376,11 @@ README.md には **「常に最新」を表す固定ファイル名** のスク�
 
 ## 対象プラットフォーム
 
-開発・動作確認は **macOS と Windows の両方**で実施（Editor / Simulator ともに GUI 起動確認済み）。Phase 3-B（Task 22〜24）で **i.MX8MP / Yocto 向け Runtime** を追加予定（Simulator のソースを共有して `hmi_runtime` バイナリを生成、Yocto SDK でクロスビルド → 実機 scp）。詳細は [Docs/phase3b-runtime-plan.md](Docs/phase3b-runtime-plan.md)。
+開発・動作確認は **macOS と Windows の両方**で実施（Editor / Simulator / Runtime PC ビルドともに GUI 起動確認済み）。**Phase 3-B-1 / Task 22 で 3 バイナリ構成（hmi_editor / hmi_simulator / hmi_runtime）に拡張済み**（Simulator のソースを共有して `hmi_runtime` バイナリを生成、ホスト PC で起動確認済み）。残りの Task 23（Yocto SDK でのクロスビルド）・Task 24（i.MX8MP 実機 scp + 起動）は未着手。詳細は [Docs/phase3b-runtime-plan.md](Docs/phase3b-runtime-plan.md)。
 
 ### Claude Code on the web は非対応
 
-**Claude Code on the web では本プロジェクトの実装作業を行わない**。MVP タスクや Codex 指摘対応は必ず macOS / Windows のローカル環境で実施する。
+**Claude Code on the web では本プロジェクトの実装作業を行わない**。フェーズタスクや Codex 指摘対応は必ず macOS / Windows のローカル環境で実施する（Phase 3-B-2 / Task 23 以降は WSL2 / VM での Yocto SDK クロスビルドも追加）。
 
 理由（2026-05 時点で調査済）：
 
@@ -387,4 +388,4 @@ README.md には **「常に最新」を表す固定ファイル名** のスク�
 - aqtinstall で公式 Qt を取得しようとすると、コンテナの既定ネットワークポリシーが `download.qt.io` / `ftp.jaist.ac.jp` / `mirrors.dotsrc.org` 等 Qt ミラーを `host_not_allowed` (HTTP 403) で全遮断する。
 - 結果、`cmake --build` が通せずビルド検証ができない。GUI 動作確認も不可のため、ビルドが通ったとしても MVP の受け入れ基準を満たせない。
 
-Web 版で実装を進める運用は採用しない。Claude Code on the web のセッションを開いてしまった場合も、MVP タスクや Codex 指摘対応に着手せず、ローカル環境に切り替えてから作業すること。
+Web 版で実装を進める運用は採用しない。Claude Code on the web のセッションを開いてしまった場合も、フェーズタスクや Codex 指摘対応に着手せず、ローカル環境に切り替えてから作業すること。

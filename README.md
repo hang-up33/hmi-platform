@@ -1,6 +1,6 @@
 # hmi-platform
 
-Yocto 上で動作する i.MX8M Plus 向け Qt/QML HMI ランタイムを対象に、HMI 作画・シミュレーション・タグ管理・実機デプロイを統合した開発環境。
+Yocto / i.MX8M Plus 向け Qt6 HMI ランタイムを対象に、HMI 作画ツール（Editor）・PC 試験環境（Simulator）・実機ランタイム（Runtime）・JSON スキーマ（Shared/Schema）・共有 Widget（Shared/Widgets）を統合した開発基盤。
 
 ## スクリーンショット
 
