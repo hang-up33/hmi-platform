@@ -22,8 +22,8 @@ Codex が PR レビューを行う際は、以下のルールに従ってくだ�
 
 ### スコープ
 
-- 本リポジトリは **MVP フェーズ**（[CLAUDE.md](CLAUDE.md) の「現在のフェーズ」参照）です。
-  設計書の MVP タスク順を逸脱する大規模リファクタ提案は控えめにし、必要であれば `[Future]` ラベルで分離してください。
+- 本リポジトリは **Phase 3-B-1 / Task 22 まで完了**（[CLAUDE.md](CLAUDE.md) の「現在のフェーズ」参照）。残タスクは Task 23（Yocto SDK クロスビルド）・Task 24（i.MX8MP 実機描画）。
+  現在進行中のフェーズスコープ（[Docs/phase3b-runtime-plan.md](Docs/phase3b-runtime-plan.md)）を逸脱する大規模リファクタ提案は控えめにし、必要であれば `[Future]` ラベルで分離してください。
 - フォルダ構成変更（`Editor/ Simulator/ Runtime/ Shared/Schema/ Shared/Widgets/ Docs/`）は禁止です。提案しないでください。
 - qmake その他の代替ビルドシステム導入は禁止です。CMake 前提でレビューしてください。
 

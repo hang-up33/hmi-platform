@@ -9,6 +9,14 @@
 #   sleep 2
 #   scripts/capture-app-window.sh hmi_editor Docs/screenshots/task-4-button.png
 #
+#   ./build/Simulator/hmi_simulator.app/Contents/MacOS/hmi_simulator --open <path> &
+#   sleep 2
+#   scripts/capture-app-window.sh hmi_simulator Docs/screenshots/task-8-simulator.png
+#
+#   ./build/Runtime/hmi_runtime.app/Contents/MacOS/hmi_runtime --open <path> &
+#   sleep 2
+#   scripts/capture-app-window.sh hmi_runtime Docs/screenshots/task-22-runtime-host.png
+#
 # 仕組み:
 #   1. Swift で CGWindowListCopyWindowInfo を呼び、対象プロセスのウィンドウ ID を取得
 #   2. screencapture -l<wid> でそのウィンドウだけ取得（Retina 倍率は自動考慮）

@@ -8,9 +8,9 @@ Phase 1 / 2 / 3-A と同じく **1 タスク = 1 ブランチ = 1 PR**、完了�
 
 ```mermaid
 flowchart LR
-    A["Phase 3-A<br/>Task 16〜21<br/>(完了)"] --> B["Phase 3-B-1<br/>Runtime CMake glue<br/>(Task 22)"]
-    B --> C["Phase 3-B-2<br/>Yocto SDK クロスビルド<br/>(Task 23)"]
-    C --> D["Phase 3-B-3<br/>実機描画検証<br/>(Task 24)"]
+    A["Phase 3-A<br/>Task 16〜21<br/>(完了)"] --> B["Phase 3-B-1<br/>Runtime CMake glue<br/>(Task 22, 完了)"]
+    B --> C["Phase 3-B-2<br/>Yocto SDK クロスビルド<br/>(Task 23, 未着手)"]
+    C --> D["Phase 3-B-3<br/>実機描画検証<br/>(Task 24, 未着手)"]
     D --> E["Phase 3-C 候補<br/>物理 I/O / 実機 E2E"]
 ```
 
@@ -75,7 +75,7 @@ flowchart LR
 
 | # | タスク | スコープ | 完了基準 |
 |---|---|---|---|
-| 22 | Simulator の QML module を STATIC library 化 + Runtime/ で hmi_runtime バイナリを追加 | **Simulator/CMakeLists.txt を再構成**し、QML module を STATIC library として切り出す（`qt_add_qml_module(hmi_simulator_qml STATIC URI HmiSimulator ...)`）。これは CLAUDE.md「共有 QML モジュールは `STATIC` でビルドし、利用側アプリで plugin ターゲットをリンクする」原則に従う既存パターン（`Shared/Widgets` と同じ構造）。Qt の `qt_add_qml_module` を実行ファイルに直接付けた場合、その QML resource は別の実行ファイルから再利用できないため、**実行ファイル 2 個（hmi_simulator / hmi_runtime）から共有するには STATIC library 化が必須**。Simulator 側 `qt_add_executable(hmi_simulator ...)` は STATIC plugin（`hmi_simulator_qmlplugin`）を `target_link_libraries` で取り込む構成に変更。C++ ソース（`Simulator/src/main.cpp` 等）は **共通ソースとして Simulator/ に残し**、`Runtime/CMakeLists.txt` でも同じソースを参照して `hmi_runtime` ターゲットを add_executable + 同じ STATIC plugin をリンクする。ルート `CMakeLists.txt` に `add_subdirectory(Runtime)` を追加。Simulator と Runtime で振る舞いを切り替える必要が出た場合（例：QPA platform の既定値）は CMake define `HMI_RUNTIME_BUILD` を立てて Simulator/src/main.cpp 内で `#ifdef HMI_RUNTIME_BUILD` で分岐する（Task 24 で実機差異が見えてから具体化、Task 22 段階では分岐ゼロのまま）。バイナリ名は `hmi_simulator` / `hmi_runtime` で別、QML モジュール URI は **`HmiSimulator` を共有**（モジュール名を変えるとソース共有が崩れる）。**C++ ソース共有の具体的な CMake 技法**（`target_sources` で参照 / OBJECT ライブラリ抽出 / 共通 CMake function 化 等）は Task 22 着手時に判断する（QML module の STATIC 化は確定）。`Runtime/` 配下に `.cpp` / `.qml` / `.h` は置かない方針 | `cmake --build` 緑、既存の Simulator 単体テスト（Phase 2 で導入）が引き続き緑、ホストで `hmi_simulator --open <path>` と `hmi_runtime --open <path>` の両方が同じレイアウトで JSON 描画する。動作証跡スクショ `Docs/screenshots/task-22-runtime-host.png`（hmi_runtime PC 版の起動画面）を保存 |
+| 22 | Simulator の QML module を STATIC library 化 + Runtime/ で hmi_runtime バイナリを追加 | **Simulator/CMakeLists.txt を再構成**し、QML module を STATIC library として切り出す（`qt_add_qml_module(hmi_simulator_qml STATIC URI HmiSimulator ...)`）。これは CLAUDE.md「共有 QML モジュールは `STATIC` でビルドし、利用側アプリで plugin ターゲットをリンクする」原則に従う既存パターン（`Shared/Widgets` と同じ構造）。Qt の `qt_add_qml_module` を実行ファイルに直接付けた場合、その QML resource は別の実行ファイルから再利用できないため、**実行ファイル 2 個（hmi_simulator / hmi_runtime）から共有するには STATIC library 化が必須**。Simulator 側 `qt_add_executable(hmi_simulator ...)` は STATIC plugin（`hmi_simulator_qmlplugin`）を `target_link_libraries` で取り込む構成に変更。C++ ソース（`Simulator/src/main.cpp` 等）は **共通ソースとして Simulator/ に残し**、`Runtime/CMakeLists.txt` でも同じソースを参照して `hmi_runtime` ターゲットを add_executable + 同じ STATIC plugin をリンクする。ルート `CMakeLists.txt` に `add_subdirectory(Runtime)` を追加。Simulator と Runtime で振る舞いを切り替える必要が出た場合（例：QPA platform の既定値）は CMake define `HMI_RUNTIME_BUILD` を立てて Simulator/src/main.cpp 内で `#ifdef HMI_RUNTIME_BUILD` で分岐する（Task 24 で実機差異が見えてから具体化、Task 22 段階では分岐ゼロのまま）。バイナリ名は `hmi_simulator` / `hmi_runtime` で別、QML モジュール URI は **`HmiSimulator` を共有**（モジュール名を変えるとソース共有が崩れる）。**Task 22 で確定した C++ ソース共有方式**：共通 CMake function `hmi_add_simulator_like_executable` + `CMAKE_CURRENT_FUNCTION_LIST_DIR`（OBJECT ライブラリ抽出 / `target_sources` の絶対パス渡し方式は採用せず）。`Runtime/CMakeLists.txt` は `hmi_add_simulator_like_executable(hmi_runtime)` の 1 行のみ。`Runtime/` 配下に `.cpp` / `.qml` / `.h` は置かない方針 | `cmake --build` 緑、既存の Simulator 単体テスト（Phase 2 で導入）が引き続き緑、ホストで `hmi_simulator --open <path>` と `hmi_runtime --open <path>` の両方が同じレイアウトで JSON 描画する。動作証跡スクショ `Docs/screenshots/task-22-runtime-host.png`（hmi_runtime PC 版の起動画面）を保存 |
 
 ### Phase 3-B-2: Yocto SDK クロスビルド
 
@@ -119,7 +119,7 @@ flowchart LR
 
 - **Simulator/ がソースの唯一の置き場**（`.cpp` / `.qml` / `.h` はここに集中）。Runtime/ には CMakeLists.txt のみ。これにより「Simulator を直すと Runtime にも自動反映」「Runtime に手を入れる場合も Simulator/ で編集する」がルール化される。
 - ただし**Simulator/CMakeLists.txt は Task 22 で再構成される**（QML module を実行ファイル直結から STATIC library 化に変更、`Shared/Widgets` と同じパターン）。これは Qt の `qt_add_qml_module` を実行ファイルに直接付けると別の実行ファイルから共有できないという Qt CMake API の制約による必須変更。既存ファイル削除や C++ ソース変更は伴わない。
-- Simulator 側の変更が Runtime 動作を壊さないか確認するため、**ホストビルドで `hmi_runtime` PC 版を起動する sanity check** を CI（既存 macOS / Windows ジョブ）の動作確認に含める方針を検討（具体化は Task 22 着手時）。
+- Simulator 側の変更が Runtime 動作を壊さないか確認するため、**ホストビルドで `hmi_runtime` PC 版を起動する sanity check** を併用する。Task 22 完了時点では：(a) CI の `cmake --build` で `hmi_runtime` も全ターゲットビルド対象としてリンク互換性は担保される、(b) 実起動 sanity は手動 screenshot で確認（`Docs/screenshots/task-22-runtime-host.png`）。CI 上での `hmi_runtime` 自動起動チェックは Task 23/24 で実機差異が見えた後で必要なら追加する。
 - CLAUDE.md「Editor / Simulator で同等の C++ ヘルパーが必要になる場合、Shared に移さず両方に独立して持つ」原則は **Simulator と Runtime には適用しない**（両者は本質的に同じアプリで、独立して持つ意味が無いため）。Editor との関係では引き続き適用。
 
 ### QML モジュール命名
@@ -134,7 +134,7 @@ flowchart LR
 - CMake toolchain は Yocto SDK 同梱の `$OECORE_NATIVE_SYSROOT/usr/share/cmake/OEToolchainConfig.cmake` を使う（本リポジトリ側で独自 toolchain ファイルは導入しない、`-DHMI_TARGET_YOCTO=ON` のような独自オプションも追加しない）。**注意：`environment-setup-*` を `source` すると対話シェル上では `cmake` が alias で wrap されて `CMAKE_TOOLCHAIN_FILE` を自動付与してくれるが、非対話スクリプトでは alias が展開されない**（[Yocto ML 2018-01 報告](https://docs.yoctoproject.org/pipermail/yocto/2018-January/039667.html)）。`scripts/yocto/cross-build.sh` は alias に頼らず、明示的に `cmake -DCMAKE_TOOLCHAIN_FILE="$OECORE_NATIVE_SYSROOT/usr/share/cmake/OEToolchainConfig.cmake"`（もしくは CMake 3.21+ なら `cmake --toolchain "$OECORE_NATIVE_SYSROOT/usr/share/cmake/OEToolchainConfig.cmake"`）で渡す。これを忘れるとホストの Qt / コンパイラを拾うか `find_package(Qt6)` が失敗して、生成バイナリがホスト ELF になる、または build 自体が失敗する。
 - ただし**ルート `CMakeLists.txt` は MinGW 以外で `HMI_ENABLE_E2E` を既定 ON にしている**（Phase 3-A 経緯）。Yocto SDK は MinGW ではないため、何も指定しないと Spix / AnyRPC を FetchContent で取得・クロスビルドしようとして AnyRPC のクロスツールチェイン互換問題で失敗する可能性が高い（Phase 3-A の Windows MinGW で踏んだ libstdc++ 衝突と同種のリスク）。**Task 23 のクロスビルド手順では `-DHMI_ENABLE_E2E=OFF -DBUILD_TESTING=OFF` を明示する**。これを `scripts/yocto/cross-build.sh` 相当のラッパーに固定値として埋め、ユーザーが option を意識せずクロスビルドできるようにする。実機 E2E の検討は Phase 3-C 候補に切り出し済み。
 - **ビルドターゲットは `hmi_runtime` のみ**（`cmake --build build-yocto --target hmi_runtime`）。PC 専用の `hmi_editor` / `hmi_simulator` は実機に不要で、クロスビルドすると所要時間と失敗要因が増える。`hmi_runtime` は `hmi_simulator_qmlplugin`（Task 22 で導入する STATIC plugin）に依存するので、`hmi_runtime` を build すれば必要な依存ライブラリだけが build される。`scripts/yocto/cross-build.sh` には `--target hmi_runtime` を固定で埋める。
-- ビルドツリーは `build-yocto/`（macOS の `build/`、Windows の `build-mingw/` に倣う）に分ける。`.gitignore` への追加も Task 23 内で実施。
+- ビルドツリーは `build-yocto/`（macOS の `build/`、Windows の `build-mingw/` に倣う）に分ける。`.gitignore` の既存 `build-*/` パターンで `build-yocto/` も既にカバーされているため、追加作業は不要（Task 22 完了時点で確認済み）。
 
 ### スクリーンショット運用
 
