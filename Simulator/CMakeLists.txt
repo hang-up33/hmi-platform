@@ -1,37 +1,60 @@
-qt_add_executable(hmi_simulator
-    src/main.cpp
-    src/ProjectLoader.cpp
-    src/ProjectLoader.h
-)
+# Task 22: Simulator の QML module を STATIC library 化し、
+# hmi_simulator（PC ビルド）と hmi_runtime（PC sanity + Yocto SDK クロスビルド）の
+# 両方から共有できるようにする。
+#
+# Qt の qt_add_qml_module を実行ファイルに直結すると別の実行ファイルから
+# 共有できないため、STATIC library として切り出し、利用側は qmlplugin を
+# target_link_libraries で取り込む。パターンは Shared/Widgets に倣う
+# （CLAUDE.md「共有 QML モジュールは STATIC でビルドし、利用側アプリで
+# plugin ターゲットをリンクする」原則）。
 
-qt_add_qml_module(hmi_simulator
+qt_add_qml_module(hmi_simulator_qml STATIC
     URI HmiSimulator
     VERSION 1.0
+    OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/HmiSimulator
     QML_FILES
         qml/Main.qml
         qml/SimulatorCanvas.qml
 )
 
-target_link_libraries(hmi_simulator
-    PRIVATE
-        Qt6::Quick
-        hmi_schema
-        hmi_widgetsplugin
-)
+# Simulator の C++ ソース（main.cpp / ProjectLoader）は Simulator/ にのみ置く。
+# hmi_simulator と hmi_runtime の 2 ターゲットが同じソースを使うため、
+# 共通の CMake function で executable を生成する。関数は CMake 上は
+# グローバルスコープなので、add_subdirectory(Simulator) 後に
+# Runtime/ から呼び出せる。CMAKE_CURRENT_FUNCTION_LIST_DIR は関数が
+# 定義された場所（このディレクトリ = Simulator/）を指すため、Runtime/
+# から呼んでも Simulator/src/ のソースを正しく参照できる。
+function(hmi_add_simulator_like_executable target)
+    qt_add_executable(${target}
+        "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/src/main.cpp"
+        "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/src/ProjectLoader.cpp"
+        "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/src/ProjectLoader.h"
+    )
 
-# Task 16: E2E テスト用 Spix エンドポイント。`--e2e` 起動時のみ
-# 実際にネットワークを開くため、リンクしても通常起動には影響しない。
-# Windows MinGW では AnyRPC の libstdc++ 衝突により無効化される
-# （HMI_ENABLE_E2E のデフォルトがルート CMakeLists.txt で OFF になる）。
-if(HMI_ENABLE_E2E)
-    target_compile_definitions(hmi_simulator PRIVATE HMI_HAS_SPIX)
-    target_link_libraries(hmi_simulator PRIVATE Spix::QtQuick)
-endif()
+    target_link_libraries(${target}
+        PRIVATE
+            Qt6::Quick
+            hmi_schema
+            hmi_widgetsplugin
+            hmi_simulator_qmlplugin
+    )
 
-set_target_properties(hmi_simulator PROPERTIES
-    MACOSX_BUNDLE TRUE
-    WIN32_EXECUTABLE TRUE
-)
+    # Task 16: E2E テスト用 Spix エンドポイント。`--e2e` 起動時のみ
+    # 実際にネットワークを開くため、リンクしても通常起動には影響しない。
+    # Windows MinGW では AnyRPC の libstdc++ 衝突により無効化される
+    # （HMI_ENABLE_E2E のデフォルトがルート CMakeLists.txt で OFF になる）。
+    if(HMI_ENABLE_E2E)
+        target_compile_definitions(${target} PRIVATE HMI_HAS_SPIX)
+        target_link_libraries(${target} PRIVATE Spix::QtQuick)
+    endif()
+
+    set_target_properties(${target} PROPERTIES
+        MACOSX_BUNDLE TRUE
+        WIN32_EXECUTABLE TRUE
+    )
+endfunction()
+
+hmi_add_simulator_like_executable(hmi_simulator)
 
 if(BUILD_TESTING)
     add_subdirectory(tests)
