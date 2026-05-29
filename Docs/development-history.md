@@ -35,8 +35,8 @@ timeline
     Task 19 : 保存 → 読込ループ E2E
     Task 20 : Simulator 表示 E2E
     Task 21 : E2E を CI に追加
-  section Phase 3-B Runtime / i.MX8MP (予定)
-    Task 22 : Runtime CMake glue
+  section Phase 3-B Runtime / i.MX8MP (進行中)
+    Task 22 : Runtime CMake glue (完了)
     Task 23 : Yocto SDK クロスビルド
     Task 24 : 実機描画検証
 ```
@@ -191,17 +191,17 @@ timeline
 
 ---
 
-## Phase 3-B: Runtime / i.MX8MP 対応（予定 — Task 22 着手前）
+## Phase 3-B: Runtime / i.MX8MP 対応（進行中 — Task 22 完了）
 
 **目標**：Simulator と同じ JSON 描画機能を i.MX8MP 実機（Yocto / Wayland or EGLFS）で動かす Runtime を導入する。
 **計画書**：[Docs/phase3b-runtime-plan.md](phase3b-runtime-plan.md)（v2、PR [#37](https://github.com/hang-up33/hmi-platform/pull/37) で策定）
 **方針**：Simulator/ のソースを共有して `hmi_runtime` バイナリを生成し、3 バイナリ構成（hmi_editor / hmi_simulator / hmi_runtime）を維持。開発ホストは Windows VM + 既存 Yocto SDK。
 
-### Task 22: Runtime CMake glue（⏳ 未着手）
+### Task 22: Runtime CMake glue（✅ 完了）
 
 - **目的**：Simulator の QML module を `STATIC` library 化し、`Runtime/CMakeLists.txt` の glue だけで `hmi_runtime` バイナリをホストビルド可能にする。
-- **予定成果物**：`hmi_simulator_qmlplugin`（STATIC）、`Runtime/CMakeLists.txt`（C++ ソースは Simulator/ を参照）、ホスト起動スクショ `task-22-runtime-host.png`。
-- **設計判断**：Qt の `qt_add_qml_module` を実行ファイル直結にすると別バイナリから共有できない → STATIC plugin + 直リンクが必須（`Shared/Widgets` と同パターン）。Runtime/ には `.cpp` / `.qml` / `.h` を置かない。
+- **成果物**：`hmi_simulator_qmlplugin`（STATIC、`Simulator/CMakeLists.txt`）、共通 function `hmi_add_simulator_like_executable`、`Runtime/CMakeLists.txt`（C++ ソースは Simulator/ を `CMAKE_CURRENT_FUNCTION_LIST_DIR` 経由で参照）、ホスト起動スクショ `Docs/screenshots/task-22-runtime-host.png` / `task-22-simulator-host.png`。
+- **学び**：Qt の `qt_add_qml_module` を実行ファイル直結にすると別バイナリから共有できない → STATIC plugin + 直リンクが必須（`Shared/Widgets` と同パターン）。C++ ソース共有は CMake 関数 + `CMAKE_CURRENT_FUNCTION_LIST_DIR` でディレクトリを跨いだ参照が成立。Runtime/ には `.cpp` / `.qml` / `.h` を置かない原則を維持。hmi_simulator / hmi_runtime の PC ビルドが同一 JSON で完全一致のレイアウトを描画することを目視確認。
 
 ### Task 23: Yocto SDK で hmi_runtime をクロスビルド（⏳ 未着手）
 

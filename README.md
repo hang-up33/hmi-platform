@@ -108,6 +108,8 @@ cmake --build build-mingw
 ```sh
 ./build/Editor/hmi_editor.app/Contents/MacOS/hmi_editor
 ./build/Simulator/hmi_simulator.app/Contents/MacOS/hmi_simulator
+# Runtime PC ビルド（Simulator のソース共有、Phase 3-B Task 22〜）
+./build/Runtime/hmi_runtime.app/Contents/MacOS/hmi_runtime --open <path/to/project.json>
 ```
 
 ### Windows
@@ -117,13 +119,15 @@ cmake --build build-mingw
 ```powershell
 .\build-mingw\hmi_editor.exe
 .\build-mingw\hmi_simulator.exe
+# Runtime PC ビルド（Simulator のソース共有、Phase 3-B Task 22〜）
+.\build-mingw\hmi_runtime.exe --open <path\to\project.json>
 ```
 
 新しいシェルから起動する場合は `. .\scripts\windows\setup-env.ps1` で PATH を通してから実行。
 
 ## フェーズ進捗
 
-Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入の全タスクが完了済み。Phase 3-B（Runtime / i.MX8MP / Yocto）は計画策定済み（Task 22〜24）、Task 22 着手前。Simulator のソースを共有して `hmi_runtime` バイナリを生成する方針。
+Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入の全タスクが完了済み。Phase 3-B（Runtime / i.MX8MP / Yocto）は **Task 22 完了**（hmi_runtime PC ビルドが Simulator のソース共有で生成されることを確認）、Task 23（Yocto SDK クロスビルド）・Task 24（実機描画）は未着手。
 
 > 各タスクで何をしたか・どの PR で入ったか・何を学んだかの **時系列まとめ** は [Docs/development-history.md](Docs/development-history.md) を参照。第三者への説明用。
 
@@ -173,7 +177,7 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 
 | # | タスク | 状態 |
 |---|---|---|
-| 22 | Runtime/ で Simulator のソースを再利用して hmi_runtime バイナリを追加 | ⏳ 未着手 |
+| 22 | Runtime/ で Simulator のソースを再利用して hmi_runtime バイナリを追加 | ✅ 完了 |
 | 23 | Yocto SDK で hmi_runtime をクロスビルド | ⏳ 未着手 |
 | 24 | i.MX8MP 実機で hmi_runtime を起動し JSON 描画 | ⏳ 未着手 |
 

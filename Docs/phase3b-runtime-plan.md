@@ -184,6 +184,6 @@ flowchart LR
 
 | # | タスク | 状態 |
 |---|---|---|
-| 22 | Runtime/ で Simulator のソースを再利用して hmi_runtime バイナリを追加 | ⏳ 未着手 |
+| 22 | Runtime/ で Simulator のソースを再利用して hmi_runtime バイナリを追加 | ✅ 完了 |
 | 23 | Yocto SDK で hmi_runtime をクロスビルド | ⏳ 未着手 |
 | 24 | i.MX8MP 実機で hmi_runtime を起動し JSON 描画 | ⏳ 未着手 |

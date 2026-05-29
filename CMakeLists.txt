@@ -107,6 +107,10 @@ add_subdirectory(Shared/Schema)
 add_subdirectory(Shared/Widgets)
 add_subdirectory(Editor)
 add_subdirectory(Simulator)
+# Task 22: Runtime/ は Simulator のソースを共有する CMake glue。
+# Simulator/ で定義した hmi_add_simulator_like_executable function を呼ぶため、
+# 必ず add_subdirectory(Simulator) より後に置く。
+add_subdirectory(Runtime)
 
 # Task 17: Phase 3-A E2E テスト。BUILD_TESTING=OFF / HMI_ENABLE_E2E=OFF では
 # tests/e2e 内の CMakeLists が return して何も登録しない。
