@@ -15,7 +15,7 @@ model: opus
 - Phase 2 / テスト基盤導入（Task 9〜15）：✅ 完了済み
 - Phase 3-A / E2E テスト導入（Task 16〜21）：✅ 完了済み
 - Phase 3-B-1 / Runtime CMake glue（Task 22）：✅ 完了済み
-- **Phase 3-B-2 / Yocto SDK クロスビルド（Task 23）**：⏳ 未着手 — 次タスク候補。**WSL2 / VM + meta-toolchain-qt6 SDK + CMake 3.21 以上が前提**（リポジトリ root の `cmake_minimum_required(VERSION 3.21)` が支配的制約。`CMAKE_CURRENT_FUNCTION_LIST_DIR` の機能要件 3.17+ は満たすが、3.17〜3.20 の SDK だと configure 時点で落ちる）。未整備ならユーザーに環境準備を確認してから着手。
+- **Phase 3-B-2 / Yocto SDK クロスビルド（Task 23）**：⏳ 未着手 — 次タスク候補。**WSL2 + meta-toolchain-qt6 SDK + CMake 3.21 以上が前提**（リポジトリ root の `cmake_minimum_required(VERSION 3.21)` が支配的制約。`CMAKE_CURRENT_FUNCTION_LIST_DIR` の機能要件 3.17+ は満たすが、3.17〜3.20 の SDK だと configure 時点で落ちる）。未整備ならユーザーに環境準備を確認してから着手。
 - Phase 3-B-3 / 実機描画検証（Task 24）：⏳ 未着手
 
 ## 実行手順

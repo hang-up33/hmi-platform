@@ -195,7 +195,7 @@ timeline
 
 **目標**：Simulator と同じ JSON 描画機能を i.MX8MP 実機（Yocto / Wayland or EGLFS）で動かす Runtime を導入する。
 **計画書**：[Docs/phase3b-runtime-plan.md](phase3b-runtime-plan.md)（v2、PR [#37](https://github.com/hang-up33/hmi-platform/pull/37) で策定）
-**方針**：Simulator/ のソースを共有して `hmi_runtime` バイナリを生成し、3 バイナリ構成（hmi_editor / hmi_simulator / hmi_runtime）を維持。開発ホストは Windows VM + 既存 Yocto SDK。
+**方針**：Simulator/ のソースを共有して `hmi_runtime` バイナリを生成し、3 バイナリ構成（hmi_editor / hmi_simulator / hmi_runtime）を維持。開発ホストは Windows 母艦 + WSL2 で、Yocto SDK クロスビルドは **WSL2 内**で実施（既存 SDK を再利用）。
 
 ### Task 22: Runtime CMake glue ([PR #39](https://github.com/hang-up33/hmi-platform/pull/39))
 
@@ -205,7 +205,7 @@ timeline
 
 ### Task 23: Yocto SDK で hmi_runtime をクロスビルド（⏳ 未着手）
 
-- **目的**：WSL2 / VM 内で `meta-toolchain-qt6` SDK を使い `hmi_runtime` を aarch64 ELF として生成。
+- **目的**：**WSL2 内**で `meta-toolchain-qt6` SDK を使い `hmi_runtime` を aarch64 ELF として生成。
 - **予定成果物**：`scripts/yocto/cross-build.sh`、`-DHMI_ENABLE_E2E=OFF -DBUILD_TESTING=OFF -DCMAKE_TOOLCHAIN_FILE=...` 固定のラッパー。
 - **設計判断**：Spix / AnyRPC はクロスビルド互換性に難があるため E2E は明示 OFF。ビルドは `--target hmi_runtime` のみで PC 専用 Editor / Simulator は build しない（時間と失敗要因を削る）。
 

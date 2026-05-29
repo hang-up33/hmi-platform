@@ -34,12 +34,14 @@ flowchart LR
 |---|---|
 | Runtime 範囲 | **A: 読み取り専用 JSON 描画のみ**（Simulator と同等機能）。物理 I/O / ネットワーク経由更新は Phase 3-C 以降 |
 | ソース共有方式 | **Simulator/ にソースを集中、Runtime/ は CMake glue のみ**。同一ソースから `hmi_simulator`（ホスト用）と `hmi_runtime`（ホスト sanity + クロスビルド用）の 2 ターゲットを生成 |
-| 開発ホスト OS | **Windows**（既存 VM + Yocto + i.MX8MP 書き込みワークフローを再利用） |
-| クロスビルド方式 | **Yocto SDK**（`meta-toolchain-qt6` から生成、WSL2 / VM で `source environment-setup-*` → CMake クロスビルド）。Runtime 専用ターゲット `hmi_runtime` だけクロスビルド対象、Editor / Simulator はクロスビルドしない |
+| 開発ホスト OS | **Windows 母艦 + WSL2**。Yocto SDK クロスビルドは **WSL2 内で完結**し、i.MX8MP 実機書き込み等の既存ワークフローは Windows 側を再利用 |
+| クロスビルド方式 | **Yocto SDK**（`meta-toolchain-qt6` から生成、WSL2 で `source environment-setup-*` → CMake クロスビルド）。Runtime 専用ターゲット `hmi_runtime` だけクロスビルド対象、Editor / Simulator はクロスビルドしない |
 | CI 組込み | **当面なし**（手動検証）。Phase 3-C 以降に必要になった時点で self-hosted runner を検討 |
 | Yocto image | 既存ベンダ提供 image を再利用（レシピ新規作成・image 再ビルドは Phase 3-B スコープ外） |
 
 > **Note**：上記前提のうち「Yocto SDK が `meta-toolchain-qt6` で生成されている」「既存 image の Qt6 バージョンが本リポジトリのホストビルド（6.8 以上）と minor 互換」は Task 23 着手時に確認する。差異があった場合は Task 23 を「SDK 生成 + バージョン整合」に拡張する。
+>
+> **Note（2026-05-29 追記）**：クロスビルド環境は当初「WSL2 / VM」を併記していたが、**WSL2 に確定**した（VM は使わない）。以降、本書・[CLAUDE.md](../CLAUDE.md)・[development-history.md](development-history.md)・mvp-task-runner エージェントの関連記述はすべて WSL2 前提に統一済み。
 
 ---
 
@@ -81,7 +83,7 @@ flowchart LR
 
 | # | タスク | スコープ | 完了基準 |
 |---|---|---|---|
-| 23 | Yocto SDK で hmi_runtime をクロスビルド | 既存 Yocto image から `bitbake meta-toolchain-qt6` で SDK を生成（**未生成の場合のみ**。既に存在する場合は手順だけ記録）。WSL2 / VM に install。`source environment-setup-aarch64-poky-linux` 後にルート `CMakeLists.txt` を **`cmake -DCMAKE_TOOLCHAIN_FILE="$OECORE_NATIVE_SYSROOT/usr/share/cmake/OEToolchainConfig.cmake" -DHMI_ENABLE_E2E=OFF -DBUILD_TESTING=OFF`** で configure（`environment-setup-*` の alias は非対話スクリプトで効かないため、toolchain file を明示的に渡す。詳細は「Yocto SDK 連携」節）。**E2E / BUILD_TESTING を明示 OFF にする理由**：Phase 3-A 経緯で MinGW 以外は E2E が既定 ON のため Yocto 環境では明示 OFF が必要（Spix / AnyRPC のクロスビルド問題を回避）。**ビルドは `cmake --build build-yocto --target hmi_runtime` のように `hmi_runtime` ターゲットのみ**（PC 専用の Editor / Simulator はクロスビルドしない、不要なビルドコストと潜在的な失敗要因を避ける）。`hmi_simulator` ターゲットも `hmi_simulator_qmlplugin`（STATIC plugin、Task 22 で導入）に依存するため、`hmi_runtime` ターゲットを build すれば必要な依存だけが build される。SDK パス・toolchain file・configure オプション・`--target hmi_runtime` の指定を `scripts/yocto/` 配下に**最小限の Bash スクリプト + README**として整備（PowerShell 版は不要、WSL2 / VM 内で実行する想定）。Windows / macOS 側のホストビルドには影響を与えない | WSL2 / VM 内で `scripts/yocto/cross-build.sh` 相当を実行 → `build-yocto/Runtime/hmi_runtime` が aarch64 ELF として生成される（**`file hmi_runtime` の出力に `ELF 64-bit LSB ... ARM aarch64` が含まれることを確認**。ホスト ELF や x86_64 になっていたら toolchain file が正しく渡せていない）。`build-yocto/Editor/hmi_editor` `build-yocto/Simulator/hmi_simulator` は build されないこと（PC 専用ターゲットのクロスビルドコストを払わない）。ホストビルド（`build/` / `build-mingw/`）は引き続き緑 |
+| 23 | Yocto SDK で hmi_runtime をクロスビルド | 既存 Yocto image から `bitbake meta-toolchain-qt6` で SDK を生成（**未生成の場合のみ**。既に存在する場合は手順だけ記録）。WSL2 に install。`source environment-setup-aarch64-poky-linux` 後にルート `CMakeLists.txt` を **`cmake -DCMAKE_TOOLCHAIN_FILE="$OECORE_NATIVE_SYSROOT/usr/share/cmake/OEToolchainConfig.cmake" -DHMI_ENABLE_E2E=OFF -DBUILD_TESTING=OFF`** で configure（`environment-setup-*` の alias は非対話スクリプトで効かないため、toolchain file を明示的に渡す。詳細は「Yocto SDK 連携」節）。**E2E / BUILD_TESTING を明示 OFF にする理由**：Phase 3-A 経緯で MinGW 以外は E2E が既定 ON のため Yocto 環境では明示 OFF が必要（Spix / AnyRPC のクロスビルド問題を回避）。**ビルドは `cmake --build build-yocto --target hmi_runtime` のように `hmi_runtime` ターゲットのみ**（PC 専用の Editor / Simulator はクロスビルドしない、不要なビルドコストと潜在的な失敗要因を避ける）。`hmi_simulator` ターゲットも `hmi_simulator_qmlplugin`（STATIC plugin、Task 22 で導入）に依存するため、`hmi_runtime` ターゲットを build すれば必要な依存だけが build される。SDK パス・toolchain file・configure オプション・`--target hmi_runtime` の指定を `scripts/yocto/` 配下に**最小限の Bash スクリプト + README**として整備（PowerShell 版は不要、WSL2 内で実行する想定）。Windows / macOS 側のホストビルドには影響を与えない | WSL2 内で `scripts/yocto/cross-build.sh` 相当を実行 → `build-yocto/Runtime/hmi_runtime` が aarch64 ELF として生成される（**`file hmi_runtime` の出力に `ELF 64-bit LSB ... ARM aarch64` が含まれることを確認**。ホスト ELF や x86_64 になっていたら toolchain file が正しく渡せていない）。`build-yocto/Editor/hmi_editor` `build-yocto/Simulator/hmi_simulator` は build されないこと（PC 専用ターゲットのクロスビルドコストを払わない）。ホストビルド（`build/` / `build-mingw/`）は引き続き緑 |
 
 ### Phase 3-B-3: 実機描画検証
 
@@ -130,7 +132,7 @@ flowchart LR
 
 ### Yocto SDK 連携
 
-- SDK インストール先・toolchain ファイルパスは **WSL2 / VM 内の絶対パス** をスクリプトに含める。Windows 側の PowerShell から呼ばない（クロスビルドは Linux 環境完結）。
+- SDK インストール先・toolchain ファイルパスは **WSL2 内の絶対パス** をスクリプトに含める。Windows 側の PowerShell から呼ばない（クロスビルドは Linux 環境完結）。
 - CMake toolchain は Yocto SDK 同梱の `$OECORE_NATIVE_SYSROOT/usr/share/cmake/OEToolchainConfig.cmake` を使う（本リポジトリ側で独自 toolchain ファイルは導入しない、`-DHMI_TARGET_YOCTO=ON` のような独自オプションも追加しない）。**注意：`environment-setup-*` を `source` すると対話シェル上では `cmake` が alias で wrap されて `CMAKE_TOOLCHAIN_FILE` を自動付与してくれるが、非対話スクリプトでは alias が展開されない**（[Yocto ML 2018-01 報告](https://docs.yoctoproject.org/pipermail/yocto/2018-January/039667.html)）。`scripts/yocto/cross-build.sh` は alias に頼らず、明示的に `cmake -DCMAKE_TOOLCHAIN_FILE="$OECORE_NATIVE_SYSROOT/usr/share/cmake/OEToolchainConfig.cmake"`（もしくは CMake 3.21+ なら `cmake --toolchain "$OECORE_NATIVE_SYSROOT/usr/share/cmake/OEToolchainConfig.cmake"`）で渡す。これを忘れるとホストの Qt / コンパイラを拾うか `find_package(Qt6)` が失敗して、生成バイナリがホスト ELF になる、または build 自体が失敗する。
 - ただし**ルート `CMakeLists.txt` は MinGW 以外で `HMI_ENABLE_E2E` を既定 ON にしている**（Phase 3-A 経緯）。Yocto SDK は MinGW ではないため、何も指定しないと Spix / AnyRPC を FetchContent で取得・クロスビルドしようとして AnyRPC のクロスツールチェイン互換問題で失敗する可能性が高い（Phase 3-A の Windows MinGW で踏んだ libstdc++ 衝突と同種のリスク）。**Task 23 のクロスビルド手順では `-DHMI_ENABLE_E2E=OFF -DBUILD_TESTING=OFF` を明示する**。これを `scripts/yocto/cross-build.sh` 相当のラッパーに固定値として埋め、ユーザーが option を意識せずクロスビルドできるようにする。実機 E2E の検討は Phase 3-C 候補に切り出し済み。
 - **ビルドターゲットは `hmi_runtime` のみ**（`cmake --build build-yocto --target hmi_runtime`）。PC 専用の `hmi_editor` / `hmi_simulator` は実機に不要で、クロスビルドすると所要時間と失敗要因が増える。`hmi_runtime` は `hmi_simulator_qmlplugin`（Task 22 で導入する STATIC plugin）に依存するので、`hmi_runtime` を build すれば必要な依存ライブラリだけが build される。`scripts/yocto/cross-build.sh` には `--target hmi_runtime` を固定で埋める。
@@ -147,7 +149,7 @@ flowchart LR
 
 - Phase 3-B 完了時に README の以下を更新：
   - 進捗表に Task 22〜24 を追加
-  - 「ビルドと実行」節に **Yocto クロスビルド** の小節を追加（WSL2 / VM 前提）
+  - 「ビルドと実行」節に **Yocto クロスビルド** の小節を追加（WSL2 前提）
   - 「スクリーンショット」節に Runtime 実機写真の項目を追加
   - 対象プラットフォーム表記を「macOS / Windows / **i.MX8MP（Yocto）**」に拡張
   - アプリ構成表に「Runtime は Simulator のソース共有による i.MX8MP ターゲット版」と明記
@@ -160,7 +162,7 @@ flowchart LR
 
 - Runtime は **Simulator のソースを共有**。`Runtime/` 配下には CMakeLists.txt のみを置く（`.cpp` / `.qml` / `.h` は置かない）。
 - Runtime に追加機能が必要な場合も **Simulator/ 側で編集**し、必要なら `#ifdef HMI_RUNTIME_BUILD` で振る舞いを分岐する。
-- Yocto SDK クロスビルドは **WSL2 / VM 内で完結**。Windows 母艦の PowerShell からは呼ばない（PATH / 環境変数汚染を避ける）。
+- Yocto SDK クロスビルドは **WSL2 内で完結**。Windows 母艦の PowerShell からは呼ばない（PATH / 環境変数汚染を避ける）。
 - Yocto SDK でクロスビルドする時は **`-DHMI_ENABLE_E2E=OFF -DBUILD_TESTING=OFF` を必ず付ける**（Phase 3-A 経緯で MinGW 以外は E2E 既定 ON のため、明示 OFF にしないと Spix / AnyRPC のクロスビルド失敗を踏む）。これを `scripts/yocto/cross-build.sh` に固定値として埋め、ユーザーが option を意識しないでも済むようにする。
 - Yocto SDK でビルドする時は **`--target hmi_runtime` で対象を限定する**（PC 専用の hmi_editor / hmi_simulator をクロスビルドしない、ビルド時間と失敗要因を最小化）。`scripts/yocto/cross-build.sh` には `--target hmi_runtime` を固定で埋める。
 - ホストビルド（Windows / macOS）で `hmi_simulator` も `hmi_runtime` PC 版も Phase 3-B 完了後に引き続き緑であること。Runtime 追加のために Simulator を壊さない。
