@@ -43,7 +43,7 @@ flowchart LR
 >
 > **Note（2026-05-29 追記）**：クロスビルド環境は当初「WSL2 / VM」を併記していたが、**WSL2 に確定**した（VM は使わない）。以降、本書・[CLAUDE.md](../CLAUDE.md)・[development-history.md](development-history.md)・mvp-task-runner エージェントの関連記述はすべて WSL2 前提に統一済み。
 >
-> **Note（2026-05-30 追記｜重要・方針転換）**：Task 23 着手前に実機（i.MX8MP EVK）の現物を USB シリアル（COM5 / 115200 8N1）で調査したところ、**現行 image が Qt6 を一切含まない**ことが判明した。詳細と方針は下記 §「実機 image 調査結果と更新方針」を参照。上記 Note の「minor 互換」の範囲を超える乖離のため、**Task 23 を「既存 image 用の SDK 生成」から「実機 image を Qt6 対応の新 BSP に更新したうえで SDK 生成・クロスビルド」へ拡張**する。上表「Yocto image＝既存ベンダ提供を再利用（image 再ビルドはスコープ外）」もこの判断で見直す。
+> **Note（2026-05-30 追記｜重要・方針転換）**：Task 23 着手前に実機（i.MX8MP EVK）の現物を USB シリアル（COM5 / 115200 8N1）で調査したところ、**現行 image が Qt6 を一切含まない**ことが判明した。詳細と方針は下記 §「実機 image 調査結果と更新方針」を参照。上記 Note の「minor 互換」の範囲を超える乖離のため、**Task 23 を「実機 image を Qt6 対応の新 BSP（scarthgap）に更新したうえで SDK 生成・クロスビルドする」形に拡張**した。これに伴い、上表の Yocto image 行・下記 Task 23 本文・関連ドキュメント（CLAUDE.md / development-history / mvp-task-runner）も新 BSP・`imx-image-full` 前提に更新済み。
 
 ### 実機 image 調査結果と更新方針（2026-05-30）
 
