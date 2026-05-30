@@ -133,6 +133,8 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 
 ### Phase 1: MVP（Editor / Simulator の作画 → 保存 → 読込）
 
+詳細は [Docs/phase1-mvp-plan.md](Docs/phase1-mvp-plan.md)（Phase 2 以降の体裁に合わせた事後整理）。
+
 | # | タスク | 状態 |
 |---|---|---|
 | 1 | Qt6 プロジェクト作成 | ✅ 完了 |
