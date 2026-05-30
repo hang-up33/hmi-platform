@@ -46,7 +46,7 @@ timeline
 ## Phase 1: MVP — Editor / Simulator の作画 → 保存 → 読込
 
 **目標**：Editor で Widget を配置し、JSON で保存して Simulator が同じ JSON を描画できる最小ループを成立させる。
-**計画書**：（Phase 1 は計画書化前の段階。経緯は CLAUDE.md と各 PR を参照）
+**計画書**：[phase1-mvp-plan.md](phase1-mvp-plan.md)（2026-05-30 に他フェーズと体裁を揃えて事後整理。Phase 1 は計画書化前に完了したため、本ヒストリーと各 PR を一次情報として遡って作成）
 
 ### Task 1: Qt6 プロジェクト雛形
 
