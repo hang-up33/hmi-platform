@@ -132,6 +132,8 @@ cmake --build build-mingw
 Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入の全タスクが完了済み。Phase 3-B（Runtime / i.MX8MP / Yocto）は **Task 22 完了**（hmi_runtime PC ビルドが Simulator のソース共有で生成されることを確認）、Task 23（Yocto SDK クロスビルド）・Task 24（実機描画）は未着手。
 
 > 各タスクで何をしたか・どの PR で入ったか・何を学んだかの **時系列まとめ** は [Docs/development-history.md](Docs/development-history.md) を参照。第三者への説明用。
+>
+> 開発環境の現状（ホスト構成・ディスク事情・WSL/Yocto ビルド環境・実機 i.MX8MP の状態）は [.claude/rules/dev-environment.md](.claude/rules/dev-environment.md) に集約。複数マシン（macOS / Windows 母艦 + WSL2）を跨いで参照するためのメモ（`.claude/rules/` は git 共有＋Claude Code が自動読込）。
 
 ### Phase 1: MVP（Editor / Simulator の作画 → 保存 → 読込）
 
