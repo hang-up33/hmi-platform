@@ -86,9 +86,16 @@ Task 23（Yocto SDK で `hmi_runtime` をクロスビルド）用の WSL2 環境
 
 ### SDK 入手方針
 
-- 当初は「BSP を repo sync からゼロ生成」を想定したが、**ベンダ/ビルドサーバから toolchain `.sh` を入手する**方針に変更（理由：実機 image とのバージョン整合＝ABI 一致を担保するため）。
-- ベンダ依頼内容：「実機 image と同一 BSP/config で生成した aarch64(cortexa53) / i.MX8MP 向け、**Qt6 を含む** SDK（`bitbake <image> -c populate_sdk` 由来 or `meta-toolchain-qt6`）」。
-- SDK 入手後：`.sh` を WSL で実行（`-y -d <dir>` で非対話 install）→ `source environment-setup-aarch64-poky-linux` →
+> **前提（飛ばさない）**：実機の現行 image は Qt6 非対応（下記「実機 i.MX8MP EVK」参照）。
+> **SDK だけ用意しても実機では動かない**。**新 BSP（scarthgap）で `imx-image-full` をビルド → EVK を再フラッシュ →
+> 同一 build dir から SDK 生成**、という一連を踏むのが必須前提（手順の正本は
+> [phase3b-runtime-plan.md §「実機 image 調査結果と更新方針」](../../Docs/phase3b-runtime-plan.md)。image と SDK は**同じ BSP/config から**作る）。
+
+- **誰がフルビルドするか**は 2 択。いずれも成果物は「**新 BSP の image** ＋ それと同一 BSP/config の **Qt6 入り SDK（`.sh`）**」のセット：
+  - **(a) 自前ビルド**：ディスク整理で E ドライブを確保済みなので、WSL2 で `repo sync` → `imx-image-full` → `populate_sdk` まで自前で回す（上記正本の手順）。
+  - **(b) ビルドサーバ/ベンダに委託**：上記の image+SDK 生成一式を代行してもらう場合に限る。**「SDK の `.sh` だけ受け取って image 更新を省く」のは不可**（ABI 不一致＋ボードに Qt6 ランタイムが無く起動しない）。
+- 受領 SDK の要件：「実機に焼いた image と**同一 BSP/config**で生成した aarch64(cortexa53) / i.MX8MP 向け、**Qt6 を含む** SDK（`bitbake imx-image-full -c populate_sdk` 由来 or `meta-toolchain-qt6`）」。
+- SDK 入手後（Task 23）：`.sh` を WSL で実行（`-y -d <dir>` で非対話 install）→ `source environment-setup-aarch64-poky-linux` →
   `cmake -S . -B build-yocto -DCMAKE_TOOLCHAIN_FILE="$OECORE_NATIVE_SYSROOT/usr/share/cmake/OEToolchainConfig.cmake" -DHMI_ENABLE_E2E=OFF -DBUILD_TESTING=OFF` →
   `cmake --build build-yocto --target hmi_runtime`（`-B build-yocto` でビルドツリーを明示生成してから build する。`-S . -B` を省くとリポジトリ直下にキャッシュが作られ後続 build が失敗する）。詳細は [phase3b-runtime-plan.md](../../Docs/phase3b-runtime-plan.md)「Yocto SDK 連携」。
 
