@@ -15,7 +15,7 @@ model: opus
 - Phase 2 / テスト基盤導入（Task 9〜15）：✅ 完了済み
 - Phase 3-A / E2E テスト導入（Task 16〜21）：✅ 完了済み
 - Phase 3-B-1 / Runtime CMake glue（Task 22）：✅ 完了済み
-- **Phase 3-B-2 / Yocto SDK クロスビルド（Task 23）**：⏳ 未着手 — 次タスク候補。**WSL2 + meta-toolchain-qt6 SDK + CMake 3.21 以上が前提**（リポジトリ root の `cmake_minimum_required(VERSION 3.21)` が支配的制約。`CMAKE_CURRENT_FUNCTION_LIST_DIR` の機能要件 3.17+ は満たすが、3.17〜3.20 の SDK だと configure 時点で落ちる）。未整備ならユーザーに環境準備を確認してから着手。
+- **Phase 3-B-2 / Yocto SDK クロスビルド（Task 23）**：⏳ 未着手 — 次タスク候補。**2026-05-30 前提変更**：実機の現行 image が Qt6 非対応（NXP zeus 5.4）と判明したため、まず **NXP 新 BSP（scarthgap）で `imx-image-full` をビルドして実機 image を更新 → 同一 BSP から SDK 生成（`-c populate_sdk` / `meta-toolchain-qt6`）** が前段に必要（詳細は `Docs/phase3b-runtime-plan.md` §「実機 image 調査結果と更新方針」）。SDK 利用時は **CMake 3.21 以上が前提**（root の `cmake_minimum_required(VERSION 3.21)` が支配的。3.17〜3.20 の SDK だと configure で落ちる）。新 BSP のフルビルドは大容量ディスク要。**着手前にユーザーへ BSP / ビルド環境を確認**。
 - Phase 3-B-3 / 実機描画検証（Task 24）：⏳ 未着手
 
 ## 実行手順
