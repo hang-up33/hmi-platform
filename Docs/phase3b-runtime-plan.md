@@ -37,7 +37,7 @@ flowchart LR
 | 開発ホスト OS | **Windows 母艦 + WSL2**。Yocto SDK クロスビルドは **WSL2 内で完結**し、i.MX8MP 実機書き込み等の既存ワークフローは Windows 側を再利用 |
 | クロスビルド方式 | **Yocto SDK**（`meta-toolchain-qt6` から生成、WSL2 で `source environment-setup-*` → CMake クロスビルド）。Runtime 専用ターゲット `hmi_runtime` だけクロスビルド対象、Editor / Simulator はクロスビルドしない |
 | CI 組込み | **当面なし**（手動検証）。Phase 3-C 以降に必要になった時点で self-hosted runner を検討 |
-| Yocto image | 既存ベンダ提供 image を再利用（レシピ新規作成・image 再ビルドは Phase 3-B スコープ外） |
+| Yocto image | **2026-05-30 改定**（当初は「既存ベンダ提供 image を再利用／image 再ビルドはスコープ外」）：実機 image が Qt6 非対応（NXP zeus 5.4）と判明したため、**NXP 新 BSP（scarthgap）で `imx-image-full` をビルドして実機 image を更新**する方針に変更（§「実機 image 調査結果と更新方針」）。独自レシピの新規作成は引き続き行わず NXP 公式 image を使う |
 
 > **Note**：上記前提のうち「Yocto SDK が `meta-toolchain-qt6` で生成されている」「既存 image の Qt6 バージョンが本リポジトリのホストビルド（6.8 以上）と minor 互換」は Task 23 着手時に確認する。差異があった場合は Task 23 を「SDK 生成 + バージョン整合」に拡張する。
 >
@@ -58,9 +58,10 @@ flowchart LR
 - **なぜ更新が必須か**：現行 image は NXP zeus（Yocto 3.0、2019）で、`meta-qt6` 自体が存在しない世代。ボードに Qt6 ランタイムが無く、この image と一致する Qt6 SDK も原理的に生成できないため、**Qt6 の `hmi_runtime` を実機で動かすには image を Qt6 対応の新 BSP に更新する以外に道がない**。
 - **取得・生成手順の流れ**：
   1. 新 BSP を取得：`repo init -u https://github.com/nxp-imx/imx-manifest -b imx-linux-scarthgap -m <L6.6.52_2.2.x の manifest>.xml` → `repo sync`
-  2. `MACHINE=imx8mp-lpddr4-evk DISTRO=fsl-imx-xwayland` で **`bitbake imx-image-full`**（NXP 標準 image のうち Qt を含むのは `imx-image-full`。`imx-image-core` / `imx-image-multimedia` は Qt 無し）→ EVK に**再フラッシュ**（標準 EVK は LPDDR4。DDR4 版ボードなら `imx8mp-ddr4-evk`。`imx8mp-evk` は DTB 名であって Yocto MACHINE 名ではない点に注意）
-  3. 同一 BSP から **`bitbake imx-image-full -c populate_sdk`**（または `meta-toolchain-qt6`）で SDK 生成。**image と SDK を同じ BSP から作る**ことでランタイム／SDK のバージョンが整合
-  4. その SDK で `hmi_runtime` をクロスビルド（Task 23）→ 実機で描画確認（Task 24）
+  2. **ビルド環境を生成**：`DISTRO=fsl-imx-xwayland MACHINE=imx8mp-lpddr4-evk source imx-setup-release.sh -b build-xwayland`（build dir と `conf/local.conf`・`conf/bblayers.conf` を作成し EULA 同意。これを踏まないと `bitbake` が PATH に無い／layer 未設定で失敗する）。標準 EVK は LPDDR4（DDR4 版ボードなら `imx8mp-ddr4-evk`。`imx8mp-evk` は DTB 名であって Yocto MACHINE 名ではない点に注意）
+  3. 同 build dir 内で **`bitbake imx-image-full`**（NXP 標準 image のうち Qt を含むのは `imx-image-full`。`imx-image-core` / `imx-image-multimedia` は Qt 無し）→ EVK に**再フラッシュ**
+  4. 同 build dir から **`bitbake imx-image-full -c populate_sdk`**（または `meta-toolchain-qt6`）で SDK 生成。**image と SDK を同じ BSP から作る**ことでランタイム／SDK のバージョンが整合
+  5. その SDK で `hmi_runtime` をクロスビルド（Task 23）→ 実機で描画確認（Task 24）
 - **制約（重要）**：新 BSP の image＋SDK フルビルドは **ソース＋sstate＋tmp で 100〜200GB** 規模。Windows 母艦の C: 空きは約 35GB しかなく、**構築済みの WSL2 環境ではフルビルド不可**。**(a) 大容量ディスクの確保（C: を 100GB+ 空ける／別ドライブ追加）か (b) 専用ビルドマシン**が前提になる。WSL2 のホストツールチェイン（Ubuntu 22.04＋Yocto host deps）自体は 2026-05-30 に構築済み（メモリ `wsl-yocto-build-env`／`imx8mp-board-qt6-mismatch` 参照）。
 - **スコープ方針**：レシピ新規作成は引き続き行わず、**NXP 公式 BSP の標準 image（Qt 入りの `imx-image-full`）と標準 SDK を使う**。独自レイヤ・独自 image は Phase 3-C 以降の判断。
 
@@ -104,7 +105,7 @@ flowchart LR
 
 | # | タスク | スコープ | 完了基準 |
 |---|---|---|---|
-| 23 | Yocto SDK で hmi_runtime をクロスビルド | 既存 Yocto image から `bitbake meta-toolchain-qt6` で SDK を生成（**未生成の場合のみ**。既に存在する場合は手順だけ記録）。WSL2 に install。`source environment-setup-aarch64-poky-linux` 後にルート `CMakeLists.txt` を **`cmake -DCMAKE_TOOLCHAIN_FILE="$OECORE_NATIVE_SYSROOT/usr/share/cmake/OEToolchainConfig.cmake" -DHMI_ENABLE_E2E=OFF -DBUILD_TESTING=OFF`** で configure（`environment-setup-*` の alias は非対話スクリプトで効かないため、toolchain file を明示的に渡す。詳細は「Yocto SDK 連携」節）。**E2E / BUILD_TESTING を明示 OFF にする理由**：Phase 3-A 経緯で MinGW 以外は E2E が既定 ON のため Yocto 環境では明示 OFF が必要（Spix / AnyRPC のクロスビルド問題を回避）。**ビルドは `cmake --build build-yocto --target hmi_runtime` のように `hmi_runtime` ターゲットのみ**（PC 専用の Editor / Simulator はクロスビルドしない、不要なビルドコストと潜在的な失敗要因を避ける）。`hmi_simulator` ターゲットも `hmi_simulator_qmlplugin`（STATIC plugin、Task 22 で導入）に依存するため、`hmi_runtime` ターゲットを build すれば必要な依存だけが build される。SDK パス・toolchain file・configure オプション・`--target hmi_runtime` の指定を `scripts/yocto/` 配下に**最小限の Bash スクリプト + README**として整備（PowerShell 版は不要、WSL2 内で実行する想定）。Windows / macOS 側のホストビルドには影響を与えない | WSL2 内で `scripts/yocto/cross-build.sh` 相当を実行 → `build-yocto/Runtime/hmi_runtime` が aarch64 ELF として生成される（**`file hmi_runtime` の出力に `ELF 64-bit LSB ... ARM aarch64` が含まれることを確認**。ホスト ELF や x86_64 になっていたら toolchain file が正しく渡せていない）。`build-yocto/Editor/hmi_editor` `build-yocto/Simulator/hmi_simulator` は build されないこと（PC 専用ターゲットのクロスビルドコストを払わない）。ホストビルド（`build/` / `build-mingw/`）は引き続き緑 |
+| 23 | Yocto SDK で hmi_runtime をクロスビルド | **（2026-05-30 改定）前提変更**：実機が Qt6 非対応（zeus 5.4）のため、SDK は §「実機 image 調査結果と更新方針」の**新 BSP（scarthgap）から `bitbake imx-image-full -c populate_sdk`**（または `meta-toolchain-qt6`）で生成する（旧記述「既存 image から SDK 生成」は破棄）。以降のクロスビルド機構は不変：生成した SDK を WSL2 に install。`source environment-setup-aarch64-poky-linux` 後にルート `CMakeLists.txt` を **`cmake -DCMAKE_TOOLCHAIN_FILE="$OECORE_NATIVE_SYSROOT/usr/share/cmake/OEToolchainConfig.cmake" -DHMI_ENABLE_E2E=OFF -DBUILD_TESTING=OFF`** で configure（`environment-setup-*` の alias は非対話スクリプトで効かないため、toolchain file を明示的に渡す。詳細は「Yocto SDK 連携」節）。**E2E / BUILD_TESTING を明示 OFF にする理由**：Phase 3-A 経緯で MinGW 以外は E2E が既定 ON のため Yocto 環境では明示 OFF が必要（Spix / AnyRPC のクロスビルド問題を回避）。**ビルドは `cmake --build build-yocto --target hmi_runtime` のように `hmi_runtime` ターゲットのみ**（PC 専用の Editor / Simulator はクロスビルドしない、不要なビルドコストと潜在的な失敗要因を避ける）。`hmi_simulator` ターゲットも `hmi_simulator_qmlplugin`（STATIC plugin、Task 22 で導入）に依存するため、`hmi_runtime` ターゲットを build すれば必要な依存だけが build される。SDK パス・toolchain file・configure オプション・`--target hmi_runtime` の指定を `scripts/yocto/` 配下に**最小限の Bash スクリプト + README**として整備（PowerShell 版は不要、WSL2 内で実行する想定）。Windows / macOS 側のホストビルドには影響を与えない | WSL2 内で `scripts/yocto/cross-build.sh` 相当を実行 → `build-yocto/Runtime/hmi_runtime` が aarch64 ELF として生成される（**`file hmi_runtime` の出力に `ELF 64-bit LSB ... ARM aarch64` が含まれることを確認**。ホスト ELF や x86_64 になっていたら toolchain file が正しく渡せていない）。`build-yocto/Editor/hmi_editor` `build-yocto/Simulator/hmi_simulator` は build されないこと（PC 専用ターゲットのクロスビルドコストを払わない）。ホストビルド（`build/` / `build-mingw/`）は引き続き緑 |
 
 ### Phase 3-B-3: 実機描画検証
 
