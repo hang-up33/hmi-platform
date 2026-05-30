@@ -1,6 +1,6 @@
 # Phase 1: MVP — Editor / Simulator の作画 → 保存 → 読込
 
-Editor で Widget を配置し、JSON で保存して Simulator が同じ JSON を描画できる **最小ループ（MVP）** を成立させるフェーズ。Task 1〜8 で構成し、以降のフェーズと同じく **1 タスク = 1 ブランチ = 1 PR**、完了基準は `cmake --build` 緑 ＋ 該当動作の確認。
+Editor で Widget を配置し、JSON で保存して Simulator が同じ JSON を描画できる **最小ループ（MVP）** を成立させるフェーズ。Task 1〜8 で構成する。運用は、以降のフェーズで定着する **1 タスク = 1 ブランチ = 1 PR** を概ね踏襲する（ただし **Task 1 はリポジトリ初期化期のため直接コミット・PR なし**。Task 2 以降が PR 経由）。完了基準は `cmake --build` 緑 ＋ 該当動作の確認。
 
 > **本書の位置づけ（2026-05-30 事後作成）**：Phase 1 / MVP は「フェーズごとに計画書を書く」運用が定着する **前**（Phase 2 以降で定着）に完了したため、当時は計画書が存在しなかった。本書は他フェーズ（[phase2-testing-plan.md](phase2-testing-plan.md) / [phase3-e2e-plan.md](phase3-e2e-plan.md) / [phase3b-runtime-plan.md](phase3b-runtime-plan.md)）と体裁を揃えるため、**[development-history.md](development-history.md) と各 PR を一次情報として遡って整理**したもの。計画段階の予測ではなく「何をやり、何を完了基準としたか」の確定記録（事後まとめ）である。罠と回避策の集約は [CLAUDE.md](../CLAUDE.md) を参照。
 
