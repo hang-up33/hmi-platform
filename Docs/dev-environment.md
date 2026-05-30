@@ -87,8 +87,8 @@ Task 23（Yocto SDK で `hmi_runtime` をクロスビルド）用の WSL2 環境
 - 当初は「BSP を repo sync からゼロ生成」を想定したが、**ベンダ/ビルドサーバから toolchain `.sh` を入手する**方針に変更（理由：実機 image とのバージョン整合＝ABI 一致を担保するため）。
 - ベンダ依頼内容：「実機 image と同一 BSP/config で生成した aarch64(cortexa53) / i.MX8MP 向け、**Qt6 を含む** SDK（`bitbake <image> -c populate_sdk` 由来 or `meta-toolchain-qt6`）」。
 - SDK 入手後：`.sh` を WSL で実行（`-y -d <dir>` で非対話 install）→ `source environment-setup-aarch64-poky-linux` →
-  `cmake -DCMAKE_TOOLCHAIN_FILE="$OECORE_NATIVE_SYSROOT/usr/share/cmake/OEToolchainConfig.cmake" -DHMI_ENABLE_E2E=OFF -DBUILD_TESTING=OFF` →
-  `cmake --build build-yocto --target hmi_runtime`。詳細は [phase3b-runtime-plan.md](phase3b-runtime-plan.md)「Yocto SDK 連携」。
+  `cmake -S . -B build-yocto -DCMAKE_TOOLCHAIN_FILE="$OECORE_NATIVE_SYSROOT/usr/share/cmake/OEToolchainConfig.cmake" -DHMI_ENABLE_E2E=OFF -DBUILD_TESTING=OFF` →
+  `cmake --build build-yocto --target hmi_runtime`（`-B build-yocto` でビルドツリーを明示生成してから build する。`-S . -B` を省くとリポジトリ直下にキャッシュが作られ後続 build が失敗する）。詳細は [phase3b-runtime-plan.md](phase3b-runtime-plan.md)「Yocto SDK 連携」。
 
 ---
 
