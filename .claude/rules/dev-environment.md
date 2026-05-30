@@ -4,17 +4,19 @@
 環境固有の知識（ホスト構成・ディスク事情・WSL/Yocto ビルド環境・実機 i.MX8MP の状態など）を
 ここに **git 管理で集約** し、どのマシンからでも参照できるようにする。
 
-> **なぜリポジトリに置くか**：Claude Code 等の「セッション横断メモリ」はマシンローカル（各 PC のホーム配下）に
-> 保存され、Windows ↔ Mac では引き継がれない。環境固有の事実をこの文書に書いておけば git で全マシンに伝播する。
+> **なぜここ（`.claude/rules/`）に置くか**：Claude Code の自動メモリ（`~/.claude/projects/<project>/memory/`）は
+> **マシンローカル**で、Windows ↔ Mac を跨いで共有されない。一方 `.claude/rules/*.md` は **git 管理されチームと共有**され、
+> `paths` frontmatter を付けなければ **毎セッション起動時に自動読込**される（`.claude/CLAUDE.md` と同じ優先度）。
+> よって「マシン横断で必要な環境知識」は本ファイルを唯一の真実とする（[Claude Code メモリ仕様](https://code.claude.com/docs/ja/memory) 準拠）。
 
 ## 運用ルール
 
 - **環境固有の事実が変わったらこの文書を更新する**（新マシン追加、ディスク構成変更、WSL/SDK 状態、実機 image 更新など）。
 - 役割分担：
   - **この文書** = 環境・マシン・実機の「現状スナップショット」。
-  - [phase3b-runtime-plan.md](phase3b-runtime-plan.md) ほか `Docs/phase*-plan.md` = フェーズ/タスクの設計判断と完了基準。
-  - [development-history.md](development-history.md) = タスクごとの時系列まとめ（目的 / PR / 成果物 / 学び）。
-  - [../CLAUDE.md](../CLAUDE.md) = 作業指針（ビルド手順・ルール・罠）。
+  - [phase3b-runtime-plan.md](../../Docs/phase3b-runtime-plan.md) ほか `Docs/phase*-plan.md` = フェーズ/タスクの設計判断と完了基準。
+  - [development-history.md](../../Docs/development-history.md) = タスクごとの時系列まとめ（目的 / PR / 成果物 / 学び）。
+  - [CLAUDE.md](../../CLAUDE.md) = 作業指針（ビルド手順・ルール・罠）。
 - 重複が出たら、**手順・設計はプラン文書、環境の現状はこの文書**に寄せ、互いをリンクで結ぶ（同じ事実を二重メンテしない）。
 
 ---
@@ -27,7 +29,7 @@
 | **macOS** | macOS 14+（Darwin 25+） | Editor / Simulator のビルド・GUI 確認、動作証跡スクショ撮影 | `build/`（`.app` バンドル） | Homebrew Qt（`/opt/homebrew/opt/qt`、6.8+） |
 
 - Editor / Simulator は両 OS で GUI 起動確認済み。Runtime（PC sanity 版）も Task 22 で両 OS ビルド確認済み。
-- ビルド手順の詳細は [../CLAUDE.md](../CLAUDE.md)「ビルドと実行」と [qt6-build スキル](../.claude/skills/qt6-build/SKILL.md)。
+- ビルド手順の詳細は [CLAUDE.md](../../CLAUDE.md)「ビルドと実行」と [qt6-build スキル](../skills/qt6-build/SKILL.md)。
 
 ### Windows 母艦の詳細
 
@@ -88,7 +90,7 @@ Task 23（Yocto SDK で `hmi_runtime` をクロスビルド）用の WSL2 環境
 - ベンダ依頼内容：「実機 image と同一 BSP/config で生成した aarch64(cortexa53) / i.MX8MP 向け、**Qt6 を含む** SDK（`bitbake <image> -c populate_sdk` 由来 or `meta-toolchain-qt6`）」。
 - SDK 入手後：`.sh` を WSL で実行（`-y -d <dir>` で非対話 install）→ `source environment-setup-aarch64-poky-linux` →
   `cmake -S . -B build-yocto -DCMAKE_TOOLCHAIN_FILE="$OECORE_NATIVE_SYSROOT/usr/share/cmake/OEToolchainConfig.cmake" -DHMI_ENABLE_E2E=OFF -DBUILD_TESTING=OFF` →
-  `cmake --build build-yocto --target hmi_runtime`（`-B build-yocto` でビルドツリーを明示生成してから build する。`-S . -B` を省くとリポジトリ直下にキャッシュが作られ後続 build が失敗する）。詳細は [phase3b-runtime-plan.md](phase3b-runtime-plan.md)「Yocto SDK 連携」。
+  `cmake --build build-yocto --target hmi_runtime`（`-B build-yocto` でビルドツリーを明示生成してから build する。`-S . -B` を省くとリポジトリ直下にキャッシュが作られ後続 build が失敗する）。詳細は [phase3b-runtime-plan.md](../../Docs/phase3b-runtime-plan.md)「Yocto SDK 連携」。
 
 ---
 
@@ -101,7 +103,7 @@ Task 23（Yocto SDK で `hmi_runtime` をクロスビルド）用の WSL2 環境
 - **含意**：zeus は `meta-qt6` 登場前の世代で、この image と一致する Qt6 SDK は原理的に作れず、ボードに Qt6 ランタイムも無い。
   本リポジトリは Qt 6.8（gcc11+/C++20）前提のため、現行 image のままでは `hmi_runtime` を起動できない。
   → **Task 23 の前段として、実機 image を Qt6 対応の新 BSP（scarthgap、`imx-image-full`）に更新・再フラッシュする**必要がある。
-  詳細は [phase3b-runtime-plan.md](phase3b-runtime-plan.md) §「実機 image 調査結果と更新方針」。
+  詳細は [phase3b-runtime-plan.md](../../Docs/phase3b-runtime-plan.md) §「実機 image 調査結果と更新方針」。
 
 ---
 
