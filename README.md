@@ -1,5 +1,7 @@
 # hmi-platform
 
+> **コードネーム: Atlas（アトラス）** — 開発時の通称（プロジェクト全体のブランド別名）。Editor / Simulator / Runtime / Shared を束ねて支える基盤、という意味でギリシャ神話の天空を支える巨神アトラスにちなむ。正式なリポジトリ名は `hmi-platform` のまま（リネームはしない）。
+
 Yocto / i.MX8M Plus 向け Qt6 HMI ランタイムを対象に、HMI 作画ツール（Editor）・PC 試験環境（Simulator）・実機ランタイム（Runtime）・JSON スキーマ（Shared/Schema）・共有 Widget（Shared/Widgets）を統合した開発基盤。
 
 ## スクリーンショット
