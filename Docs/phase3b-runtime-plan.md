@@ -42,6 +42,27 @@ flowchart LR
 > **Note**：上記前提のうち「Yocto SDK が `meta-toolchain-qt6` で生成されている」「既存 image の Qt6 バージョンが本リポジトリのホストビルド（6.8 以上）と minor 互換」は Task 23 着手時に確認する。差異があった場合は Task 23 を「SDK 生成 + バージョン整合」に拡張する。
 >
 > **Note（2026-05-29 追記）**：クロスビルド環境は当初「WSL2 / VM」を併記していたが、**WSL2 に確定**した（VM は使わない）。以降、本書・[CLAUDE.md](../CLAUDE.md)・[development-history.md](development-history.md)・mvp-task-runner エージェントの関連記述はすべて WSL2 前提に統一済み。
+>
+> **Note（2026-05-30 追記｜重要・方針転換）**：Task 23 着手前に実機（i.MX8MP EVK）の現物を USB シリアル（COM5 / 115200 8N1）で調査したところ、**現行 image が Qt6 を一切含まない**ことが判明した。詳細と方針は下記 §「実機 image 調査結果と更新方針」を参照。上記 Note の「minor 互換」の範囲を超える乖離のため、**Task 23 を「既存 image 用の SDK 生成」から「実機 image を Qt6 対応の新 BSP に更新したうえで SDK 生成・クロスビルド」へ拡張**する。上表「Yocto image＝既存ベンダ提供を再利用（image 再ビルドはスコープ外）」もこの判断で見直す。
+
+### 実機 image 調査結果と更新方針（2026-05-30）
+
+**経緯**：実機 image の Qt6 バージョンを確認しようと EVK にシリアル接続（FTDI クアッド UART デバッグブリッジ、COM5、root パスワード無し）して調べたところ、**ボードに載っている image が古すぎて Qt6 ランタイムを載せられない**ことが分かった。よって「実機が Qt6 非対応だから image を新 BSP に更新する」という方針に切り替える。
+
+| 項目 | 現行（実機の現物） | 更新ターゲット（推奨） |
+|---|---|---|
+| NXP BSP | `fsl-imx-xwayland` **5.4-zeus**（`L5.4.24_2.1.0`、kernel 5.4.24、2020 年ビルド） | **Scarthgap LTS `L6.6.52_2.2.x`**（Yocto 5.0 / kernel 6.6.52、NXP・Yocto 双方の現行 LTS） |
+| Qt | **Qt6 無し**（`libQt6Core` も `qmake6` も無い。zeus は Qt6 登場前で `meta-qt6` が存在しない世代） | **Qt 6.8 系**（scarthgap の `meta-qt6`／`fsl-image-qt6` イメージ。採用 manifest で 6.6 LTS〜6.8.x を要確認。本リポジトリの Qt 6.8 フロアと整合） |
+| glibc / libstdc++ | 2.30 / 6.0.27（gcc9 世代）— Qt6.8 バイナリは `GLIBCXX_*` 不足で動かない懸念 | scarthgap 同梱の新しい toolchain（gcc13 系）で解消 |
+
+- **なぜ更新が必須か**：現行 image は NXP zeus（Yocto 3.0、2019）で、`meta-qt6` 自体が存在しない世代。ボードに Qt6 ランタイムが無く、この image と一致する Qt6 SDK も原理的に生成できないため、**Qt6 の `hmi_runtime` を実機で動かすには image を Qt6 対応の新 BSP に更新する以外に道がない**。
+- **取得・生成手順の流れ**：
+  1. 新 BSP を取得：`repo init -u https://github.com/nxp-imx/imx-manifest -b imx-linux-scarthgap -m <L6.6.52_2.2.x の manifest>.xml` → `repo sync`
+  2. `MACHINE=imx8mp-evk DISTRO=fsl-imx-xwayland` で **`bitbake fsl-image-qt6`** → EVK に**再フラッシュ**
+  3. 同一 BSP から **`bitbake fsl-image-qt6 -c populate_sdk`**（または `meta-toolchain-qt6`）で SDK 生成。**image と SDK を同じ BSP から作る**ことでランタイム／SDK のバージョンが整合
+  4. その SDK で `hmi_runtime` をクロスビルド（Task 23）→ 実機で描画確認（Task 24）
+- **制約（重要）**：新 BSP の image＋SDK フルビルドは **ソース＋sstate＋tmp で 100〜200GB** 規模。Windows 母艦の C: 空きは約 35GB しかなく、**構築済みの WSL2 環境ではフルビルド不可**。**(a) 大容量ディスクの確保（C: を 100GB+ 空ける／別ドライブ追加）か (b) 専用ビルドマシン**が前提になる。WSL2 のホストツールチェイン（Ubuntu 22.04＋Yocto host deps）自体は 2026-05-30 に構築済み（メモリ `wsl-yocto-build-env`／`imx8mp-board-qt6-mismatch` 参照）。
+- **スコープ方針**：レシピ新規作成は引き続き行わず、**NXP 公式 BSP の標準 image（`fsl-image-qt6`）と標準 SDK を使う**。独自レイヤ・独自 image は Phase 3-C 以降の判断。
 
 ---
 
@@ -187,5 +208,5 @@ flowchart LR
 | # | タスク | 状態 |
 |---|---|---|
 | 22 | Runtime/ で Simulator のソースを再利用して hmi_runtime バイナリを追加 | ✅ 完了 |
-| 23 | Yocto SDK で hmi_runtime をクロスビルド | ⏳ 未着手 |
-| 24 | i.MX8MP 実機で hmi_runtime を起動し JSON 描画 | ⏳ 未着手 |
+| 23 | Yocto SDK で hmi_runtime をクロスビルド | ⏳ 未着手（**前提見直し 2026-05-30**：実機 image が Qt6 非対応＝新 BSP への image 更新が前段に必要。§「実機 image 調査結果と更新方針」参照） |
+| 24 | i.MX8MP 実機で hmi_runtime を起動し JSON 描画 | ⏳ 未着手（image 更新後） |
