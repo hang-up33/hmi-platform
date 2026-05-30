@@ -58,7 +58,7 @@ flowchart LR
 - **なぜ更新が必須か**：現行 image は NXP zeus（Yocto 3.0、2019）で、`meta-qt6` 自体が存在しない世代。ボードに Qt6 ランタイムが無く、この image と一致する Qt6 SDK も原理的に生成できないため、**Qt6 の `hmi_runtime` を実機で動かすには image を Qt6 対応の新 BSP に更新する以外に道がない**。
 - **取得・生成手順の流れ**：
   1. 新 BSP を取得：`repo init -u https://github.com/nxp-imx/imx-manifest -b imx-linux-scarthgap -m <L6.6.52_2.2.x の manifest>.xml` → `repo sync`
-  2. `MACHINE=imx8mp-evk DISTRO=fsl-imx-xwayland` で **`bitbake fsl-image-qt6`** → EVK に**再フラッシュ**
+  2. `MACHINE=imx8mp-lpddr4-evk DISTRO=fsl-imx-xwayland` で **`bitbake fsl-image-qt6`** → EVK に**再フラッシュ**（標準 EVK は LPDDR4。DDR4 版ボードなら `imx8mp-ddr4-evk`。`imx8mp-evk` は DTB 名であって Yocto MACHINE 名ではない点に注意）
   3. 同一 BSP から **`bitbake fsl-image-qt6 -c populate_sdk`**（または `meta-toolchain-qt6`）で SDK 生成。**image と SDK を同じ BSP から作る**ことでランタイム／SDK のバージョンが整合
   4. その SDK で `hmi_runtime` をクロスビルド（Task 23）→ 実機で描画確認（Task 24）
 - **制約（重要）**：新 BSP の image＋SDK フルビルドは **ソース＋sstate＋tmp で 100〜200GB** 規模。Windows 母艦の C: 空きは約 35GB しかなく、**構築済みの WSL2 環境ではフルビルド不可**。**(a) 大容量ディスクの確保（C: を 100GB+ 空ける／別ドライブ追加）か (b) 専用ビルドマシン**が前提になる。WSL2 のホストツールチェイン（Ubuntu 22.04＋Yocto host deps）自体は 2026-05-30 に構築済み（メモリ `wsl-yocto-build-env`／`imx8mp-board-qt6-mismatch` 参照）。
