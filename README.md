@@ -10,6 +10,10 @@ Yocto / i.MX8M Plus 向け Qt6 HMI ランタイムを対象に、HMI 作画ツ�
 
 Editor の現状画面。`追加` / `開く` / `保存` ボタンで Widget の配置と JSON 入出力を行う。
 
+![hmi_runtime on i.MX8MP](Docs/screenshots/task-24-runtime-imx.jpg)
+
+`hmi_runtime`（Simulator のソース共有・aarch64 クロスビルド）を **i.MX8MP 実機（scarthgap / Qt6 6.8.1 / weston）** で起動し、Editor 由来の JSON を描画した様子（Phase 3-B / Task 24）。
+
 ## 成果物
 
 | モジュール | 役割 |
@@ -103,6 +107,18 @@ cmake --build build-mingw
 
 詳細・罠は [.claude/skills/qt6-build/SKILL.md](.claude/skills/qt6-build/SKILL.md) を参照。
 
+### Yocto クロスビルド（i.MX8MP 実機向け / Phase 3-B）
+
+`hmi_runtime` だけを aarch64（Yocto scarthgap / Qt6）にクロスビルドする。**WSL2 内で実行**し、上記ホストビルドには影響しない。
+
+```sh
+# meta-toolchain-qt6 で生成した Qt6 クロス SDK を ~/qt6-sdk に install 済みとして
+./scripts/yocto/cross-build.sh
+# → ~/build-yocto/Runtime/hmi_runtime（ARM aarch64 ELF）
+```
+
+SDK 生成（新 BSP の image+SDK ビルド）から実機 scp 起動までの手順は [scripts/yocto/README.md](scripts/yocto/README.md) を参照。
+
 ## 起動
 
 ### macOS
@@ -129,7 +145,7 @@ cmake --build build-mingw
 
 ## フェーズ進捗
 
-Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入の全タスクが完了済み。Phase 3-B（Runtime / i.MX8MP / Yocto）は **Task 22 完了**（hmi_runtime PC ビルドが Simulator のソース共有で生成されることを確認）、Task 23（Yocto SDK クロスビルド）・Task 24（実機描画）は未着手。
+Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入、**Phase 3-B / Runtime（Task 22〜24）まで全タスク完了**。新 BSP（scarthgap）で Qt6 入り実機 image と Qt6 クロス SDK を生成し、`hmi_runtime` を aarch64 にクロスビルド → **i.MX8MP 実機（weston / Wayland）で Editor 由来の JSON を描画**することを実機で確認済み。
 
 > 各タスクで何をしたか・どの PR で入ったか・何を学んだかの **時系列まとめ** は [Docs/development-history.md](Docs/development-history.md) を参照。第三者への説明用。
 >
@@ -184,8 +200,8 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 | # | タスク | 状態 |
 |---|---|---|
 | 22 | Runtime/ で Simulator のソースを再利用して hmi_runtime バイナリを追加 | ✅ 完了 |
-| 23 | Yocto SDK で hmi_runtime をクロスビルド | ⏳ 未着手 |
-| 24 | i.MX8MP 実機で hmi_runtime を起動し JSON 描画 | ⏳ 未着手 |
+| 23 | Yocto SDK で hmi_runtime をクロスビルド | ✅ 完了 |
+| 24 | i.MX8MP 実機で hmi_runtime を起動し JSON 描画 | ✅ 完了 |
 
 ## 共通データ仕様（Project Format）
 
