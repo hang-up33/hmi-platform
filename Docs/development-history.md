@@ -203,13 +203,13 @@ timeline
 - **成果物**：`hmi_simulator_qmlplugin`（STATIC、`Simulator/CMakeLists.txt`）、共通 function `hmi_add_simulator_like_executable`、`Runtime/CMakeLists.txt`（C++ ソースは Simulator/ を `CMAKE_CURRENT_FUNCTION_LIST_DIR` 経由で参照）、ホスト起動スクショ `Docs/screenshots/task-22-runtime-host.png` / `task-22-simulator-host.png`。
 - **学び**：Qt の `qt_add_qml_module` を実行ファイル直結にすると別バイナリから共有できない → STATIC plugin + 直リンクが必須（`Shared/Widgets` と同パターン）。C++ ソース共有は CMake 関数 + `CMAKE_CURRENT_FUNCTION_LIST_DIR` でディレクトリを跨いだ参照が成立。Runtime/ には `.cpp` / `.qml` / `.h` を置かない原則を維持。hmi_simulator / hmi_runtime の PC ビルドが同一 JSON で完全一致のレイアウトを描画することを目視確認。
 
-### Task 23: Yocto SDK で hmi_runtime をクロスビルド（本 PR）
+### Task 23: Yocto SDK で hmi_runtime をクロスビルド ([PR #48](https://github.com/hang-up33/hmi-platform/pull/48))
 
 - **目的**：`hmi_runtime` を aarch64 ELF として生成。**前提変更（2026-05-30）**：実機の現行 image が Qt6 非対応（NXP zeus 5.4）と判明したため、WSL2 内で NXP 新 BSP（scarthgap, `imx-6.6.52-2.2.2`）の `imx-image-full` をビルドして実機 image を更新し、同一 BSP から生成した SDK でクロスビルドする。
 - **成果物**：[`scripts/yocto/cross-build.sh`](../scripts/yocto/cross-build.sh)（env source → toolchain file 明示渡し → `-DHMI_ENABLE_E2E=OFF -DBUILD_TESTING=OFF` → `--target hmi_runtime` → `file` で aarch64 ELF 検証、を固定）+ [`scripts/yocto/README.md`](../scripts/yocto/README.md)。生成物 `~/build-yocto/Runtime/hmi_runtime`（`ELF 64-bit LSB ... ARM aarch64`、Qt 6.8.1 依存）。
 - **学び**：(1) SDK は `imx-image-full -c populate_sdk`（フル SDK）だと ML 系（`onnxruntime-dbg` 692MB）の dpkg 展開で詰まるため、**`bitbake meta-toolchain-qt6`（Qt6 だけの軽量 SDK）に切替**。(2) SDK の env スクリプト名は NXP tune の都合で **`environment-setup-armv8a-poky-linux`**（`aarch64` ではない）。(3) 非対話では cmake alias が効かず toolchain file の明示渡しが必須。(4) `imx-image-full` フルビルドは tmp/work が巨大化するため **`INHERIT += "rm_work"`** で peak を抑制、E ドライブ枯渇は **`diskpart compact vdisk`**（管理者）で回収。(5) **crates.io が wget 既定 UA を 403（CloudFront）で弾く**ため `FETCHCMD_wget` に `--user-agent` を付与。GitHub 並列 fetch のスロットル（git exit 128）は retry で解消。詳細は [.claude/rules/dev-environment.md](../.claude/rules/dev-environment.md)。
 
-### Task 24: i.MX8MP 実機で hmi_runtime を起動し JSON 描画（本 PR）
+### Task 24: i.MX8MP 実機で hmi_runtime を起動し JSON 描画 ([PR #48](https://github.com/hang-up33/hmi-platform/pull/48))
 
 - **目的**：実機に配布し、Editor が出した JSON 形状を実機画面で描画する。
 - **成果物**：実機描画の動作証跡 [`Docs/screenshots/task-24-runtime-imx.jpg`](screenshots/task-24-runtime-imx.jpg)（weston 上に「HMI Simulator」ウィンドウ + 3 widget が描画）。`scripts/yocto/README.md` に実機デプロイ手順を記載。
