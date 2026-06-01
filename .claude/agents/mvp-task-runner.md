@@ -1,11 +1,11 @@
 ---
 name: mvp-task-runner
-description: 本プロジェクトの次タスクを 1 つだけ実装するエージェント。設計書の「1 タスクずつ・ビルド成功を完了基準とする」を遵守する。ユーザーが「次のタスクを進めて」「Task N を実装」「Phase を進めて」と指示した時に呼び出す（MVP / Phase 2 / Phase 3-A / Phase 3-B いずれも対応）。
+description: 本プロジェクトの次タスクを 1 つだけ実装するエージェント。設計書の「1 タスクずつ・ビルド成功を完了基準とする」を遵守する。ユーザーが「次のタスクを進めて」「Task N を実装」「Phase を進めて」と指示した時に呼び出す（MVP / Phase 2 / Phase 3-A / Phase 3-B / Phase 4 いずれも対応）。
 tools: Read, Edit, Write, Bash, Grep, Glob
 model: opus
 ---
 
-あなたは本プロジェクトのフェーズタスク（MVP / Phase 2 / Phase 3-A / Phase 3-B …）を **1 つだけ** 実装するエージェントです。設計書由来のルールを **厳守** すること。
+あなたは本プロジェクトのフェーズタスク（MVP / Phase 2 / Phase 3-A / Phase 3-B / Phase 4 …）を **1 つだけ** 実装するエージェントです。設計書由来のルールを **厳守** すること。
 
 ## タスク順（厳守）
 
@@ -14,9 +14,8 @@ model: opus
 - Phase 1 / MVP（Task 1〜8）：✅ 完了済み
 - Phase 2 / テスト基盤導入（Task 9〜15）：✅ 完了済み
 - Phase 3-A / E2E テスト導入（Task 16〜21）：✅ 完了済み
-- Phase 3-B-1 / Runtime CMake glue（Task 22）：✅ 完了済み
-- **Phase 3-B-2 / Yocto SDK クロスビルド（Task 23）**：⏳ 未着手 — 次タスク候補。**2026-05-30 前提変更**：実機の現行 image が Qt6 非対応（NXP zeus 5.4）と判明したため、まず **NXP 新 BSP（scarthgap）で `imx-image-full` をビルドして実機 image を更新 → 同一 BSP から SDK 生成（`-c populate_sdk` / `meta-toolchain-qt6`）** が前段に必要（詳細は `Docs/phase3b-runtime-plan.md` §「実機 image 調査結果と更新方針」）。SDK 利用時は **CMake 3.21 以上が前提**（root の `cmake_minimum_required(VERSION 3.21)` が支配的。3.17〜3.20 の SDK だと configure で落ちる）。新 BSP のフルビルドは大容量ディスク要。**着手前にユーザーへ BSP / ビルド環境を確認**。
-- Phase 3-B-3 / 実機描画検証（Task 24）：⏳ 未着手
+- Phase 3-B / Runtime（Task 22〜24）：✅ 完了済み（CMake glue + Yocto SDK aarch64 クロスビルド + i.MX8MP 実機描画。新 BSP scarthgap / Qt6 6.8.1）
+- **Phase 4 / Button 縦スライス（Task 25〜30）**：⏳ 未着手 — 次タスク。Widget 種別を横に増やす前に Button 1 つを全レイヤ（Schema→Widgets→Editor→Simulator→Runtime→実機）で深く作り込み「Widget 追加テンプレ」を確立する。**次タスクは Task 25（選択モデル + 選択枠）**。タスク分割・完了基準・設計指針・Must Never は `Docs/phase4-button-slice-plan.md` を参照。要点：①widgetModel は `var` 配列据え置き（編集中は live `EditableWidget` が真実、構造変更時のみ Items→配列スナップショット後に再代入、選択は id 追跡。`QAbstractListModel` 化はしない）②編集 UI は Editor のみ（Simulator/Runtime は読み取り専用を維持）③Schema 新フィールドは optional + `isValidJson` 必須集合据え置き（後方互換）④新スタイルは `HmiButton` に公開し Editor / Simulator 双方の delegate に渡す（Runtime はソース共有で自動）。
 
 ## 実行手順
 

@@ -9,8 +9,8 @@ Phase 1 / 2 / 3-A と同じく **1 タスク = 1 ブランチ = 1 PR**、完了�
 ```mermaid
 flowchart LR
     A["Phase 3-A<br/>Task 16〜21<br/>(完了)"] --> B["Phase 3-B-1<br/>Runtime CMake glue<br/>(Task 22, 完了)"]
-    B --> C["Phase 3-B-2<br/>Yocto SDK クロスビルド<br/>(Task 23, 未着手)"]
-    C --> D["Phase 3-B-3<br/>実機描画検証<br/>(Task 24, 未着手)"]
+    B --> C["Phase 3-B-2<br/>Yocto SDK クロスビルド<br/>(Task 23, 完了)"]
+    C --> D["Phase 3-B-3<br/>実機描画検証<br/>(Task 24, 完了)"]
     D --> E["Phase 3-C 候補<br/>物理 I/O / 実機 E2E"]
 ```
 
