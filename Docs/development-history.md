@@ -35,10 +35,10 @@ timeline
     Task 19 : 保存 → 読込ループ E2E
     Task 20 : Simulator 表示 E2E
     Task 21 : E2E を CI に追加
-  section Phase 3-B Runtime / i.MX8MP (進行中)
+  section Phase 3-B Runtime / i.MX8MP (完了)
     Task 22 : Runtime CMake glue (完了)
-    Task 23 : Yocto SDK クロスビルド
-    Task 24 : 実機描画検証
+    Task 23 : Yocto SDK クロスビルド (完了)
+    Task 24 : 実機描画検証 (完了)
 ```
 
 ---
@@ -203,17 +203,17 @@ timeline
 - **成果物**：`hmi_simulator_qmlplugin`（STATIC、`Simulator/CMakeLists.txt`）、共通 function `hmi_add_simulator_like_executable`、`Runtime/CMakeLists.txt`（C++ ソースは Simulator/ を `CMAKE_CURRENT_FUNCTION_LIST_DIR` 経由で参照）、ホスト起動スクショ `Docs/screenshots/task-22-runtime-host.png` / `task-22-simulator-host.png`。
 - **学び**：Qt の `qt_add_qml_module` を実行ファイル直結にすると別バイナリから共有できない → STATIC plugin + 直リンクが必須（`Shared/Widgets` と同パターン）。C++ ソース共有は CMake 関数 + `CMAKE_CURRENT_FUNCTION_LIST_DIR` でディレクトリを跨いだ参照が成立。Runtime/ には `.cpp` / `.qml` / `.h` を置かない原則を維持。hmi_simulator / hmi_runtime の PC ビルドが同一 JSON で完全一致のレイアウトを描画することを目視確認。
 
-### Task 23: Yocto SDK で hmi_runtime をクロスビルド（⏳ 未着手）
+### Task 23: Yocto SDK で hmi_runtime をクロスビルド ([PR #48](https://github.com/hang-up33/hmi-platform/pull/48))
 
-- **目的**：`hmi_runtime` を aarch64 ELF として生成。**前提変更（2026-05-30）**：実機の現行 image が Qt6 非対応（NXP zeus 5.4）と判明したため、**WSL2 内で NXP 新 BSP（scarthgap）の `imx-image-full` をビルドして実機 image を更新し、同一 BSP から生成した SDK** でクロスビルドする（詳細は [phase3b-runtime-plan.md](phase3b-runtime-plan.md) §「実機 image 調査結果と更新方針」）。
-- **予定成果物**：`scripts/yocto/cross-build.sh`、`-DHMI_ENABLE_E2E=OFF -DBUILD_TESTING=OFF -DCMAKE_TOOLCHAIN_FILE=...` 固定のラッパー。
-- **設計判断**：Spix / AnyRPC はクロスビルド互換性に難があるため E2E は明示 OFF。ビルドは `--target hmi_runtime` のみで PC 専用 Editor / Simulator は build しない（時間と失敗要因を削る）。
+- **目的**：`hmi_runtime` を aarch64 ELF として生成。**前提変更（2026-05-30）**：実機の現行 image が Qt6 非対応（NXP zeus 5.4）と判明したため、WSL2 内で NXP 新 BSP（scarthgap, `imx-6.6.52-2.2.2`）の `imx-image-full` をビルドして実機 image を更新し、同一 BSP から生成した SDK でクロスビルドする。
+- **成果物**：[`scripts/yocto/cross-build.sh`](../scripts/yocto/cross-build.sh)（env source → toolchain file 明示渡し → `-DHMI_ENABLE_E2E=OFF -DBUILD_TESTING=OFF` → `--target hmi_runtime` → `file` で aarch64 ELF 検証、を固定）+ [`scripts/yocto/README.md`](../scripts/yocto/README.md)。生成物 `~/build-yocto/Runtime/hmi_runtime`（`ELF 64-bit LSB ... ARM aarch64`、Qt 6.8.1 依存）。
+- **学び**：(1) SDK は `imx-image-full -c populate_sdk`（フル SDK）だと ML 系（`onnxruntime-dbg` 692MB）の dpkg 展開で詰まるため、**`bitbake meta-toolchain-qt6`（Qt6 だけの軽量 SDK）に切替**。(2) SDK の env スクリプト名は NXP tune の都合で **`environment-setup-armv8a-poky-linux`**（`aarch64` ではない）。(3) 非対話では cmake alias が効かず toolchain file の明示渡しが必須。(4) `imx-image-full` フルビルドは tmp/work が巨大化するため **`INHERIT += "rm_work"`** で peak を抑制、E ドライブ枯渇は **`diskpart compact vdisk`**（管理者）で回収。(5) **crates.io が wget 既定 UA を 403（CloudFront）で弾く**ため `FETCHCMD_wget` に `--user-agent` を付与。GitHub 並列 fetch のスロットル（git exit 128）は retry で解消。詳細は [.claude/rules/dev-environment.md](../.claude/rules/dev-environment.md)。
 
-### Task 24: i.MX8MP 実機で hmi_runtime を起動し JSON 描画（⏳ 未着手）
+### Task 24: i.MX8MP 実機で hmi_runtime を起動し JSON 描画 ([PR #48](https://github.com/hang-up33/hmi-platform/pull/48))
 
-- **目的**：実機に `scp` で配布し、Editor が出した既存 JSON を実機画面で描画する。
-- **予定成果物**：実機画面の手動撮影写真 `Docs/screenshots/task-24-runtime-imx.jpg` を PR 本文に添付。
-- **設計判断**：実機固有の問題（フォント不足 / QPA 不整合 / タッチ座標）が大きい場合は追加タスクに切り出し、Phase 3-B-3 を肥大化させない。PC → i.MX 転送機能は **OS レイヤの責務** として Phase 3-C 候補（Runtime バイナリには入れない）。
+- **目的**：実機に配布し、Editor が出した JSON 形状を実機画面で描画する。
+- **成果物**：実機描画の動作証跡 [`Docs/screenshots/task-24-runtime-imx.jpg`](screenshots/task-24-runtime-imx.jpg)（weston 上に「HMI Simulator」ウィンドウ + 3 widget が描画）。`scripts/yocto/README.md` に実機デプロイ手順を記載。
+- **学び**：(1) 実機 boot は **microSD（SW4=0011、0010=eMMC）**。(2) `imx-image-full` の sshd は **socket-activated**（`sshd.socket` enabled、`sshd.service` は無い）。(3) 新しい OpenSSH の scp は SFTP 既定で、実機側に sftp-server が無いと失敗 → **`scp -O`**（旧プロトコル）必須。(4) LAN 直結だと **link-local（169.254.x.x）** になり、WSL は NAT 越しで届きにくいので **Windows 母艦から scp** する。(5) weston は **root（uid 0）** で動作、socket は `/run/user/0/wayland-1` → `XDG_RUNTIME_DIR=/run/user/0` `WAYLAND_DISPLAY=wayland-1` `QT_QPA_PLATFORM=wayland` で起動。Runtime は Simulator のソース共有のためウィンドウタイトルは "HMI Simulator" のまま（意図どおり）。
 
 ---
 
@@ -238,4 +238,5 @@ timeline
 - [Docs/phase2-testing-plan.md](phase2-testing-plan.md) — Phase 2 計画書
 - [Docs/phase3-e2e-plan.md](phase3-e2e-plan.md) — Phase 3-A 計画書
 - [Docs/phase3b-runtime-plan.md](phase3b-runtime-plan.md) — Phase 3-B 計画書 v2
+- [Docs/phase3b-runtime-journey.md](phase3b-runtime-journey.md) — Phase 3-B 奮闘記（Task 23/24 をどう乗り越えたか・心境の記録）
 - [Docs/qml-canvas-structure.md](qml-canvas-structure.md) — Canvas.qml の構造解説

@@ -84,33 +84,39 @@ Task 23（Yocto SDK で `hmi_runtime` をクロスビルド）用の WSL2 環境
   WSL2 が「仮想化が無効」で起動できないことがある。スタートメニューから明示的に **「再起動」** を選ぶと完全ブートして確定する。
   （`HypervisorPresent:True` かつ `VirtualizationFirmwareEnabled:False` は Hyper-V 稼働時の正常表示で、BIOS の VT-x は ON。）
 
-### SDK 入手方針
+### SDK 生成（2026-06-01：自前ビルドで完了）
 
-> **前提（飛ばさない）**：実機の現行 image は Qt6 非対応（下記「実機 i.MX8MP EVK」参照）。
-> **SDK だけ用意しても実機では動かない**。**新 BSP（scarthgap）で `imx-image-full` をビルド → EVK を再フラッシュ →
-> 同一 build dir から SDK 生成**、という一連を踏むのが必須前提（手順の正本は
-> [phase3b-runtime-plan.md §「実機 image 調査結果と更新方針」](../../Docs/phase3b-runtime-plan.md)。image と SDK は**同じ BSP/config から**作る）。
+新 BSP（scarthgap, `imx-6.6.52-2.2.2`）から **自前ビルド** で image と SDK を生成し、実機更新まで完了した
+（手順の正本は [scripts/yocto/README.md](../../scripts/yocto/README.md)、設計判断は [phase3b-runtime-plan.md](../../Docs/phase3b-runtime-plan.md)）。
 
-- **誰がフルビルドするか**は 2 択。いずれも成果物は「**新 BSP の image** ＋ それと同一 BSP/config の **Qt6 入り SDK（`.sh`）**」のセット：
-  - **(a) 自前ビルド**：ディスク整理で E ドライブを確保済みなので、WSL2 で `repo sync` → `imx-image-full` → `populate_sdk` まで自前で回す（上記正本の手順）。
-  - **(b) ビルドサーバ/ベンダに委託**：上記の image+SDK 生成一式を代行してもらう場合に限る。**「SDK の `.sh` だけ受け取って image 更新を省く」のは不可**（ABI 不一致＋ボードに Qt6 ランタイムが無く起動しない）。
-- 受領 SDK の要件：「実機に焼いた image と**同一 BSP/config**で生成した aarch64(cortexa53) / i.MX8MP 向け、**Qt6 を含む** SDK（`bitbake imx-image-full -c populate_sdk` 由来 or `meta-toolchain-qt6`）」。
-- SDK 入手後（Task 23）：`.sh` を WSL で実行（`-y -d <dir>` で非対話 install）→ `source environment-setup-aarch64-poky-linux` →
-  `cmake -S . -B build-yocto -DCMAKE_TOOLCHAIN_FILE="$OECORE_NATIVE_SYSROOT/usr/share/cmake/OEToolchainConfig.cmake" -DHMI_ENABLE_E2E=OFF -DBUILD_TESTING=OFF` →
-  `cmake --build build-yocto --target hmi_runtime`（`-B build-yocto` でビルドツリーを明示生成してから build する。`-S . -B` を省くとリポジトリ直下にキャッシュが作られ後続 build が失敗する）。詳細は [phase3b-runtime-plan.md](../../Docs/phase3b-runtime-plan.md)「Yocto SDK 連携」。
+- **image**：`bitbake imx-image-full` → microSD に焼いて実機更新（Qt6 6.8.1 入り）。
+- **SDK**：当初 `imx-image-full -c populate_sdk`（フル SDK）を試したが、**`onnxruntime-dbg`（692MB の ML デバッグ deb）の dpkg 展開で失敗**。Qt6 のクロスビルドに ML/opencv は不要なので **`bitbake meta-toolchain-qt6`（Qt6 だけの軽量 SDK, ~1.8GB `.sh`）に切替** → これで成功。
+- **install**：`.sh -y -d ~/qt6-sdk`。env スクリプト名は NXP tune の都合で **`environment-setup-armv8a-poky-linux`**（`aarch64` ではない点に注意）。
+- **クロスビルド**：`./scripts/yocto/cross-build.sh` で実行（env source → toolchain file 明示 → `-DHMI_ENABLE_E2E=OFF -DBUILD_TESTING=OFF` → `--target hmi_runtime`）。`~/build-yocto/Runtime/hmi_runtime` が aarch64 ELF で生成され、実機描画も確認済み（Task 24）。
+
+#### Yocto ビルドで踏んだ罠（再ビルド時の備忘）
+
+- **crates.io の 403**：bitbake の wget 既定 UA を crates.io（CloudFront）が 403 で弾く。`conf/local.conf` に
+  `FETCHCMD_wget = "/usr/bin/env wget -t 2 -T 30 --passive-ftp --user-agent=yocto-bitbake"` を足すと解消（premirror に無く crates.io 直叩きになる crate 全般に効く）。
+- **GitHub 並列 fetch のスロットル**：`gitsm://github.com/...` の clone が exit 128 で稀に落ちる（並列 fetch 集中時）。リポジトリは健在なので **retry で通る**。
+- **ディスク**：`imx-image-full` は tmp/work が巨大化し E（233GB の外付け SSD）を使い切る。**`INHERIT += "rm_work"`** で peak を ~30GB に抑える。それでも膨らんだ vhdx は **`diskpart compact vdisk`（管理者 PowerShell、`wsl --shutdown` 後 attach readonly → compact）** で物理回収（`wsl --manage --set-sparse` や `fstrim` だけでは縮まなかった。compact は 228GB に対し一晩かかったが ~52GB 回収）。
+- **WSL distro relocate（C→E）**：`wsl --export` → `--unregister` → `--import ... --version 2`（[ディスク事情] 節のコマンド）。
 
 ---
 
 ## 実機 i.MX8MP EVK
 
-- **ボード**：NXP **i.MX8MPlus EVK**（`/proc/device-tree/model` = "NXP i.MX8MPlus EVK board"）。
+- **ボード**：NXP **i.MX8MPlus LPDDR4 EVK**（`/proc/device-tree/compatible` = `fsl,imx8mp-evk` ＝LPDDR4。シリアルで判定）。
 - **シリアルコンソール**：**COM5 / 115200 8N1**（FTDI クアッド UART デバッグブリッジ経由）。root はパスワード無し。
-- **現行 image（2026-05-30 調査）**：`fsl-imx-xwayland` **5.4-zeus**（NXP `L5.4.24_2.1.0`、kernel 5.4.24、2020 年ビルド、Yocto 3.0）。
-  aarch64 / glibc **2.30** / libstdc++ **6.0.27**（gcc9 世代）。**Qt6 は未インストール**（`libQt6Core` も `qmake6` も無し）。
-- **含意**：zeus は `meta-qt6` 登場前の世代で、この image と一致する Qt6 SDK は原理的に作れず、ボードに Qt6 ランタイムも無い。
-  本リポジトリは Qt 6.8（gcc11+/C++20）前提のため、現行 image のままでは `hmi_runtime` を起動できない。
-  → **Task 23 の前段として、実機 image を Qt6 対応の新 BSP（scarthgap、`imx-image-full`）に更新・再フラッシュする**必要がある。
-  詳細は [phase3b-runtime-plan.md](../../Docs/phase3b-runtime-plan.md) §「実機 image 調査結果と更新方針」。
+- **現行 image（2026-06-01 更新済み）**：`fsl-imx-xwayland` **6.6-scarthgap**（NXP `imx-6.6.52-2.2.2`）。
+  **Qt6 6.8.1 入り**（`/usr/lib/libQt6Core.so.6.8.1` 確認済み）。weston / Wayland。これで `hmi_runtime` が実機起動・描画可能（Task 24 達成）。
+  - 旧 image は zeus 5.4（2020・Qt6 無し）で `hmi_runtime` 起動不可だったため、新 BSP（scarthgap）で `imx-image-full` をビルドし microSD に焼いて更新した。
+- **ブートスイッチ（SW4）**：**`0011` = microSD ブート / `0010` = eMMC ブート**。SD の新 image を起動するには SW4 を 0011 に。
+- **実機運用メモ（Task 24 で確立）**：
+  - **転送**：実機 sshd は **socket-activated**（`sshd.socket` enabled、`sshd.service` は無い → `systemctl start sshd` は失敗するが port 22 は listen 済み）。新しい OpenSSH の scp は SFTP 既定で実機に sftp-server が無く失敗するため **`scp -O`** 必須。事前に実機で `passwd`（ssh は空パスワード拒否）。
+  - **ネットワーク**：LAN 直結だと DHCP 無しで **link-local（169.254.x.x）** になる。**WSL2 は NAT 越しで link-local に届きにくいので Windows 母艦から `scp`** する（Windows の ethernet も 169.254.x.x が付き ping 可）。
+  - **起動**：weston は **root（uid 0）** で動作、Wayland socket は `/run/user/0/wayland-1`。`export XDG_RUNTIME_DIR=/run/user/0; export WAYLAND_DISPLAY=wayland-1; export QT_QPA_PLATFORM=wayland` してから `hmi_runtime --open <json>`。
+- 詳細手順は [scripts/yocto/README.md](../../scripts/yocto/README.md)、設計判断は [phase3b-runtime-plan.md](../../Docs/phase3b-runtime-plan.md)。
 
 ---
 

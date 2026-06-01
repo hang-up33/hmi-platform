@@ -209,5 +209,5 @@ flowchart LR
 | # | タスク | 状態 |
 |---|---|---|
 | 22 | Runtime/ で Simulator のソースを再利用して hmi_runtime バイナリを追加 | ✅ 完了 |
-| 23 | Yocto SDK で hmi_runtime をクロスビルド | ⏳ 未着手（**前提見直し 2026-05-30**：実機 image が Qt6 非対応＝新 BSP への image 更新が前段に必要。§「実機 image 調査結果と更新方針」参照） |
-| 24 | i.MX8MP 実機で hmi_runtime を起動し JSON 描画 | ⏳ 未着手（image 更新後） |
+| 23 | Yocto SDK で hmi_runtime をクロスビルド | ✅ 完了（2026-06-01。新 BSP scarthgap で image 更新 → `meta-toolchain-qt6` SDK 自前生成 → `scripts/yocto/cross-build.sh` で aarch64 ELF。詳細は [scripts/yocto/README.md](../scripts/yocto/README.md)） |
+| 24 | i.MX8MP 実機で hmi_runtime を起動し JSON 描画 | ✅ 完了（2026-06-01。実機 weston 上で Editor 由来 JSON を描画。証跡 `Docs/screenshots/task-24-runtime-imx.jpg`） |
