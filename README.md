@@ -145,7 +145,7 @@ SDK 生成（新 BSP の image+SDK ビルド）から実機 scp 起動までの�
 
 ## フェーズ進捗
 
-Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入、**Phase 3-B / Runtime（Task 22〜24）まで全タスク完了**。新 BSP（scarthgap）で Qt6 入り実機 image と Qt6 クロス SDK を生成し、`hmi_runtime` を aarch64 にクロスビルド → **i.MX8MP 実機（weston / Wayland）で Editor 由来の JSON を描画**することを実機で確認済み。
+Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入、**Phase 3-B / Runtime（Task 22〜24）まで全タスク完了**。新 BSP（scarthgap）で Qt6 入り実機 image と Qt6 クロス SDK を生成し、`hmi_runtime` を aarch64 にクロスビルド → **i.MX8MP 実機（weston / Wayland）で Editor 由来の JSON を描画**することを実機で確認済み。**次は Phase 4 / Button 縦スライス（Task 25〜30）に着手** — Widget 種別を横に増やす前に Button 1 つを全レイヤで深く作り込み「Widget 追加テンプレ」を確立する（選択・インスペクタ・リサイズ・削除・スタイル属性の Schema 拡張）。
 
 > 各タスクで何をしたか・どの PR で入ったか・何を学んだかの **時系列まとめ** は [Docs/development-history.md](Docs/development-history.md) を参照。第三者への説明用。
 >
@@ -202,6 +202,19 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 | 22 | Runtime/ で Simulator のソースを再利用して hmi_runtime バイナリを追加 | ✅ 完了 |
 | 23 | Yocto SDK で hmi_runtime をクロスビルド | ✅ 完了 |
 | 24 | i.MX8MP 実機で hmi_runtime を起動し JSON 描画 | ✅ 完了 |
+
+### Phase 4: Button 縦スライス（Widget 追加テンプレの確立）
+
+詳細は [Docs/phase4-button-slice-plan.md](Docs/phase4-button-slice-plan.md)。Widget 種別を横に増やす前に、Button 1 つを全レイヤ（Schema→Widgets→Editor→Simulator→Runtime→実機）で深く作り込み、後続の全 Widget 追加に流用できる **選択 + インスペクタ** と **Schema スタイル拡張の手順** を確立する。
+
+| # | タスク | 状態 |
+|---|---|---|
+| 25 | 選択モデル + 選択枠（Editor） | ⏳ 未着手 |
+| 26 | インスペクタ + text/tag 編集（Editor） | ⏳ 未着手 |
+| 27 | 座標/サイズ数値編集 + ハンドルリサイズ（Editor） | ⏳ 未着手 |
+| 28 | スタイル属性追加（Schema + HmiButton + Simulator/Runtime）★ | ⏳ 未着手 |
+| 29 | インスペクタにスタイル編集 + 削除（Editor） | ⏳ 未着手 |
+| 30 | テスト/E2E 拡充 + 実機 styled 描画（全環境） | ⏳ 未着手 |
 
 ## 共通データ仕様（Project Format）
 

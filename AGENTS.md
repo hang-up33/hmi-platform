@@ -22,8 +22,8 @@ Codex が PR レビューを行う際は、以下のルールに従ってくだ�
 
 ### スコープ
 
-- 本リポジトリは **Phase 3-B-1 / Task 22 まで完了**（[CLAUDE.md](CLAUDE.md) の「現在のフェーズ」参照）。残タスクは Task 23（Yocto SDK クロスビルド）・Task 24（i.MX8MP 実機描画）。
-  現在進行中のフェーズスコープ（[Docs/phase3b-runtime-plan.md](Docs/phase3b-runtime-plan.md)）を逸脱する大規模リファクタ提案は控えめにし、必要であれば `[Future]` ラベルで分離してください。
+- 本リポジトリは **Phase 3-B / Runtime（Task 22〜24）まで完了**（i.MX8MP 実機描画まで到達。[CLAUDE.md](CLAUDE.md) の「現在のフェーズ」参照）。**次は Phase 4 / Button 縦スライス（Task 25〜30）**：Widget 種別を横に増やす前に Button 1 つを全レイヤ（Schema→Widgets→Editor→Simulator→Runtime→実機）で深く作り込み「Widget 追加テンプレ」を確立する（選択・インスペクタ・リサイズ・削除・スタイル属性の Schema 拡張）。
+  現在進行中のフェーズスコープ（[Docs/phase4-button-slice-plan.md](Docs/phase4-button-slice-plan.md)）を逸脱する大規模リファクタ提案は控えめにし、必要であれば `[Future]` ラベルで分離してください。
 - フォルダ構成変更（`Editor/ Simulator/ Runtime/ Shared/Schema/ Shared/Widgets/ Docs/`）は禁止です。提案しないでください。
 - qmake その他の代替ビルドシステム導入は禁止です。CMake 前提でレビューしてください。
 
