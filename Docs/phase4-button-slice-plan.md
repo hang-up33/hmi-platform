@@ -71,8 +71,8 @@ flowchart LR
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | **全レイヤを貫く**。①`WidgetData`（`Shared/Schema`）に `backgroundColor`（QString hex）/ `textColor`（QString hex）/ `fontSize`（int）を追加。`toJson` は **既定値時は省略書き出し**（既存 text/tag と同じ optional 方針）、`fromJson` は既定値で埋め、`isValidJson` の **必須集合は id/type/width/height のまま据え置き**（後方互換）。②`HmiButton.qml` に `property color backgroundColor` / `textColor` / `property int fontSize` を公開し、現在のハードコード値を既定値に（`backgroundColor: "#4cc9f0"`、`textColor: "white"`、`fontSize: 14`）。press フィードバックは `Qt.darker(backgroundColor, 1.2)` で導出。③Editor の `EditableWidget` メタ（`widgetBackgroundColor` 等）と `Canvas.qml` delegate / `Main.qml` の保存走査（`saveTo` / `onAccepted`）に新フィールドを追加。④**Simulator の `SimulatorCanvas.qml` delegate でも新フィールドを HmiButton へ渡す**（Runtime はソース共有で自動）。⑤`Shared/Schema/tests/tst_widget_data.cpp` に round-trip / 既定値省略 / `isValidJson` のケースを追加 |
-| 完了基準 | ビルド緑、`ctest`（Schema 単体）緑。Editor / Simulator で色・フォントが JSON 通り描画される。スクショ `Docs/screenshots/task-28-style-editor.png` / `-simulator.png` |
+| スコープ | **全レイヤを貫く**。①`WidgetData`（`Shared/Schema`）に `backgroundColor`（QString hex）/ `textColor`（QString hex）/ `fontSize`（int）を追加。`toJson` は **既定値時は省略書き出し**（既存 text/tag と同じ optional 方針）、`fromJson` は既定値で埋め、`isValidJson` の **必須集合は id/type/width/height のまま据え置き**（後方互換）。②`HmiButton.qml` に `property color backgroundColor` / `textColor` / `property int fontSize` を公開し、現在のハードコード値を既定値に（`backgroundColor: "#4cc9f0"`、`textColor: "white"`、`fontSize: 14`）。press フィードバックは `Qt.darker(backgroundColor, 1.2)` で導出。③Editor の `EditableWidget` メタ（`widgetBackgroundColor` 等）と `Canvas.qml` delegate / `Main.qml` の保存走査（`saveTo` / `onAccepted`）に新フィールドを追加。④**Simulator の `SimulatorCanvas.qml` delegate でも新フィールドを HmiButton へ渡す**（Runtime はソース共有で自動）。⑤**JSON↔QML ブリッジ（C++）**：`Editor/src/ProjectIo.cpp`（save 経路の `QVariantMap`→`WidgetData` 読み取り、load 経路の `WidgetData`→`QVariantMap` の `insert`）と `Simulator/src/ProjectLoader.cpp`（load 経路の `insert`）は現在 `id/type/x/y/width/height/text/tag` を**手動コピー**しているため、**両ファイルの変換に新フィールドを追加**する（忘れると Schema / delegate を直しても styled JSON の色等が QML に届かず「JSON 通り描画」を満たせない）。⑥テスト：`Shared/Schema/tests/tst_widget_data.cpp`（round-trip / 既定値省略 / `isValidJson`）に加え、`Editor/tests/tst_project_io.cpp` と `Simulator/tests/tst_project_loader.cpp` にも新フィールドがブリッジを往復することの検証を追加 |
+| 完了基準 | ビルド緑、`ctest`（Schema 単体 + ProjectIo / ProjectLoader）緑。**styled JSON を保存→読込した時に色・フォント込みで再現**（Schema→C++ ブリッジ→delegate を往復）。Editor / Simulator で色・フォントが JSON 通り描画される。スクショ `Docs/screenshots/task-28-style-editor.png` / `-simulator.png` |
 
 ### T29: インスペクタにスタイル編集 + 削除（Editor）
 
@@ -114,6 +114,7 @@ flowchart LR
 ### スタイルは HmiButton に集約し両アプリから渡す
 
 - 新プロパティは **`HmiButton.qml`（`Shared/Widgets`）に一度だけ公開**。Editor（`Canvas.qml` delegate）と Simulator（`SimulatorCanvas.qml` delegate）の **両方**で HmiButton に渡す口を足す（Runtime は Simulator ソース共有で自動）。片方だけ足すと Editor で編集できても実機/Simulator で反映されない、の取りこぼしを防ぐ。
+- ただし QML delegate だけでは不十分。**JSON↔QML の C++ ブリッジ**（`ProjectIo.cpp` の save/load・`ProjectLoader.cpp` の load）は `QVariantMap` でフィールドを**手動コピー**しているため、新フィールドは **これら C++ 変換にも追加**する。レイヤの貫通順は **Schema → C++ ブリッジ（ProjectIo / ProjectLoader）→ QML delegate → HmiButton**。どこか 1 つ抜けると JSON の値が描画に届かない（これが縦スライスで一番取りこぼしやすい箇所）。
 
 ### E2E / 命名
 
@@ -127,7 +128,7 @@ flowchart LR
 ### Must Always
 
 - 1 タスク = 1 ブランチ = 1 PR、`cmake --build` 緑 ＋ 該当環境での動作確認（スクショ / 実機）を完了基準にする。
-- Widget の新プロパティを足す時は **`HmiButton` に公開 → Editor と Simulator 双方の delegate に渡す → Schema 単体テスト（round-trip / `isValidJson`）も同時更新**（このセットを 1 タスク内で揃える）。
+- Widget の新プロパティを足す時は **`HmiButton` に公開 → JSON↔QML ブリッジ（`ProjectIo.cpp` の save/load・`ProjectLoader.cpp` の load の `QVariantMap` 変換）に追加 → Editor と Simulator 双方の delegate に渡す → Schema / ProjectIo / ProjectLoader のテストも同時更新**（このセットを 1 タスク内で揃える）。
 - Schema 新フィールドは **optional**（既定値省略書き出し、`isValidJson` 必須集合は据え置き）で後方互換を保つ。
 - 編集 UI は **Editor のみ**。Simulator / Runtime は読み取り専用を維持し、描画に新スタイルを渡す口だけ足す。
 - widgetModel は **編集中 live Item を真実とし、構造変更時のみ Items→配列スナップショット後に再代入**。選択は id で追跡。
