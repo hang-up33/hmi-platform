@@ -238,4 +238,5 @@ timeline
 - [Docs/phase2-testing-plan.md](phase2-testing-plan.md) — Phase 2 計画書
 - [Docs/phase3-e2e-plan.md](phase3-e2e-plan.md) — Phase 3-A 計画書
 - [Docs/phase3b-runtime-plan.md](phase3b-runtime-plan.md) — Phase 3-B 計画書 v2
+- [Docs/phase3b-runtime-journey.md](phase3b-runtime-journey.md) — Phase 3-B 奮闘記（Task 23/24 をどう乗り越えたか・心境の記録）
 - [Docs/qml-canvas-structure.md](qml-canvas-structure.md) — Canvas.qml の構造解説
