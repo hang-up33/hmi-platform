@@ -50,7 +50,7 @@ flowchart LR
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | `Canvas.qml` に `selectedWidgetId` プロパティを追加。`EditableWidget.qml` に `selected`（= 自分の `widgetId === canvas.selectedWidgetId`）を持たせ、選択時に選択枠（ハイライト border / 破線）を描画。クリックで自分を選択、背景クリックで解除。選択発火は `EditableWidget` の `dragArea` で `onClicked` を取る（既存の `drag.filterChildren` との両立は着手時に実機確認。必要なら HmiButton の `clicked` を EditableWidget が中継して選択に使う） |
+| スコープ | `Canvas.qml`（`root`）に `selectedWidgetId` プロパティを追加。`EditableWidget.qml` には **plain な `selected`（bool）プロパティ**と **`signal selectRequested(string id)`** を持たせ、`selected` 時に選択枠（ハイライト border / 破線）を描画する。**QML の `id` はコンポーネントファイルを跨いで参照できない**ため、`EditableWidget` から `canvas` / `root` を直接触らず、**結線は delegate 側（`root` が可視な `Canvas.qml`）で行う**：delegate で `selected: widgetId === root.selectedWidgetId` をバインドし、`onSelectRequested: root.selectedWidgetId = id`。背景クリックで `root.selectedWidgetId = ""` に解除。`EditableWidget` は `dragArea` の `onClicked` で `selectRequested(widgetId)` を emit する（既存の `drag.filterChildren` との両立は着手時に実機確認。必要なら HmiButton の `clicked` を中継して選択要求に使う） |
 | 完了基準 | ビルド緑、既存 QML テスト緑。Editor で Button をクリックすると選択枠が出て、別 Button / 背景クリックで移動・解除。スクショ `Docs/screenshots/task-25-selection.png` |
 
 ### T26: インスペクタ + text/tag 編集（Editor）
@@ -102,7 +102,9 @@ flowchart LR
 
 ### 選択状態は Canvas が保持
 
-- `selectedWidgetId` は `Canvas.qml` に持たせる。`Main.qml` 側はインスペクタ表示の参照に使うだけ。Simulator / Runtime は選択概念を持たない（読み取り専用）ので **無改修**を維持する。
+- `selectedWidgetId` は `Canvas.qml`（`root`）に持たせる。**QML の `id` はコンポーネントファイルを跨いで参照できない**ため、`EditableWidget` から `canvas` / `root` を直接触らない設計にする：`EditableWidget` は plain な `selected`（bool）と `signal selectRequested(string id)` だけを公開し、結線は delegate 側（`root` が可視な `Canvas.qml`）で `selected: widgetId === root.selectedWidgetId` のバインドと `onSelectRequested: root.selectedWidgetId = id` で行う。
+- `Main.qml` 側は **自分が定義した子の id（`canvas`）が見える**ので `canvas.selectedWidgetId` をインスペクタ表示・編集対象 Item の解決に使える（インスペクタは `canvas.widgetItems` から `widgetId === canvas.selectedWidgetId` の Item を引いて two-way バインドする）。
+- Simulator / Runtime は選択概念を持たない（読み取り専用）ので **無改修**を維持する。
 
 ### Schema 拡張の後方互換
 
