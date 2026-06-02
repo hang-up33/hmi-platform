@@ -296,6 +296,7 @@ Task 3 で定着したスタイル。新しいデータ型を追加するとき�
   - 代替として利用側で `IMPORTS HmiWidgets` を宣言する書き方もあるが、本プロジェクトの Qt 6.11（Homebrew）構成では自モジュール（`HmiEditor`）のリソース解決と競合して `No module named "HmiEditor"` で起動失敗した実績がある。STATIC plugin + 直リンクが唯一動作確認済みの方法。
   - Yocto / i.MX8MP の組み込みデプロイでも静的リンクの方が dylib 配布パスの問題を避けられて好都合。
 - **`default property alias content: <inner>.data` で受けた子要素の `parent` は内部 Item を指す**。たとえば `EditableWidget` は内部 `container` に子を流し込むため、Main.qml で `EditableWidget { HmiButton { text: parent.widgetText } }` と書くと `parent` は `container` を指してしまい、`widgetText`（root のプロパティ）が undefined になる。回避策：外側 Item に `id` を付け、子からは `id` 経由で参照する（例：`EditableWidget { id: btn; HmiButton { text: btn.widgetText } }`）。Canvas.qml も同じ構造のため同様の注意が必要。
+- **`drag.filterChildren: true` の MouseArea 下では、親の `onClicked` はクリックでは発火しない**（Task 25 で確認）。`EditableWidget` の `dragArea` は `drag.filterChildren: true` で子（`HmiButton`）の `clicked` を活かしつつドラッグ閾値超過時だけ grab を奪う設計のため、純クリックは**子 MouseArea が消費**して親まで届かない。よって「クリックで選択」のような操作は**子 Widget の `clicked` を中継**して実現する（`HmiButton { onClicked: wrapper.selectRequested(wrapper.widgetId) }`）。選択状態の所有は `Canvas`（`selectedWidgetId`）に集約し、QML の `id` はファイルを跨げないため `EditableWidget` には plain な `selected`(bool) ＋ `signal selectRequested(string)` だけを持たせ、結線（`selected: widgetId === root.selectedWidgetId` / `onSelectRequested`）は `root` が可視な delegate 側（`Canvas.qml`）で行う。背景クリックでの解除は `background` に置いた MouseArea（widgetLayer より**前**に宣言し、Widget 上のクリックは子が消費・空き領域だけが落ちてくる構造）で `selectedWidgetId = ""`。新しい Widget 種別を `EditableWidget` でラップする時もこの結線パターンを踏襲する。
 - **C++ ヘルパーを QML に公開するときは `setContextProperty` が最も軽い**。Editor 側に存在する一時的なコントローラ（例：`ProjectIo`）は `engine.rootContext()->setContextProperty("projectIo", &io)` でグローバル変数として QML から呼べる。`qmlRegisterType` / QML_ELEMENT は型インスタンス化が必要な場合に使う。**`hmi_schema` 等の Shared ライブラリは QML を一切知らないことを保ち**、QML 連携クラスは利用側アプリ（Editor / Simulator）に置く。
 - **Editor / Simulator で同等の C++ ヘルパーが必要になる場合、Shared に移さず両方に独立して持つ**（Task 8 で確立）。Editor `ProjectIo`（save + load）と Simulator `ProjectLoader`（load のみ）は load() の実装がほぼ同一だが、責務（編集 vs 読み取り専用）が異なるため Shared に統合しない。Shared への昇格を検討するのは、save 側にも同等の機能差が現れた時のみ。それまでは「重複を許容、利用側完結」を優先する。
 - **Simulator と Runtime はソース完全共通**（Phase 3-B / Task 22 で確立済み）。Editor との関係（独立保持）とは別に、Runtime は Simulator/ のソースを `Runtime/CMakeLists.txt` の CMake glue で再利用して `hmi_runtime` バイナリを生成する。Runtime/ には `.cpp` / `.qml` / `.h` を置かない。Runtime に追加機能が必要な場合も Simulator/ 側で編集し、必要なら `#ifdef HMI_RUNTIME_BUILD` で振る舞いを分岐する。QML モジュール URI も Simulator と同じ `HmiSimulator` を再利用する（モジュール名を変えるとソース共有が崩れる）。詳細は [Docs/phase3b-runtime-plan.md](Docs/phase3b-runtime-plan.md)。
@@ -333,8 +334,23 @@ kill %1
 
 - `scripts/capture-app-window.sh` は Swift で `CGWindowListCopyWindowInfo` を呼び対象プロセスのウィンドウ ID を取得し、`screencapture -l<wid>` で当該ウィンドウのみを切り出す（Retina 倍率は自動考慮、アクセシビリティ権限不要、**画面収録権限のみ**が必要）。
 - **初回のみ macOS の画面収録権限を Claude Code 親プロセス（Visual Studio Code / ターミナル）に付与する必要がある**。システム設定 > プライバシーとセキュリティ > 画面収録 で対象アプリを ON にし、再起動。
-- Windows でのキャプチャは未対応（必要になったタスクで `scripts/windows/` 配下に PowerShell 版を追加する）。
 - **AppleScript で Qt QML の Button を自動クリックする手段は事実上ない**（Task 7 で確認）。`tell application "System Events" to click at {x, y}` の CGEvent も、Accessibility の `click button "name" of window 1` も、QML のクリックイベントとして受理されない（座標は正しくても無反応）。FileDialog を介する読込・保存系の動作証跡が必要な場合は、(a) 起動直後の初期状態だけスクショして「ボタンが追加されたこと」を見せる、(b) どうしても「操作後の状態」を撮りたいなら、テスト用に環境変数や CLI 引数で初期 JSON を自動ロードする小機能を当該タスクに含める、のいずれかを選ぶ。最初から無理に automate しようとせず手動補完で済ませる判断もあり。
+
+### 撮影手順（Windows）
+
+Task 25 で `scripts/windows/capture-app-window.ps1`（PowerShell 版）を新設。`PrintWindow(PW_RENDERFULLCONTENT=2)` でウィンドウ単位に切り出すため、他ウィンドウに**隠れていても**対象アプリだけを撮れる（macOS の `screencapture -l<wid>` 相当）。
+
+```powershell
+. .\scripts\windows\setup-env.ps1
+Start-Process .\build-mingw\hmi_editor.exe   # 起動
+Start-Sleep -Seconds 3
+.\scripts\windows\capture-app-window.ps1 -ProcessName hmi_editor -Out Docs\screenshots\task-<N>-<短い名>.png
+Stop-Process -Name hmi_editor -Force
+```
+
+- 出力 PNG は **ウィンドウ枠（タイトルバー込み）** で、右下に数 px の黒縁が残ることがある（`GetWindowRect` と実描画域の差。動作証跡としては問題なし）。
+- **Windows では macOS と違い Qt QML の Button を自動クリックできる**。Win32 `mouse_event`（実マウスメッセージ）は QML の `MouseArea` / `clicked` に届くため、`SetWindowPos(hWnd, HWND_TOPMOST, ...)` ＋ `BringWindowToTop` で対象を**最前面に固定**してから対象座標へ `SetCursorPos`→`mouse_event(LDOWN/LUP)` でクリックすれば「操作後の状態」（選択枠が出た状態など）を撮れる。AppleScript の CGEvent が無反応なのと対照的（理由：AppleScript は合成イベント、Win32 は実 OS マウスメッセージ）。
+  - 注意：**背景プロセスからの `SetForegroundWindow` は Windows に抑制される**ことがあり、ウィンドウが他に隠れたまま注入クリックすると別ウィンドウに当たる。必ず `HWND_TOPMOST` 固定で前面に出してからクリックする。座標は `GetWindowRect` の左上 ＋ クライアント原点（`ClientToScreen`）＋ QML 上の論理座標から算出する。
 
 ### ファイル配置と PR への埋め込み
 

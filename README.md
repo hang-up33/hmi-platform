@@ -209,7 +209,7 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 
 | # | タスク | 状態 |
 |---|---|---|
-| 25 | 選択モデル + 選択枠（Editor） | ⏳ 未着手 |
+| 25 | 選択モデル + 選択枠（Editor） | ✅ 完了 |
 | 26 | インスペクタ + text/tag 編集（Editor） | ⏳ 未着手 |
 | 27 | 座標/サイズ数値編集 + ハンドルリサイズ（Editor） | ⏳ 未着手 |
 | 28 | スタイル属性追加（Schema + HmiButton + Simulator/Runtime）★ | ⏳ 未着手 |

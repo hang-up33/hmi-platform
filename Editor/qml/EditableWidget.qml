@@ -30,6 +30,19 @@ Item {
     property string widgetText: ""
     property string widgetTag: ""
 
+    // Task 25: 選択状態。値の所有は Canvas（root.selectedWidgetId）にあり、
+    // この EditableWidget は「選ばれているか」を受け取って選択枠を描画するだけ
+    // （plain な bool プロパティ）。結線は delegate 側（Canvas.qml）で
+    // `selected: widgetId === root.selectedWidgetId` とバインドする。
+    property bool selected: false
+
+    // Task 25: クリックされて「選択して欲しい」要求を外へ伝えるシグナル。
+    // QML の id はコンポーネントファイルを跨いで参照できないため、
+    // EditableWidget から Canvas を直接触らず、このシグナル経由で結線する。
+    // 引数名は QML 予約語 `id` / 既存プロパティ `widgetId` との衝突を避けて
+    // `requestedId` とする。
+    signal selectRequested(string requestedId)
+
     MouseArea {
         id: dragArea
         anchors.fill: parent
@@ -50,5 +63,20 @@ Item {
             id: container
             anchors.fill: parent
         }
+    }
+
+    // Task 25: 選択枠。selected 時のみ表示する。
+    // dragArea より後に宣言して最前面へ重ね、内容（HmiButton）の上に枠を描く。
+    // MouseArea を持たないためマウスイベントは透過し、ドラッグ/クリックを妨げない。
+    // 負マージンで Widget をわずかに囲み、ボタン自身の境界線と重ならないようにする。
+    Rectangle {
+        id: selectionFrame
+        anchors.fill: parent
+        anchors.margins: -2
+        visible: root.selected
+        color: "transparent"
+        radius: 4
+        border.color: "#ff5d8f"
+        border.width: 2
     }
 }

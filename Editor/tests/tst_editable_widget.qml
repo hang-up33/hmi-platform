@@ -32,6 +32,13 @@ TestCase {
         anchors.fill: parent
     }
 
+    // Task 25: selectRequested シグナルの発火検証用
+    SignalSpy {
+        id: selectSpy
+        target: testCase.editable
+        signalName: "selectRequested"
+    }
+
     Component.onCompleted: {
         const comp = Qt.createComponent(Qt.resolvedUrl("../qml/EditableWidget.qml"));
         if (comp.status !== Component.Ready) {
@@ -49,10 +56,12 @@ TestCase {
         editable.widgetType = "Button";
         editable.widgetText = "";
         editable.widgetTag = "";
+        editable.selected = false;
         editable.x = 50;
         editable.y = 50;
         editable.width = 100;
         editable.height = 50;
+        selectSpy.clear();
     }
 
     function test_default_meta_properties() {
@@ -62,6 +71,23 @@ TestCase {
         compare(editable.widgetText, "");
         compare(editable.widgetTag, "");
         compare(editable.dragging, false);
+    }
+
+    // Task 25: 選択状態プロパティの既定値と設定可否
+    function test_selected_defaults_false() {
+        compare(editable.selected, false);
+    }
+
+    function test_selected_is_settable() {
+        editable.selected = true;
+        compare(editable.selected, true);
+    }
+
+    // Task 25: selectRequested シグナルが id 付きで発火する
+    function test_select_requested_signal_emits() {
+        editable.selectRequested("btn001");
+        compare(selectSpy.count, 1);
+        compare(selectSpy.signalArguments[0][0], "btn001");
     }
 
     function test_meta_properties_are_settable() {

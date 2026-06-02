@@ -21,6 +21,12 @@ Item {
           text: "Start", tag: "PLC.START" }
     ]
 
+    // Task 25: 選択中 Widget の id。選択状態の所有者はここ（Canvas）に集約する。
+    // 各 EditableWidget は delegate 側で `selected: widgetId === selectedWidgetId`
+    // をバインドし、自身が選ばれているかを受け取る。空文字 "" は未選択。
+    // Main.qml はこの値をインスペクタ（Task 26 以降）の編集対象解決に使う。
+    property string selectedWidgetId: ""
+
     // 配置されている Widget 群（Task 6 の JSON 保存で走査するため公開）
     property alias widgetItems: widgetLayer.children
 
@@ -78,6 +84,16 @@ Item {
         border.color: "#888888"
         border.width: 1
 
+        // Task 25: 背景クリックで選択解除。widgetLayer より前に宣言することで
+        // 後続の widgetLayer（Widget 群）が上に重なり、Widget 上のクリックは
+        // 各 HmiButton の MouseArea が消費する。空きキャンバスへのクリックだけが
+        // ここまで落ちてきて選択を解除する。
+        MouseArea {
+            id: backgroundClickArea
+            anchors.fill: parent
+            onClicked: root.selectedWidgetId = ""
+        }
+
         Item {
             id: widgetLayer
             anchors.fill: parent
@@ -98,6 +114,15 @@ Item {
                     width: modelData.width !== undefined ? modelData.width : 120
                     height: modelData.height !== undefined ? modelData.height : 40
 
+                    // Task 25: 選択状態の結線。EditableWidget からは Canvas の id
+                    // （root）が見えないため、可視な delegate 側で双方向を結ぶ：
+                    //  - 自分が選択中かを selectedWidgetId との一致で受け取る
+                    //  - クリックされたら selectRequested 経由で selectedWidgetId を更新
+                    selected: wrapper.widgetId === root.selectedWidgetId
+                    onSelectRequested: function(requestedId) {
+                        root.selectedWidgetId = requestedId
+                    }
+
                     // 現状 MVP は Button のみ。型分岐は将来 Widget 種別が増えた時に拡張。
                     HmiButton {
                         anchors.fill: parent
@@ -106,6 +131,10 @@ Item {
                         // （CLAUDE.md の "default property alias の parent 罠" 参照）。
                         text: wrapper.widgetText
                         tag: wrapper.widgetTag
+                        // Task 25: ドラッグ用の親 MouseArea は drag.filterChildren 下で
+                        // クリックを発火しない（子が消費する）。よってクリック検出は
+                        // HmiButton 側の clicked を中継して選択要求に使う。
+                        onClicked: wrapper.selectRequested(wrapper.widgetId)
                     }
                 }
             }
