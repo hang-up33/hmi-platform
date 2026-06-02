@@ -47,6 +47,7 @@ TestCase {
         // 前の test が変更した状態が次に漏れないように）
         canvas.canvasWidth = 800;
         canvas.canvasHeight = 600;
+        canvas.selectedWidgetId = "";
         canvas.widgetModel = [
             { id: "btn001", type: "Button", x: 100, y: 50, width: 120, height: 40,
               text: "Start", tag: "PLC.START" }
@@ -127,5 +128,48 @@ TestCase {
 
         compare(canvas.width, 640);
         compare(canvas.height, 480);
+    }
+
+    // Task 25: 選択状態は selectedWidgetId（Canvas が所有）に集約され、
+    // 既定は未選択（空文字）。
+    function test_selected_widget_id_defaults_empty() {
+        compare(canvas.selectedWidgetId, "");
+    }
+
+    // Task 25: selectedWidgetId を設定すると一致する delegate だけが
+    // selected になる（delegate 側 `selected: widgetId === selectedWidgetId`
+    // バインドの結線確認）。
+    function test_selecting_id_marks_matching_delegate() {
+        canvas.widgetModel = [
+            { id: "a", type: "Button", x:   0, y: 0, width: 80, height: 30, text: "A", tag: "" },
+            { id: "b", type: "Button", x: 100, y: 0, width: 80, height: 30, text: "B", tag: "" }
+        ];
+        tryVerify(function() { return editableChildren().length === 2; }, 1000,
+                  "2 件モデルが反映されない");
+
+        canvas.selectedWidgetId = "b";
+        tryVerify(function() {
+            const ws = editableChildren();
+            if (ws.length !== 2) return false;
+            for (let i = 0; i < ws.length; ++i) {
+                if (ws[i].selected !== (ws[i].widgetId === "b")) return false;
+            }
+            return true;
+        }, 1000, "選択状態が selectedWidgetId に追従しない");
+    }
+
+    // Task 25: 選択解除（空文字）で全 delegate の selected が false に戻る。
+    function test_clearing_selection_unmarks_all() {
+        canvas.selectedWidgetId = "btn001";
+        tryVerify(function() {
+            const ws = editableChildren();
+            return ws.length === 1 && ws[0].selected === true;
+        }, 1000, "btn001 が選択状態にならない");
+
+        canvas.selectedWidgetId = "";
+        tryVerify(function() {
+            const ws = editableChildren();
+            return ws.length === 1 && ws[0].selected === false;
+        }, 1000, "選択解除後も selected が残る");
     }
 }
