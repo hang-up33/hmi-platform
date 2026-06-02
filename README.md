@@ -143,6 +143,15 @@ SDK 生成（新 BSP の image+SDK ビルド）から実機 scp 起動までの�
 
 新しいシェルから起動する場合は `. .\scripts\windows\setup-env.ps1` で PATH を通してから実行。
 
+Explorer からダブルクリックで起動したい（「Qt の DLL が見つからない」を解消したい）場合は、`windeployqt` で DLL / プラグイン / QML を exe の隣へ同梱する：
+
+```powershell
+.\scripts\windows\deploy.ps1            # hmi_editor + hmi_simulator 両方
+.\scripts\windows\build.ps1 -Deploy     # build と同時に実行する場合
+```
+
+`build-mingw` をクリーンビルドで作り直した後は DLL も消えるため再実行が必要。
+
 ## フェーズ進捗
 
 Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入、**Phase 3-B / Runtime（Task 22〜24）まで全タスク完了**。新 BSP（scarthgap）で Qt6 入り実機 image と Qt6 クロス SDK を生成し、`hmi_runtime` を aarch64 にクロスビルド → **i.MX8MP 実機（weston / Wayland）で Editor 由来の JSON を描画**することを実機で確認済み。**次は Phase 4 / Button 縦スライス（Task 25〜30）に着手** — Widget 種別を横に増やす前に Button 1 つを全レイヤで深く作り込み「Widget 追加テンプレ」を確立する（選択・インスペクタ・リサイズ・削除・スタイル属性の Schema 拡張）。

@@ -59,9 +59,15 @@ cmake --build build --target hmi_widgets
 . .\scripts\windows\setup-env.ps1
 .\build-mingw\hmi_editor.exe
 .\build-mingw\hmi_simulator.exe
+
+# Explorer からダブルクリック起動したい場合は windeployqt で DLL を同梱する
+.\scripts\windows\deploy.ps1                 # 両 exe に windeployqt を実行
+.\scripts\windows\build.ps1 -Deploy          # build と同時に実行する場合
 ```
 
 Windows は **Qt 6.11.0 MinGW 64-bit kit + 付属 MinGW 13.1 + Ninja** を前提とする（MSVC kit は未使用）。`scripts/windows/setup-env.ps1` が Qt 付属ツールチェイン（MinGW / Ninja / CMake）を PATH 先頭に挿入することで、システム側の VS `cl.exe` や別 MinGW を回避する。詳細・罠は [qt6-build](.claude/skills/qt6-build/SKILL.md) スキル参照。
+
+**Explorer からダブルクリックで開かない（「Qt の DLL が見つからない」）場合**は、`setup-env.ps1` を読み込んでいないシェル / Explorer が Qt・MinGW の `bin` を PATH に持たないため。`scripts/windows/deploy.ps1`（中身は `windeployqt --release --compiler-runtime --qmldir <qml>`）で Qt6 DLL・MinGW ランタイム（`libstdc++-6.dll` 等）・プラグイン（`platforms\qwindows.dll`）・QML モジュールを exe の隣へ配置すると自己完結する。**`build-mingw` をクリーン消去した後は再実行が必要**（DLL も消えるため）。`setup-env.ps1` を dot-source した開発シェルから起動する分には不要。
 
 テスト・lint・フォーマッタは未整備。
 

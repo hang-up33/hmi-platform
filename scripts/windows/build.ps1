@@ -4,12 +4,14 @@
 #   PS> .\scripts\windows\build.ps1                # configure + build
 #   PS> .\scripts\windows\build.ps1 -Target hmi_editor
 #   PS> .\scripts\windows\build.ps1 -Reconfigure   # build-mingw を消して configure からやり直し
+#   PS> .\scripts\windows\build.ps1 -Deploy        # build 後 windeployqt で Explorer 起動可能に
 
 param(
     [string]$BuildDir   = 'build-mingw',
     [string]$Target     = '',
     [string]$BuildType  = 'Debug',
-    [switch]$Reconfigure
+    [switch]$Reconfigure,
+    [switch]$Deploy
 )
 
 # $ErrorActionPreference = 'Stop' は使わない。
@@ -69,3 +71,21 @@ Write-Host ''
 Write-Host 'Build OK.'
 Write-Host "  Editor:    $buildPath\hmi_editor.exe"
 Write-Host "  Simulator: $buildPath\hmi_simulator.exe"
+
+# -Deploy 指定時は windeployqt で DLL / プラグイン / QML を exe の隣へ配置し、
+# Explorer ダブルクリック起動を可能にする。build -Target を deploy 対象へ写像する
+# （空 = 両方 / hmi_editor / hmi_simulator のみ deploy.ps1 に渡せる）。
+if ($Deploy) {
+    $deployTarget = switch ($Target) {
+        ''              { 'all' }
+        'hmi_editor'    { 'hmi_editor' }
+        'hmi_simulator' { 'hmi_simulator' }
+        default         { '' }
+    }
+    if ($deployTarget) {
+        Write-Host ''
+        & (Join-Path $scriptDir 'deploy.ps1') -BuildDir $BuildDir -Target $deployTarget
+    } else {
+        Write-Host "（-Deploy 指定だが Target='$Target' は deploy 対象外のためスキップ）"
+    }
+}
