@@ -149,9 +149,15 @@ HEAD_SHA=$(git rev-parse HEAD)
    # 1) reviews API：指摘ありの review summary が来る（state / 本文）。commit_id で絞る
    gh api --paginate repos/<owner>/<repo>/pulls/<N>/reviews \
      --jq '.[] | select(.commit_id == "<HEAD-SHA>") | {state, body}'
-   # 2) review comments API：inline コメント本体（指摘の中身）。commit_id で絞る
+   # 2) review comments API：inline コメント本体（指摘の中身）。
+   #    **必ず original_commit_id で絞る（commit_id ではない）**。inline コメントの
+   #    `commit_id` は、指摘行が新コミットでも存在し続けると GitHub に **最新 HEAD へ
+   #    re-anchor（付け替え）される**ため、commit_id で絞ると前ラウンドの古い指摘が
+   #    新 HEAD のものとして再マッチし「同じ指摘がまた来た」と誤検出する（PR #52 で実害）。
+   #    `original_commit_id` は投稿時コミット固定なので、当該 HEAD への **新規** inline
+   #    だけを正しく拾える。created_at >= SINCE の併用でさらに堅い。
    gh api --paginate repos/<owner>/<repo>/pulls/<N>/comments \
-     --jq '.[] | select(.commit_id == "<HEAD-SHA>") | {path, line, body}'
+     --jq '.[] | select(.original_commit_id == "<HEAD-SHA>") | {path, line, body}'
    # 3) issue comments API：PR 会話タブのコメント。Codex は **指摘なしのときここに
    #    "Didn't find any major issues" を投稿する** ことが多く、reviews API に
    #    クリーン文言が載らないラウンドがあるため必ず併せて見る。
