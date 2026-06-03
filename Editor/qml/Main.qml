@@ -52,24 +52,9 @@ Window {
         if (!path) {
             return false
         }
-        const items = canvas.widgetItems
-        const widgets = []
-        for (let i = 0; i < items.length; ++i) {
-            const item = items[i]
-            if (item.widgetId === undefined) {
-                continue
-            }
-            widgets.push({
-                id: item.widgetId,
-                type: item.widgetType,
-                x: Math.round(item.x),
-                y: Math.round(item.y),
-                width: Math.round(item.width),
-                height: Math.round(item.height),
-                text: item.widgetText,
-                tag: item.widgetTag
-            })
-        }
+        // Task 26: live Item 群のスナップショット（インスペクタ編集を含む現在値）
+        // を Canvas に集約した snapshotModel() で取得する。
+        const widgets = canvas.snapshotModel()
         // ProjectIo.save は FileDialog 由来の `file:///` 形式 QUrl を期待する
         // ため、絶対パスを `file://` プレフィックス付きで URL 化して渡す。
         // E2E は macOS / Linux でのみ走る（Windows MinGW は HMI_ENABLE_E2E=OFF）
@@ -245,25 +230,9 @@ Window {
         nameFilters: [qsTr("JSON files (*.json)"), qsTr("All files (*)")]
         defaultSuffix: "json"
         onAccepted: {
-            // Canvas 上の EditableWidget を走査し、Shared/Schema 互換の Widget リストへ変換
-            const items = canvas.widgetItems
-            const widgets = []
-            for (let i = 0; i < items.length; ++i) {
-                const item = items[i]
-                if (item.widgetId === undefined) {
-                    continue // EditableWidget 以外（Repeater 自身など）はスキップ
-                }
-                widgets.push({
-                    id: item.widgetId,
-                    type: item.widgetType,
-                    x: Math.round(item.x),
-                    y: Math.round(item.y),
-                    width: Math.round(item.width),
-                    height: Math.round(item.height),
-                    text: item.widgetText,
-                    tag: item.widgetTag
-                })
-            }
+            // Canvas 上の live EditableWidget 群を Shared/Schema 互換の Widget
+            // リストへ変換（Task 26 で Canvas.snapshotModel() に集約・共用）。
+            const widgets = canvas.snapshotModel()
             const ok = projectIo.save(saveDialog.selectedFile, "Sample", "Main", widgets)
             if (!ok) {
                 console.warn("プロジェクト保存に失敗:", saveDialog.selectedFile)
