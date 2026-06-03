@@ -7,6 +7,8 @@ paths:
   - "Simulator/**"
   - "Runtime/**"
   - "Shared/Widgets/**"
+  - "CMakeLists.txt"
+  - "**/CMakeLists.txt"
 metadata:
   type: project
 ---

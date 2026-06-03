@@ -38,7 +38,7 @@
 CLAUDE.md の肥大化対策で切り出した詳細規約。`paths:` frontmatter で対象ファイルを触る時だけ自動ロードされる（CLAUDE.md 側にはポインタ表のみ残置）。
 
 - [schema-conventions](schema-conventions.md) — Shared/Schema の型・JSON I/O 実装規約（`paths: Shared/Schema/**`）
-- [qml-module-conventions](qml-module-conventions.md) — QML モジュール URI・命名衝突・STATIC plugin 共有・EditableWidget 結線・Simulator/Runtime ソース共有（`paths: **/*.qml`・Editor/Simulator/Runtime/Shared/Widgets）
+- [qml-module-conventions](qml-module-conventions.md) — QML モジュール URI・命名衝突・STATIC plugin 共有・EditableWidget 結線・Simulator/Runtime ソース共有・ルート CMake の `add_subdirectory` 順序制約（`paths: **/*.qml`・Editor/Simulator/Runtime/Shared/Widgets・`**/CMakeLists.txt`）
 
 ## 重複のため移植しなかったメモリ（実体は git 管理ドキュメント側）
 
