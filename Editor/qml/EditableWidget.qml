@@ -30,6 +30,13 @@ Item {
     property string widgetText: ""
     property string widgetTag: ""
 
+    // Task 28: スタイル属性のメタ。HmiButton と同じく空文字 / 0 を「未指定」とし、
+    // 既定外観へのフォールバックは HmiButton 側に集約する（ここでは既定値を持たない）。
+    // 子の HmiButton には delegate（Canvas.qml）で wrapper 経由に渡す。
+    property string widgetBackgroundColor: ""
+    property string widgetTextColor: ""
+    property int widgetFontSize: 0
+
     // Task 27: リサイズ時の最小サイズ。ハンドルドラッグ / 数値編集での縮小は
     // これ未満にならないよう clamp する（潰れて選択・操作不能になるのを防ぐ）。
     property real minWidth: 30

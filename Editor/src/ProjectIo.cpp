@@ -39,6 +39,12 @@ bool ProjectIo::save(const QUrl &fileUrl,
         w.height = m.value(QStringLiteral("height")).toInt();
         w.text = m.value(QStringLiteral("text")).toString();
         w.tag = m.value(QStringLiteral("tag")).toString();
+        // Task 28: スタイル属性も QVariantMap → WidgetData へ手動コピーする。
+        // ここを抜かすと Schema / delegate を直しても styled JSON の色・フォントが
+        // 保存に乗らない（縦スライスで一番取りこぼしやすい箇所）。
+        w.backgroundColor = m.value(QStringLiteral("backgroundColor")).toString();
+        w.textColor = m.value(QStringLiteral("textColor")).toString();
+        w.fontSize = m.value(QStringLiteral("fontSize")).toInt();
         screen.widgets.append(w);
     }
 
@@ -116,6 +122,10 @@ QVariantMap ProjectIo::load(const QUrl &fileUrl)
         m.insert(QStringLiteral("height"), w.height);
         m.insert(QStringLiteral("text"), w.text);
         m.insert(QStringLiteral("tag"), w.tag);
+        // Task 28: load 経路でもスタイル属性を QML 側へ届ける（delegate が読む）。
+        m.insert(QStringLiteral("backgroundColor"), w.backgroundColor);
+        m.insert(QStringLiteral("textColor"), w.textColor);
+        m.insert(QStringLiteral("fontSize"), w.fontSize);
         widgetsVar.append(m);
     }
 

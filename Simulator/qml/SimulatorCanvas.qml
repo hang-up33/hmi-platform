@@ -54,6 +54,12 @@ Item {
                     anchors.fill: parent
                     text: wrapper.modelData.text !== undefined ? wrapper.modelData.text : ""
                     tag: wrapper.modelData.tag !== undefined ? wrapper.modelData.tag : ""
+                    // Task 28: スタイル属性も HmiButton へ渡す（Editor delegate と対）。
+                    // 未指定（空 / 0）は HmiButton 側で既定外観にフォールバックされる。
+                    // Runtime は本ソースを共有するため、これだけで実機にも反映される。
+                    backgroundColor: wrapper.modelData.backgroundColor !== undefined ? wrapper.modelData.backgroundColor : ""
+                    textColor: wrapper.modelData.textColor !== undefined ? wrapper.modelData.textColor : ""
+                    fontSize: wrapper.modelData.fontSize !== undefined ? wrapper.modelData.fontSize : 0
                 }
             }
         }

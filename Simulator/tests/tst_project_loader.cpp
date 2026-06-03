@@ -23,7 +23,10 @@ constexpr auto kValidProjectJson = R"({
           "width": 120,
           "height": 40,
           "text": "Start",
-          "tag": "PLC.START"
+          "tag": "PLC.START",
+          "backgroundColor": "#ff0000",
+          "textColor": "#00ff00",
+          "fontSize": 22
         }
       ]
     }
@@ -82,6 +85,10 @@ void ProjectLoaderTest::loadsValidProject()
     QCOMPARE(w.value("height").toInt(), 40);
     QCOMPARE(w.value("text").toString(), QStringLiteral("Start"));
     QCOMPARE(w.value("tag").toString(), QStringLiteral("PLC.START"));
+    // Task 28: スタイル属性も JSON → load を経て QML delegate へ届く（描画の入力になる）。
+    QCOMPARE(w.value("backgroundColor").toString(), QStringLiteral("#ff0000"));
+    QCOMPARE(w.value("textColor").toString(), QStringLiteral("#00ff00"));
+    QCOMPARE(w.value("fontSize").toInt(), 22);
 }
 
 void ProjectLoaderTest::loadAcceptsScreenWithEmptyWidgets()

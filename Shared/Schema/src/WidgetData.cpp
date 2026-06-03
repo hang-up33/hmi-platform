@@ -17,6 +17,17 @@ QJsonObject WidgetData::toJson() const
     if (!tag.isEmpty()) {
         obj["tag"] = tag;
     }
+    // Task 28: スタイルは既定値（空 / 0 = 未指定）のとき省略して書き出す。
+    // これにより Phase 1〜3-B で保存した旧 JSON と同形を保ち、後方互換になる。
+    if (!backgroundColor.isEmpty()) {
+        obj["backgroundColor"] = backgroundColor;
+    }
+    if (!textColor.isEmpty()) {
+        obj["textColor"] = textColor;
+    }
+    if (fontSize > 0) {
+        obj["fontSize"] = fontSize;
+    }
     return obj;
 }
 
@@ -31,6 +42,10 @@ WidgetData WidgetData::fromJson(const QJsonObject &obj)
     w.height = obj.value("height").toInt();
     w.text = obj.value("text").toString();
     w.tag = obj.value("tag").toString();
+    // Task 28: スタイルはキー欠落時に既定値（空 / 0 = 未指定）で埋める緩い設計。
+    w.backgroundColor = obj.value("backgroundColor").toString();
+    w.textColor = obj.value("textColor").toString();
+    w.fontSize = obj.value("fontSize").toInt();
     return w;
 }
 

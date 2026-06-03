@@ -223,7 +223,7 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 | 25 | 選択モデル + 選択枠（Editor） | ✅ 完了 |
 | 26 | インスペクタ + text/tag 編集（Editor） | ✅ 完了 |
 | 27 | 座標/サイズ数値編集 + ハンドルリサイズ（Editor） | ✅ 完了 |
-| 28 | スタイル属性追加（Schema + HmiButton + Simulator/Runtime）★ | ⏳ 未着手 |
+| 28 | スタイル属性追加（Schema + HmiButton + Simulator/Runtime）★ | ✅ 完了 |
 | 29 | インスペクタにスタイル編集 + 削除（Editor） | ⏳ 未着手 |
 | 30 | テスト/E2E 拡充 + 実機 styled 描画（全環境） | ⏳ 未着手 |
 
@@ -246,13 +246,18 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
           "width": 120,
           "height": 40,
           "text": "Start",
-          "tag": "PLC.START"
+          "tag": "PLC.START",
+          "backgroundColor": "#e63946",
+          "textColor": "#ffffff",
+          "fontSize": 22
         }
       ]
     }
   ]
 }
 ```
+
+`backgroundColor` / `textColor`（`#RRGGBB`）と `fontSize`（int px）は Task 28 で追加した **省略可能なスタイル属性**。省略時は HmiButton の既定外観（`#4cc9f0` / `white` / 14px）にフォールバックするため、旧 JSON はそのまま描画できる（後方互換）。必須項目は従来どおり `id` / `type` / `width` / `height`。
 
 ## 開発ルール
 

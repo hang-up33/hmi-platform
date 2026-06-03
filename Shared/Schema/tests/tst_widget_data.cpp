@@ -30,6 +30,7 @@ class WidgetDataTest : public QObject
 private slots:
     void roundTripFullFields();
     void roundTripOmitsEmptyTextAndTag();
+    void roundTripOmitsDefaultStyleFields();
     void fromJsonFillsDefaultsForMissingKeys();
 
     void isValidJsonAcceptsMinimumRequiredFields();
@@ -50,6 +51,9 @@ void WidgetDataTest::roundTripFullFields()
     src.height = 40;
     src.text = "Start";
     src.tag = "PLC.START";
+    src.backgroundColor = "#ff0000";
+    src.textColor = "#00ff00";
+    src.fontSize = 22;
 
     const QJsonObject obj = src.toJson();
     const WidgetData restored = WidgetData::fromJson(obj);
@@ -62,6 +66,32 @@ void WidgetDataTest::roundTripFullFields()
     QCOMPARE(restored.height, src.height);
     QCOMPARE(restored.text, src.text);
     QCOMPARE(restored.tag, src.tag);
+    QCOMPARE(restored.backgroundColor, src.backgroundColor);
+    QCOMPARE(restored.textColor, src.textColor);
+    QCOMPARE(restored.fontSize, src.fontSize);
+}
+
+// Task 28: スタイル属性は既定値（空 / 0 = 未指定）のとき toJson で省略され、
+// 旧 JSON と後方互換になることを固定する。
+void WidgetDataTest::roundTripOmitsDefaultStyleFields()
+{
+    WidgetData src;
+    src.id = "btn003";
+    src.type = "Button";
+    src.width = 120;
+    src.height = 40;
+    src.text = "Start";
+
+    const QJsonObject obj = src.toJson();
+
+    QVERIFY(!obj.contains("backgroundColor"));
+    QVERIFY(!obj.contains("textColor"));
+    QVERIFY(!obj.contains("fontSize"));
+
+    const WidgetData restored = WidgetData::fromJson(obj);
+    QVERIFY(restored.backgroundColor.isEmpty());
+    QVERIFY(restored.textColor.isEmpty());
+    QCOMPARE(restored.fontSize, 0);
 }
 
 void WidgetDataTest::roundTripOmitsEmptyTextAndTag()
@@ -99,6 +129,9 @@ void WidgetDataTest::fromJsonFillsDefaultsForMissingKeys()
     QCOMPARE(w.height, 0);
     QVERIFY(w.text.isEmpty());
     QVERIFY(w.tag.isEmpty());
+    QVERIFY(w.backgroundColor.isEmpty());
+    QVERIFY(w.textColor.isEmpty());
+    QCOMPARE(w.fontSize, 0);
 }
 
 void WidgetDataTest::isValidJsonAcceptsMinimumRequiredFields()

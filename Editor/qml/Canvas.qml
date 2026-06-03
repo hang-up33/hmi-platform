@@ -86,7 +86,11 @@ Item {
                 width: Math.round(item.width),
                 height: Math.round(item.height),
                 text: item.widgetText,
-                tag: item.widgetTag
+                tag: item.widgetTag,
+                // Task 28: スタイル属性も live Item からスナップショットして保存に乗せる。
+                backgroundColor: item.widgetBackgroundColor,
+                textColor: item.widgetTextColor,
+                fontSize: item.widgetFontSize
             })
         }
         return result
@@ -168,6 +172,10 @@ Item {
                     widgetType: modelData.type !== undefined ? modelData.type : "Button"
                     widgetText: modelData.text !== undefined ? modelData.text : ""
                     widgetTag: modelData.tag !== undefined ? modelData.tag : ""
+                    // Task 28: スタイル属性を modelData → wrapper メタへ流す（未指定は空 / 0）。
+                    widgetBackgroundColor: modelData.backgroundColor !== undefined ? modelData.backgroundColor : ""
+                    widgetTextColor: modelData.textColor !== undefined ? modelData.textColor : ""
+                    widgetFontSize: modelData.fontSize !== undefined ? modelData.fontSize : 0
                     // Task 18: Spix から `widget_<id>` で参照できるようにする。
                     objectName: "widget_" + widgetId
                     x: modelData.x !== undefined ? modelData.x : 0
@@ -192,6 +200,11 @@ Item {
                         // （CLAUDE.md の "default property alias の parent 罠" 参照）。
                         text: wrapper.widgetText
                         tag: wrapper.widgetTag
+                        // Task 28: スタイル属性を HmiButton（唯一の真実）へ渡す。
+                        // 空 / 0 は HmiButton 側で既定外観にフォールバックされる。
+                        backgroundColor: wrapper.widgetBackgroundColor
+                        textColor: wrapper.widgetTextColor
+                        fontSize: wrapper.widgetFontSize
                         // Task 25: ドラッグ用の親 MouseArea は drag.filterChildren 下で
                         // クリックを発火しない（子が消費する）。よってクリック検出は
                         // HmiButton 側の clicked を中継して選択要求に使う。
