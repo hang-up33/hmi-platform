@@ -35,7 +35,7 @@
 
 - 入口スクリプト：`scripts/windows/build.ps1`（configure+build）、`scripts/windows/setup-env.ps1`（dot-source で PATH 設定）。
 - 主要パス：Qt = `C:\Qt\6.11.0\mingw_64`、MinGW = `C:\Qt\Tools\mingw1310_64`、generator = Ninja 固定。
-- 罠（詳細は CLAUDE.md「Windows 環境の罠」）：
+- 罠（詳細は [qt6-build スキル](../skills/qt6-build/SKILL.md) の「既知の罠」）：
   - PowerShell 5.1 は BOM 無し UTF-8 を cp932 誤認 →`scripts/windows/*.ps1` は UTF-8 with BOM で保存。
   - VS の `cl.exe` や別 MinGW が PATH を汚染しないよう `setup-env.ps1` が Qt 付属ツールチェインを PATH 先頭に挿入。
   - EXE 出力先はビルドツリー直下（`build-mingw\hmi_editor.exe`）。macOS の `.app` とは構造が違う。
