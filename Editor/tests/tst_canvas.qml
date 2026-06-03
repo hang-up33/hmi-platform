@@ -288,4 +288,49 @@ TestCase {
                   "引数省略 deleteWidget が選択 Widget を消さない");
         compare(canvas.selectedWidgetId, "");
     }
+
+    // Task 30: 削除（構造変更）が「他 widget の未保存スタイル編集」を巻き戻さない
+    // ことを固定する。Task 29 の delete テストは残存 id 集合の正しさを見るが、
+    // 本テストは snapshotModel が live Item のスタイル値（背景色 / 文字色 /
+    // 文字サイズ）を取り込んでから再代入する保証（Phase 4 設計指針「live Item を
+    // 真実・構造変更時のみスナップショット」）をスタイルフィールドで検証する。
+    function test_delete_preserves_other_widgets_style_edits() {
+        canvas.widgetModel = [
+            { id: "keep", type: "Button", x:   0, y: 0, width: 80, height: 30, text: "Keep", tag: "" },
+            { id: "gone", type: "Button", x: 100, y: 0, width: 80, height: 30, text: "Gone", tag: "" }
+        ];
+        tryVerify(function() { return editableChildren().length === 2; }, 1000,
+                  "2 件モデルが反映されない");
+
+        // keep のスタイルを未保存編集（インスペクタの書き戻し相当：live Item を直接更新）
+        canvas.selectedWidgetId = "keep";
+        tryVerify(function() {
+            return canvas.selectedItem !== null && canvas.selectedItem.widgetId === "keep";
+        }, 1000, "keep が選択 Item にならない");
+        canvas.selectedItem.widgetBackgroundColor = "#123456";
+        canvas.selectedItem.widgetTextColor = "#abcdef";
+        canvas.selectedItem.widgetFontSize = 27;
+
+        // gone を削除（構造変更 → Repeater 再生成）。選択中は keep なので維持される。
+        canvas.deleteWidget("gone");
+
+        // keep だけ残り、スタイル編集が再生成後の live Item に保たれている
+        tryVerify(function() {
+            const ch = editableChildren();
+            return ch.length === 1 && ch[0].widgetId === "keep";
+        }, 1000, "削除後に keep が残らない");
+
+        const keep = editableChildren()[0];
+        compare(keep.widgetBackgroundColor, "#123456");
+        compare(keep.widgetTextColor, "#abcdef");
+        compare(keep.widgetFontSize, 27);
+
+        // 保存経路（snapshotModel）にも未保存スタイル編集が乗っている
+        const snap = canvas.snapshotModel();
+        compare(snap.length, 1);
+        compare(snap[0].id, "keep");
+        compare(snap[0].backgroundColor, "#123456");
+        compare(snap[0].textColor, "#abcdef");
+        compare(snap[0].fontSize, 27);
+    }
 }

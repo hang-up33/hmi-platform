@@ -8,11 +8,19 @@ Yocto / i.MX8M Plus 向け Qt6 HMI ランタイムを対象に、HMI 作画ツ�
 
 ![HMI Editor](Docs/screenshots/editor.png)
 
-Editor の現状画面。`追加` / `開く` / `保存` ボタンで Widget の配置と JSON 入出力を行う。
+Editor の現状画面。`追加` / `開く` / `保存` で Widget 配置と JSON 入出力を行い、右側インスペクタで選択中 Widget の **text / tag / 座標・サイズ / スタイル（背景色・文字色・文字サイズ）を編集・削除**できる（Phase 4 / Task 25〜29）。
+
+![HMI Simulator](Docs/screenshots/simulator.png)
+
+Simulator（読み取り専用）で同じ JSON を描画した様子。Editor で付けた **背景色 / 文字色 / 文字サイズ** がそのまま反映される（最下段 `Default` はスタイル未指定で HmiButton の既定外観にフォールバック）。Runtime はこの Simulator のソースを共有する。
 
 ![hmi_runtime on i.MX8MP](Docs/screenshots/task-24-runtime-imx.jpg)
 
 `hmi_runtime`（Simulator のソース共有・aarch64 クロスビルド）を **i.MX8MP 実機（scarthgap / Qt6 6.8.1 / weston）** で起動し、Editor 由来の JSON を描画した様子（Phase 3-B / Task 24）。
+
+![styled runtime on i.MX8MP](Docs/screenshots/task-30-runtime-styled.png)
+
+Phase 4 の styled JSON（背景色 / 文字色 / 文字サイズ）を **i.MX8MP 実機**の `hmi_runtime` で描画した様子（Task 30）。HDMI 未接続のため Qt 内蔵 VNC platform に描画し digital capture した（右の黒帯は VNC framebuffer とウィンドウサイズ差、日本語ラベルが □ なのは実機 image にフォント無しのため）。スタイル属性が実機まで貫通していることの証跡。
 
 ## 成果物
 
@@ -225,7 +233,7 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 | 27 | 座標/サイズ数値編集 + ハンドルリサイズ（Editor） | ✅ 完了 |
 | 28 | スタイル属性追加（Schema + HmiButton + Simulator/Runtime）★ | ✅ 完了 |
 | 29 | インスペクタにスタイル編集 + 削除（Editor） | ✅ 完了 |
-| 30 | テスト/E2E 拡充 + 実機 styled 描画（全環境） | ⏳ 未着手 |
+| 30 | テスト/E2E 拡充 + 実機 styled 描画（全環境） | 🔄 進行中（QML テスト + E2E コード + スクショ + **実機 styled 描画**完了 / 残りは macOS `ctest -L e2e` 実行のみ pending） |
 
 ## 共通データ仕様（Project Format）
 
