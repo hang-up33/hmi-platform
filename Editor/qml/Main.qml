@@ -98,6 +98,7 @@ Window {
             && !inspectorTagField.activeFocus
             && !inspectorBgColorField.activeFocus
             && !inspectorTextColorField.activeFocus
+            && !inspectorFontSizeSpin.activeFocus
             && !fieldX.activeFocus && !fieldY.activeFocus
             && !fieldW.activeFocus && !fieldH.activeFocus
         onActivated: canvas.deleteWidget(canvas.selectedWidgetId)
