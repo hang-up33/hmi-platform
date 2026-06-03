@@ -7,7 +7,9 @@ import HmiWidgets
 
 Window {
     id: rootWindow
-    width: 1024
+    // Task 26: 右側インスペクタ（幅 260px）を足したぶん、キャンバス（800px）が
+    // 隠れないようウィンドウ幅を広げる（1024 → 1280）。
+    width: 1280
     height: 768
     visible: true
     title: qsTr("HMI Editor")
@@ -15,6 +17,30 @@ Window {
     // Spix のテストランナーは `hmiEditorWindow/<objectName>` の形で操作対象
     // QML Item を指定する。
     objectName: "hmiEditorWindow"
+
+    // Task 26: 選択中の live な EditableWidget を id で解決する。
+    // 選択状態の真実は canvas.selectedWidgetId にあり、編集対象 Item は
+    // canvas.widgetItems（= widgetLayer.children）から id 一致で引く。
+    // selectedWidgetId / widgetItems を引数に渡すことで、両者の変化でこの
+    // バインディングが再評価される（delegate 再生成で children が入れ替わっても
+    // 同一 id の新しい Item に解決し直す）。未選択・該当なしは null。
+    // Phase 4 設計指針に従い widgetModel の var 配列は据え置き、インスペクタは
+    // この live Item を直接 two-way 編集する（delegate 再生成を起こさない）。
+    property var selectedItem: resolveSelectedItem(canvas.selectedWidgetId,
+                                                   canvas.widgetItems)
+
+    function resolveSelectedItem(selectedId, items) {
+        if (!selectedId) {
+            return null
+        }
+        for (let i = 0; i < items.length; ++i) {
+            // Repeater 自身など widgetId を持たない子は除外する。
+            if (items[i] && items[i].widgetId === selectedId) {
+                return items[i]
+            }
+        }
+        return null
+    }
 
     // Task 19: E2E（Spix の invokeMethod）から呼ぶ JSON 保存ラッパー。
     // FileDialog は AppleScript / Spix から自動操作できないため、Canvas 上の
@@ -100,17 +126,114 @@ Window {
             }
         }
 
-        // キャンバスを中央配置。
+        // Task 26: 右側インスペクタ。選択中 Widget の text / tag を編集する。
+        // 編集対象は canvas.selectedWidgetId が指す live な EditableWidget
+        // （rootWindow.selectedItem で解決）。Simulator / Runtime は読み取り専用の
+        // ため、この編集 UI は Editor のみが持つ（Phase 4 ルール）。
+        Rectangle {
+            id: inspector
+            objectName: "inspectorPanel"
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            width: 260
+            color: "#f5f5f5"
+            border.color: "#cccccc"
+            border.width: 1
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: 12
+                spacing: 8
+
+                Label {
+                    text: qsTr("インスペクタ")
+                    font.pixelSize: 16
+                    font.bold: true
+                }
+
+                // 未選択時の案内
+                Label {
+                    objectName: "inspectorEmptyLabel"
+                    visible: rootWindow.selectedItem === null
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    color: "#888888"
+                    text: qsTr("Widget を選択してください")
+                }
+
+                // 選択中の編集フォーム
+                Column {
+                    objectName: "inspectorForm"
+                    visible: rootWindow.selectedItem !== null
+                    width: parent.width
+                    spacing: 8
+
+                    Label {
+                        objectName: "inspectorIdLabel"
+                        color: "#555555"
+                        text: qsTr("ID: ") + (rootWindow.selectedItem
+                            ? rootWindow.selectedItem.widgetId : "")
+                    }
+
+                    Label { text: qsTr("Text") }
+                    TextField {
+                        id: inspectorTextField
+                        objectName: "inspectorTextField"
+                        width: parent.width
+                        // ユーザー入力のみ選択中 Item へ書き戻す
+                        // （textEdited はプログラム変更では発火しない）。
+                        // Item.widgetText 更新で HmiButton の text バインドが即追従する。
+                        onTextEdited: {
+                            if (rootWindow.selectedItem) {
+                                rootWindow.selectedItem.widgetText = text
+                            }
+                        }
+                        // 選択が変わったら表示値を選択 Item の値へ更新する。
+                        // text を直接バインドするとユーザー入力でバインディングが
+                        // 切れ、選択切替時に追従しなくなるため明示更新する。
+                        Connections {
+                            target: rootWindow
+                            function onSelectedItemChanged() {
+                                inspectorTextField.text = rootWindow.selectedItem
+                                    ? rootWindow.selectedItem.widgetText : ""
+                            }
+                        }
+                    }
+
+                    Label { text: qsTr("Tag") }
+                    TextField {
+                        id: inspectorTagField
+                        objectName: "inspectorTagField"
+                        width: parent.width
+                        onTextEdited: {
+                            if (rootWindow.selectedItem) {
+                                rootWindow.selectedItem.widgetTag = text
+                            }
+                        }
+                        Connections {
+                            target: rootWindow
+                            function onSelectedItemChanged() {
+                                inspectorTagField.text = rootWindow.selectedItem
+                                    ? rootWindow.selectedItem.widgetTag : ""
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // キャンバスをインスペクタを除いた左側スペースの中央に配置。
         // Task 7 で Widget 表示は Canvas 内部の Repeater + widgetModel に移譲した。
         // 初期表示の btn001 もモデル初期値で再現している。
-        // Task 18: E2E（Spix）からドラッグの drop 先として参照するため
-        // objectName を付与する。
+        // Task 18: E2E（Spix）からドラッグの drop 先として参照するため objectName を付与。
         Canvas {
             id: canvas
             objectName: "canvas"
-            anchors.centerIn: parent
             canvasWidth: 800
             canvasHeight: 600
+            anchors.verticalCenter: parent.verticalCenter
+            x: (parent.width - inspector.width - width) / 2
         }
     }
 
