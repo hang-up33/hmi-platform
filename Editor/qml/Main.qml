@@ -337,8 +337,15 @@ Window {
                         objectName: "inspectorBgColorField"
                         width: parent.width
                         placeholderText: qsTr("#4cc9f0")
+                        // Codex PR #58 P2: 空 または 完全な #RRGGBB の時だけ live Item へ
+                        // 反映する。途中入力（"#ff"）や不正値（"redx"）が
+                        // widgetBackgroundColor に残ると JSON に無効色が保存され、
+                        // Simulator/Runtime の描画で無効色になるため。
+                        validator: RegularExpressionValidator {
+                            regularExpression: /^(#[0-9A-Fa-f]{6})?$/
+                        }
                         onTextEdited: {
-                            if (canvas.selectedItem) {
+                            if (canvas.selectedItem && acceptableInput) {
                                 canvas.selectedItem.widgetBackgroundColor = text
                             }
                         }
@@ -357,8 +364,13 @@ Window {
                         objectName: "inspectorTextColorField"
                         width: parent.width
                         placeholderText: qsTr("white")
+                        // Codex PR #58 P2: 背景色と同じく、空 または 完全な #RRGGBB の
+                        // 時だけ反映する（途中入力・不正値を live Item に書き戻さない）。
+                        validator: RegularExpressionValidator {
+                            regularExpression: /^(#[0-9A-Fa-f]{6})?$/
+                        }
                         onTextEdited: {
-                            if (canvas.selectedItem) {
+                            if (canvas.selectedItem && acceptableInput) {
                                 canvas.selectedItem.widgetTextColor = text
                             }
                         }
