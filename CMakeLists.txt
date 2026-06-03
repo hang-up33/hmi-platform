@@ -1,6 +1,14 @@
 cmake_minimum_required(VERSION 3.21)
 project(hmi_platform LANGUAGES CXX)
 
+# Windows ではアプリアイコンを exe に埋め込むため RC（リソースコンパイラ = MinGW windres）
+# を有効化する。Editor / Simulator の CMakeLists が configure_file で生成した .rc を
+# ターゲットソースに追加し、windres がアイコンを実行ファイルへ焼き込む。
+# 非 Windows（macOS / Yocto クロス）では RC は不要なので有効化しない。
+if(WIN32)
+    enable_language(RC)
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 

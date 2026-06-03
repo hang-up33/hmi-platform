@@ -34,6 +34,19 @@ set_target_properties(hmi_editor PROPERTIES
     WIN32_EXECUTABLE TRUE
 )
 
+# Windows: Atlas ブランドアイコンを exe に埋め込む。
+# branding/app_icon.rc.in の @HMI_APP_ICON_PATH@ を atlas.ico の絶対パスで埋めた
+# .rc を生成し、ターゲットソースに加える（windres が埋め込み）。
+if(WIN32)
+    set(HMI_APP_ICON_PATH "${CMAKE_SOURCE_DIR}/branding/atlas.ico")
+    configure_file(
+        "${CMAKE_SOURCE_DIR}/branding/app_icon.rc.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/hmi_editor_icon.rc"
+        @ONLY
+    )
+    target_sources(hmi_editor PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/hmi_editor_icon.rc")
+endif()
+
 if(BUILD_TESTING)
     add_subdirectory(tests)
 endif()

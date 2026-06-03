@@ -1,0 +1,4 @@
+// Atlas brand icon embedded into the Windows executable.
+// Generated from app_icon.rc.in by CMake configure_file() (@HMI_APP_ICON_PATH@ filled in).
+// IDI_ICON1 (the first icon resource) is what Windows uses as the app / taskbar icon.
+IDI_ICON1 ICON "@HMI_APP_ICON_PATH@"

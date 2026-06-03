@@ -152,6 +152,8 @@ Explorer からダブルクリックで起動したい（「Qt の DLL が見つ
 
 `build-mingw` をクリーンビルドで作り直した後は DLL も消えるため再実行が必要。
 
+3 つの exe（hmi_editor / hmi_simulator / hmi_runtime）には **Atlas ブランドアイコン**（`branding/atlas.ico`）が埋め込まれ、Explorer・タスクバー・ウィンドウタイトルバーに表示される（windeployqt とは独立に exe 自身へ焼き込まれる）。アイコンを変えたいときは `scripts\windows\generate-icon.ps1` を編集・再実行して `.ico` を再生成する（外部ツール不要）。
+
 ## フェーズ進捗
 
 Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入、**Phase 3-B / Runtime（Task 22〜24）まで全タスク完了**。新 BSP（scarthgap）で Qt6 入り実機 image と Qt6 クロス SDK を生成し、`hmi_runtime` を aarch64 にクロスビルド → **i.MX8MP 実機（weston / Wayland）で Editor 由来の JSON を描画**することを実機で確認済み。**次は Phase 4 / Button 縦スライス（Task 25〜30）に着手** — Widget 種別を横に増やす前に Button 1 つを全レイヤで深く作り込み「Widget 追加テンプレ」を確立する（選択・インスペクタ・リサイズ・削除・スタイル属性の Schema 拡張）。

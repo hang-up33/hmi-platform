@@ -63,11 +63,16 @@ cmake --build build --target hmi_widgets
 # Explorer からダブルクリック起動したい場合は windeployqt で DLL を同梱する
 .\scripts\windows\deploy.ps1                 # 両 exe に windeployqt を実行
 .\scripts\windows\build.ps1 -Deploy          # build と同時に実行する場合
+
+# exe のアイコン（Atlas ブランド）を変えたいとき。branding\atlas.ico を再生成し次のビルドで反映
+.\scripts\windows\generate-icon.ps1
 ```
 
 Windows は **Qt 6.11.0 MinGW 64-bit kit + 付属 MinGW 13.1 + Ninja** を前提とする（MSVC kit は未使用）。`scripts/windows/setup-env.ps1` が Qt 付属ツールチェイン（MinGW / Ninja / CMake）を PATH 先頭に挿入することで、システム側の VS `cl.exe` や別 MinGW を回避する。詳細・罠は [qt6-build](.claude/skills/qt6-build/SKILL.md) スキル参照。
 
 **Explorer からダブルクリックで開かない（「Qt の DLL が見つからない」）場合**は、`setup-env.ps1` を読み込んでいないシェル / Explorer が Qt・MinGW の `bin` を PATH に持たないため。`scripts/windows/deploy.ps1`（中身は `windeployqt --release --compiler-runtime --qmldir <qml>`）で Qt6 DLL・MinGW ランタイム（`libstdc++-6.dll` 等）・プラグイン（`platforms\qwindows.dll`）・QML モジュールを exe の隣へ配置すると自己完結する。**`build-mingw` をクリーン消去した後は再実行が必要**（DLL も消えるため）。`setup-env.ps1` を dot-source した開発シェルから起動する分には不要。
+
+**3 つの exe（hmi_editor / hmi_simulator / hmi_runtime）には Atlas ブランドアイコンが埋め込まれる**（Explorer・タスクバー・ウィンドウタイトルバーに表示）。仕組みは「ルート `CMakeLists.txt` で Windows 限定 `enable_language(RC)` → 各アプリの CMakeLists が `branding/app_icon.rc.in` を `configure_file` で `.rc` 化（`@HMI_APP_ICON_PATH@` に `branding/atlas.ico` の絶対パスを埋める）→ MinGW windres が exe へ焼き込む」。**windeployqt とは独立**（アイコンは exe 自身に焼かれるので deploy 不要で出る）。アイコン画像の「唯一の真実」は `scripts/windows/generate-icon.ps1`（外部ツール無しで GDI+ 描画 → 16〜256px を PNG 圧縮 ICO にパック）で、色・形を変えたいときはこれを編集して再実行する。Qt は exe 埋め込みアイコンを自動でウィンドウアイコンに採用するため、QML/C++ 側のコード変更は不要。
 
 テスト・lint・フォーマッタは未整備。
 
@@ -259,6 +264,7 @@ Task 16 で **Spix（OSS / MIT / `faaxm/spix` v0.14）と AnyRPC（XML-RPC 依�
 - **`-DKEY=$var` 形式の native コマンド引数は変数展開されない**。`cmake ... -DCMAKE_BUILD_TYPE=$BuildType` のように裸で書くと、PS 5.1 は `$BuildType` をリテラルとして cmake に渡す。引数全体を `"-DCMAKE_BUILD_TYPE=$BuildType"` のように **ダブルクォートで囲む** こと（シングルクォートだと展開されない）。
 - **CMake が VS の `cl.exe` を掴まないようにする**。Windows には Visual Studio Build Tools が同居していることが多く、PATH 先頭に Qt 付属 MinGW を入れないと CMake が MSVC を選んで Qt MinGW kit と ABI 不一致になる。`scripts/windows/setup-env.ps1` がこれを担保する。
 - **EXE の出力先が macOS と違う**。Windows は `build-mingw\hmi_<name>.exe`（ビルドツリーのトップ）に出る。macOS は `build/Editor/hmi_editor.app/Contents/MacOS/hmi_editor`。
+- **`New-Object <型>(<式1>, <式2>, ...)` の引数にナマの算術式を書くと誤パースされる**（アイコン生成スクリプト作成時に遭遇）。PowerShell ではカンマ演算子 `,` が二項 `-`/`+`/`*` より優先順位が高いため、`New-Object Drawing.RectangleF($cx - $r, $cy - $r, ...)` は `$cx - ($r, $cy) - ...` のように配列を巻き込んで評価され、`[System.Object[]] does not contain a method named 'op_Subtraction'` で落ちる。**各引数を括弧で囲む**（`($cx - $r), ($cy - $r), ...`）か、事前に変数へ代入してから渡す。メソッド呼び出し `$g.DrawLine($pen, $cx - $r, ...)` では引数が個別に評価されるため、この罠は `New-Object`（= `-ArgumentList` に配列を渡す形）に特有。
 - **起動中の `hmi_editor.exe` / `hmi_simulator.exe` を終了せずに再ビルドするとリンクが `cannot open output file ...: Permission denied` で失敗する**（Task 27 で遭遇）。Windows は実行中の exe を排他ロックするため、リンカが上書きできない。**コードのエラーではない**ので、`g++`/QML の構文を疑う前に `Get-Process hmi_editor | Stop-Process -Force` で起動中インスタンスを落としてから再ビルドする。動作確認で起動したアプリは**キャプチャ後に必ず `Stop-Process` する**運用にすると踏まない。
 - **`deploy.ps1` / `build.ps1 -Deploy` を実行した後は offscreen の QML ctest が壊れる**（Task 26 で発覚）。`windeployqt` は `build-mingw\platforms\` に **`qwindows.dll` だけ**を配置するが、QML テスト exe（`tst_hmi_widgets_qml` / `tst_hmi_editor_qml`）は build-mingw 直下で動くため、この**ローカル `platforms\` が Qt 本体のプラグイン群（`qoffscreen.dll` 等）を隠す**。結果 `-platform offscreen` 起動が `0xc0000602`（STATUS_FAIL_FAST_EXCEPTION）で失敗し、しかも **「no Qt platform plugin could be initialized. Available platform plugins are: windows.」のモーダルダイアログが OK 待ちで張り付き、ctest が数百秒ハングする**（563 秒の実測あり）。回避策：ctest 実行時に `$env:QT_QPA_PLATFORM_PLUGIN_PATH = "C:\Qt\6.11.0\mingw_64\plugins\platforms"` を設定して Qt 本体の完全なプラグイン集合を明示する（ローカル `platforms\` より優先される）。`deploy.ps1` 未実行のクリーンな build-mingw では発生しない（Qt 本体の plugins へ素直にフォールバックするため）。デプロイ済みツリーで `ctest` が固まったらこの罠を疑う。
 - 詳細・他の罠は [qt6-build](.claude/skills/qt6-build/SKILL.md) を参照。
