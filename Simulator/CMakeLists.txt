@@ -52,6 +52,19 @@ function(hmi_add_simulator_like_executable target)
         MACOSX_BUNDLE TRUE
         WIN32_EXECUTABLE TRUE
     )
+
+    # Windows: Atlas ブランドアイコンを exe に埋め込む（Editor と同じ仕組み）。
+    # hmi_simulator / hmi_runtime（PC ビルド時）の両方に効く。Yocto クロスでは
+    # WIN32 が偽なので何もしない。.rc はターゲットごとに別名で生成して衝突を避ける。
+    if(WIN32)
+        set(HMI_APP_ICON_PATH "${CMAKE_SOURCE_DIR}/branding/atlas.ico")
+        configure_file(
+            "${CMAKE_SOURCE_DIR}/branding/app_icon.rc.in"
+            "${CMAKE_CURRENT_BINARY_DIR}/${target}_icon.rc"
+            @ONLY
+        )
+        target_sources(${target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/${target}_icon.rc")
+    endif()
 endfunction()
 
 hmi_add_simulator_like_executable(hmi_simulator)
