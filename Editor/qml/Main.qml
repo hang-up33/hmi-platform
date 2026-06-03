@@ -18,29 +18,12 @@ Window {
     // QML Item を指定する。
     objectName: "hmiEditorWindow"
 
-    // Task 26: 選択中の live な EditableWidget を id で解決する。
-    // 選択状態の真実は canvas.selectedWidgetId にあり、編集対象 Item は
-    // canvas.widgetItems（= widgetLayer.children）から id 一致で引く。
-    // selectedWidgetId / widgetItems を引数に渡すことで、両者の変化でこの
-    // バインディングが再評価される（delegate 再生成で children が入れ替わっても
-    // 同一 id の新しい Item に解決し直す）。未選択・該当なしは null。
-    // Phase 4 設計指針に従い widgetModel の var 配列は据え置き、インスペクタは
-    // この live Item を直接 two-way 編集する（delegate 再生成を起こさない）。
-    property var selectedItem: resolveSelectedItem(canvas.selectedWidgetId,
-                                                   canvas.widgetItems)
-
-    function resolveSelectedItem(selectedId, items) {
-        if (!selectedId) {
-            return null
-        }
-        for (let i = 0; i < items.length; ++i) {
-            // Repeater 自身など widgetId を持たない子は除外する。
-            if (items[i] && items[i].widgetId === selectedId) {
-                return items[i]
-            }
-        }
-        return null
-    }
+    // Task 26: 選択中の live な EditableWidget はインスペクタの編集対象。
+    // 解決ロジックと所有は Canvas に集約した（canvas.selectedItem）。Repeater
+    // 再生成後も同一 id の新しい live Item に解決し直される（Codex PR #52 P2 指摘
+    // への回答。詳細は Canvas.qml の selectedItem コメント）。インスペクタは
+    // この live Item を直接 two-way 編集する（widgetModel の var 配列は据え置き
+    // ＝Phase 4 設計指針、delegate 再生成を起こさない）。
 
     // Task 19: E2E（Spix の invokeMethod）から呼ぶ JSON 保存ラッパー。
     // FileDialog は AppleScript / Spix から自動操作できないため、Canvas 上の
@@ -113,7 +96,7 @@ Window {
 
         // Task 26: 右側インスペクタ。選択中 Widget の text / tag を編集する。
         // 編集対象は canvas.selectedWidgetId が指す live な EditableWidget
-        // （rootWindow.selectedItem で解決）。Simulator / Runtime は読み取り専用の
+        // （canvas.selectedItem で解決）。Simulator / Runtime は読み取り専用の
         // ため、この編集 UI は Editor のみが持つ（Phase 4 ルール）。
         Rectangle {
             id: inspector
@@ -140,7 +123,7 @@ Window {
                 // 未選択時の案内
                 Label {
                     objectName: "inspectorEmptyLabel"
-                    visible: rootWindow.selectedItem === null
+                    visible: canvas.selectedItem === null
                     width: parent.width
                     wrapMode: Text.WordWrap
                     color: "#888888"
@@ -150,15 +133,15 @@ Window {
                 // 選択中の編集フォーム
                 Column {
                     objectName: "inspectorForm"
-                    visible: rootWindow.selectedItem !== null
+                    visible: canvas.selectedItem !== null
                     width: parent.width
                     spacing: 8
 
                     Label {
                         objectName: "inspectorIdLabel"
                         color: "#555555"
-                        text: qsTr("ID: ") + (rootWindow.selectedItem
-                            ? rootWindow.selectedItem.widgetId : "")
+                        text: qsTr("ID: ") + (canvas.selectedItem
+                            ? canvas.selectedItem.widgetId : "")
                     }
 
                     Label { text: qsTr("Text") }
@@ -170,18 +153,18 @@ Window {
                         // （textEdited はプログラム変更では発火しない）。
                         // Item.widgetText 更新で HmiButton の text バインドが即追従する。
                         onTextEdited: {
-                            if (rootWindow.selectedItem) {
-                                rootWindow.selectedItem.widgetText = text
+                            if (canvas.selectedItem) {
+                                canvas.selectedItem.widgetText = text
                             }
                         }
                         // 選択が変わったら表示値を選択 Item の値へ更新する。
                         // text を直接バインドするとユーザー入力でバインディングが
                         // 切れ、選択切替時に追従しなくなるため明示更新する。
                         Connections {
-                            target: rootWindow
+                            target: canvas
                             function onSelectedItemChanged() {
-                                inspectorTextField.text = rootWindow.selectedItem
-                                    ? rootWindow.selectedItem.widgetText : ""
+                                inspectorTextField.text = canvas.selectedItem
+                                    ? canvas.selectedItem.widgetText : ""
                             }
                         }
                     }
@@ -192,15 +175,15 @@ Window {
                         objectName: "inspectorTagField"
                         width: parent.width
                         onTextEdited: {
-                            if (rootWindow.selectedItem) {
-                                rootWindow.selectedItem.widgetTag = text
+                            if (canvas.selectedItem) {
+                                canvas.selectedItem.widgetTag = text
                             }
                         }
                         Connections {
-                            target: rootWindow
+                            target: canvas
                             function onSelectedItemChanged() {
-                                inspectorTagField.text = rootWindow.selectedItem
-                                    ? rootWindow.selectedItem.widgetTag : ""
+                                inspectorTagField.text = canvas.selectedItem
+                                    ? canvas.selectedItem.widgetTag : ""
                             }
                         }
                     }

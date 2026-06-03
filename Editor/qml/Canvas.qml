@@ -30,6 +30,30 @@ Item {
     // 配置されている Widget 群（Task 6 の JSON 保存で走査するため公開）
     property alias widgetItems: widgetLayer.children
 
+    // Task 26: 選択中の live な EditableWidget を解決して公開する。
+    // selectedWidgetId と widgetItems(= widgetLayer.children) の **両方** に依存
+    // するバインドなので、addWidget() / 読込で widgetModel を再代入して Repeater
+    // が delegate を作り直しても（childrenChanged 発火）、同一 id の **新しい live
+    // Item** に解決し直される（破棄済みの古い Item を掴み続けない）。Codex PR #52
+    // P2 指摘への回答：再生成後の再解決はこの reactive 依存で担保し、tst_canvas.qml
+    // の test_selected_item_reresolves_after_add で回帰固定する。選択状態の所有を
+    // Canvas に一元化するため、Main.qml のインスペクタはこの canvas.selectedItem を
+    // 参照する。
+    property var selectedItem: resolveSelectedItem(selectedWidgetId, widgetItems)
+
+    function resolveSelectedItem(selectedId, items) {
+        if (!selectedId) {
+            return null
+        }
+        for (let i = 0; i < items.length; ++i) {
+            // Repeater 自身など widgetId を持たない子は除外する。
+            if (items[i] && items[i].widgetId === selectedId) {
+                return items[i]
+            }
+        }
+        return null
+    }
+
     // Task 18: 新規 Widget 追加用の単調増加カウンタ（実用上の最大連番）。
     // 初期 widgetModel に btn001 が含まれているので 1 から始める。Main.qml の
     // Open で widgetModel が差し替わった場合に備え、`addWidget()` は採番前に
