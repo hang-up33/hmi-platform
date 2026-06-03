@@ -17,7 +17,10 @@ QVariantMap makeWidgetVariant(const QString &id,
                               int x, int y,
                               int w, int h,
                               const QString &text = QString(),
-                              const QString &tag = QString())
+                              const QString &tag = QString(),
+                              const QString &backgroundColor = QString(),
+                              const QString &textColor = QString(),
+                              int fontSize = 0)
 {
     QVariantMap m;
     m.insert("id", id);
@@ -28,6 +31,10 @@ QVariantMap makeWidgetVariant(const QString &id,
     m.insert("height", h);
     m.insert("text", text);
     m.insert("tag", tag);
+    // Task 28: スタイル属性も QML（QVariantMap）→ save → load を往復する。
+    m.insert("backgroundColor", backgroundColor);
+    m.insert("textColor", textColor);
+    m.insert("fontSize", fontSize);
     return m;
 }
 
@@ -58,7 +65,8 @@ void ProjectIoTest::saveThenLoadRoundTrip()
     QVERIFY(dir.isValid());
 
     QVariantList widgets;
-    widgets.append(makeWidgetVariant("btn001", 10, 20, 120, 40, "Start", "PLC.START"));
+    widgets.append(makeWidgetVariant("btn001", 10, 20, 120, 40, "Start", "PLC.START",
+                                     "#ff0000", "#00ff00", 22));
     widgets.append(makeWidgetVariant("btn002", 50, 80, 100, 30));
 
     ProjectIo io;
@@ -82,11 +90,19 @@ void ProjectIoTest::saveThenLoadRoundTrip()
     QCOMPARE(w0.value("height").toInt(), 40);
     QCOMPARE(w0.value("text").toString(), QStringLiteral("Start"));
     QCOMPARE(w0.value("tag").toString(), QStringLiteral("PLC.START"));
+    // Task 28: スタイル属性も QML → save → load を往復して再現される。
+    QCOMPARE(w0.value("backgroundColor").toString(), QStringLiteral("#ff0000"));
+    QCOMPARE(w0.value("textColor").toString(), QStringLiteral("#00ff00"));
+    QCOMPARE(w0.value("fontSize").toInt(), 22);
 
     const QVariantMap w1 = loaded.at(1).toMap();
     QCOMPARE(w1.value("id").toString(), QStringLiteral("btn002"));
     QVERIFY(w1.value("text").toString().isEmpty());
     QVERIFY(w1.value("tag").toString().isEmpty());
+    // 既定スタイル（未指定）の widget は空 / 0 で戻る（toJson 省略 → fromJson 既定埋め）。
+    QVERIFY(w1.value("backgroundColor").toString().isEmpty());
+    QVERIFY(w1.value("textColor").toString().isEmpty());
+    QCOMPARE(w1.value("fontSize").toInt(), 0);
 }
 
 void ProjectIoTest::saveProducesValidJsonOnDisk()

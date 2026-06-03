@@ -65,6 +65,11 @@ QVariantMap ProjectLoader::load(const QUrl &fileUrl)
         m.insert(QStringLiteral("height"), w.height);
         m.insert(QStringLiteral("text"), w.text);
         m.insert(QStringLiteral("tag"), w.tag);
+        // Task 28: スタイル属性も QML delegate へ届ける（Editor の ProjectIo.load と同形）。
+        // Simulator / Runtime は読み取り専用だが、描画に新スタイルを渡す口は必要。
+        m.insert(QStringLiteral("backgroundColor"), w.backgroundColor);
+        m.insert(QStringLiteral("textColor"), w.textColor);
+        m.insert(QStringLiteral("fontSize"), w.fontSize);
         widgetsVar.append(m);
     }
 
