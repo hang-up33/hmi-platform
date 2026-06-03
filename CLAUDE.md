@@ -196,7 +196,7 @@ inline review は `gh api repos/<owner>/<repo>/pulls/<N>/comments` 側にも来�
 - QML モジュール URI とアプリの `loadFromModule()` 引数を一致させる。
 - 出力（応答・ドキュメント・コミットメッセージ）は日本語を基本とする。
 - 環境固有の事実（開発ホスト構成・ディスク事情・WSL/Yocto ビルド環境・実機 i.MX8MP の状態・シリアル設定等）が変わったら、[.claude/rules/dev-environment.md](.claude/rules/dev-environment.md) を更新する。これは git 管理＋自動読込される Claude Code のルール（`.claude/rules/`）で、マシンローカルな自動メモリと違い Windows ↔ Mac を跨いで共有されるため、マシン横断で必要な環境知識はここを唯一の真実とする。
-- **新しい知見・好み・方針はマシンローカルの自動メモリ（`~/.claude/projects/.../memory/`）ではなく、git 管理＋自動読込される `.claude/rules/` に保存する**（2026-05-30 ユーザー指示）。理由は自動メモリが Windows ↔ Mac を跨がないため。1 知見 = 1 ファイル（小文字＋ハイフン区切り、frontmatter は `name` / `description` / `metadata.type` のみ。`node_type` / `originSessionId` のようなマシンローカル項目は付けない）で配置し、[.claude/rules/memory-index.md](.claude/rules/memory-index.md) に 1 行追記する。ただし CLAUDE.md / `Docs/*.md` に書ける「プロジェクト事実・設計判断」はそちらを正とし、二重メンテを避ける（rules に残すのは作業の進め方・好み等）。
+- **新しい知見・好み・方針はマシンローカルの自動メモリ（`~/.claude/projects/.../memory/`）ではなく、git 管理＋自動読込される `.claude/rules/` に保存する**（2026-05-30 ユーザー指示）。理由は自動メモリが Windows ↔ Mac を跨がないため。1 知見 = 1 ファイル（小文字＋ハイフン区切り、frontmatter は `name` / `description` / `metadata.type` のみ。`node_type` / `originSessionId` のようなマシンローカル項目は付けない）で配置し、[.claude/rules/memory-index.md](.claude/rules/memory-index.md) に 1 行追記する。**コードの特定領域に紐づく規約は frontmatter に `paths:`（glob）を足して path-scoped rule にし、該当ファイルを編集する時だけロードさせる**（毎セッション常時ロードされる本ファイルや無条件 rule を肥大化させないため。例：[.claude/rules/qml-module-conventions.md](.claude/rules/qml-module-conventions.md) は `paths: ["**/*.qml", ...]`）。ただし CLAUDE.md / `Docs/*.md` に書ける「プロジェクト事実・設計判断」はそちらを正とし、二重メンテを避ける（rules に残すのは作業の進め方・好み等）。
 
 ### Must Never
 
@@ -273,49 +273,14 @@ Task 16 で **Spix（OSS / MIT / `faaxm/spix` v0.14）と AnyRPC（XML-RPC 依�
 
 ---
 
-## Schema 実装規約（`Shared/Schema`）
+## プロジェクト規約（path-scoped rules）
 
-Task 3 で定着したスタイル。新しいデータ型を追加するときも踏襲する。
+コードの特定領域に紐づく詳細規約は、該当ファイルを編集する時だけ自動ロードされる **path-scoped rule**（`.claude/rules/` + `paths:` frontmatter）に分割した。毎セッション常時ロードされる本ファイルを肥大化させず、必要な時だけ規約をコンテキストに載せるため（[Claude Code メモリ仕様](https://code.claude.com/docs/ja/memory) 準拠）。
 
-- **型は struct + namespace `hmi::schema`** で表現する（Q_GADGET / Q_OBJECT は必要になるまで付けない。Task 3 時点では QML 直接 expose しないため）。
-- **ヘッダ配置**：`Shared/Schema/include/hmi/schema/<TypeName>.h`。利用側は `#include "hmi/schema/<TypeName>.h"`。
-- **ソース**：`Shared/Schema/src/<TypeName>.cpp`。新規追加時は `Shared/Schema/CMakeLists.txt` の `qt_add_library(hmi_schema STATIC ...)` 一覧にも追記する。
-- **JSON I/O**：各型に `QJsonObject toJson() const;` と `static <T> fromJson(const QJsonObject &);` を持たせる（メンバ関数 + 静的ファクトリ）。`QJsonDocument` は最上位（Project）でのみ使用する想定。
-- **省略可能フィールド**：`toJson()` で `isEmpty()` 判定して書き出しを省略する（Widget の `text` / `tag` が前例）。
-- **JSON 検証 API**：各型に `static bool isValidJson(const QJsonObject &);` も持たせる（Task 7 で定着）。`fromJson` はキー欠落時に既定値で埋める緩い設計なので、Editor / Simulator の読込側は **必ず `ProjectData::isValidJson` を通してから `fromJson` を呼ぶ**。検証は階層構造的に：`ProjectData::isValidJson` → `ScreenData::isValidJson` → `WidgetData::isValidJson` と再帰し、Shared/Schema 側に検証ロジックを集約する（利用側に検証コードを散らさない）。新しい必須フィールドを足す型変更時は `isValidJson` も同時に更新する。
-
----
-
-## QML モジュール規約
-
-- すべての QML モジュールは `qt_add_qml_module` で **明示的に `URI` を付与**（`HmiEditor` / `HmiSimulator` / `HmiWidgets`）。
-- `Shared/Widgets` は `OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/HmiWidgets` を指定し、ビルドパスを URI と一致させる（Qt の警告防止）。
-- QML ロードは `loadFromModule(URI, "Main")` を使用し、`qrc:` パス指定は避ける。
-- QML import は Qt6 形式（`import QtQuick` — バージョン番号無し）。
-- **QtQuick 標準型と同名の QML ファイルを作らない**（`Canvas.qml` / `Rectangle.qml` / `Item.qml` / `Text.qml` / `Image.qml` / `Window.qml` / `Button.qml`〔Controls〕等）。`import QtQuick` だけでは標準型が優先解決され、`Cannot assign to non-existent property` 等のエラーになる。回避策はいずれか：
-  - **プレフィックス命名**（推奨）：`EditorCanvas.qml` / `HmiButton.qml` のように接頭辞を付ける。
-  - **自モジュールを明示 import**：`Canvas.qml` のような名前を採用した場合、利用側 QML に `import HmiEditor`（または `HmiWidgets`）を必ず記述する。
-- 共有 Widget（`HmiWidgets`）を新規追加する際は、上記の命名衝突に特に注意する（`Button` / `Label` / `Slider` 等は Controls と衝突しうる）。
-- **複数バイナリ間で共有する QML モジュールは `STATIC` でビルドし、利用側アプリで plugin ターゲットをリンクする**。これは Qt 公式の「Multiple QML Modules in One Binary」推奨構成：
-  - 共有側（`Shared/Widgets/CMakeLists.txt`、`Simulator/CMakeLists.txt` の `hmi_simulator_qml`）：`qt_add_qml_module(<name> STATIC URI <Uri> ...)`
-  - 利用側（`Editor` / `Simulator` / `Runtime`）：`target_link_libraries(<app> PRIVATE <name>plugin)`
-  - 動的ビルド（`STATIC` を付けない）だと plugin が `MODULE_LIBRARY` になり `target_link_libraries` がエラーになる。
-  - **単一バイナリ専用** の QML モジュール（例：`HmiEditor` URI）は実行ファイル直結（`qt_add_qml_module(hmi_editor URI HmiEditor ...)`）のままで OK。STATIC 化は別バイナリと共有する場合のみ必須。
-  - 代替として利用側で `IMPORTS HmiWidgets` を宣言する書き方もあるが、本プロジェクトの Qt 6.11（Homebrew）構成では自モジュール（`HmiEditor`）のリソース解決と競合して `No module named "HmiEditor"` で起動失敗した実績がある。STATIC plugin + 直リンクが唯一動作確認済みの方法。
-  - Yocto / i.MX8MP の組み込みデプロイでも静的リンクの方が dylib 配布パスの問題を避けられて好都合。
-- **`default property alias content: <inner>.data` で受けた子要素の `parent` は内部 Item を指す**。たとえば `EditableWidget` は内部 `container` に子を流し込むため、Main.qml で `EditableWidget { HmiButton { text: parent.widgetText } }` と書くと `parent` は `container` を指してしまい、`widgetText`（root のプロパティ）が undefined になる。回避策：外側 Item に `id` を付け、子からは `id` 経由で参照する（例：`EditableWidget { id: btn; HmiButton { text: btn.widgetText } }`）。Canvas.qml も同じ構造のため同様の注意が必要。
-- **`drag.filterChildren: true` の MouseArea 下では、親の `onClicked` はクリックでは発火しない**（Task 25 で確認）。`EditableWidget` の `dragArea` は `drag.filterChildren: true` で子（`HmiButton`）の `clicked` を活かしつつドラッグ閾値超過時だけ grab を奪う設計のため、純クリックは**子 MouseArea が消費**して親まで届かない。よって「クリックで選択」のような操作は**子 Widget の `clicked` を中継**して実現する（`HmiButton { onClicked: wrapper.selectRequested(wrapper.widgetId) }`）。選択状態の所有は `Canvas`（`selectedWidgetId`）に集約し、QML の `id` はファイルを跨げないため `EditableWidget` には plain な `selected`(bool) ＋ `signal selectRequested(string)` だけを持たせ、結線（`selected: widgetId === root.selectedWidgetId` / `onSelectRequested`）は `root` が可視な delegate 側（`Canvas.qml`）で行う。背景クリックでの解除は `background` に置いた MouseArea（widgetLayer より**前**に宣言し、Widget 上のクリックは子が消費・空き領域だけが落ちてくる構造）で `selectedWidgetId = ""`。新しい Widget 種別を `EditableWidget` でラップする時もこの結線パターンを踏襲する。
-- **インスペクタ等で「選択中の live Item を `TextField` から two-way 編集」する時は `onTextEdited`（書き戻し）＋ `Connections.onSelectedItemChanged`（表示更新）の 2 本立てにする**（Task 26 で確立）。`text:` を選択 Item のプロパティに**直接バインドしてはいけない**：ユーザーがキー入力するとそのバインディングが切れ、以後の選択切替で表示が追従しなくなる。正しいパターンは (1) `TextField.onTextEdited`（**ユーザー入力でのみ発火**、プログラム変更では発火しない）で `selectedItem.widgetText = text` と live Item へ書き戻す → `HmiButton { text: wrapper.widgetText }` が即追従、(2) `Connections { target: rootWindow; function onSelectedItemChanged() { field.text = selectedItem ? selectedItem.widgetText : "" } }` で**選択が変わった時だけ**表示値を更新。編集対象の解決は `Canvas` の `selectedWidgetId` と `widgetItems`(=`widgetLayer.children`) を引数に取る純関数バインド（`property var selectedItem: resolveSelectedItem(canvas.selectedWidgetId, canvas.widgetItems)`）にすると、選択変更でも delegate 再生成（children 入替）でも同一 id の新しい Item に解決し直せる（Phase 4 設計指針「live Item を真実に・var 配列据え置き」と整合）。T27/T29 のインスペクタ項目（座標・サイズ・スタイル）も同じ 2 本立てで足す。
-- **数値フィールド（座標・サイズ）は `SpinBox` でなく `TextField` + `IntValidator` を使う**（Task 27 で確立）。`QtQuick.Controls` の **editable な `SpinBox` は `value` をプログラムから設定しても表示テキストが更新されない不具合**があった（Windows / Qt 6.11 で確認：`value` は正しく入っているのに入力欄が空表示。X/Y/幅 は出るのに高さだけ空、という再現性のない壊れ方をした）。`TextField { validator: IntValidator { bottom: N; top: M }; onTextEdited: if (acceptableInput) item.<prop> = parseInt(text) }` なら表示を自前で制御でき確実。値の表示同期は上記 2 本立て + **選択中 Item の `xChanged`/`widthChanged` 等を購読する `Connections { target: canvas.selectedItem; ... }`**（drag/handle 由来の変化に追従）。ただし **同期関数は `activeFocus` のフィールドを上書きしない**こと（書き戻し→幾何変化→同期 でテキスト再代入するとカーソルが飛ぶ）。`acceptableInput` で妥当値のみ書き戻し、最小サイズは `IntValidator.bottom` と `EditableWidget.minWidth/minHeight` を一致させる。
-- **リサイズハンドルは `EditableWidget` に専用 `MouseArea` + `preventStealing: true` で実装する**（Task 27）。親 `dragArea`（`drag.filterChildren: true` で Widget 移動）にハンドルの press を奪われると「リサイズのつもりが移動」になるため、ハンドル側 MouseArea に `preventStealing: true` を立てて握り続ける（ハンドルは `dragArea` の子ではないので本来奪われないが安全側で固定）。座標は `mapToItem(root.parent, mouse.x, mouse.y)` で widgetLayer 基準に変換し、press 時点との差分で `root.width/height` を更新する（ハンドルが resize で動くため、ハンドル相対座標だと値が暴れる）。`Math.max(minWidth, ...)` で最小 clamp。
-- **C++ ヘルパーを QML に公開するときは `setContextProperty` が最も軽い**。Editor 側に存在する一時的なコントローラ（例：`ProjectIo`）は `engine.rootContext()->setContextProperty("projectIo", &io)` でグローバル変数として QML から呼べる。`qmlRegisterType` / QML_ELEMENT は型インスタンス化が必要な場合に使う。**`hmi_schema` 等の Shared ライブラリは QML を一切知らないことを保ち**、QML 連携クラスは利用側アプリ（Editor / Simulator）に置く。
-- **Editor / Simulator で同等の C++ ヘルパーが必要になる場合、Shared に移さず両方に独立して持つ**（Task 8 で確立）。Editor `ProjectIo`（save + load）と Simulator `ProjectLoader`（load のみ）は load() の実装がほぼ同一だが、責務（編集 vs 読み取り専用）が異なるため Shared に統合しない。Shared への昇格を検討するのは、save 側にも同等の機能差が現れた時のみ。それまでは「重複を許容、利用側完結」を優先する。
-- **Simulator と Runtime はソース完全共通**（Phase 3-B / Task 22 で確立済み）。Editor との関係（独立保持）とは別に、Runtime は Simulator/ のソースを `Runtime/CMakeLists.txt` の CMake glue で再利用して `hmi_runtime` バイナリを生成する。Runtime/ には `.cpp` / `.qml` / `.h` を置かない。Runtime に追加機能が必要な場合も Simulator/ 側で編集し、必要なら `#ifdef HMI_RUNTIME_BUILD` で振る舞いを分岐する。QML モジュール URI も Simulator と同じ `HmiSimulator` を再利用する（モジュール名を変えるとソース共有が崩れる）。詳細は [Docs/phase3b-runtime-plan.md](Docs/phase3b-runtime-plan.md)。
-- **ソース共有の具体的 CMake 技法は「共通 function + `CMAKE_CURRENT_FUNCTION_LIST_DIR`」を採用**（Task 22 で確立）。`Simulator/CMakeLists.txt` で `function(hmi_add_simulator_like_executable target)` を定義し、関数内で `qt_add_executable(${target} ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/src/main.cpp ...)` のように **関数定義位置のディレクトリ** を絶対パス基準にする。`Runtime/CMakeLists.txt` は `hmi_add_simulator_like_executable(hmi_runtime)` の 1 行だけ。CMake function はグローバルスコープなので、ルート `CMakeLists.txt` で `add_subdirectory(Simulator)` を `add_subdirectory(Runtime)` より **前** に置く必要がある（順序を逆にすると関数未定義エラー）。`CMAKE_CURRENT_FUNCTION_LIST_DIR` 自体は CMake 3.17+ で導入された機能だが、**本リポジトリは root `CMakeLists.txt` で `cmake_minimum_required(VERSION 3.21)` を指定しているため、Yocto SDK 側の CMake は 3.21 以上が必須**（3.17〜3.20 だと configure 時点で落ちる。Task 23 着手時に SDK の `cmake --version` を確認する）。QML module 側は同じ Simulator/CMakeLists.txt で `qt_add_qml_module(hmi_simulator_qml STATIC URI HmiSimulator ...)` として STATIC plugin 化し、function 内の `target_link_libraries` で両バイナリに `hmi_simulator_qmlplugin` を取り込む（CLAUDE.md 既出の Shared/Widgets と同パターン）。実行ファイルに直結したまま QML module を宣言した状態では別バイナリから共有できないため、STATIC 化は必須。
-- **Task 22 時点では `hmi_runtime` のウィンドウタイトル・applicationName は `hmi_simulator` と同じ**（[Simulator/qml/Main.qml](Simulator/qml/Main.qml) の `Window.title = "HMI Simulator"`、[Simulator/src/main.cpp](Simulator/src/main.cpp) の `setApplicationName("hmi_simulator")`）。これは計画書「Task 22 段階では分岐ゼロのまま、Task 24 で実機差異が見えてから `#ifdef HMI_RUNTIME_BUILD` を入れる」方針に従った意図的な現状。Task 24 で実機初期化を入れる時に分岐すれば良い。Codex レビューでウィンドウタイトルが Simulator のままなことを指摘されたら本方針を根拠に説明する。
-- **Simulator のような起動時自動ロード機能が欲しい時は CLI 引数 + `setContextProperty` の組み合わせが軽い**（Task 8 で確立）。`main.cpp` で `QCommandLineParser` から取った `QUrl` を `initialJsonUrl` 等の名前で context に詰め、QML 側 `Component.onCompleted` で空判定して `projectLoader.load()` を呼ぶ。これは FileDialog の自動操作が AppleScript で不可能な問題（動作証跡セクション参照）を回避する正攻法でもある。
-- **QtQuick.Controls / QtQuick.Dialogs は QML `import` だけで動く**（Qt 6.5+）。CMake で `Qt6::QuickControls2` 等を明示リンクしなくても plugin が動的にロードされるため、`target_link_libraries` への追加は不要。デプロイ時のみ `windeployqt` / `macdeployqt` で plugin 同梱を確認する。
-- **`FileDialog.selectedFile` は `file:///...` 形式の `QUrl`**。C++ で受けるときは `QUrl::toLocalFile()` で OS パスに変換してから `QFile` / `QSaveFile` に渡すこと（`toString()` だと `file://` が残って書き込みに失敗する）。書き込みは `QSaveFile` を使い `commit()` で原子的に保存するのが安全。
+| 規約 | rule ファイル | ロード条件（`paths`） |
+|---|---|---|
+| Schema 型・JSON I/O 実装規約（struct + namespace、`toJson`/`fromJson`/`isValidJson`） | [.claude/rules/schema-conventions.md](.claude/rules/schema-conventions.md) | `Shared/Schema/**` |
+| QML モジュール規約（URI・命名衝突回避・STATIC plugin 共有・EditableWidget の選択/編集/リサイズ結線・C++ ヘルパー公開・Simulator/Runtime ソース共有） | [.claude/rules/qml-module-conventions.md](.claude/rules/qml-module-conventions.md) | `**/*.qml` / `Editor/**` / `Simulator/**` / `Runtime/**` / `Shared/Widgets/**` |
 
 ---
 
