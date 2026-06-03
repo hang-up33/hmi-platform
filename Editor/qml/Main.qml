@@ -25,6 +25,29 @@ Window {
     // この live Item を直接 two-way 編集する（widgetModel の var 配列は据え置き
     // ＝Phase 4 設計指針、delegate 再生成を起こさない）。
 
+    // Task 27: 座標・サイズ SpinBox の表示値を選択中 Item の現在値へ同期する。
+    // 選択変更・移動ドラッグ・リサイズハンドルのいずれの経路でも呼ばれ、表示を
+    // live 値に追従させる。プログラムからの value 代入は valueModified を発火
+    // しないため書き戻しループは起きない。未選択時は既定値（from）に戻す。
+    function syncGeometryFields() {
+        const it = canvas.selectedItem
+        // 編集中（activeFocus）のフィールドは上書きしない。書き戻し → 幾何変化 →
+        // 同期 でテキストを再代入するとカーソルが飛ぶため。非フォーカスの
+        // フィールドは drag/handle 由来の変化に live 追従させる。
+        if (!fieldX.activeFocus) {
+            fieldX.text = it ? String(Math.round(it.x)) : ""
+        }
+        if (!fieldY.activeFocus) {
+            fieldY.text = it ? String(Math.round(it.y)) : ""
+        }
+        if (!fieldW.activeFocus) {
+            fieldW.text = it ? String(Math.round(it.width)) : ""
+        }
+        if (!fieldH.activeFocus) {
+            fieldH.text = it ? String(Math.round(it.height)) : ""
+        }
+    }
+
     // Task 19: E2E（Spix の invokeMethod）から呼ぶ JSON 保存ラッパー。
     // FileDialog は AppleScript / Spix から自動操作できないため、Canvas 上の
     // EditableWidget 群を Shared/Schema 互換のリストへ変換 → ProjectIo.save に
@@ -186,6 +209,99 @@ Window {
                                     ? canvas.selectedItem.widgetTag : ""
                             }
                         }
+                    }
+
+                    // Task 27: 座標・サイズの数値編集。TextField + IntValidator
+                    //（QtQuick / QtQuick.Controls の既存 import で完結）で選択中 Item の
+                    // x/y/width/height を更新する。editable な SpinBox は value を
+                    // プログラム設定しても表示テキストが更新されない不具合があったため
+                    // （Windows / Qt 6.11 で確認）、表示を自前で制御できる TextField を採用。
+                    Label { text: qsTr("座標・サイズ") }
+                    Grid {
+                        objectName: "inspectorGeometryGrid"
+                        columns: 2
+                        rowSpacing: 6
+                        columnSpacing: 8
+                        verticalItemAlignment: Grid.AlignVCenter
+
+                        Label { text: qsTr("X") }
+                        TextField {
+                            id: fieldX
+                            objectName: "inspectorXField"
+                            width: 150
+                            inputMethodHints: Qt.ImhDigitsOnly
+                            validator: IntValidator { bottom: 0; top: 9999 }
+                            // 妥当な数値の時だけ選択中 Item へ書き戻す（acceptableInput）。
+                            onTextEdited: {
+                                if (canvas.selectedItem && acceptableInput) {
+                                    canvas.selectedItem.x = parseInt(text)
+                                }
+                            }
+                        }
+
+                        Label { text: qsTr("Y") }
+                        TextField {
+                            id: fieldY
+                            objectName: "inspectorYField"
+                            width: 150
+                            inputMethodHints: Qt.ImhDigitsOnly
+                            validator: IntValidator { bottom: 0; top: 9999 }
+                            onTextEdited: {
+                                if (canvas.selectedItem && acceptableInput) {
+                                    canvas.selectedItem.y = parseInt(text)
+                                }
+                            }
+                        }
+
+                        Label { text: qsTr("幅") }
+                        TextField {
+                            id: fieldW
+                            objectName: "inspectorWidthField"
+                            width: 150
+                            inputMethodHints: Qt.ImhDigitsOnly
+                            // 最小幅 30（EditableWidget.minWidth と整合）。
+                            validator: IntValidator { bottom: 30; top: 9999 }
+                            onTextEdited: {
+                                if (canvas.selectedItem && acceptableInput) {
+                                    canvas.selectedItem.width = parseInt(text)
+                                }
+                            }
+                        }
+
+                        Label { text: qsTr("高さ") }
+                        TextField {
+                            id: fieldH
+                            objectName: "inspectorHeightField"
+                            width: 150
+                            inputMethodHints: Qt.ImhDigitsOnly
+                            // 最小高さ 24（EditableWidget.minHeight と整合）。
+                            validator: IntValidator { bottom: 24; top: 9999 }
+                            onTextEdited: {
+                                if (canvas.selectedItem && acceptableInput) {
+                                    canvas.selectedItem.height = parseInt(text)
+                                }
+                            }
+                        }
+                    }
+
+                    // Task 27: x/y/width/height は インスペクタ数値編集・移動ドラッグ・
+                    // リサイズハンドルの 3 経路で変わる。表示を value/text へ直接バインド
+                    // するとユーザー入力で切れて drag/handle 由来の更新を取りこぼすため、
+                    // 選択変更時（selectedItem 変化）と選択中 Item の幾何プロパティ変化
+                    //（drag/handle）の両方で明示同期する（syncGeometryFields）。
+                    Connections {
+                        target: canvas
+                        function onSelectedItemChanged() {
+                            rootWindow.syncGeometryFields()
+                        }
+                    }
+                    Connections {
+                        target: canvas.selectedItem
+                        ignoreUnknownSignals: true
+                        function onXChanged() { rootWindow.syncGeometryFields() }
+                        function onYChanged() { rootWindow.syncGeometryFields() }
+                        function onWidthChanged() { rootWindow.syncGeometryFields() }
+                        function onHeightChanged() { rootWindow.syncGeometryFields() }
                     }
                 }
             }
