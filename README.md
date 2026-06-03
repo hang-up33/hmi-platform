@@ -164,7 +164,7 @@ Explorer からダブルクリックで起動したい（「Qt の DLL が見つ
 
 ## フェーズ進捗
 
-Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入、**Phase 3-B / Runtime（Task 22〜24）まで全タスク完了**。新 BSP（scarthgap）で Qt6 入り実機 image と Qt6 クロス SDK を生成し、`hmi_runtime` を aarch64 にクロスビルド → **i.MX8MP 実機（weston / Wayland）で Editor 由来の JSON を描画**することを実機で確認済み。**次は Phase 4 / Button 縦スライス（Task 25〜30）に着手** — Widget 種別を横に増やす前に Button 1 つを全レイヤで深く作り込み「Widget 追加テンプレ」を確立する（選択・インスペクタ・リサイズ・削除・スタイル属性の Schema 拡張）。
+Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入、**Phase 3-B / Runtime（Task 22〜24）まで全タスク完了**。新 BSP（scarthgap）で Qt6 入り実機 image と Qt6 クロス SDK を生成し、`hmi_runtime` を aarch64 にクロスビルド → **i.MX8MP 実機（weston / Wayland）で Editor 由来の JSON を描画**することを実機で確認済み。**Phase 4 / Button 縦スライス（Task 25〜30）も完了** — Widget 種別を横に増やす前に Button 1 つを全レイヤで深く作り込み「Widget 追加テンプレ」を確立した（選択・インスペクタ・リサイズ・削除・スタイル属性の Schema 拡張）。Task 30 の macOS `ctest -L e2e`（`e2e_style_roundtrip` 含む 5/5 緑）も確認済み。
 
 > 各タスクで何をしたか・どの PR で入ったか・何を学んだかの **時系列まとめ** は [Docs/development-history.md](Docs/development-history.md) を参照。第三者への説明用。
 >
@@ -233,7 +233,7 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 | 27 | 座標/サイズ数値編集 + ハンドルリサイズ（Editor） | ✅ 完了 |
 | 28 | スタイル属性追加（Schema + HmiButton + Simulator/Runtime）★ | ✅ 完了 |
 | 29 | インスペクタにスタイル編集 + 削除（Editor） | ✅ 完了 |
-| 30 | テスト/E2E 拡充 + 実機 styled 描画（全環境） | 🔄 進行中（QML テスト + E2E コード + スクショ + **実機 styled 描画**完了 / 残りは macOS `ctest -L e2e` 実行のみ pending） |
+| 30 | テスト/E2E 拡充 + 実機 styled 描画（全環境） | ✅ 完了（QML テスト + E2E コード + スクショ + 実機 styled 描画 + **macOS `ctest -L e2e` 緑（`e2e_style_roundtrip` 含む 5/5）**） |
 
 ## 共通データ仕様（Project Format）
 
