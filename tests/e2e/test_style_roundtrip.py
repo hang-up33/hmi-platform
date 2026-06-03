@@ -1,25 +1,26 @@
-"""Phase 4 Task 30: スタイル編集 → 保存 → Simulator 描画の cross-app E2E。
+"""Phase 4 Task 30: スタイルの「データ経路 → Simulator 描画」cross-app E2E。
 
-Editor で btn001 を **選択** し、スタイル（text / backgroundColor / textColor）を
-編集 → ``saveTo`` で JSON 保存 → 保存 JSON にスタイルが乗っていることを Python で
-直接検証 → 同 JSON を Simulator に ``--open`` で読み込ませ、HmiButton にスタイルが
-反映されて描画されることを ``getStringProperty`` で確認する。
+検証スコープ（Codex PR #60 指摘を受け **直接メタ更新の検証に限定**して明記）：
+Editor で ``widget_btn001`` を **選択** → 選択中 Widget の**スタイルメタ**
+（``widgetText`` / ``widgetBackgroundColor`` / ``widgetTextColor`` ＝インスペクタの
+``onTextEdited`` が書き戻すのと**同一プロパティ経路**）を更新 → ``saveTo`` で JSON 保存
+→ 保存 JSON にスタイルが乗っていることを Python で直接 assert → 同 JSON を Simulator に
+``--open`` で読み込ませ、HmiButton（``objectName: "hmiButton"``）にスタイルが反映されて
+描画されることを ``getStringProperty`` で確認する。Task 19/20 の座標 round-trip のスタイル版。
 
-Task 29 で入れた「選択 + インスペクタのスタイル編集」を end-to-end で固定する位置づけ
-（Task 19/20 の座標 round-trip のスタイル版）。
+**本 E2E が検証しないもの（重要）**：インスペクタの ``TextField`` UI そのもの
+（``inspectorBgColorField`` 等の ``onTextEdited`` 書き戻しや objectName）は**駆動しない**。
+理由：``onTextEdited`` は**実ユーザー入力でのみ発火**し、Spix の ``setStringProperty`` では
+発火しないため（Task 18〜20 と同じ制約）。インスペクタ UI が live Item に反映される動作は
+**手動スクショ**（``Docs/screenshots/task-29-style-delete.png`` ＝選択時にインスペクタへ値が
+出る）で担保する。Spix が実テキスト入力を再現できるようになったら本 E2E をインスペクタ
+``TextField`` 経路へ拡張する。
 
 Spix v0.14 制約・回避策（CLAUDE.md / [Docs/phase3-e2e-plan.md]・既存 E2E と同方針）：
 
-- **インスペクタの TextField は ``onTextEdited``（ユーザー入力でのみ発火）で live Item
-  へ書き戻す**ため、Spix の ``setStringProperty`` でフィールドの ``text`` を変えても
-  発火しない。よって Task 18〜20 と同じく、選択中 EditableWidget（``widget_btn001``）の
-  メタ（``widgetText`` / ``widgetBackgroundColor`` / ``widgetTextColor``）へ
-  ``setStringProperty`` で直接書き込む（インスペクタが書き戻す先と同一の値経路）。
 - 選択は ``widget_btn001`` を ``mouseClick`` して行う（HmiButton の ``clicked`` 中継で
   ``selectedWidgetId`` が更新される＝アプリ実動作と同じ経路）。
-- Simulator 側は HmiButton に ``objectName: "hmiButton"`` を付与してあり、
-  ``hmiSimulatorWindow/widget_btn001/hmiButton`` の ``backgroundColor`` / ``text`` を
-  ``getStringProperty`` で読む。
+- スタイルメタへの書き込みは ``setStringProperty``（Task 18〜20 で実証済みの経路）。
 - スタイル値の真偽は **保存 JSON を Python で直接 assert** することでも担保する
   （Spix のプロパティ読みに依存しない authoritative なチェック）。
 - レスポンスは expat を経由しない正規表現で抽出する（Homebrew Python の ``_pyexpat``

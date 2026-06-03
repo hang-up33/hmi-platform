@@ -73,19 +73,21 @@ set_tests_properties(e2e_simulator_display PROPERTIES
     LABELS e2e
 )
 
-# Task 30: スタイル編集 → 保存 → Simulator 描画の cross-app E2E。
-# Editor で btn001 を選択しスタイル（text/背景色/文字色）を編集 → saveTo →
-# 保存 JSON を直接検証 → Simulator を `--open` で起動し HmiButton の描画値を
-# getStringProperty で確認する。Editor / Simulator の 2 プロセスを順に起動するため
-# TIMEOUT は他の cross-app テストと同等に取る。
+# Task 30: スタイルの「データ経路 → Simulator 描画」cross-app E2E。
+# Editor で btn001 を選択し、選択中 Widget のスタイルメタ（text/背景色/文字色＝
+# インスペクタの書き戻し先と同一経路）を更新 → saveTo → 保存 JSON を直接検証 →
+# Simulator を `--open` で起動し HmiButton の描画値を getStringProperty で確認する。
+# ※ インスペクタ TextField UI 自体は Spix が onTextEdited を発火できないため駆動しない
+#    （test_style_roundtrip.py の docstring 参照。検証スコープを直接メタ更新に限定）。
+# Editor / Simulator の 2 プロセスを順に起動するため TIMEOUT は他の cross-app と同等。
 add_test(
-    NAME e2e_style_inspector_roundtrip
+    NAME e2e_style_roundtrip
     COMMAND ${Python3_EXECUTABLE}
-        ${CMAKE_CURRENT_SOURCE_DIR}/test_style_inspector_roundtrip.py
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_style_roundtrip.py
         --editor-binary $<TARGET_FILE:hmi_editor>
         --simulator-binary $<TARGET_FILE:hmi_simulator>
 )
-set_tests_properties(e2e_style_inspector_roundtrip PROPERTIES
+set_tests_properties(e2e_style_roundtrip PROPERTIES
     TIMEOUT 60
     LABELS e2e
 )

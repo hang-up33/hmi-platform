@@ -149,7 +149,7 @@ SDK 生成（新 BSP の image+SDK ビルド）から実機 scp 起動までの�
 .\build-mingw\hmi_runtime.exe --open <path\to\project.json>
 ```
 
-新しいシェルから起動する場合は `. ..\build-mingw\hmi_editor.exe` で PATH を通してから実行。
+新しいシェルから起動する場合は `. .\scripts\windows\setup-env.ps1` で PATH を通してから実行。
 
 Explorer からダブルクリックで起動したい（「Qt の DLL が見つからない」を解消したい）場合は、`windeployqt` で DLL / プラグイン / QML を exe の隣へ同梱する：
 
