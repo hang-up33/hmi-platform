@@ -157,7 +157,7 @@ flowchart LR
 | # | タスク | 状態 |
 |---|---|---|
 | 25 | 選択モデル + 選択枠（Editor） | ✅ 完了 |
-| 26 | インスペクタ + text/tag 編集（Editor） | ⏳ 未着手 |
+| 26 | インスペクタ + text/tag 編集（Editor） | ✅ 完了 |
 | 27 | 座標/サイズ数値編集 + ハンドルリサイズ（Editor） | ⏳ 未着手 |
 | 28 | スタイル属性追加（Schema + HmiButton + Simulator/Runtime）★ | ⏳ 未着手 |
 | 29 | インスペクタにスタイル編集 + 削除（Editor） | ⏳ 未着手 |

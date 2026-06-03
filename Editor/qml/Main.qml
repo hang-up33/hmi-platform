@@ -7,7 +7,9 @@ import HmiWidgets
 
 Window {
     id: rootWindow
-    width: 1024
+    // Task 26: 右側インスペクタ（幅 260px）を足したぶん、キャンバス（800px）が
+    // 隠れないようウィンドウ幅を広げる（1024 → 1280）。
+    width: 1280
     height: 768
     visible: true
     title: qsTr("HMI Editor")
@@ -15,6 +17,13 @@ Window {
     // Spix のテストランナーは `hmiEditorWindow/<objectName>` の形で操作対象
     // QML Item を指定する。
     objectName: "hmiEditorWindow"
+
+    // Task 26: 選択中の live な EditableWidget はインスペクタの編集対象。
+    // 解決ロジックと所有は Canvas に集約した（canvas.selectedItem）。Repeater
+    // 再生成後も同一 id の新しい live Item に解決し直される（Codex PR #52 P2 指摘
+    // への回答。詳細は Canvas.qml の selectedItem コメント）。インスペクタは
+    // この live Item を直接 two-way 編集する（widgetModel の var 配列は据え置き
+    // ＝Phase 4 設計指針、delegate 再生成を起こさない）。
 
     // Task 19: E2E（Spix の invokeMethod）から呼ぶ JSON 保存ラッパー。
     // FileDialog は AppleScript / Spix から自動操作できないため、Canvas 上の
@@ -26,24 +35,9 @@ Window {
         if (!path) {
             return false
         }
-        const items = canvas.widgetItems
-        const widgets = []
-        for (let i = 0; i < items.length; ++i) {
-            const item = items[i]
-            if (item.widgetId === undefined) {
-                continue
-            }
-            widgets.push({
-                id: item.widgetId,
-                type: item.widgetType,
-                x: Math.round(item.x),
-                y: Math.round(item.y),
-                width: Math.round(item.width),
-                height: Math.round(item.height),
-                text: item.widgetText,
-                tag: item.widgetTag
-            })
-        }
+        // Task 26: live Item 群のスナップショット（インスペクタ編集を含む現在値）
+        // を Canvas に集約した snapshotModel() で取得する。
+        const widgets = canvas.snapshotModel()
         // ProjectIo.save は FileDialog 由来の `file:///` 形式 QUrl を期待する
         // ため、絶対パスを `file://` プレフィックス付きで URL 化して渡す。
         // E2E は macOS / Linux でのみ走る（Windows MinGW は HMI_ENABLE_E2E=OFF）
@@ -100,17 +94,114 @@ Window {
             }
         }
 
-        // キャンバスを中央配置。
+        // Task 26: 右側インスペクタ。選択中 Widget の text / tag を編集する。
+        // 編集対象は canvas.selectedWidgetId が指す live な EditableWidget
+        // （canvas.selectedItem で解決）。Simulator / Runtime は読み取り専用の
+        // ため、この編集 UI は Editor のみが持つ（Phase 4 ルール）。
+        Rectangle {
+            id: inspector
+            objectName: "inspectorPanel"
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            width: 260
+            color: "#f5f5f5"
+            border.color: "#cccccc"
+            border.width: 1
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: 12
+                spacing: 8
+
+                Label {
+                    text: qsTr("インスペクタ")
+                    font.pixelSize: 16
+                    font.bold: true
+                }
+
+                // 未選択時の案内
+                Label {
+                    objectName: "inspectorEmptyLabel"
+                    visible: canvas.selectedItem === null
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    color: "#888888"
+                    text: qsTr("Widget を選択してください")
+                }
+
+                // 選択中の編集フォーム
+                Column {
+                    objectName: "inspectorForm"
+                    visible: canvas.selectedItem !== null
+                    width: parent.width
+                    spacing: 8
+
+                    Label {
+                        objectName: "inspectorIdLabel"
+                        color: "#555555"
+                        text: qsTr("ID: ") + (canvas.selectedItem
+                            ? canvas.selectedItem.widgetId : "")
+                    }
+
+                    Label { text: qsTr("Text") }
+                    TextField {
+                        id: inspectorTextField
+                        objectName: "inspectorTextField"
+                        width: parent.width
+                        // ユーザー入力のみ選択中 Item へ書き戻す
+                        // （textEdited はプログラム変更では発火しない）。
+                        // Item.widgetText 更新で HmiButton の text バインドが即追従する。
+                        onTextEdited: {
+                            if (canvas.selectedItem) {
+                                canvas.selectedItem.widgetText = text
+                            }
+                        }
+                        // 選択が変わったら表示値を選択 Item の値へ更新する。
+                        // text を直接バインドするとユーザー入力でバインディングが
+                        // 切れ、選択切替時に追従しなくなるため明示更新する。
+                        Connections {
+                            target: canvas
+                            function onSelectedItemChanged() {
+                                inspectorTextField.text = canvas.selectedItem
+                                    ? canvas.selectedItem.widgetText : ""
+                            }
+                        }
+                    }
+
+                    Label { text: qsTr("Tag") }
+                    TextField {
+                        id: inspectorTagField
+                        objectName: "inspectorTagField"
+                        width: parent.width
+                        onTextEdited: {
+                            if (canvas.selectedItem) {
+                                canvas.selectedItem.widgetTag = text
+                            }
+                        }
+                        Connections {
+                            target: canvas
+                            function onSelectedItemChanged() {
+                                inspectorTagField.text = canvas.selectedItem
+                                    ? canvas.selectedItem.widgetTag : ""
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // キャンバスをインスペクタを除いた左側スペースの中央に配置。
         // Task 7 で Widget 表示は Canvas 内部の Repeater + widgetModel に移譲した。
         // 初期表示の btn001 もモデル初期値で再現している。
-        // Task 18: E2E（Spix）からドラッグの drop 先として参照するため
-        // objectName を付与する。
+        // Task 18: E2E（Spix）からドラッグの drop 先として参照するため objectName を付与。
         Canvas {
             id: canvas
             objectName: "canvas"
-            anchors.centerIn: parent
             canvasWidth: 800
             canvasHeight: 600
+            anchors.verticalCenter: parent.verticalCenter
+            x: (parent.width - inspector.width - width) / 2
         }
     }
 
@@ -122,25 +213,9 @@ Window {
         nameFilters: [qsTr("JSON files (*.json)"), qsTr("All files (*)")]
         defaultSuffix: "json"
         onAccepted: {
-            // Canvas 上の EditableWidget を走査し、Shared/Schema 互換の Widget リストへ変換
-            const items = canvas.widgetItems
-            const widgets = []
-            for (let i = 0; i < items.length; ++i) {
-                const item = items[i]
-                if (item.widgetId === undefined) {
-                    continue // EditableWidget 以外（Repeater 自身など）はスキップ
-                }
-                widgets.push({
-                    id: item.widgetId,
-                    type: item.widgetType,
-                    x: Math.round(item.x),
-                    y: Math.round(item.y),
-                    width: Math.round(item.width),
-                    height: Math.round(item.height),
-                    text: item.widgetText,
-                    tag: item.widgetTag
-                })
-            }
+            // Canvas 上の live EditableWidget 群を Shared/Schema 互換の Widget
+            // リストへ変換（Task 26 で Canvas.snapshotModel() に集約・共用）。
+            const widgets = canvas.snapshotModel()
             const ok = projectIo.save(saveDialog.selectedFile, "Sample", "Main", widgets)
             if (!ok) {
                 console.warn("プロジェクト保存に失敗:", saveDialog.selectedFile)

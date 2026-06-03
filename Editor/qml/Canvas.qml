@@ -30,6 +30,30 @@ Item {
     // 配置されている Widget 群（Task 6 の JSON 保存で走査するため公開）
     property alias widgetItems: widgetLayer.children
 
+    // Task 26: 選択中の live な EditableWidget を解決して公開する。
+    // selectedWidgetId と widgetItems(= widgetLayer.children) の **両方** に依存
+    // するバインドなので、addWidget() / 読込で widgetModel を再代入して Repeater
+    // が delegate を作り直しても（childrenChanged 発火）、同一 id の **新しい live
+    // Item** に解決し直される（破棄済みの古い Item を掴み続けない）。Codex PR #52
+    // P2 指摘への回答：再生成後の再解決はこの reactive 依存で担保し、tst_canvas.qml
+    // の test_selected_item_reresolves_after_add で回帰固定する。選択状態の所有を
+    // Canvas に一元化するため、Main.qml のインスペクタはこの canvas.selectedItem を
+    // 参照する。
+    property var selectedItem: resolveSelectedItem(selectedWidgetId, widgetItems)
+
+    function resolveSelectedItem(selectedId, items) {
+        if (!selectedId) {
+            return null
+        }
+        for (let i = 0; i < items.length; ++i) {
+            // Repeater 自身など widgetId を持たない子は除外する。
+            if (items[i] && items[i].widgetId === selectedId) {
+                return items[i]
+            }
+        }
+        return null
+    }
+
     // Task 18: 新規 Widget 追加用の単調増加カウンタ（実用上の最大連番）。
     // 初期 widgetModel に btn001 が含まれているので 1 から始める。Main.qml の
     // Open で widgetModel が差し替わった場合に備え、`addWidget()` は採番前に
@@ -37,15 +61,53 @@ Item {
     // （Codex Task 18 P1 指摘）。
     property int widgetIdCounter: 1
 
+    // Task 26: 現在 live な EditableWidget 群から widgetModel 互換の配列を
+    // 生成する（= 編集中の真実である live Item を配列へスナップショット）。
+    // widgetModel（var 配列）は in-place 変更でバインディング通知が出ないため、
+    // 構造変更（追加 / 削除）時はこの関数で **インスペクタ編集やドラッグ位置を
+    // 含む現在値** を取り込んでから再代入する。これをせず古い widgetModel を
+    // 直接 concat すると、Repeater 再生成で未保存の編集が古い値へ戻る
+    // （Codex PR #52 P2 指摘）。Main.qml の保存経路（saveTo / onAccepted）も
+    // 同じ走査をしていたため本関数に集約して共用する。
+    function snapshotModel() {
+        const items = widgetItems
+        const result = []
+        for (let i = 0; i < items.length; ++i) {
+            const item = items[i]
+            // Repeater 自身など widgetId を持たない子はスキップ
+            if (item.widgetId === undefined) {
+                continue
+            }
+            result.push({
+                id: item.widgetId,
+                type: item.widgetType,
+                x: Math.round(item.x),
+                y: Math.round(item.y),
+                width: Math.round(item.width),
+                height: Math.round(item.height),
+                text: item.widgetText,
+                tag: item.widgetTag
+            })
+        }
+        return result
+    }
+
     // Task 18: 既定サイズ/位置で Widget を 1 個追加する。Main.qml の追加
     // ボタンから呼ばれる。E2E（Spix）からは追加ボタンの mouseClick 経由で
     // 同じパスを通る。
     function addWidget() {
-        // 既存モデルから btnNNN 形式の最大連番を走査し、カウンタと比較する。
-        // 読込で外部 JSON が入った後の追加でも ID が衝突しないよう保つ。
+        // Task 26: 古い widgetModel を直接 concat せず、現在の live Item 群を
+        // スナップショットしてから追加する。これによりインスペクタでの未保存
+        // 編集（text/tag）やドラッグ後の位置が、追加に伴う Repeater 再生成で
+        // 巻き戻らない（Codex PR #52 指摘）。
+        const snapshot = snapshotModel()
+
+        // 既存 id（live Item 由来）から btnNNN 形式の最大連番を走査し、
+        // カウンタと比較する。読込で外部 JSON が入った後の追加でも ID が
+        // 衝突しないよう保つ。
         let maxFound = widgetIdCounter
-        for (let i = 0; i < widgetModel.length; ++i) {
-            const existingId = widgetModel[i].id
+        for (let i = 0; i < snapshot.length; ++i) {
+            const existingId = snapshot[i].id
             if (typeof existingId !== "string") {
                 continue
             }
@@ -66,10 +128,9 @@ Item {
             x: 50, y: 200, width: 120, height: 40,
             text: "New", tag: ""
         }
-        // QML の property var(array) は in-place push でバインディングが
-        // 発火しないことがある。新しい配列を代入することで Repeater に確実
-        // にモデル変更を通知する。
-        widgetModel = widgetModel.concat([newWidget])
+        snapshot.push(newWidget)
+        // 新しい配列を代入することで Repeater に確実にモデル変更を通知する。
+        widgetModel = snapshot
     }
 
     implicitWidth: canvasWidth

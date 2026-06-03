@@ -172,4 +172,47 @@ TestCase {
             return ws.length === 1 && ws[0].selected === false;
         }, 1000, "選択解除後も selected が残る");
     }
+
+    // Task 26: selectedItem は選択 id の live な EditableWidget を指す
+    // （Main.qml のインスペクタはこれを編集対象にする）。未選択は null。
+    function test_selected_item_resolves_to_live_item() {
+        compare(canvas.selectedItem, null);
+
+        canvas.selectedWidgetId = "btn001";
+        tryVerify(function() {
+            return canvas.selectedItem !== null
+                && canvas.selectedItem.widgetId === "btn001";
+        }, 1000, "selectedItem が btn001 の live Item を指さない");
+
+        canvas.selectedWidgetId = "";
+        tryVerify(function() { return canvas.selectedItem === null; }, 1000,
+                  "選択解除後も selectedItem が残る");
+    }
+
+    // Task 26: addWidget() で widgetModel 再代入 → Repeater 再生成が起きても、
+    // selectedItem は破棄済みの古い Item を掴み続けず、同一 id の **新しい live
+    // Item** に解決し直される（Codex PR #52 P2 指摘の回帰固定）。再解決された
+    // Item へ書けば反映されること（= 破棄済み参照でないこと）まで検証する。
+    function test_selected_item_reresolves_after_add() {
+        canvas.selectedWidgetId = "btn001";
+        tryVerify(function() {
+            return canvas.selectedItem !== null
+                && canvas.selectedItem.widgetId === "btn001";
+        }, 1000, "前提：btn001 が選択 Item にならない");
+
+        // 追加でモデル再代入 → Repeater が delegate を作り直す
+        canvas.addWidget();
+
+        // 再生成後も btn001 の live Item（現存 children の中）に解決し直される
+        tryVerify(function() {
+            const sel = canvas.selectedItem;
+            return sel !== null
+                && sel.widgetId === "btn001"
+                && editableChildren().indexOf(sel) !== -1;
+        }, 1000, "再生成後に selectedItem が live な btn001 を指さない");
+
+        // 解決し直された Item へ書けば反映される（破棄済み参照なら反映されない）
+        canvas.selectedItem.widgetText = "Edited";
+        compare(canvas.selectedItem.widgetText, "Edited");
+    }
 }
