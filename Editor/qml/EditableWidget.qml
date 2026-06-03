@@ -30,6 +30,11 @@ Item {
     property string widgetText: ""
     property string widgetTag: ""
 
+    // Task 27: リサイズ時の最小サイズ。ハンドルドラッグ / 数値編集での縮小は
+    // これ未満にならないよう clamp する（潰れて選択・操作不能になるのを防ぐ）。
+    property real minWidth: 30
+    property real minHeight: 24
+
     // Task 25: 選択状態。値の所有は Canvas（root.selectedWidgetId）にあり、
     // この EditableWidget は「選ばれているか」を受け取って選択枠を描画するだけ
     // （plain な bool プロパティ）。結線は delegate 側（Canvas.qml）で
@@ -78,5 +83,59 @@ Item {
         radius: 4
         border.color: "#ff5d8f"
         border.width: 2
+    }
+
+    // Task 27: 右下リサイズハンドル。selected 時のみ表示。
+    // 専用 MouseArea で root.width / height を直接更新する（x/y を drag.target で
+    // 動かす移動ドラッグと同じく、binding を切って live 値を持つ運用。保存は
+    // snapshotModel が live 値を読む）。
+    //   - preventStealing: true ：親 dragArea（drag.filterChildren）にこの press を
+    //     奪われると Widget 移動になってしまうため明示的に握り続ける。ハンドルは
+    //     dragArea の子ではないので本来は奪われないが、安全側で固定する。
+    //   - 座標は mapToItem(root.parent, ...) で widgetLayer 基準に変換して扱う。
+    //     ハンドルは resize に伴って動くため、ハンドル相対座標だと値が暴れる。
+    //     親基準にすれば press 時点との差分が安定して pointer 移動量になる。
+    Rectangle {
+        id: resizeHandle
+        objectName: "resizeHandle"
+        visible: root.selected
+        width: 14
+        height: 14
+        radius: 3
+        color: "#ff5d8f"
+        border.color: "white"
+        border.width: 1
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.rightMargin: -7
+        anchors.bottomMargin: -7
+
+        MouseArea {
+            id: resizeArea
+            anchors.fill: parent
+            preventStealing: true
+            cursorShape: Qt.SizeFDiagCursor
+
+            property real pressSceneX: 0
+            property real pressSceneY: 0
+            property real pressW: 0
+            property real pressH: 0
+
+            onPressed: function(mouse) {
+                const p = mapToItem(root.parent, mouse.x, mouse.y)
+                pressSceneX = p.x
+                pressSceneY = p.y
+                pressW = root.width
+                pressH = root.height
+            }
+            onPositionChanged: function(mouse) {
+                if (!pressed) {
+                    return
+                }
+                const p = mapToItem(root.parent, mouse.x, mouse.y)
+                root.width = Math.max(root.minWidth, pressW + (p.x - pressSceneX))
+                root.height = Math.max(root.minHeight, pressH + (p.y - pressSceneY))
+            }
+        }
     }
 }
