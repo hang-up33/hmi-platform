@@ -62,7 +62,7 @@ origin: hmi-platform
      ```
    - 両方の見た目が同時に変わるタスクは両方撮り、`-editor.png` / `-simulator.png` の suffix を付けてコミットする
    - 撮ったスクショは Read ツールで内容を確認してから採用する（黒画面・他ウィンドウが混入していないか）
-   - 詳細運用は [CLAUDE.md](../../../CLAUDE.md) の「動作証跡スクリーンショット運用」セクション参照
+   - 詳細運用は [screenshot-capture](../screenshot-capture/SKILL.md) スキル参照
 
 8. **進捗反映**
    - README.md の進捗表の該当行を ⬜ → ✅ に更新

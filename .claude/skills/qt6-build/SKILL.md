@@ -82,6 +82,31 @@ cmake --build build-mingw
 
 実行ファイル出力先は macOS とは異なり、ビルドツリーのトップ（`build-mingw\hmi_editor.exe`）になる（hmi_runtime も同じく `build-mingw\hmi_runtime.exe`）。
 
+### Windows: Explorer ダブルクリック起動用デプロイ（windeployqt）
+
+`setup-env.ps1` を dot-source した開発シェルから起動する分には不要だが、**Explorer からダブルクリックで開きたい**場合は Qt6 DLL・MinGW ランタイム・プラグインを exe の隣へ配置する：
+
+```powershell
+.\scripts\windows\deploy.ps1                 # 両 exe に windeployqt を実行
+.\scripts\windows\build.ps1 -Deploy          # build と同時に実行する場合
+```
+
+- 中身は `windeployqt --release --compiler-runtime --qmldir <qml>`。Qt6 DLL・MinGW ランタイム（`libstdc++-6.dll` 等）・プラグイン（`platforms\qwindows.dll`）・QML モジュールを exe の隣へ配置して自己完結させる。
+- **`build-mingw` をクリーン消去した後は再実行が必要**（DLL も消えるため）。
+- Explorer で「Qt の DLL が見つからない」エラーが出るのは、`setup-env.ps1` 未読込のシェル / Explorer が Qt・MinGW の `bin` を PATH に持たないため。`deploy.ps1` で解消する。
+
+### Windows: exe アイコン埋め込み（Atlas ブランド）
+
+3 つの exe（hmi_editor / hmi_simulator / hmi_runtime）には Atlas ブランドアイコンが埋め込まれる（Explorer・タスクバー・ウィンドウタイトルバーに表示）。
+
+```powershell
+.\scripts\windows\generate-icon.ps1   # branding\atlas.ico を再生成（次のビルドで反映）
+```
+
+- 仕組み：ルート `CMakeLists.txt` で Windows 限定 `enable_language(RC)` → 各アプリの CMakeLists が `branding/app_icon.rc.in` を `configure_file` で `.rc` 化（`@HMI_APP_ICON_PATH@` に `branding/atlas.ico` の絶対パスを埋める）→ MinGW windres が exe へ焼き込む。
+- **windeployqt とは独立**（アイコンは exe 自身に焼かれるので deploy 不要で出る）。Qt は exe 埋め込みアイコンを自動でウィンドウアイコンに採用するため、QML/C++ 側のコード変更は不要。
+- アイコン画像の「唯一の真実」は `scripts/windows/generate-icon.ps1`（外部ツール無しで GDI+ 描画 → 16〜256px を PNG 圧縮 ICO にパック）。色・形を変えたいときはこれを編集して再実行する。
+
 ## 既知の罠（How It Works — pitfalls）
 
 ### 1. `framework 'AGL' not found`（macOS 14+）
@@ -141,6 +166,26 @@ $utf8Bom = [System.Text.UTF8Encoding]::new($true)
 $c = [System.IO.File]::ReadAllText('path\to\script.ps1', [System.Text.UTF8Encoding]::new($false))
 [System.IO.File]::WriteAllText('path\to\script.ps1', $c, $utf8Bom)
 ```
+
+### 10. Windows: 起動中の exe を落とさず再ビルドするとリンクが Permission denied で失敗
+
+**原因**：Windows は実行中の exe を排他ロックするため、`hmi_editor.exe` / `hmi_simulator.exe` を起動したまま再ビルドするとリンカが上書きできず `cannot open output file ...: Permission denied` で落ちる（Task 27 で遭遇）。
+**対処**：**コードのエラーではない**ので、`g++`/QML の構文を疑う前に `Get-Process hmi_editor | Stop-Process -Force` で起動中インスタンスを落としてから再ビルドする。動作確認で起動したアプリはキャプチャ後に必ず `Stop-Process` する運用にすると踏まない。
+
+### 11. Windows: `deploy.ps1` 実行後に offscreen の QML ctest が数百秒ハングする
+
+**原因**：`windeployqt` は `build-mingw\platforms\` に **`qwindows.dll` だけ**を配置するが、QML テスト exe（`tst_hmi_widgets_qml` / `tst_hmi_editor_qml`）は build-mingw 直下で動くため、この**ローカル `platforms\` が Qt 本体のプラグイン群（`qoffscreen.dll` 等）を隠す**。結果 `-platform offscreen` 起動が `0xc0000602`（STATUS_FAIL_FAST_EXCEPTION）で失敗し、「no Qt platform plugin could be initialized. Available platform plugins are: windows.」のモーダルダイアログが OK 待ちで張り付いて ctest が数百秒ハングする（563 秒の実測あり。Task 26 で発覚）。
+**対処**：ctest 実行時に `$env:QT_QPA_PLATFORM_PLUGIN_PATH = "C:\Qt\6.11.0\mingw_64\plugins\platforms"` を設定して Qt 本体の完全なプラグイン集合を明示する（ローカル `platforms\` より優先される）。`deploy.ps1` 未実行のクリーンな build-mingw では発生しない。デプロイ済みツリーで ctest が固まったらこの罠を疑う。
+
+### 12. CI（aqtinstall）: 最新 Qt バージョンは Updates.xml 未同期で取得失敗する
+
+**原因**：`jurplel/install-qt-action@v4` にローカル開発と同じ最新版（例 `6.11.0`）を渡すと、Qt 公式 mirror の `Updates.xml` 同期遅れで `Failed to locate XML data for Qt version '6.11.0'` で落ちる（Task 15 初回ランで両 OS 再現）。
+**対処**：CI では **1〜2 マイナー下げた安定取得可能なバージョン（現状 6.10.0）** を使う。Qt 6.x の minor 互換でテスト緑判定は維持される。バージョンを上げる時は事前に `aqt list-qt <host> desktop --spec "<X.Y>"` で取得可能性を確認する。詳細パターンは [Docs/phase2-testing-plan.md](../../../Docs/phase2-testing-plan.md) の「Task 15 で確立したパターン」を参照。
+
+### 13. Windows PowerShell: `New-Object <型>(<算術式>, ...)` がカンマ演算子で誤パースされる
+
+**原因**：PowerShell ではカンマ演算子 `,` が二項 `-`/`+`/`*` より優先順位が高いため、`New-Object Drawing.RectangleF($cx - $r, $cy - $r, ...)` は `$cx - ($r, $cy) - ...` のように配列を巻き込んで評価され、`[System.Object[]] does not contain a method named 'op_Subtraction'` で落ちる（アイコン生成スクリプト作成時に遭遇）。
+**対処**：各引数を括弧で囲む（`($cx - $r), ($cy - $r), ...`）か、事前に変数へ代入してから渡す。メソッド呼び出し `$g.DrawLine($pen, $cx - $r, ...)` では引数が個別に評価されるためこの罠は出ない（`New-Object` = `-ArgumentList` に配列を渡す形に特有）。
 
 ## 関連エージェント
 

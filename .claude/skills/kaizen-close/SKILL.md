@@ -63,7 +63,7 @@ origin: hmi-platform
 気付き : macOS 14+ で Qt 6.7 が AGL 不在でリンク不可、Qt 6.8+ への切替が必須
 
 反映先選定：
-- 次セッションも同じ罠を踏む可能性大 → CLAUDE.md の「Qt バージョンの罠」セクション
+- 次セッションも同じ罠を踏む可能性大 → 該当 skill（ビルド罠は [qt6-build](../qt6-build/SKILL.md)、E2E は [e2e-spix](../e2e-spix/SKILL.md)、スクショは [screenshot-capture](../screenshot-capture/SKILL.md)）。常時必要な「always do X」だけ CLAUDE.md / path-scoped rule へ
 - 人間の読者向けの前提条件 → README.md の「前提」セクション
 - 同じ症状が再発した時の専用解決手順 → cmake-build-resolver エージェント
 
