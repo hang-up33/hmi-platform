@@ -86,6 +86,24 @@ Window {
         }
     }
 
+    // Task 29: Delete キーで選択中 Widget を削除する。Shortcut なら個別 Item の
+    // フォーカス・Keys ハンドリングを増やさず Window 全体に効かせられる。ただし
+    // インスペクタの TextField 編集中（文字削除に Delete を使う）に奪うと困るため、
+    // enabled を「選択あり かつ どのインスペクタ入力もフォーカスしていない」に
+    // 限定する。削除ロジックはボタンと同じ Canvas.deleteWidget() に集約。
+    Shortcut {
+        sequence: StandardKey.Delete
+        enabled: canvas.selectedWidgetId !== ""
+            && !inspectorTextField.activeFocus
+            && !inspectorTagField.activeFocus
+            && !inspectorBgColorField.activeFocus
+            && !inspectorTextColorField.activeFocus
+            && !inspectorFontSizeSpin.activeFocus
+            && !fieldX.activeFocus && !fieldY.activeFocus
+            && !fieldW.activeFocus && !fieldH.activeFocus
+        onActivated: canvas.deleteWidget(canvas.selectedWidgetId)
+    }
+
     // 薄いグレーの余白背景
     Rectangle {
         anchors.fill: parent
@@ -302,6 +320,112 @@ Window {
                         function onYChanged() { rootWindow.syncGeometryFields() }
                         function onWidthChanged() { rootWindow.syncGeometryFields() }
                         function onHeightChanged() { rootWindow.syncGeometryFields() }
+                    }
+
+                    // Task 29: スタイル編集（背景色 / 文字色 / 文字サイズ）。
+                    // 色は "#RRGGBB" hex の TextField（ColorDialog は任意のため未採用、
+                    // まず hex で確実に動かす）。空文字は HmiButton 側で既定外観に
+                    // フォールバックされる（widgetBackgroundColor 等は空 = 未指定）。
+                    // 編集は T26/T27 と同じ 2 本立て：onTextEdited で live Item へ書き戻し、
+                    // Connections.onSelectedItemChanged で選択切替時に表示値を更新する
+                    //（text を直接バインドするとユーザー入力でバインディングが切れて
+                    // 選択切替に追従しなくなるため）。
+                    Label { text: qsTr("スタイル") }
+
+                    Label { text: qsTr("背景色 (#RRGGBB)") }
+                    TextField {
+                        id: inspectorBgColorField
+                        objectName: "inspectorBgColorField"
+                        width: parent.width
+                        placeholderText: qsTr("#4cc9f0")
+                        // Codex PR #58 P2: 空 または 完全な #RRGGBB の時だけ live Item へ
+                        // 反映する。途中入力（"#ff"）や不正値（"redx"）が
+                        // widgetBackgroundColor に残ると JSON に無効色が保存され、
+                        // Simulator/Runtime の描画で無効色になるため。
+                        validator: RegularExpressionValidator {
+                            regularExpression: /^(#[0-9A-Fa-f]{6})?$/
+                        }
+                        onTextEdited: {
+                            if (canvas.selectedItem && acceptableInput) {
+                                canvas.selectedItem.widgetBackgroundColor = text
+                            }
+                        }
+                        Connections {
+                            target: canvas
+                            function onSelectedItemChanged() {
+                                inspectorBgColorField.text = canvas.selectedItem
+                                    ? canvas.selectedItem.widgetBackgroundColor : ""
+                            }
+                        }
+                    }
+
+                    Label { text: qsTr("文字色 (#RRGGBB)") }
+                    TextField {
+                        id: inspectorTextColorField
+                        objectName: "inspectorTextColorField"
+                        width: parent.width
+                        placeholderText: qsTr("white")
+                        // Codex PR #58 P2: 背景色と同じく、空 または 完全な #RRGGBB の
+                        // 時だけ反映する（途中入力・不正値を live Item に書き戻さない）。
+                        validator: RegularExpressionValidator {
+                            regularExpression: /^(#[0-9A-Fa-f]{6})?$/
+                        }
+                        onTextEdited: {
+                            if (canvas.selectedItem && acceptableInput) {
+                                canvas.selectedItem.widgetTextColor = text
+                            }
+                        }
+                        Connections {
+                            target: canvas
+                            function onSelectedItemChanged() {
+                                inspectorTextColorField.text = canvas.selectedItem
+                                    ? canvas.selectedItem.widgetTextColor : ""
+                            }
+                        }
+                    }
+
+                    // 文字サイズは SpinBox（範囲 6〜96 px）。editable は付けない：
+                    // Task 27 で editable な SpinBox は value をプログラム設定しても
+                    // 表示テキストが更新されない不具合を確認したため（非 editable なら
+                    // value 設定で表示が正しく更新される）。0/未指定は HmiButton 側で
+                    // 既定 14px にフォールバックされるので、ここでは既定 14 を表示する。
+                    Label { text: qsTr("文字サイズ") }
+                    SpinBox {
+                        id: inspectorFontSizeSpin
+                        objectName: "inspectorFontSizeSpin"
+                        from: 6
+                        to: 96
+                        value: 14
+                        // ユーザー操作（valueModified）でのみ書き戻す。プログラムからの
+                        // value 代入では発火しないため書き戻しループは起きない。
+                        onValueModified: {
+                            if (canvas.selectedItem) {
+                                canvas.selectedItem.widgetFontSize = value
+                            }
+                        }
+                        Connections {
+                            target: canvas
+                            function onSelectedItemChanged() {
+                                const it = canvas.selectedItem
+                                // 0/未指定は既定 14 を表示（HmiButton の resolvedFontSize と整合）。
+                                inspectorFontSizeSpin.value = (it && it.widgetFontSize > 0)
+                                    ? it.widgetFontSize : 14
+                            }
+                        }
+                    }
+
+                    // Task 29: 削除ボタン。構造変更（削除）は Canvas.deleteWidget() に
+                    // 集約する（addWidget と対称：live Item をスナップショット → 該当 id
+                    // を除いて再代入 → 選択解除）。これで未保存の他 widget 編集が
+                    // 巻き戻らない（Phase 4 設計指針）。
+                    Button {
+                        objectName: "inspectorDeleteButton"
+                        text: qsTr("削除")
+                        onClicked: {
+                            if (canvas.selectedWidgetId) {
+                                canvas.deleteWidget(canvas.selectedWidgetId)
+                            }
+                        }
                     }
                 }
             }

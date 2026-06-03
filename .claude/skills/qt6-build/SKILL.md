@@ -175,7 +175,7 @@ $c = [System.IO.File]::ReadAllText('path\to\script.ps1', [System.Text.UTF8Encodi
 ### 11. Windows: `deploy.ps1` 実行後に offscreen の QML ctest が数百秒ハングする
 
 **原因**：`windeployqt` は `build-mingw\platforms\` に **`qwindows.dll` だけ**を配置するが、QML テスト exe（`tst_hmi_widgets_qml` / `tst_hmi_editor_qml`）は build-mingw 直下で動くため、この**ローカル `platforms\` が Qt 本体のプラグイン群（`qoffscreen.dll` 等）を隠す**。結果 `-platform offscreen` 起動が `0xc0000602`（STATUS_FAIL_FAST_EXCEPTION）で失敗し、「no Qt platform plugin could be initialized. Available platform plugins are: windows.」のモーダルダイアログが OK 待ちで張り付いて ctest が数百秒ハングする（563 秒の実測あり。Task 26 で発覚）。
-**対処**：ctest 実行時に `$env:QT_QPA_PLATFORM_PLUGIN_PATH = "C:\Qt\6.11.0\mingw_64\plugins\platforms"` を設定して Qt 本体の完全なプラグイン集合を明示する（ローカル `platforms\` より優先される）。`deploy.ps1` 未実行のクリーンな build-mingw では発生しない。デプロイ済みツリーで ctest が固まったらこの罠を疑う。
+**対処**：ctest 実行時に `$env:QT_QPA_PLATFORM_PLUGIN_PATH = "C:\Qt\6.11.0\mingw_64\plugins\platforms"` を設定して Qt 本体の完全なプラグイン集合を明示する（ローカル `platforms\` より優先される）。**または build-mingw をクリーン再ビルド**（`Remove-Item build-mingw -Recurse -Force; .\scripts\windows\build.ps1`）して配備物（`platforms\`・`qml\`・ローカル `Qt6*.dll`）を消すのが最も確実。`deploy.ps1` 未実行のクリーンな build-mingw では発生しない。デプロイ済みツリーで ctest が固まる／QML テストだけ `0xc0000602` で落ちたらこの罠を疑う（Task 29 でも再発。deploy は ctest と別フェーズで／別ディレクトリへ行うのが安全）。
 
 ### 12. CI（aqtinstall）: 最新 Qt バージョンは Updates.xml 未同期で取得失敗する
 

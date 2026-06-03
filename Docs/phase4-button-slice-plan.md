@@ -160,5 +160,5 @@ flowchart LR
 | 26 | インスペクタ + text/tag 編集（Editor） | ✅ 完了 |
 | 27 | 座標/サイズ数値編集 + ハンドルリサイズ（Editor） | ✅ 完了 |
 | 28 | スタイル属性追加（Schema + HmiButton + Simulator/Runtime）★ | ✅ 完了 |
-| 29 | インスペクタにスタイル編集 + 削除（Editor） | ⏳ 未着手 |
+| 29 | インスペクタにスタイル編集 + 削除（Editor） | ✅ 完了 |
 | 30 | テスト/E2E 拡充 + 実機 styled 描画（全環境） | ⏳ 未着手 |

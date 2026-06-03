@@ -137,6 +137,33 @@ Item {
         widgetModel = snapshot
     }
 
+    // Task 29: 選択中（または指定 id）の Widget を削除する。addWidget() と対称で、
+    // 構造変更（削除）なので live Item 群をスナップショット → 該当 id を除いた配列を
+    // 再代入して Repeater をリトリガする（var 配列据え置き＝Phase 4 設計指針）。
+    // これにより未保存の他 widget の編集（text/座標/スタイル）が巻き戻らない。
+    // 削除後は選択を解除（selectedWidgetId = ""）し、selectedItem も null に解決される。
+    // 引数省略時は現在の選択 id を対象にする。Main.qml の削除ボタンから呼ばれる。
+    function deleteWidget(targetId) {
+        const id = (targetId !== undefined && targetId !== "")
+            ? targetId : selectedWidgetId
+        if (!id) {
+            return
+        }
+        const snapshot = snapshotModel()
+        const next = []
+        for (let i = 0; i < snapshot.length; ++i) {
+            if (snapshot[i].id !== id) {
+                next.push(snapshot[i])
+            }
+        }
+        // 削除対象が選択中なら選択を解除する。先に解除しておくことで、
+        // 配列再代入に伴う Repeater 再生成中も破棄済み Item を掴まない。
+        if (selectedWidgetId === id) {
+            selectedWidgetId = ""
+        }
+        widgetModel = next
+    }
+
     implicitWidth: canvasWidth
     implicitHeight: canvasHeight
     width: canvasWidth

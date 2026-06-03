@@ -215,4 +215,77 @@ TestCase {
         canvas.selectedItem.widgetText = "Edited";
         compare(canvas.selectedItem.widgetText, "Edited");
     }
+
+    // Task 29: 選択中 live Item のスタイルメタ（背景色 / 文字色 / 文字サイズ）を
+    // 直接更新できる（インスペクタの onTextEdited / onValueModified が書き戻す先）。
+    // var 配列を据え置きつつ live Item を真実とする設計の確認。
+    function test_style_props_are_writable_on_live_item() {
+        canvas.selectedWidgetId = "btn001";
+        tryVerify(function() {
+            return canvas.selectedItem !== null
+                && canvas.selectedItem.widgetId === "btn001";
+        }, 1000, "btn001 が選択 Item にならない");
+
+        canvas.selectedItem.widgetBackgroundColor = "#ff0000";
+        canvas.selectedItem.widgetTextColor = "#000000";
+        canvas.selectedItem.widgetFontSize = 22;
+
+        compare(canvas.selectedItem.widgetBackgroundColor, "#ff0000");
+        compare(canvas.selectedItem.widgetTextColor, "#000000");
+        compare(canvas.selectedItem.widgetFontSize, 22);
+
+        // snapshotModel（保存経路）にもスタイルが乗ること（C++ ブリッジへ渡る値）。
+        const snap = canvas.snapshotModel();
+        let entry = null;
+        for (let i = 0; i < snap.length; ++i) {
+            if (snap[i].id === "btn001") { entry = snap[i]; break; }
+        }
+        verify(entry !== null, "snapshotModel に btn001 が無い");
+        compare(entry.backgroundColor, "#ff0000");
+        compare(entry.textColor, "#000000");
+        compare(entry.fontSize, 22);
+    }
+
+    // Task 29: deleteWidget(id) は該当 id を除いて widgetModel を再代入し、
+    // 選択中だった場合は選択を解除する（インスペクタ削除ボタン / Delete キーの
+    // 呼び先）。他 widget は残ることも確認する（構造変更スナップショットの対称性）。
+    function test_delete_widget_removes_only_target() {
+        canvas.widgetModel = [
+            { id: "a", type: "Button", x:   0, y: 0, width: 80, height: 30, text: "A", tag: "" },
+            { id: "b", type: "Button", x: 100, y: 0, width: 80, height: 30, text: "B", tag: "" },
+            { id: "c", type: "Button", x: 200, y: 0, width: 80, height: 30, text: "C", tag: "" }
+        ];
+        tryVerify(function() { return editableChildren().length === 3; }, 1000,
+                  "3 件モデルが反映されない");
+
+        canvas.selectedWidgetId = "b";
+        canvas.deleteWidget("b");
+
+        // b だけ消えて a / c は残る
+        tryVerify(function() {
+            const ids = editableChildren().map(function(w) { return w.widgetId; });
+            return ids.length === 2
+                && ids.indexOf("a") !== -1
+                && ids.indexOf("c") !== -1
+                && ids.indexOf("b") === -1;
+        }, 1000, "deleteWidget が対象だけを消さない");
+
+        // 選択中だった b を消したので選択は解除される
+        compare(canvas.selectedWidgetId, "");
+        compare(canvas.selectedItem, null);
+    }
+
+    // Task 29: 引数省略の deleteWidget() は現在の選択 id を対象にする
+    //（インスペクタ削除ボタンは選択 id を明示渡しするが、フォールバック仕様を固定）。
+    function test_delete_widget_uses_selection_when_no_arg() {
+        canvas.selectedWidgetId = "btn001";
+        tryVerify(function() { return canvas.selectedItem !== null; }, 1000,
+                  "btn001 が選択されない");
+
+        canvas.deleteWidget();
+
+        tryVerify(function() { return editableChildren().length === 0; }, 1000,
+                  "引数省略 deleteWidget が選択 Widget を消さない");
+        compare(canvas.selectedWidgetId, "");
+    }
 }
