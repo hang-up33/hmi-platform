@@ -116,6 +116,11 @@ Task 23（Yocto SDK で `hmi_runtime` をクロスビルド）用の WSL2 環境
   - **転送**：実機 sshd は **socket-activated**（`sshd.socket` enabled、`sshd.service` は無い → `systemctl start sshd` は失敗するが port 22 は listen 済み）。新しい OpenSSH の scp は SFTP 既定で実機に sftp-server が無く失敗するため **`scp -O`** 必須。事前に実機で `passwd`（ssh は空パスワード拒否）。
   - **ネットワーク**：LAN 直結だと DHCP 無しで **link-local（169.254.x.x）** になる。**WSL2 は NAT 越しで link-local に届きにくいので Windows 母艦から `scp`** する（Windows の ethernet も 169.254.x.x が付き ping 可）。
   - **起動**：weston は **root（uid 0）** で動作、Wayland socket は `/run/user/0/wayland-1`。`export XDG_RUNTIME_DIR=/run/user/0; export WAYLAND_DISPLAY=wayland-1; export QT_QPA_PLATFORM=wayland` してから `hmi_runtime --open <json>`。
+- **実機キャプチャ・接続メモ（Task 30 で確立）**：
+  - **mDNS で IP が引ける**：実機は avahi 稼働。`imx8mp-lpddr4-evk.local` が link-local IP（実績 `169.254.29.17`）に解決される。
+  - **link-local の宛先 IF 選択がぶれる**：母艦に複数の link-local IF（VirtualBox `192.168.56.x` / WSL `172.18.x` 等）があると `169.254.x.x` への ping/ssh が別 IF 経由で **host unreachable** になる。実機直結アダプタ（実績「イーサネット 2」`169.254.32.193`）を**送信元に固定**する：ping は `-S <src>`、ssh/scp は **`-b <src>`**。
+  - **`pkill -f hmi_runtime` 厳禁**：ssh のリモートシェルのコマンドライン自身に "hmi_runtime" が含まれ、`pkill -f` が**自分の親シェルを kill** して ssh が exit 255 で即死する。停止は **`pkill -x hmi_runtime`**。
+  - **HDMI 未接続だと weston に出力が無い**（`DRM: head 'HDMI-A-1' ... is disconnected`）→ Qt は "fake screen" 描画で `weston-screenshooter` も撮れない。物理モニタ無しで撮るには **`QT_QPA_PLATFORM='vnc:size=1280x720'` で起動 → 母艦から `scripts/yocto/vnc-capture.py <ip> 5900 out.png <src>`**（Qt 内蔵 VNC, 依存なし）。実機 image に**日本語フォント無し**でラベルは □ になる（描画自体は正常）。
 - 詳細手順は [scripts/yocto/README.md](../../scripts/yocto/README.md)、設計判断は [phase3b-runtime-plan.md](../../Docs/phase3b-runtime-plan.md)。
 
 ---

@@ -18,6 +18,10 @@ Simulator（読み取り専用）で同じ JSON を描画した様子。Editor �
 
 `hmi_runtime`（Simulator のソース共有・aarch64 クロスビルド）を **i.MX8MP 実機（scarthgap / Qt6 6.8.1 / weston）** で起動し、Editor 由来の JSON を描画した様子（Phase 3-B / Task 24）。
 
+![styled runtime on i.MX8MP](Docs/screenshots/task-30-runtime-styled.png)
+
+Phase 4 の styled JSON（背景色 / 文字色 / 文字サイズ）を **i.MX8MP 実機**の `hmi_runtime` で描画した様子（Task 30）。HDMI 未接続のため Qt 内蔵 VNC platform に描画し digital capture した（右の黒帯は VNC framebuffer とウィンドウサイズ差、日本語ラベルが □ なのは実機 image にフォント無しのため）。スタイル属性が実機まで貫通していることの証跡。
+
 ## 成果物
 
 | モジュール | 役割 |
@@ -229,7 +233,7 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 | 27 | 座標/サイズ数値編集 + ハンドルリサイズ（Editor） | ✅ 完了 |
 | 28 | スタイル属性追加（Schema + HmiButton + Simulator/Runtime）★ | ✅ 完了 |
 | 29 | インスペクタにスタイル編集 + 削除（Editor） | ✅ 完了 |
-| 30 | テスト/E2E 拡充 + 実機 styled 描画（全環境） | 🔄 進行中（Windows 分: QML テスト + E2E コード + スクショ完了 / macOS `ctest -L e2e` 実行・実機 styled 写真は pending） |
+| 30 | テスト/E2E 拡充 + 実機 styled 描画（全環境） | 🔄 進行中（QML テスト + E2E コード + スクショ + **実機 styled 描画**完了 / 残りは macOS `ctest -L e2e` 実行のみ pending） |
 
 ## 共通データ仕様（Project Format）
 
