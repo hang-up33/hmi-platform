@@ -8,7 +8,11 @@ Yocto / i.MX8M Plus 向け Qt6 HMI ランタイムを対象に、HMI 作画ツ�
 
 ![HMI Editor](Docs/screenshots/editor.png)
 
-Editor の現状画面。`追加` / `開く` / `保存` ボタンで Widget の配置と JSON 入出力を行う。
+Editor の現状画面。`追加` / `開く` / `保存` で Widget 配置と JSON 入出力を行い、右側インスペクタで選択中 Widget の **text / tag / 座標・サイズ / スタイル（背景色・文字色・文字サイズ）を編集・削除**できる（Phase 4 / Task 25〜29）。
+
+![HMI Simulator](Docs/screenshots/simulator.png)
+
+Simulator（読み取り専用）で同じ JSON を描画した様子。Editor で付けた **背景色 / 文字色 / 文字サイズ** がそのまま反映される（最下段 `Default` はスタイル未指定で HmiButton の既定外観にフォールバック）。Runtime はこの Simulator のソースを共有する。
 
 ![hmi_runtime on i.MX8MP](Docs/screenshots/task-24-runtime-imx.jpg)
 
@@ -141,7 +145,7 @@ SDK 生成（新 BSP の image+SDK ビルド）から実機 scp 起動までの�
 .\build-mingw\hmi_runtime.exe --open <path\to\project.json>
 ```
 
-新しいシェルから起動する場合は `. .\scripts\windows\setup-env.ps1` で PATH を通してから実行。
+新しいシェルから起動する場合は `. ..\build-mingw\hmi_editor.exe` で PATH を通してから実行。
 
 Explorer からダブルクリックで起動したい（「Qt の DLL が見つからない」を解消したい）場合は、`windeployqt` で DLL / プラグイン / QML を exe の隣へ同梱する：
 
@@ -225,7 +229,7 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 | 27 | 座標/サイズ数値編集 + ハンドルリサイズ（Editor） | ✅ 完了 |
 | 28 | スタイル属性追加（Schema + HmiButton + Simulator/Runtime）★ | ✅ 完了 |
 | 29 | インスペクタにスタイル編集 + 削除（Editor） | ✅ 完了 |
-| 30 | テスト/E2E 拡充 + 実機 styled 描画（全環境） | ⏳ 未着手 |
+| 30 | テスト/E2E 拡充 + 実機 styled 描画（全環境） | 🔄 進行中（Windows 分: QML テスト + E2E コード + スクショ完了 / macOS `ctest -L e2e` 実行・実機 styled 写真は pending） |
 
 ## 共通データ仕様（Project Format）
 

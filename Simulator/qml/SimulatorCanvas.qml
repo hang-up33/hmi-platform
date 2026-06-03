@@ -51,6 +51,10 @@ Item {
 
                 // MVP は Button のみ。将来 Widget 種別が増えたら type で分岐する。
                 HmiButton {
+                    // Task 30: E2E（Spix）から hmiSimulatorWindow/widget_<id>/hmiButton の
+                    // パスで text / backgroundColor 等の描画値を getStringProperty 検証
+                    // できるよう objectName を付与する（widget_<id> wrapper 命名と対）。
+                    objectName: "hmiButton"
                     anchors.fill: parent
                     text: wrapper.modelData.text !== undefined ? wrapper.modelData.text : ""
                     tag: wrapper.modelData.tag !== undefined ? wrapper.modelData.tag : ""

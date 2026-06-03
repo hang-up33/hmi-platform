@@ -88,6 +88,8 @@ flowchart LR
 | スコープ | ①Editor QML テスト（`Editor/tests/tst_canvas.qml` 等）に「選択 → インスペクタ編集 → Item 反映」「削除」を追加。②E2E（`tests/e2e/`）に「Editor で選択 → インスペクタで text / color 変更 → `saveTo` → Simulator で `getStringProperty` 検証」シナリオを追加（既存 `harness.py` 流用、Editor=9876 / Simulator=9877 の既定ポート据え置き）。③styled Button を含む JSON を `hmi_runtime` で **i.MX8MP 実機**描画し撮影 |
 | 完了基準 | macOS で `ctest`（unit + e2e）緑。実機 styled 描画写真 `Docs/screenshots/task-30-runtime-styled.jpg`。README スクショ（`editor.png` / `simulator.png`）も更新 |
 
+> **進捗（Windows 母艦セッション）**：①Editor QML テスト追加（`tst_canvas.qml` に `test_delete_preserves_other_widgets_style_edits` ＝削除が他 widget の未保存スタイル編集を保つ保証）・②E2E シナリオ実装（`tests/e2e/test_style_inspector_roundtrip.py` ＝選択→スタイル編集→`saveTo`→保存 JSON 直接検証→Simulator の `hmiButton` を `getStringProperty` 検証。`SimulatorCanvas.qml` の HmiButton に `objectName: "hmiButton"` 付与・CMake 登録済み）・README スクショ更新（`simulator.png` 追加・`editor.png` キャプション刷新）まで **Windows で完了（unit ctest 8/8 緑、E2E は `HMI_ENABLE_E2E=OFF` でスキップ）**。**pending（次の該当環境セッション）**：macOS で `ctest -L e2e` 緑（新シナリオの実行検証）、i.MX8MP 実機での styled JSON 描画写真 `task-30-runtime-styled.jpg`。E2E コードは既存 `test_simulator_display.py` 等の実証済みパターンを踏襲したが、Windows では実行できないため macOS での実行が初回検証になる。
+
 > **Note**：T25〜T27 / T29 の実装中に「選択や編集が `var` 配列の delegate 再生成で巻き戻る」事象（CLAUDE.md「Spix 罠」最終群と同根）が出たら、**設計指針の "live Item が真実 + 構造変更時のみスナップショット" 方針で吸収**する。それでも破綻するようなら QAbstractListModel 化を別タスク化してユーザーに相談（本スライスには含めない）。
 
 ---
@@ -161,4 +163,4 @@ flowchart LR
 | 27 | 座標/サイズ数値編集 + ハンドルリサイズ（Editor） | ✅ 完了 |
 | 28 | スタイル属性追加（Schema + HmiButton + Simulator/Runtime）★ | ✅ 完了 |
 | 29 | インスペクタにスタイル編集 + 削除（Editor） | ✅ 完了 |
-| 30 | テスト/E2E 拡充 + 実機 styled 描画（全環境） | ⏳ 未着手 |
+| 30 | テスト/E2E 拡充 + 実機 styled 描画（全環境） | 🔄 進行中（Windows 分完了 / macOS E2E 実行・実機写真 pending） |

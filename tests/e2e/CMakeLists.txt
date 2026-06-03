@@ -72,3 +72,20 @@ set_tests_properties(e2e_simulator_display PROPERTIES
     TIMEOUT 60
     LABELS e2e
 )
+
+# Task 30: スタイル編集 → 保存 → Simulator 描画の cross-app E2E。
+# Editor で btn001 を選択しスタイル（text/背景色/文字色）を編集 → saveTo →
+# 保存 JSON を直接検証 → Simulator を `--open` で起動し HmiButton の描画値を
+# getStringProperty で確認する。Editor / Simulator の 2 プロセスを順に起動するため
+# TIMEOUT は他の cross-app テストと同等に取る。
+add_test(
+    NAME e2e_style_inspector_roundtrip
+    COMMAND ${Python3_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_style_inspector_roundtrip.py
+        --editor-binary $<TARGET_FILE:hmi_editor>
+        --simulator-binary $<TARGET_FILE:hmi_simulator>
+)
+set_tests_properties(e2e_style_inspector_roundtrip PROPERTIES
+    TIMEOUT 60
+    LABELS e2e
+)
