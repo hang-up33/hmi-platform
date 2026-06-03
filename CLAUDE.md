@@ -112,7 +112,7 @@ JSON 入出力は `QJsonDocument`（外部依存なし）。Editor / Simulator �
 
 ### Must Always
 
-- 現フェーズのタスク順を守る。Phase 1 / MVP（Task 1〜8）、Phase 2 / テスト基盤導入（Task 9〜15）、Phase 3-A / E2E テスト導入（Task 16〜21）、**Phase 3-B / Runtime（Task 22〜24）** は完了済み（i.MX8MP 実機描画まで到達）。**Phase 4 / Button 縦スライス（Task 25〜30）** は Task 25〜29 完了（選択・インスペクタ・リサイズ・**スタイル属性の全レイヤ貫通**・スタイル編集 + 削除）（[Docs/phase4-button-slice-plan.md](Docs/phase4-button-slice-plan.md)）。次セッションで「次のタスクを進めて」と指示があれば **Task 30（テスト/E2E 拡充 + 実機 styled 描画）** から着手する。Phase 4 は Widget 種別を横に増やす前に Button 1 つを全レイヤで深く作り込み「Widget 追加テンプレ」を確立する縦スライス。各タスクの完了基準・設計指針・Must Never は [Docs/phase4-button-slice-plan.md](Docs/phase4-button-slice-plan.md) を参照。Phase 3-B（Yocto / 実機）の環境知識は [.claude/rules/dev-environment.md](.claude/rules/dev-environment.md) に集約済み。
+- 現フェーズのタスク順を守る。Phase 1 / MVP（Task 1〜8）、Phase 2 / テスト基盤導入（Task 9〜15）、Phase 3-A / E2E テスト導入（Task 16〜21）、**Phase 3-B / Runtime（Task 22〜24）** は完了済み（i.MX8MP 実機描画まで到達）。**Phase 4 / Button 縦スライス（Task 25〜30）も完了**（選択・インスペクタ・リサイズ・**スタイル属性の全レイヤ貫通**・スタイル編集 + 削除・テスト/E2E 拡充・実機 styled 描画・macOS E2E 緑まで＝「Widget 追加テンプレ」確立）（[Docs/phase4-button-slice-plan.md](Docs/phase4-button-slice-plan.md)）。**Phase 4 までで未着手のフェーズタスクは無い**。次の **Phase 5（Widget 種別の横展開：Label / Lamp / Gauge 等 + 状態/アクション）は「候補」段階で未承認**（[Docs/phase4-button-slice-plan.md](Docs/phase4-button-slice-plan.md)「Phase 5 候補」）。次セッションで「次のタスクを進めて」と指示があっても **自動着手せず、まず Phase 5 のスコープをユーザーと確定・承認してから** タスク分割する。Phase 3-B（Yocto / 実機）の環境知識は [.claude/rules/dev-environment.md](.claude/rules/dev-environment.md) に集約済み。
 - Widget / Screen / Project 型と JSON I/O は `Shared/Schema` にのみ実装。
 - 完了報告の直前に [kaizen-close](.claude/skills/kaizen-close/SKILL.md) を実行し、得た知見を反映する。
 - QML モジュール URI とアプリの `loadFromModule()` 引数を一致させる。
