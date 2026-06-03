@@ -33,6 +33,13 @@
 
 - [widgetModel refactor deferred](project-widgetmodel-refactor-deferred.md) — widgetModel の QAbstractListModel 化は Phase 3-B スコープ確定後に再評価（保留の経緯付き。CLAUDE.md は要約のみ）
 
+### project 規約（path-scoped — 該当ファイル編集時のみロード）
+
+CLAUDE.md の肥大化対策で切り出した詳細規約。`paths:` frontmatter で対象ファイルを触る時だけ自動ロードされる（CLAUDE.md 側にはポインタ表のみ残置）。
+
+- [schema-conventions](schema-conventions.md) — Shared/Schema の型・JSON I/O 実装規約（`paths: Shared/Schema/**`）
+- [qml-module-conventions](qml-module-conventions.md) — QML モジュール URI・命名衝突・STATIC plugin 共有・EditableWidget 結線・Simulator/Runtime ソース共有・ルート CMake の `add_subdirectory` 順序制約（`paths: **/*.qml`・Editor/Simulator/Runtime/Shared/Widgets・`**/CMakeLists.txt`）
+
 ## 重複のため移植しなかったメモリ（実体は git 管理ドキュメント側）
 
 以下はローカル自動メモリに存在したが、既に CLAUDE.md / `Docs/*.md` に git 管理で書かれているため、二重メンテ回避のため移植せず実体を正とする：
