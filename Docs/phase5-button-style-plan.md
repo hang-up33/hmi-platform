@@ -140,5 +140,5 @@ Task 28 と同じ **4層 + インスペクタ + テスト** を1タスクで揃�
 
 | # | タスク | 状態 |
 |---|---|---|
-| 31 | ボーダー＋角丸を全レイヤ貫通（Schema + HmiButton + Simulator/Runtime + インスペクタ）★ | ⬜ 未着手 |
-| 32 | E2E 拡充 + 実機 styled 描画更新（全環境） | ⬜ 未着手 |
+| 31 | ボーダー＋角丸を全レイヤ貫通（Schema + HmiButton + Simulator/Runtime + インスペクタ）★ | ✅ 完了（PR #64。Schema/ブリッジ/delegate/HmiButton/インスペクタ + unit テスト緑〔`0`=ボーダーなし／`-1`=未指定／キー欠落時省略の境界含む〕+ インスペクタ ScrollView 化 + Editor/Simulator スクショ） |
+| 32 | E2E 拡充 + 実機 styled 描画更新（全環境） | ⬜ 未着手（**macOS で `ctest`〔unit + e2e〕緑が必須** ＝ E2E 検証は macOS で実施） |
