@@ -153,16 +153,26 @@ Window {
             border.color: "#cccccc"
             border.width: 1
 
-            Column {
+            // Task 31 (Codex PR #64 P2): border/radius でインスペクタ項目が増え、既定の
+            // 1280x768 では角丸 SpinBox / 削除ボタンが下端に押し出されてアクセス不能に
+            // なるため、フォーム全体を ScrollView に載せて縦スクロール可能にする。
+            // contentWidth: availableWidth で横スクロールバーは出さない。
+            ScrollView {
+                id: inspectorScroll
                 anchors.fill: parent
                 anchors.margins: 12
-                spacing: 8
+                contentWidth: availableWidth
+                clip: true
 
-                Label {
-                    text: qsTr("インスペクタ")
-                    font.pixelSize: 16
-                    font.bold: true
-                }
+                Column {
+                    width: inspectorScroll.availableWidth
+                    spacing: 8
+
+                    Label {
+                        text: qsTr("インスペクタ")
+                        font.pixelSize: 16
+                        font.bold: true
+                    }
 
                 // 未選択時の案内
                 Label {
@@ -509,6 +519,7 @@ Window {
                                 canvas.deleteWidget(canvas.selectedWidgetId)
                             }
                         }
+                    }
                     }
                 }
             }
