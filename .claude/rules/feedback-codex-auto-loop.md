@@ -29,7 +29,9 @@ PR 作成 + `@codex review` 投稿の後は、ユーザーからの追加指示�
 
 3. レビュー検出後、`gh api repos/<owner>/<repo>/pulls/<N>/comments` で inline 指摘、`gh api repos/<owner>/<repo>/issues/<N>/comments` で全体コメントを取得
 4. 指摘あり → 該当箇所を修正コミットして push → 再度 `@codex review` コメント → 手順 2 へループ
-5. 指摘なし（"Codex Review: Didn't find any major issues. 👍"）→ ループ脱出、ユーザーに完了報告
+5. 指摘なし（"Codex Review: Didn't find any major issues"）→ ループ脱出、ユーザーに完了報告
+
+> **取りこぼし注意（実体験：PR #62）**：**指摘 0 件のクリーンレビュー「Didn't find any major issues」は issue コメント（`issues/<N>/comments`）として来る**。一方、指摘がある回は inline コメント（`pulls/<N>/comments`）＋ review オブジェクト（`pulls/<N>/reviews`、`state=COMMENTED`）として来る。**よって検出は必ず issue コメントを主対象に含める**（上記スクリプトの `LAST_ISSUE` が要）。`pulls/<N>/reviews` ＋ inline だけをポーリングすると、クリーン回は review オブジェクトが増えないため**永久に検出できず空振りタイムアウトする**（PR #62 で実際に踏んだ。クリーンは出ていたのに 20 分空振りした）。**上記スクリプトを勝手に簡略化・改変しない**（reviews だけにしない・issue コメント監視を外さない）こと。
 
 ループ中はユーザーに途中報告は不要（待機 + 修正コミットを淡々と進める）。クリティカルな設計判断が要る指摘（大規模な方針差し戻し）に当たった場合だけ、自走を中断してユーザーに相談する。
 
