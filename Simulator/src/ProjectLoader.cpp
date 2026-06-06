@@ -70,6 +70,12 @@ QVariantMap ProjectLoader::load(const QUrl &fileUrl)
         m.insert(QStringLiteral("backgroundColor"), w.backgroundColor);
         m.insert(QStringLiteral("textColor"), w.textColor);
         m.insert(QStringLiteral("fontSize"), w.fontSize);
+        // Task 31: ボーダー＋角丸も QML delegate へ届ける（Editor の ProjectIo.load と同形）。
+        // Simulator / Runtime は読み取り専用だが描画に新スタイルを渡す口は必要。
+        // -1 / 空は HmiButton 側で既定外観にフォールバックされる。
+        m.insert(QStringLiteral("borderColor"), w.borderColor);
+        m.insert(QStringLiteral("borderWidth"), w.borderWidth);
+        m.insert(QStringLiteral("radius"), w.radius);
         widgetsVar.append(m);
     }
 

@@ -90,7 +90,11 @@ Item {
                 // Task 28: スタイル属性も live Item からスナップショットして保存に乗せる。
                 backgroundColor: item.widgetBackgroundColor,
                 textColor: item.widgetTextColor,
-                fontSize: item.widgetFontSize
+                fontSize: item.widgetFontSize,
+                // Task 31: ボーダー＋角丸も live Item から取り込む（-1 = 未指定）。
+                borderColor: item.widgetBorderColor,
+                borderWidth: item.widgetBorderWidth,
+                radius: item.widgetRadius
             })
         }
         return result
@@ -203,6 +207,10 @@ Item {
                     widgetBackgroundColor: modelData.backgroundColor !== undefined ? modelData.backgroundColor : ""
                     widgetTextColor: modelData.textColor !== undefined ? modelData.textColor : ""
                     widgetFontSize: modelData.fontSize !== undefined ? modelData.fontSize : 0
+                    // Task 31: ボーダー＋角丸も流す（未指定は空 / -1。0 は正当値なので -1 を既定にする）。
+                    widgetBorderColor: modelData.borderColor !== undefined ? modelData.borderColor : ""
+                    widgetBorderWidth: modelData.borderWidth !== undefined ? modelData.borderWidth : -1
+                    widgetRadius: modelData.radius !== undefined ? modelData.radius : -1
                     // Task 18: Spix から `widget_<id>` で参照できるようにする。
                     objectName: "widget_" + widgetId
                     x: modelData.x !== undefined ? modelData.x : 0
@@ -232,6 +240,12 @@ Item {
                         backgroundColor: wrapper.widgetBackgroundColor
                         textColor: wrapper.widgetTextColor
                         fontSize: wrapper.widgetFontSize
+                        // Task 31: ボーダー＋角丸を渡す。角丸は widgetRadius → cornerRadius に
+                        // マップする（HmiButton の公開入力名は radius 衝突回避で cornerRadius）。
+                        // 空 / -1 は HmiButton 側で既定外観にフォールバックされる。
+                        borderColor: wrapper.widgetBorderColor
+                        borderWidth: wrapper.widgetBorderWidth
+                        cornerRadius: wrapper.widgetRadius
                         // Task 25: ドラッグ用の親 MouseArea は drag.filterChildren 下で
                         // クリックを発火しない（子が消費する）。よってクリック検出は
                         // HmiButton 側の clicked を中継して選択要求に使う。

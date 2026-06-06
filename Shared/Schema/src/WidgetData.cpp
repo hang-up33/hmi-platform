@@ -28,6 +28,18 @@ QJsonObject WidgetData::toJson() const
     if (fontSize > 0) {
         obj["fontSize"] = fontSize;
     }
+    // Task 31: ボーダー＋角丸。色は空のとき省略。数値は **`>= 0`** で書き出す
+    // （fontSize の `> 0` と違い `0` も明示的な値〔ボーダーなし / 角丸なし〕として保存する）。
+    // 未指定のセンチネル `-1` のときだけ省略し、旧 JSON と後方互換を保つ。
+    if (!borderColor.isEmpty()) {
+        obj["borderColor"] = borderColor;
+    }
+    if (borderWidth >= 0) {
+        obj["borderWidth"] = borderWidth;
+    }
+    if (radius >= 0) {
+        obj["radius"] = radius;
+    }
     return obj;
 }
 
@@ -46,6 +58,12 @@ WidgetData WidgetData::fromJson(const QJsonObject &obj)
     w.backgroundColor = obj.value("backgroundColor").toString();
     w.textColor = obj.value("textColor").toString();
     w.fontSize = obj.value("fontSize").toInt();
+    // Task 31: 数値は **`toInt(-1)`**（欠落時 -1 = 未指定）で読む。`toInt()`〔欠落時 0〕を
+    // コピペすると「キー欠落 = ボーダーなし（0）」と誤解され、HmiButton の既定値に
+    // フォールバックしなくなる。色は欠落時に空文字（= 未指定）。
+    w.borderColor = obj.value("borderColor").toString();
+    w.borderWidth = obj.value("borderWidth").toInt(-1);
+    w.radius = obj.value("radius").toInt(-1);
     return w;
 }
 

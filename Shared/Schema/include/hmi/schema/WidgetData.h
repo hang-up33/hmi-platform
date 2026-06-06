@@ -24,6 +24,16 @@ struct WidgetData {
     QString textColor;
     int fontSize = 0;
 
+    // Task 31: ボーダー＋角丸（静的スタイル拡充の第 2 バンドル）。Task 28 と同じく
+    // optional だが、**`0` が正当値**（borderWidth=0 = ボーダーなし、radius=0 = 角を
+    // 丸めない）である点が fontSize（0 = 未指定）と決定的に違う。そこで数値は
+    // **`-1` をセンチネル**（未指定）にし、`toJson` は `>= 0` で書き出し（0 も書く）、
+    // `fromJson` は `toInt(-1)`（欠落時 -1）で読む。色は backgroundColor 等と同じく
+    // 空文字 = 未指定。既定外観（#1d3557 / 太さ 1 / 角丸 4）は HmiButton 側に集約する。
+    QString borderColor;
+    int borderWidth = -1;
+    int radius = -1;
+
     QJsonObject toJson() const;
     static WidgetData fromJson(const QJsonObject &obj);
 
