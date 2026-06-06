@@ -235,6 +235,15 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 | 29 | インスペクタにスタイル編集 + 削除（Editor） | ✅ 完了 |
 | 30 | テスト/E2E 拡充 + 実機 styled 描画（全環境） | ✅ 完了（QML テスト + E2E コード + スクショ + 実機 styled 描画 + **macOS `ctest -L e2e` 緑（`e2e_style_roundtrip` 含む 5/5）**） |
 
+### Phase 5: Button 静的スタイル拡充（ボーダー＋角丸）
+
+詳細は [Docs/phase5-button-style-plan.md](Docs/phase5-button-style-plan.md)。横展開（Label / Lamp …）の前に、Phase 4 で確立した「プロパティ追加テンプレ」をもう一度回して Button に静的スタイル（`borderColor` / `borderWidth` / `radius`）を足す。狙いは手順の完全定型化と、Task 28 では出なかった **「`0` が正当値の数値プロパティ」（`-1` センチネル設計）** の習得。
+
+| # | タスク | 状態 |
+|---|---|---|
+| 31 | ボーダー＋角丸を全レイヤ貫通（Schema + HmiButton + Simulator/Runtime + インスペクタ）★ | ⬜ 未着手 |
+| 32 | E2E 拡充 + 実機 styled 描画更新（全環境） | ⬜ 未着手 |
+
 ## 共通データ仕様（Project Format）
 
 `Shared/Schema` を唯一の真実とし、以下の JSON 形状で project / screen / widget を表現する。
