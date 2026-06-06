@@ -57,7 +57,7 @@ Task 28 と同じ **4層 + インスペクタ + テスト** を1タスクで揃�
 | レイヤ | 変更内容 |
 |---|---|
 | **Schema**（`Shared/Schema/WidgetData.{h,cpp}`） | `QString borderColor;` / `int borderWidth = -1;` / `int radius = -1;` を追加。`toJson` は **空 / `< 0` のとき省略**書き出し。`fromJson` は **`toInt(-1)` でセンチネルを維持**（後述の罠）。`isValidJson` の必須集合は **据え置き**（後方互換） |
-| **C++ ブリッジ**（`Editor/src/ProjectIo.cpp` save/load・`Simulator/src/ProjectLoader.cpp` load） | `QVariantMap` 手動コピーに3フィールドを追加。QML 由来の `QVariantMap` は常にキーを含む（QML が `-1` を渡す）ため save 側は `.toInt()` でよい。load 側は `m.insert("borderWidth", w.borderWidth)` 等で `-1` を素通し（QML 側で既定にフォールバック） |
+| **C++ ブリッジ**（`Editor/src/ProjectIo.cpp` save/load・`Simulator/src/ProjectLoader.cpp` load） | `QVariantMap` 手動コピーに3フィールドを追加。**save 側は欠落時にセンチネルを失わないよう `m.value("borderWidth", -1).toInt()` で読む**（QVariantMap にキーが無い経路〔既存 ProjectIo テスト・非 Canvas 呼び出し〕では `.toInt()` が `0` を返し、`toJson` の `>= 0` ルールで「未指定」でなく明示的なボーダーなしとして誤保存されるため。Codex PR #62 P2）。load 側は `m.insert("borderWidth", w.borderWidth)` 等で `-1` を素通し（QML 側で既定にフォールバック） |
 | **HmiButton**（`Shared/Widgets/qml/HmiButton.qml`） | 公開入力 `property string borderColor: ""` / `property int borderWidth: -1` / **`property int cornerRadius: -1`**（`radius` は Rectangle 組込みと衝突するため改名）。`resolvedBorderColor`（""→`#1d3557`）/ `resolvedBorderWidth`（`< 0`→1）/ `resolvedCornerRadius`（`< 0`→4）で既定外観を **HmiButton 1 箇所に集約**。描画は `border.color` / `border.width` / `radius` を `resolved*` 参照に置換（現在のハードコード `#1d3557` / 1 / 4 を既定値へ移す） |
 | **EditableWidget**（`Editor/qml/EditableWidget.qml`） | メタ `widgetBorderColor: ""` / `widgetBorderWidth: -1` / `widgetRadius: -1` を追加 |
 | **Editor delegate**（`Editor/qml/Canvas.qml`） | ①`snapshotModel()` に `borderColor` / `borderWidth` / `radius` を live Item から追加。②Repeater delegate で `modelData` → wrapper メタへ流す（未指定は `""` / `-1`）。③HmiButton へ `borderColor: wrapper.widgetBorderColor` / `borderWidth: ...` / `cornerRadius: wrapper.widgetRadius` を渡す |
@@ -72,6 +72,7 @@ Task 28 と同じ **4層 + インスペクタ + テスト** を1タスクで揃�
 1. **`0` は正当値**（`borderWidth=0` = ボーダーなし、`radius=0` = 角を丸めない）。Task 28 の `fontSize` は「`0` = 未指定」だったが、border/radius は **`-1` をセンチネル**にする：
    - `toJson`：`if (borderWidth >= 0) obj["borderWidth"] = borderWidth;`（`fontSize` の `> 0` と違い **`>= 0`**。`0` は書き出す）
    - `fromJson`：`w.borderWidth = obj.value("borderWidth").toInt(-1);`（**`toInt(-1)`**。`fontSize` の `toInt()`〔欠落時 0〕をコピペすると「欠落＝ボーダーなし」と誤解する）
+   - **C++ ブリッジ save**：`w.borderWidth = m.value("borderWidth", -1).toInt();`（QVariantMap 欠落時も `-1` を維持。`.toInt()` だと欠落が `0` になり `toJson` の `>= 0` で誤保存。Codex PR #62 P2）
 2. **`radius` 名前衝突**：HmiButton の root は `Rectangle` で `radius` は組込みプロパティ。公開入力を `radius` にすると上書き衝突するため **`cornerRadius`** に改名し、`radius: resolvedCornerRadius` で割り当てる。**JSON キー / WidgetData フィールド / EditableWidget メタは `radius`** のまま統一し、HmiButton 入力名だけ `cornerRadius`（delegate で `cornerRadius: wrapper.widgetRadius` とマップ）。
 3. **既定値の単一ソース**：既定外観（border `#1d3557` / 太さ 1 / 角丸 4）は **HmiButton の `resolved*` だけ** に置く。delegate / Schema には既定値を二重定義しない（[qml-module-conventions](../.claude/rules/qml-module-conventions.md) の「未指定 + resolved\* フォールバック」規約）。
 
@@ -91,7 +92,7 @@ Task 28 と同じ **4層 + インスペクタ + テスト** を1タスクで揃�
 ### Task 28 のスタイル拡張規約をそのまま踏襲する
 
 [qml-module-conventions](../.claude/rules/qml-module-conventions.md) の「Widget のスタイル属性は『未指定 = 空文字 / 0』を許す入力 + `resolved*` フォールバックで HmiButton に既定値集約」を踏襲する。
-**唯一の違いは数値センチネルが `0` でなく `-1`**（border/radius は `0` 自体が意味を持つため）。この差分を Schema の `toJson`（`>= 0`）/ `fromJson`（`toInt(-1)`）/ HmiButton の `resolved*`（`< 0` 判定）/ インスペクタ SpinBox（`from: 0`・同期時 `>= 0` 判定）の **4 箇所で揃える**。
+**唯一の違いは数値センチネルが `0` でなく `-1`**（border/radius は `0` 自体が意味を持つため）。この差分を Schema の `toJson`（`>= 0`）/ `fromJson`（`toInt(-1)`）/ **C++ ブリッジ save の QVariantMap 読取（`m.value(key, -1).toInt()`）** / HmiButton の `resolved*`（`< 0` 判定）/ インスペクタ SpinBox（`from: 0`・同期時 `>= 0` 判定）の **5 箇所で揃える**。
 
 ### レイヤ貫通の取りこぼし防止
 
@@ -113,7 +114,7 @@ Task 28 と同じ **4層 + インスペクタ + テスト** を1タスクで揃�
 
 - 1 タスク = 1 ブランチ = 1 PR、`cmake --build` 緑 ＋ 該当環境での動作確認を完了基準にする。
 - 新プロパティを足す時は **HmiButton に公開（resolved\* で既定集約）→ C++ ブリッジ（ProjectIo save/load・ProjectLoader load）に追加 → Editor と Simulator 双方の delegate に渡す → Schema / ProjectIo / ProjectLoader / Canvas QML のテストも同時更新** を1タスク内で揃える。
-- `0` が正当値の数値は **`-1` センチネル**で optional 化し、`toJson`（`>= 0`）/ `fromJson`（`toInt(-1)`）/ resolved（`< 0`）/ SpinBox（`from: 0`）の4箇所を揃える。
+- `0` が正当値の数値は **`-1` センチネル**で optional 化し、`toJson`（`>= 0`）/ `fromJson`（`toInt(-1)`）/ **C++ ブリッジ save の QVariantMap 読取（`m.value(key, -1).toInt()`）** / resolved（`< 0`）/ SpinBox（`from: 0`）の5箇所を揃える。
 - 編集 UI は **Editor のみ**。Simulator / Runtime は読み取り専用を維持。
 
 ### Must Never
