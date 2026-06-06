@@ -31,6 +31,8 @@ private slots:
     void roundTripFullFields();
     void roundTripOmitsEmptyTextAndTag();
     void roundTripOmitsDefaultStyleFields();
+    void roundTripOmitsUnspecifiedBorderRadius();
+    void zeroBorderWidthAndRadiusAreWrittenNotOmitted();
     void fromJsonFillsDefaultsForMissingKeys();
 
     void isValidJsonAcceptsMinimumRequiredFields();
@@ -54,6 +56,9 @@ void WidgetDataTest::roundTripFullFields()
     src.backgroundColor = "#ff0000";
     src.textColor = "#00ff00";
     src.fontSize = 22;
+    src.borderColor = "#112233";
+    src.borderWidth = 3;
+    src.radius = 8;
 
     const QJsonObject obj = src.toJson();
     const WidgetData restored = WidgetData::fromJson(obj);
@@ -69,6 +74,58 @@ void WidgetDataTest::roundTripFullFields()
     QCOMPARE(restored.backgroundColor, src.backgroundColor);
     QCOMPARE(restored.textColor, src.textColor);
     QCOMPARE(restored.fontSize, src.fontSize);
+    QCOMPARE(restored.borderColor, src.borderColor);
+    QCOMPARE(restored.borderWidth, src.borderWidth);
+    QCOMPARE(restored.radius, src.radius);
+}
+
+// Task 31: ボーダー＋角丸は未指定（色は空、数値は -1 センチネル）のとき toJson で
+// 省略され、旧 JSON と後方互換になることを固定する（Task 28 の style 省略テストと対）。
+void WidgetDataTest::roundTripOmitsUnspecifiedBorderRadius()
+{
+    WidgetData src;
+    src.id = "btn004";
+    src.type = "Button";
+    src.width = 120;
+    src.height = 40;
+    // borderColor は既定の空、borderWidth / radius は既定の -1（未指定）。
+
+    const QJsonObject obj = src.toJson();
+
+    QVERIFY(!obj.contains("borderColor"));
+    QVERIFY(!obj.contains("borderWidth"));
+    QVERIFY(!obj.contains("radius"));
+
+    const WidgetData restored = WidgetData::fromJson(obj);
+    QVERIFY(restored.borderColor.isEmpty());
+    QCOMPARE(restored.borderWidth, -1);
+    QCOMPARE(restored.radius, -1);
+}
+
+// Task 31 の新規ポイント：borderWidth=0（ボーダーなし）/ radius=0（角丸なし）は
+// **正当値**であり、fontSize（0 = 未指定）と違って toJson で省略してはいけない。
+// `>= 0` で書き出し、読み戻しても 0 のまま保たれることを固定する（`> 0` への
+// デグレ＝0 を未指定扱いして落とす回帰を検出する）。
+void WidgetDataTest::zeroBorderWidthAndRadiusAreWrittenNotOmitted()
+{
+    WidgetData src;
+    src.id = "btn005";
+    src.type = "Button";
+    src.width = 120;
+    src.height = 40;
+    src.borderWidth = 0;
+    src.radius = 0;
+
+    const QJsonObject obj = src.toJson();
+
+    QVERIFY(obj.contains("borderWidth"));
+    QVERIFY(obj.contains("radius"));
+    QCOMPARE(obj.value("borderWidth").toInt(-1), 0);
+    QCOMPARE(obj.value("radius").toInt(-1), 0);
+
+    const WidgetData restored = WidgetData::fromJson(obj);
+    QCOMPARE(restored.borderWidth, 0);
+    QCOMPARE(restored.radius, 0);
 }
 
 // Task 28: スタイル属性は既定値（空 / 0 = 未指定）のとき toJson で省略され、
@@ -132,6 +189,11 @@ void WidgetDataTest::fromJsonFillsDefaultsForMissingKeys()
     QVERIFY(w.backgroundColor.isEmpty());
     QVERIFY(w.textColor.isEmpty());
     QCOMPARE(w.fontSize, 0);
+    // Task 31: 数値は欠落時 -1（= 未指定センチネル）。0 に落ちると「ボーダーなし」と
+    // 誤解されるため、`toInt(-1)` で読んでいることをここで固定する。
+    QVERIFY(w.borderColor.isEmpty());
+    QCOMPARE(w.borderWidth, -1);
+    QCOMPARE(w.radius, -1);
 }
 
 void WidgetDataTest::isValidJsonAcceptsMinimumRequiredFields()

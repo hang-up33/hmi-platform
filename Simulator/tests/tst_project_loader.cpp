@@ -26,7 +26,10 @@ constexpr auto kValidProjectJson = R"({
           "tag": "PLC.START",
           "backgroundColor": "#ff0000",
           "textColor": "#00ff00",
-          "fontSize": 22
+          "fontSize": 22,
+          "borderColor": "#112233",
+          "borderWidth": 3,
+          "radius": 8
         }
       ]
     }
@@ -53,6 +56,7 @@ class ProjectLoaderTest : public QObject
 
 private slots:
     void loadsValidProject();
+    void loadPassesThroughZeroBorder();
     void loadAcceptsScreenWithEmptyWidgets();
     void loadRejectsMalformedJson();
     void loadRejectsSchemaMismatchedJson();
@@ -89,6 +93,44 @@ void ProjectLoaderTest::loadsValidProject()
     QCOMPARE(w.value("backgroundColor").toString(), QStringLiteral("#ff0000"));
     QCOMPARE(w.value("textColor").toString(), QStringLiteral("#00ff00"));
     QCOMPARE(w.value("fontSize").toInt(), 22);
+    // Task 31: ボーダー＋角丸も load を経て delegate へ届く。
+    QCOMPARE(w.value("borderColor").toString(), QStringLiteral("#112233"));
+    QCOMPARE(w.value("borderWidth").toInt(), 3);
+    QCOMPARE(w.value("radius").toInt(), 8);
+}
+
+// Task 31: borderWidth=0（ボーダーなし）/ radius=0（角丸なし）は正当値であり、
+// loader はそれを 0 のまま QML delegate へ素通しする（HmiButton の既定にフォールバック
+// されない）。fromJson の toInt(-1) が 0 と未指定を区別できることに依存する。
+void ProjectLoaderTest::loadPassesThroughZeroBorder()
+{
+    constexpr auto kJson = R"({
+      "project": "Zero",
+      "screens": [
+        {
+          "name": "Main",
+          "widgets": [
+            { "id": "btn001", "type": "Button", "x": 0, "y": 0,
+              "width": 120, "height": 40, "borderWidth": 0, "radius": 0 }
+          ]
+        }
+      ]
+    })";
+
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString path = writeFile(dir, "zero_border.json", QByteArray(kJson));
+    QVERIFY(!path.isEmpty());
+
+    ProjectLoader loader;
+    const QVariantMap result = loader.load(QUrl::fromLocalFile(path));
+    QCOMPARE(result.value("ok").toBool(), true);
+
+    const QVariantList widgets = result.value("widgets").toList();
+    QCOMPARE(widgets.size(), 1);
+    const QVariantMap w = widgets.first().toMap();
+    QCOMPARE(w.value("borderWidth").toInt(), 0);
+    QCOMPARE(w.value("radius").toInt(), 0);
 }
 
 void ProjectLoaderTest::loadAcceptsScreenWithEmptyWidgets()

@@ -64,6 +64,12 @@ Item {
                     backgroundColor: wrapper.modelData.backgroundColor !== undefined ? wrapper.modelData.backgroundColor : ""
                     textColor: wrapper.modelData.textColor !== undefined ? wrapper.modelData.textColor : ""
                     fontSize: wrapper.modelData.fontSize !== undefined ? wrapper.modelData.fontSize : 0
+                    // Task 31: ボーダー＋角丸も HmiButton へ渡す（Editor delegate と対）。
+                    // 角丸は radius（JSON キー）→ cornerRadius（HmiButton 入力名）にマップ。
+                    // 未指定（空 / -1）は HmiButton 側で既定外観にフォールバックされる。
+                    borderColor: wrapper.modelData.borderColor !== undefined ? wrapper.modelData.borderColor : ""
+                    borderWidth: wrapper.modelData.borderWidth !== undefined ? wrapper.modelData.borderWidth : -1
+                    cornerRadius: wrapper.modelData.radius !== undefined ? wrapper.modelData.radius : -1
                 }
             }
         }

@@ -99,6 +99,9 @@ Window {
             && !inspectorBgColorField.activeFocus
             && !inspectorTextColorField.activeFocus
             && !inspectorFontSizeSpin.activeFocus
+            && !inspectorBorderColorField.activeFocus
+            && !inspectorBorderWidthSpin.activeFocus
+            && !inspectorRadiusSpin.activeFocus
             && !fieldX.activeFocus && !fieldY.activeFocus
             && !fieldW.activeFocus && !fieldH.activeFocus
         onActivated: canvas.deleteWidget(canvas.selectedWidgetId)
@@ -150,16 +153,26 @@ Window {
             border.color: "#cccccc"
             border.width: 1
 
-            Column {
+            // Task 31 (Codex PR #64 P2): border/radius でインスペクタ項目が増え、既定の
+            // 1280x768 では角丸 SpinBox / 削除ボタンが下端に押し出されてアクセス不能に
+            // なるため、フォーム全体を ScrollView に載せて縦スクロール可能にする。
+            // contentWidth: availableWidth で横スクロールバーは出さない。
+            ScrollView {
+                id: inspectorScroll
                 anchors.fill: parent
                 anchors.margins: 12
-                spacing: 8
+                contentWidth: availableWidth
+                clip: true
 
-                Label {
-                    text: qsTr("インスペクタ")
-                    font.pixelSize: 16
-                    font.bold: true
-                }
+                Column {
+                    width: inspectorScroll.availableWidth
+                    spacing: 8
+
+                    Label {
+                        text: qsTr("インスペクタ")
+                        font.pixelSize: 16
+                        font.bold: true
+                    }
 
                 // 未選択時の案内
                 Label {
@@ -414,6 +427,86 @@ Window {
                         }
                     }
 
+                    // Task 31: ボーダー＋角丸の編集。背景色 / 文字色 / 文字サイズ（Task 29）と
+                    // 同型の 2 本立て（onTextEdited/onValueModified で live Item へ書き戻し、
+                    // Connections.onSelectedItemChanged で表示同期）。数値は **0 が正当値**
+                    //（borderWidth=0=ボーダーなし、radius=0=角丸なし）なので、SpinBox の
+                    // from を 0 にし、未指定（-1）は HmiButton の既定（太さ 1 / 角丸 4）を表示する。
+                    Label { text: qsTr("ボーダー色 (#RRGGBB)") }
+                    TextField {
+                        id: inspectorBorderColorField
+                        objectName: "inspectorBorderColorField"
+                        width: parent.width
+                        placeholderText: qsTr("#1d3557")
+                        // 背景色・文字色と同じく、空 または 完全な #RRGGBB の時だけ反映する
+                        //（途中入力・不正値を live Item に書き戻さない。Codex PR #58 P2）。
+                        validator: RegularExpressionValidator {
+                            regularExpression: /^(#[0-9A-Fa-f]{6})?$/
+                        }
+                        onTextEdited: {
+                            if (canvas.selectedItem && acceptableInput) {
+                                canvas.selectedItem.widgetBorderColor = text
+                            }
+                        }
+                        Connections {
+                            target: canvas
+                            function onSelectedItemChanged() {
+                                inspectorBorderColorField.text = canvas.selectedItem
+                                    ? canvas.selectedItem.widgetBorderColor : ""
+                            }
+                        }
+                    }
+
+                    // ボーダー太さ / 角丸は SpinBox（from: 0 で 0 を選べる）。editable は付けない
+                    //（Task 27: editable な SpinBox は value プログラム設定で表示が更新されない不具合）。
+                    Label { text: qsTr("ボーダー太さ") }
+                    SpinBox {
+                        id: inspectorBorderWidthSpin
+                        objectName: "inspectorBorderWidthSpin"
+                        from: 0
+                        to: 32
+                        value: 1
+                        onValueModified: {
+                            if (canvas.selectedItem) {
+                                canvas.selectedItem.widgetBorderWidth = value
+                            }
+                        }
+                        Connections {
+                            target: canvas
+                            function onSelectedItemChanged() {
+                                const it = canvas.selectedItem
+                                // -1/未指定は既定 1 を表示（HmiButton の resolvedBorderWidth と整合）。
+                                // 0 は正当値（ボーダーなし）なのでそのまま表示する。
+                                inspectorBorderWidthSpin.value = (it && it.widgetBorderWidth >= 0)
+                                    ? it.widgetBorderWidth : 1
+                            }
+                        }
+                    }
+
+                    Label { text: qsTr("角丸") }
+                    SpinBox {
+                        id: inspectorRadiusSpin
+                        objectName: "inspectorRadiusSpin"
+                        from: 0
+                        to: 200
+                        value: 4
+                        onValueModified: {
+                            if (canvas.selectedItem) {
+                                canvas.selectedItem.widgetRadius = value
+                            }
+                        }
+                        Connections {
+                            target: canvas
+                            function onSelectedItemChanged() {
+                                const it = canvas.selectedItem
+                                // -1/未指定は既定 4 を表示（HmiButton の resolvedCornerRadius と整合）。
+                                // 0 は正当値（角丸なし）なのでそのまま表示する。
+                                inspectorRadiusSpin.value = (it && it.widgetRadius >= 0)
+                                    ? it.widgetRadius : 4
+                            }
+                        }
+                    }
+
                     // Task 29: 削除ボタン。構造変更（削除）は Canvas.deleteWidget() に
                     // 集約する（addWidget と対称：live Item をスナップショット → 該当 id
                     // を除いて再代入 → 選択解除）。これで未保存の他 widget 編集が
@@ -426,6 +519,7 @@ Window {
                                 canvas.deleteWidget(canvas.selectedWidgetId)
                             }
                         }
+                    }
                     }
                 }
             }

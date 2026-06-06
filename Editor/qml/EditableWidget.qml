@@ -37,6 +37,14 @@ Item {
     property string widgetTextColor: ""
     property int widgetFontSize: 0
 
+    // Task 31: ボーダー＋角丸のメタ。数値は **`-1` = 未指定**（0 は正当値のため
+    // 未指定に使えない。Schema / HmiButton と揃える）。既定外観へのフォールバックは
+    // HmiButton 側に集約し、ここでは既定値を持たない。delegate（Canvas.qml）で
+    // HmiButton へ widgetRadius → cornerRadius にマップして渡す。
+    property string widgetBorderColor: ""
+    property int widgetBorderWidth: -1
+    property int widgetRadius: -1
+
     // Task 27: リサイズ時の最小サイズ。ハンドルドラッグ / 数値編集での縮小は
     // これ未満にならないよう clamp する（潰れて選択・操作不能になるのを防ぐ）。
     property real minWidth: 30

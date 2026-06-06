@@ -47,6 +47,10 @@ TestCase {
         btn.tag = "";
         btn.width = 120;
         btn.height = 40;
+        // Task 31: ボーダー＋角丸の入力も既定（未指定）へ戻す。
+        btn.borderColor = "";
+        btn.borderWidth = -1;
+        btn.cornerRadius = -1;
         clickedSpy.clear();
     }
 
@@ -86,6 +90,36 @@ TestCase {
 
         mouseClick(btn, btn.width / 2, btn.height / 2);
         compare(clickedSpy.count, 2);
+    }
+
+    // Task 31: 未指定（空 / -1）のとき resolved* が既定外観（#1d3557 / 1 / 4）に
+    // フォールバックし、root Rectangle の border/radius に反映されること。既定値の
+    // 単一ソースが HmiButton にあることを固定する。
+    function test_border_radius_defaults_when_unspecified() {
+        compare(btn.resolvedBorderWidth, 1);
+        compare(btn.resolvedCornerRadius, 4);
+        // border.width / radius は root Rectangle 自身のプロパティ。
+        compare(btn.border.width, 1);
+        compare(btn.radius, 4);
+    }
+
+    // Task 31: 明示値（0 含む）が resolved* と描画へ反映される。**borderWidth=0 /
+    // cornerRadius=0 は「ボーダー / 角丸なし」の正当値**であり、未指定（既定 1 / 4）に
+    // フォールバックしてはいけない（`>= 0` 判定であることを固定する）。
+    function test_border_radius_explicit_values_including_zero() {
+        btn.borderWidth = 5;
+        btn.cornerRadius = 10;
+        compare(btn.resolvedBorderWidth, 5);
+        compare(btn.resolvedCornerRadius, 10);
+        compare(btn.border.width, 5);
+        compare(btn.radius, 10);
+
+        btn.borderWidth = 0;
+        btn.cornerRadius = 0;
+        compare(btn.resolvedBorderWidth, 0);
+        compare(btn.resolvedCornerRadius, 0);
+        compare(btn.border.width, 0);
+        compare(btn.radius, 0);
     }
 
     // QQuickItem ツリーから指定された型名（"QQuickText" 等）の最初の子を再帰的に探す。

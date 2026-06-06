@@ -45,6 +45,13 @@ bool ProjectIo::save(const QUrl &fileUrl,
         w.backgroundColor = m.value(QStringLiteral("backgroundColor")).toString();
         w.textColor = m.value(QStringLiteral("textColor")).toString();
         w.fontSize = m.value(QStringLiteral("fontSize")).toInt();
+        // Task 31: ボーダー＋角丸。数値は **キー欠落時に -1 を既定**にして読む
+        //（`m.value(key, -1).toInt()`）。`.toInt()` だと QVariantMap にキーが無い経路
+        //（Canvas を介さない呼び出し・既存テスト等）で 0 が返り、toJson の `>= 0` 規則で
+        // 「未指定」でなく「明示的なボーダーなし」として誤保存される（Codex PR #62 P2）。
+        w.borderColor = m.value(QStringLiteral("borderColor")).toString();
+        w.borderWidth = m.value(QStringLiteral("borderWidth"), -1).toInt();
+        w.radius = m.value(QStringLiteral("radius"), -1).toInt();
         screen.widgets.append(w);
     }
 
@@ -126,6 +133,11 @@ QVariantMap ProjectIo::load(const QUrl &fileUrl)
         m.insert(QStringLiteral("backgroundColor"), w.backgroundColor);
         m.insert(QStringLiteral("textColor"), w.textColor);
         m.insert(QStringLiteral("fontSize"), w.fontSize);
+        // Task 31: ボーダー＋角丸も QML delegate へ届ける。未指定（-1 / 空）は
+        // QML 側で HmiButton の既定外観にフォールバックされる（-1 を素通しする）。
+        m.insert(QStringLiteral("borderColor"), w.borderColor);
+        m.insert(QStringLiteral("borderWidth"), w.borderWidth);
+        m.insert(QStringLiteral("radius"), w.radius);
         widgetsVar.append(m);
     }
 

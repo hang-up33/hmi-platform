@@ -241,7 +241,7 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 
 | # | タスク | 状態 |
 |---|---|---|
-| 31 | ボーダー＋角丸を全レイヤ貫通（Schema + HmiButton + Simulator/Runtime + インスペクタ）★ | ⬜ 未着手 |
+| 31 | ボーダー＋角丸を全レイヤ貫通（Schema + HmiButton + Simulator/Runtime + インスペクタ）★ | ✅ 完了（Schema/ブリッジ/delegate/HmiButton/インスペクタ + unit テスト緑〔`0`=ボーダーなし／`-1`=未指定の境界含む〕+ Editor/Simulator スクショ） |
 | 32 | E2E 拡充 + 実機 styled 描画更新（全環境） | ⬜ 未着手 |
 
 ## 共通データ仕様（Project Format）

@@ -246,6 +246,35 @@ TestCase {
         compare(entry.fontSize, 22);
     }
 
+    // Task 31: 選択中 live Item のボーダー＋角丸メタ（色 / 太さ / 角丸）を直接更新でき、
+    // snapshotModel（保存経路）にも乗ること。**borderWidth=0（ボーダーなし）** が
+    // スナップショットで 0 のまま保たれること（未指定 -1 と混同して落とさない）も固定する。
+    function test_border_props_are_writable_on_live_item() {
+        canvas.selectedWidgetId = "btn001";
+        tryVerify(function() {
+            return canvas.selectedItem !== null
+                && canvas.selectedItem.widgetId === "btn001";
+        }, 1000, "btn001 が選択 Item にならない");
+
+        canvas.selectedItem.widgetBorderColor = "#112233";
+        canvas.selectedItem.widgetBorderWidth = 0;   // 0 = ボーダーなし（正当値）
+        canvas.selectedItem.widgetRadius = 12;
+
+        compare(canvas.selectedItem.widgetBorderColor, "#112233");
+        compare(canvas.selectedItem.widgetBorderWidth, 0);
+        compare(canvas.selectedItem.widgetRadius, 12);
+
+        const snap = canvas.snapshotModel();
+        let entry = null;
+        for (let i = 0; i < snap.length; ++i) {
+            if (snap[i].id === "btn001") { entry = snap[i]; break; }
+        }
+        verify(entry !== null, "snapshotModel に btn001 が無い");
+        compare(entry.borderColor, "#112233");
+        compare(entry.borderWidth, 0);  // 0 が落ちずに保存経路へ乗る
+        compare(entry.radius, 12);
+    }
+
     // Task 29: deleteWidget(id) は該当 id を除いて widgetModel を再代入し、
     // 選択中だった場合は選択を解除する（インスペクタ削除ボタン / Delete キーの
     // 呼び先）。他 widget は残ることも確認する（構造変更スナップショットの対称性）。
