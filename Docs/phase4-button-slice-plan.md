@@ -279,22 +279,22 @@ flowchart LR
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | ①`Shared/Schema` に **変数定義**（`name` / 型〔bool / int / string〕/ 初期値）を Project レベルに追加。②`Action` 型（`trigger: "onClick"`、`op: "setVariable" / "toggleVariable"`、`target`〔変数名〕、`value`）を `WidgetData` に optional 配列で追加。③**ランタイム変数ストア**（実行時に変数の現在値を保持する widget 非依存オブジェクト。QML singleton か C++ いずれか着手時に決定）。Schema round-trip テスト |
-| 完了基準 | ビルド緑、`ctest`（Schema + ブリッジ）緑。変数定義 + アクション付き JSON が round-trip 再現。**この時点では描画/実行は変えない**（型と保存のみ） |
-| 新規ポイント | **配列 / ネストした型の JSON I/O**（これまでのフラットなスカラーと違う）。Project レベル要素の Schema 拡張（widget だけでなく Project に変数定義を持つ）。`isValidJson` 必須集合は据え置き（後方互換） |
+| スコープ | ①`Shared/Schema` に **変数定義**（`name` / 型〔bool / int / string〕/ 初期値）を Project レベルに追加。②`Action` 型（`trigger: "onClick"`、`op: "setVariable" / "toggleVariable"`、`target`〔変数名〕、`value`）を `WidgetData` に optional 配列で追加。③**`Binding` 型**（どの widget プロパティがどの変数に追従するかの定義：`property`〔"visible" / "backgroundColor" / "text" 等〕＋ `variable`〔変数名〕）を `WidgetData` に optional 配列で追加。**読み取り専用の Simulator / Runtime は保存 JSON だけから「変数変化 → property 変化」を再現するため、バインディングは Schema に必ず持つ**（T41/T43 の前提）。④**ランタイム変数ストア**（実行時に変数の現在値を保持する widget 非依存オブジェクト。QML singleton か C++ いずれか着手時に決定）。⑤変数定義 / アクション / バインディングの C++ ブリッジ（ProjectIo / ProjectLoader）+ Schema round-trip テスト |
+| 完了基準 | ビルド緑、`ctest`（Schema + ブリッジ）緑。変数定義 + アクション + **バインディング**付き JSON が round-trip 再現。**この時点では描画/実行は変えない**（型と保存のみ） |
+| 新規ポイント | **配列 / ネストした型の JSON I/O**（これまでのフラットなスカラーと違う）。Project レベル要素の Schema 拡張（widget だけでなく Project に変数定義を持つ）。**アクション（書き手）とバインディング（読み手）を対に設計**する。`isValidJson` 必須集合は据え置き（後方互換） |
 
 #### T40: インスペクタでアクション編集（Editor）
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | 選択 Button に「クリック時アクション」を設定する UI（変数 ComboBox + 操作 ComboBox + 値入力）。Project の変数定義を管理する簡易パネル（変数の追加 / 削除 / 初期値）。Editor のみ |
-| 完了基準 | ビルド緑、QML テスト緑。アクション設定 → 保存 JSON に反映。スクショ `Docs/screenshots/task-40-action-editor.png` |
+| スコープ | 選択 Button に「クリック時アクション」を設定する UI（変数 ComboBox + 操作 ComboBox + 値入力）と **バインディング設定 UI**（property ComboBox + 変数 ComboBox。T39 で追加した `Binding` を編集）。Project の変数定義を管理する簡易パネル（変数の追加 / 削除 / 初期値）。Editor のみ |
+| 完了基準 | ビルド緑、QML テスト緑。アクション + バインディング設定 → 保存 JSON に反映。スクショ `Docs/screenshots/task-40-action-editor.png` |
 
 #### T41: Simulator / Runtime でアクション実行 + 状態反映
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | Simulator（`SimulatorCanvas.qml`）でロード時に変数ストアを初期化。Button クリックで紐づくアクションを実行 → 変数更新 → **変数にバインドした widget が追従**（最小デモ：変数値を表示する / 変数で `visible`・色を切替）。Runtime はソース共有で自動。**読み取り専用アプリが初めて「動く」** |
+| スコープ | Simulator（`SimulatorCanvas.qml`）でロード時に変数ストアを初期化（変数定義の初期値を投入）。Button クリックで紐づくアクションを実行 → 変数更新 → **T39 の `Binding` 定義を解決して widget プロパティが追従**（最小デモ：変数で `visible`・色を切替）。バインディング解決ルール（`property` 名 → Item の対応プロパティへ変数値を流す）を Simulator/Runtime 共有経路に実装。Runtime はソース共有で自動。**読み取り専用アプリが初めて「動く」** |
 | 完了基準 | ビルド緑、`ctest` 緑。Simulator でクリック→変数変化→表示追従。スクショ `Docs/screenshots/task-41-action-runtime.png` |
 | 新規ポイント | Simulator / Runtime に「実行」概念を入れる（選択 / 編集は持ち込まない原則は維持）。変数ストアを Simulator/Runtime 共有経路に置く |
 
@@ -302,8 +302,8 @@ flowchart LR
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | HmiButton に視覚状態を追加：`enabled`（false で淡色 + クリック無効）、`checkable` / `checked`（トグル外観）。Schema に `bool enabled`（既定 true）/ `bool checkable`（既定 false）。pressed は既存導出（`Qt.darker`）を流用。アクション `op: "toggleVariable"` と `checked` を連動可能に。4 層 + インスペクタ + テスト |
-| 完了基準 | ビルド緑、`ctest` 緑。disabled / checked 込み JSON round-trip + 描画。スクショ `Docs/screenshots/task-42-states-editor.png` |
+| スコープ | HmiButton に視覚状態を追加：`enabled`（false で淡色 + クリック無効）、`checkable` / `checked`（トグル外観）。Schema に **`bool enabled`（既定 true）/ `bool checkable`（既定 false）/ `bool checked`（既定 false＝初期トグル状態を永続化）** の 3 つを追加し、C++ ブリッジ・delegate・インスペクタまで貫通。pressed は既存導出（`Qt.darker`）を流用。`checked` は **JSON で初期値を保存しつつ、実行時はアクション `op: "toggleVariable"` + `Binding`（`property: "checked"`）で変数連動も可能**にする。4 層 + インスペクタ + テスト |
+| 完了基準 | ビルド緑、`ctest` 緑。`enabled` / `checkable` / `checked` 込み JSON round-trip + 描画。スクショ `Docs/screenshots/task-42-states-editor.png` |
 
 #### T43: アクション round-trip E2E + 実機動作確認
 
@@ -318,6 +318,7 @@ flowchart LR
 - **新しい型のテンプレ拡張**：bool（true のみ書き出し）/ enum 文字列（JSON は文字列・QML で enum マップ・不正値フォールバック）/ real センチネル（`opacity` は `-1.0` センチネル、`toDouble(-1)`）を、既存の int センチネル（Task 31）と同じ「5 箇所を揃える」則で扱う。
 - **編集体験は Editor 専用**（トラック C）。Simulator / Runtime 無改修を維持。`var` 配列据え置き（live Item が真実・構造変更時のみスナップショット・選択は id 追跡）の方針を崩さない。複数選択は id 集合、undo は配列スナップショット方式で QML に閉じる。
 - **状態 / アクションは Widget 非依存**（トラック B）。変数ストア・アクション型・データバインドは Button に依存しない形で設計し、Phase 5 の横展開でそのまま再利用する。**実行は Simulator / Runtime**（編集は Editor）で役割分担を維持。
+- **アクション（書き手）とバインディング（読み手）は対**：アクションが変数を更新し、バインディングが変数 → widget プロパティへ流す。**両方を Schema に保存**しないと、読み取り専用の Simulator / Runtime が保存 JSON だけから「変数変化 → property 変化」を再現できない（T39 で `Binding` を Schema 化する理由）。`checked` のような状態は **初期値を JSON 保存しつつ実行時はバインディングで変数連動**できるよう、両立する設計にする。
 
 ---
 
@@ -356,7 +357,7 @@ flowchart LR
 | 36 | 複数選択 + 一括移動・整列・削除（Editor）（C） | ⬜ 未着手 |
 | 37 | コピー / ペースト / 複製（Editor）（C） | ⬜ 未着手 |
 | 38 | undo / redo（コマンドスタック）（Editor）（C） | ⬜ 未着手 |
-| 39 | 変数 / タグストア + Schema アクション型（B） | ⬜ 未着手 |
+| 39 | 変数 / タグストア + Schema アクション型 + バインディング型（B） | ⬜ 未着手 |
 | 40 | インスペクタでアクション編集（Editor）（B） | ⬜ 未着手 |
 | 41 | Simulator / Runtime でアクション実行 + 状態反映（B） | ⬜ 未着手 |
 | 42 | 状態別スタイル（pressed / disabled / checked）（B） | ⬜ 未着手 |
