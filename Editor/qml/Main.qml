@@ -102,6 +102,7 @@ Window {
             && !inspectorBorderColorField.activeFocus
             && !inspectorBorderWidthSpin.activeFocus
             && !inspectorRadiusSpin.activeFocus
+            && !inspectorFontFamilyCombo.activeFocus
             && !fieldX.activeFocus && !fieldY.activeFocus
             && !fieldW.activeFocus && !fieldH.activeFocus
         onActivated: canvas.deleteWidget(canvas.selectedWidgetId)
@@ -423,6 +424,78 @@ Window {
                                 // 0/未指定は既定 14 を表示（HmiButton の resolvedFontSize と整合）。
                                 inspectorFontSizeSpin.value = (it && it.widgetFontSize > 0)
                                     ? it.widgetFontSize : 14
+                            }
+                        }
+                    }
+
+                    // Task 33: フォント詳細（太字 / 斜体 / フォント）。bool は CheckBox、
+                    // フォントは ComboBox（hex TextField・SpinBox に続く新インスペクタ UI 型）。
+                    // 編集は T26 以降と同じ 2 本立て：ユーザー操作（CheckBox.toggled /
+                    // ComboBox.activated）でのみ live Item へ書き戻し（プログラム代入では
+                    // 発火しないので書き戻しループを起こさない）、Connections.onSelectedItemChanged
+                    // で選択切替時に表示値を更新する。
+                    CheckBox {
+                        id: inspectorFontBoldCheck
+                        objectName: "inspectorFontBoldCheck"
+                        text: qsTr("太字")
+                        onToggled: {
+                            if (canvas.selectedItem) {
+                                canvas.selectedItem.widgetFontBold = checked
+                            }
+                        }
+                        Connections {
+                            target: canvas
+                            function onSelectedItemChanged() {
+                                inspectorFontBoldCheck.checked = canvas.selectedItem
+                                    ? canvas.selectedItem.widgetFontBold : false
+                            }
+                        }
+                    }
+
+                    CheckBox {
+                        id: inspectorFontItalicCheck
+                        objectName: "inspectorFontItalicCheck"
+                        text: qsTr("斜体")
+                        onToggled: {
+                            if (canvas.selectedItem) {
+                                canvas.selectedItem.widgetFontItalic = checked
+                            }
+                        }
+                        Connections {
+                            target: canvas
+                            function onSelectedItemChanged() {
+                                inspectorFontItalicCheck.checked = canvas.selectedItem
+                                    ? canvas.selectedItem.widgetFontItalic : false
+                            }
+                        }
+                    }
+
+                    // フォント family は ComboBox。model 先頭に「(既定フォント)」を置き、
+                    // index 0 = 未指定（空文字 = システム既定）にマップする。残りは
+                    // Qt.fontFamilies()（生成時に一度評価）。読込 JSON の family が
+                    // システムに無い（model に無い）場合は表示だけ index 0 に落とし、
+                    // live Item の値は上書きしない（ユーザーが選び直すまで保持する）。
+                    Label { text: qsTr("フォント") }
+                    ComboBox {
+                        id: inspectorFontFamilyCombo
+                        objectName: "inspectorFontFamilyCombo"
+                        width: parent.width
+                        model: ["(既定フォント)"].concat(Qt.fontFamilies())
+                        // index 0（既定フォント）は空文字 = 未指定として書き戻す。
+                        onActivated: {
+                            if (canvas.selectedItem) {
+                                canvas.selectedItem.widgetFontFamily =
+                                    (currentIndex === 0 ? "" : currentText)
+                            }
+                        }
+                        Connections {
+                            target: canvas
+                            function onSelectedItemChanged() {
+                                const it = canvas.selectedItem
+                                const fam = it ? it.widgetFontFamily : ""
+                                const idx = fam
+                                    ? inspectorFontFamilyCombo.model.indexOf(fam) : 0
+                                inspectorFontFamilyCombo.currentIndex = idx >= 0 ? idx : 0
                             }
                         }
                     }

@@ -275,6 +275,35 @@ TestCase {
         compare(entry.radius, 12);
     }
 
+    // Task 33: 選択中 live Item のフォント詳細メタ（太字 / 斜体 / フォント）を直接更新でき、
+    // snapshotModel（保存経路）にも乗ること。bool は false 自体が「指定なし」と一致するため
+    // 片側（bold=true / italic=false）でも正しくスナップショットされることを固定する。
+    function test_font_props_are_writable_on_live_item() {
+        canvas.selectedWidgetId = "btn001";
+        tryVerify(function() {
+            return canvas.selectedItem !== null
+                && canvas.selectedItem.widgetId === "btn001";
+        }, 1000, "btn001 が選択 Item にならない");
+
+        canvas.selectedItem.widgetFontBold = true;
+        canvas.selectedItem.widgetFontItalic = false;
+        canvas.selectedItem.widgetFontFamily = "Courier New";
+
+        compare(canvas.selectedItem.widgetFontBold, true);
+        compare(canvas.selectedItem.widgetFontItalic, false);
+        compare(canvas.selectedItem.widgetFontFamily, "Courier New");
+
+        const snap = canvas.snapshotModel();
+        let entry = null;
+        for (let i = 0; i < snap.length; ++i) {
+            if (snap[i].id === "btn001") { entry = snap[i]; break; }
+        }
+        verify(entry !== null, "snapshotModel に btn001 が無い");
+        compare(entry.fontBold, true);
+        compare(entry.fontItalic, false);
+        compare(entry.fontFamily, "Courier New");
+    }
+
     // Task 29: deleteWidget(id) は該当 id を除いて widgetModel を再代入し、
     // 選択中だった場合は選択を解除する（インスペクタ削除ボタン / Delete キーの
     // 呼び先）。他 widget は残ることも確認する（構造変更スナップショットの対称性）。

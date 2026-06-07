@@ -76,6 +76,11 @@ QVariantMap ProjectLoader::load(const QUrl &fileUrl)
         m.insert(QStringLiteral("borderColor"), w.borderColor);
         m.insert(QStringLiteral("borderWidth"), w.borderWidth);
         m.insert(QStringLiteral("radius"), w.radius);
+        // Task 33: フォント詳細も QML delegate へ届ける（Editor の ProjectIo.load と同形）。
+        // Simulator / Runtime は読み取り専用だが描画に新スタイルを渡す口は必要。
+        m.insert(QStringLiteral("fontBold"), w.fontBold);
+        m.insert(QStringLiteral("fontItalic"), w.fontItalic);
+        m.insert(QStringLiteral("fontFamily"), w.fontFamily);
         widgetsVar.append(m);
     }
 

@@ -354,7 +354,7 @@ flowchart LR
 
 | # | タスク | 状態 |
 |---|---|---|
-| 33 | フォント詳細（bold/italic/family）全レイヤ貫通 + インスペクタ（A） | ⬜ 未着手 |
+| 33 | フォント詳細（bold/italic/family）全レイヤ貫通 + インスペクタ（A） | ✅ 完了（PR #69。Schema→C++ ブリッジ→delegate→HmiButton→EditableWidget メタ→インスペクタ〔CheckBox ×2 + ComboBox〕貫通。bool は既定値差分で省略書き出し。**空 fontFamily は `Qt.application.font.family` にフォールバック**〔`font.family: ""` 直結は Qt/macOS で文字化けする〕。unit 8 + e2e 5 = 13/13 緑、Editor/Simulator スクショ） |
 | 34 | テキスト配置（hAlign/vAlign）+ 不透明度（opacity）全レイヤ貫通（A） | ⬜ 未着手 |
 | 35 | グリッドスナップ + スナップ ON/OFF トグル（Editor）（C） | ⬜ 未着手 |
 | 36 | 複数選択 + 一括移動・整列・削除（Editor）（C） | ⬜ 未着手 |

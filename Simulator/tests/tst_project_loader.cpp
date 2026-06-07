@@ -29,7 +29,10 @@ constexpr auto kValidProjectJson = R"({
           "fontSize": 22,
           "borderColor": "#112233",
           "borderWidth": 3,
-          "radius": 8
+          "radius": 8,
+          "fontBold": true,
+          "fontItalic": true,
+          "fontFamily": "Courier New"
         }
       ]
     }
@@ -97,6 +100,10 @@ void ProjectLoaderTest::loadsValidProject()
     QCOMPARE(w.value("borderColor").toString(), QStringLiteral("#112233"));
     QCOMPARE(w.value("borderWidth").toInt(), 3);
     QCOMPARE(w.value("radius").toInt(), 8);
+    // Task 33: フォント詳細も load を経て delegate へ届く。
+    QCOMPARE(w.value("fontBold").toBool(), true);
+    QCOMPARE(w.value("fontItalic").toBool(), true);
+    QCOMPARE(w.value("fontFamily").toString(), QStringLiteral("Courier New"));
 }
 
 // Task 31: borderWidth=0（ボーダーなし）/ radius=0（角丸なし）は正当値であり、

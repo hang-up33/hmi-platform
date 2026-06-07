@@ -34,6 +34,15 @@ struct WidgetData {
     int borderWidth = -1;
     int radius = -1;
 
+    // Task 33: フォント詳細（静的スタイル拡充の第 3 バンドル）。bool は
+    // **既定値（false）と異なる時だけ書き出す**：fontBold / fontItalic は既定 false
+    // なので true のときのみ toJson に書き、fromJson は欠落時 false で埋める。
+    // fontFamily は空文字 = 未指定（システム既定フォント）で、空のとき省略する。
+    // 既定外観（bold/italic なし・システム既定フォント）は HmiButton 側に集約する。
+    bool fontBold = false;
+    bool fontItalic = false;
+    QString fontFamily;
+
     QJsonObject toJson() const;
     static WidgetData fromJson(const QJsonObject &obj);
 

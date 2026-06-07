@@ -32,6 +32,21 @@ Rectangle {
     property int borderWidth: -1
     property int cornerRadius: -1
 
+    // Task 33: フォント詳細の入力。bold/italic は bool（既定 false = 太字/斜体なし）。
+    // fontFamily は空文字 = 未指定（システム既定フォント）。bool は false 自体が
+    // 「指定なし」と一致するため -1 のようなセンチネルは不要で素直に渡せる。
+    property bool fontBold: false
+    property bool fontItalic: false
+    property string fontFamily: ""
+
+    // Task 33: 未指定（空）のときの既定フォント。**空文字を font.family に直接束縛
+    // してはいけない**：Qt/macOS では空 family が記号フォント等へ化け、テキストが
+    // 文字化けした（実機確認。bold/italic 指定時はたまたま解決されたが既定時に破綻）。
+    // 既定はアプリの既定フォント（Qt.application.font.family）にフォールバックし、
+    // 既定外観の単一ソースとして他の resolved* と揃える。
+    readonly property string resolvedFontFamily: fontFamily !== "" ? fontFamily
+                                                                   : Qt.application.font.family
+
     // 未指定（空 / 0）のときの既定外観。プロジェクト全体でここだけが既定値を持つ。
     readonly property color resolvedBackgroundColor: backgroundColor !== "" ? backgroundColor : "#4cc9f0"
     readonly property color resolvedTextColor: textColor !== "" ? textColor : "white"
@@ -60,6 +75,11 @@ Rectangle {
         text: root.text
         color: root.resolvedTextColor
         font.pixelSize: root.resolvedFontSize
+        // Task 33: フォント詳細。bold/italic は bool をそのまま反映（既定 false）。
+        // family は空文字のときシステム既定フォントになる（未指定のフォールバック）。
+        font.bold: root.fontBold
+        font.italic: root.fontItalic
+        font.family: root.resolvedFontFamily
     }
 
     MouseArea {
