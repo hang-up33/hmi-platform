@@ -1,6 +1,6 @@
 # Phase 4: Button 縦スライス（Widget 追加テンプレの確立 / スタイル + ボーダー・角丸）
 
-> **このフェーズは旧 Phase 4（Task 25〜30）と旧 Phase 5（Task 31〜32）を 1 本に統合したもの**（2026-06-07）。どちらも「Button 1 つを全レイヤで深く作り込む縦スライス」で連続しているため、1 つの Button 縦スライスフェーズ（Task 25〜32）として扱う。旧 `Docs/phase5-button-style-plan.md` は本ファイルへ統合し削除した。以降のフェーズ（横展開 / 状態・アクション）は **Phase 5** に繰り上げ（下記「Phase 5 候補」）。
+> **このフェーズは旧 Phase 4（Task 25〜30）と旧 Phase 5（Task 31〜32）を 1 本に統合したもの**（2026-06-07）。どちらも「Button 1 つを全レイヤで深く作り込む縦スライス」で連続しているため、1 つの Button 縦スライスフェーズ（Task 25〜32）として扱う。旧 `Docs/phase5-button-style-plan.md` は本ファイルへ統合し削除した。**その後 2026-06-07 に、静的スタイルの続き・編集体験の強化・状態/アクションを「Phase 4 拡張（Task 33〜43）」として承認**（下記「Phase 4 拡張」）。**横展開（新 Widget 種別）だけが Phase 5 候補に残る**（下記「Phase 5 候補」）。
 
 Phase 3-B / Runtime（Task 22〜24）完了で **Editor→JSON→Simulator/Runtime→実機** のパイプラインが現物で通った。
 だが載っているのは **Button だけの MVP** で、しかも Editor から Button の `text` すら変更できない（追加時 "New" 固定 → あとはドラッグで位置のみ）。
@@ -26,28 +26,30 @@ flowchart LR
 
 ---
 
-## スコープ確定事項
+## スコープ確定事項（コア縦スライス Task 25〜32）
+
+> 下表は **コア縦スライス（Task 25〜32）** の確定スコープ。続く **Phase 4 拡張（Task 33〜43）** はこれを広げる（静的スタイル追加・編集体験・状態/アクション）。拡張で変わる点は本表のセル内に併記し、詳細は「Phase 4 拡張」セクションを正とする。
 
 | 項目 | 確定値 |
 |---|---|
-| 対象 Widget | **Button のみ**（縦スライス）。Label / Lamp / Gauge 等の横展開は Phase 5 候補 |
-| 深さ | **静的スタイル拡張まで**（`backgroundColor` / `textColor` / `fontSize` ＝Task 28、`borderColor` / `borderWidth` / `radius` ＝Task 31 を Schema に新設し全レイヤ描画）。状態/アクション（pressed/disabled/click action）は Phase 5 候補 |
-| 編集 UI 範囲 | 選択・インスペクタ（text/tag/座標/サイズ/スタイル〔色・フォント・ボーダー・角丸〕編集）・ハンドルリサイズ・削除 |
+| 対象 Widget | **Button のみ**（縦スライス）。Label / Lamp / Gauge 等の横展開は Phase 5 候補（拡張でも対象は Button のまま） |
+| 深さ | コアは **静的スタイル拡張まで**（`backgroundColor` / `textColor` / `fontSize` ＝Task 28、`borderColor` / `borderWidth` / `radius` ＝Task 31 を Schema に新設し全レイヤ描画）。**状態/アクション（pressed/disabled/click action）は Phase 4 拡張トラック B（T39〜43）** で追加（Widget 非依存設計） |
+| 編集 UI 範囲 | コアは 選択・インスペクタ（text/tag/座標/サイズ/スタイル〔色・フォント・ボーダー・角丸〕編集）・ハンドルリサイズ・削除。**拡張で フォント詳細/配置/opacity・複数選択/整列・コピペ・undo/redo・アクション/バインディング編集を追加** |
 | widgetModel 構造 | **`var` 配列を据え置き**（`QAbstractListModel` 化はしない）。下記「設計指針」参照 |
-| 改修対象アプリ | **Editor のみが編集 UI を持つ**。Simulator / Runtime は読み取り専用を維持（描画に新スタイルを渡す口だけ追加、ソース共有で Runtime は自動） |
-| 実機検証 | T30 で styled Button を含む JSON を `hmi_runtime` で実機描画・撮影 |
+| 改修対象アプリ | **Editor のみが編集 UI を持つ**。Simulator / Runtime は読み取り専用（描画に新スタイルを渡す口だけ追加、ソース共有で Runtime は自動）。**ただし Phase 4 拡張 T41 で Simulator / Runtime に「アクション実行」を追加**（選択・編集 UI は持ち込まず、実行のみ） |
+| 実機検証 | T30 で styled Button を実機描画・撮影。**T43 で変数/アクション付き JSON の実機動作も撮影** |
 
 ---
 
 ## 各アプリの役割（再確認）
 
-| アプリ | 動作環境 | Phase 4 での改修 |
-|---|---|---|
-| Editor | PC のみ | **選択・インスペクタ・リサイズ・削除・スタイル編集 UI を追加**（本フェーズの主戦場） |
-| Simulator | PC のみ | delegate に新スタイル（color/font）を HmiButton へ渡す口だけ追加。編集 UI は持たない |
-| Runtime | i.MX8MP（PC sanity 可） | **Simulator/ のソース共有のため改修ゼロ**（Simulator の変更が自動反映）。T30 で実機描画確認 |
+| アプリ | 動作環境 | コア縦スライス（T25〜32）の改修 | Phase 4 拡張（T33〜43）の追加 |
+|---|---|---|---|
+| Editor | PC のみ | **選択・インスペクタ・リサイズ・削除・スタイル編集 UI を追加**（本フェーズの主戦場） | フォント詳細/配置/opacity 編集、複数選択/整列、コピペ、undo/redo、アクション/バインディング編集 |
+| Simulator | PC のみ | delegate に新スタイル（color/font）を HmiButton へ渡す口だけ追加。編集 UI は持たない | スタイル追加分の受け渡し口。**T41 で「アクション実行」（変数ストア初期化・クリック→変数更新→バインディング解決）を追加**（編集 UI は持たない） |
+| Runtime | i.MX8MP（PC sanity 可） | **Simulator/ のソース共有のため改修ゼロ**（Simulator の変更が自動反映）。T30 で実機描画確認 | **改修ゼロ継続**（Simulator のアクション実行も自動反映）。T43 で実機動作確認 |
 
-新スタイルプロパティは **HmiButton（`Shared/Widgets`）＝唯一の真実**に公開し、Editor / Simulator 双方の delegate から渡す（片方取りこぼし防止）。
+新スタイルプロパティは **HmiButton（`Shared/Widgets`）＝唯一の真実**に公開し、Editor / Simulator 双方の delegate から渡す（片方取りこぼし防止）。状態/アクションの実行ロジックも同様に Simulator/Runtime 共有経路に置く。
 
 ---
 
@@ -176,13 +178,13 @@ Task 28 と同じ **4層 + インスペクタ + テスト** を 1 タスクで�
 - Widget の新プロパティを足す時は **`HmiButton` に公開 → JSON↔QML ブリッジ（`ProjectIo.cpp` の save/load・`ProjectLoader.cpp` の load の `QVariantMap` 変換）に追加 → Editor と Simulator 双方の delegate に渡す → Schema / ProjectIo / ProjectLoader のテストも同時更新**（このセットを 1 タスク内で揃える）。
 - Schema 新フィールドは **optional**（既定値省略書き出し、`isValidJson` 必須集合は据え置き）で後方互換を保つ。
 - **`0` が正当値の数値**は `-1` センチネルで optional 化し、`toJson`（`>= 0`）/ `fromJson`（`toInt(-1)`）/ C++ ブリッジ save（`m.value(key, -1).toInt()`）/ resolved（`< 0`）/ SpinBox（`from: 0`）の 5 箇所を揃える（Task 31）。
-- 編集 UI は **Editor のみ**。Simulator / Runtime は読み取り専用を維持し、描画に新スタイルを渡す口だけ足す。
+- **編集 UI（選択・インスペクタ・リサイズ・整列・コピペ・undo 等）は Editor のみ**。Simulator / Runtime に編集 UI を持ち込まない。スタイルは描画に渡す口だけ足す。**ただし Phase 4 拡張 T41 で Simulator / Runtime は「アクション実行」（クリック→変数更新→バインディング解決）を持つ**（実行は読み取り専用と両立。編集ではない）。
 - widgetModel は **編集中 live Item を真実とし、構造変更時のみ Items→配列スナップショット後に再代入**。選択は id で追跡。
 
 ### Must Never
 
 - 本スライスのスコープに **`QAbstractListModel` 化**を含める（据え置き継続。必要が出たら別タスク化してユーザーに相談）。
-- Simulator / Runtime に **選択・インスペクタ・編集系コード**を持ち込む（読み取り専用を崩さない）。
+- Simulator / Runtime に **選択・インスペクタ・編集系コード**を持ち込む（編集 UI は持たせない）。※Phase 4 拡張 T41 の **アクション実行**（クリック→変数更新→バインディング解決）は編集ではなく「実行」なので可。編集（配置変更・プロパティ書き換え UI）だけを禁ずる。
 - Schema 新フィールドを **`isValidJson` の必須**にする（旧 JSON 後方互換を壊す）。
 - **新規ライブラリ / フレームワーク**を追加する（`QtQuick.Controls` / `QtQuick.Dialogs` の既存 import で完結させる）。
 - Editor の編集系ソースを **Simulator / Runtime に共有**する（既存原則。Editor は別系統）。
