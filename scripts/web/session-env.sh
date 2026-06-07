@@ -14,8 +14,10 @@ QT_PREFIX="$(ls -d /opt/Qt/*/gcc_64 2>/dev/null | sort -V | tail -1 || true)"
 [ -z "${QT_PREFIX}" ] && exit 0
 [ ! -d "${QT_PREFIX}/lib/cmake/Qt6" ] && exit 0
 
-# $CLAUDE_ENV_FILE があれば、そこへ書くと後続の Bash コマンドに環境変数が引き継がれる
+# $CLAUDE_ENV_FILE には "export KEY=value" 形式で書く（公式 hooks docs 準拠）。
+# 単なる "KEY=value" だと後続シェルの変数にはなっても export されず、子プロセスの
+# cmake に環境変数として渡らない（Codex PR #70 指摘 P1）。
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
-  echo "CMAKE_PREFIX_PATH=${QT_PREFIX}" >> "${CLAUDE_ENV_FILE}"
+  echo "export CMAKE_PREFIX_PATH=${QT_PREFIX}" >> "${CLAUDE_ENV_FILE}"
   echo "[hmi/web] CMAKE_PREFIX_PATH=${QT_PREFIX} を設定しました"
 fi
