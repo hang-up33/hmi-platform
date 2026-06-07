@@ -4,7 +4,7 @@
     "SessionStart": [
       {
         "hooks": [
-          { "type": "command", "command": "bash scripts/web/session-env.sh" }
+          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/scripts/web/session-env.sh\"" }
         ]
       }
     ]
