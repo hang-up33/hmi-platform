@@ -23,7 +23,10 @@ QVariantMap makeWidgetVariant(const QString &id,
                               int fontSize = 0,
                               const QString &borderColor = QString(),
                               int borderWidth = -1,
-                              int radius = -1)
+                              int radius = -1,
+                              bool fontBold = false,
+                              bool fontItalic = false,
+                              const QString &fontFamily = QString())
 {
     QVariantMap m;
     m.insert("id", id);
@@ -42,6 +45,10 @@ QVariantMap makeWidgetVariant(const QString &id,
     m.insert("borderColor", borderColor);
     m.insert("borderWidth", borderWidth);
     m.insert("radius", radius);
+    // Task 33: フォント詳細も QML（QVariantMap）→ save → load を往復する。
+    m.insert("fontBold", fontBold);
+    m.insert("fontItalic", fontItalic);
+    m.insert("fontFamily", fontFamily);
     return m;
 }
 
@@ -75,7 +82,8 @@ void ProjectIoTest::saveThenLoadRoundTrip()
 
     QVariantList widgets;
     widgets.append(makeWidgetVariant("btn001", 10, 20, 120, 40, "Start", "PLC.START",
-                                     "#ff0000", "#00ff00", 22, "#112233", 3, 8));
+                                     "#ff0000", "#00ff00", 22, "#112233", 3, 8,
+                                     true, true, "Courier New"));
     widgets.append(makeWidgetVariant("btn002", 50, 80, 100, 30));
 
     ProjectIo io;
@@ -107,6 +115,10 @@ void ProjectIoTest::saveThenLoadRoundTrip()
     QCOMPARE(w0.value("borderColor").toString(), QStringLiteral("#112233"));
     QCOMPARE(w0.value("borderWidth").toInt(), 3);
     QCOMPARE(w0.value("radius").toInt(), 8);
+    // Task 33: フォント詳細も往復する。
+    QCOMPARE(w0.value("fontBold").toBool(), true);
+    QCOMPARE(w0.value("fontItalic").toBool(), true);
+    QCOMPARE(w0.value("fontFamily").toString(), QStringLiteral("Courier New"));
 
     const QVariantMap w1 = loaded.at(1).toMap();
     QCOMPARE(w1.value("id").toString(), QStringLiteral("btn002"));
@@ -120,6 +132,10 @@ void ProjectIoTest::saveThenLoadRoundTrip()
     QVERIFY(w1.value("borderColor").toString().isEmpty());
     QCOMPARE(w1.value("borderWidth").toInt(), -1);
     QCOMPARE(w1.value("radius").toInt(), -1);
+    // Task 33: 未指定のフォント詳細は false / 空で戻る（toJson 省略 → fromJson 既定埋め）。
+    QCOMPARE(w1.value("fontBold").toBool(), false);
+    QCOMPARE(w1.value("fontItalic").toBool(), false);
+    QVERIFY(w1.value("fontFamily").toString().isEmpty());
 }
 
 // Task 31: borderWidth=0（ボーダーなし）/ radius=0（角丸なし）が C++ ブリッジ

@@ -70,6 +70,11 @@ Item {
                     borderColor: wrapper.modelData.borderColor !== undefined ? wrapper.modelData.borderColor : ""
                     borderWidth: wrapper.modelData.borderWidth !== undefined ? wrapper.modelData.borderWidth : -1
                     cornerRadius: wrapper.modelData.radius !== undefined ? wrapper.modelData.radius : -1
+                    // Task 33: フォント詳細も HmiButton へ渡す（Editor delegate と対）。
+                    // 未指定（false / 空文字）は HmiButton 側で既定（太字/斜体なし・既定フォント）になる。
+                    fontBold: wrapper.modelData.fontBold !== undefined ? wrapper.modelData.fontBold : false
+                    fontItalic: wrapper.modelData.fontItalic !== undefined ? wrapper.modelData.fontItalic : false
+                    fontFamily: wrapper.modelData.fontFamily !== undefined ? wrapper.modelData.fontFamily : ""
                 }
             }
         }

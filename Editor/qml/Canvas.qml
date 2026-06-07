@@ -94,7 +94,11 @@ Item {
                 // Task 31: ボーダー＋角丸も live Item から取り込む（-1 = 未指定）。
                 borderColor: item.widgetBorderColor,
                 borderWidth: item.widgetBorderWidth,
-                radius: item.widgetRadius
+                radius: item.widgetRadius,
+                // Task 33: フォント詳細も live Item から取り込む（bool / 空文字 = 未指定）。
+                fontBold: item.widgetFontBold,
+                fontItalic: item.widgetFontItalic,
+                fontFamily: item.widgetFontFamily
             })
         }
         return result
@@ -211,6 +215,10 @@ Item {
                     widgetBorderColor: modelData.borderColor !== undefined ? modelData.borderColor : ""
                     widgetBorderWidth: modelData.borderWidth !== undefined ? modelData.borderWidth : -1
                     widgetRadius: modelData.radius !== undefined ? modelData.radius : -1
+                    // Task 33: フォント詳細を流す（未指定は false / 空文字）。
+                    widgetFontBold: modelData.fontBold !== undefined ? modelData.fontBold : false
+                    widgetFontItalic: modelData.fontItalic !== undefined ? modelData.fontItalic : false
+                    widgetFontFamily: modelData.fontFamily !== undefined ? modelData.fontFamily : ""
                     // Task 18: Spix から `widget_<id>` で参照できるようにする。
                     objectName: "widget_" + widgetId
                     x: modelData.x !== undefined ? modelData.x : 0
@@ -246,6 +254,10 @@ Item {
                         borderColor: wrapper.widgetBorderColor
                         borderWidth: wrapper.widgetBorderWidth
                         cornerRadius: wrapper.widgetRadius
+                        // Task 33: フォント詳細を HmiButton へ渡す（空 / false は既定にフォールバック）。
+                        fontBold: wrapper.widgetFontBold
+                        fontItalic: wrapper.widgetFontItalic
+                        fontFamily: wrapper.widgetFontFamily
                         // Task 25: ドラッグ用の親 MouseArea は drag.filterChildren 下で
                         // クリックを発火しない（子が消費する）。よってクリック検出は
                         // HmiButton 側の clicked を中継して選択要求に使う。

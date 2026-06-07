@@ -52,6 +52,11 @@ bool ProjectIo::save(const QUrl &fileUrl,
         w.borderColor = m.value(QStringLiteral("borderColor")).toString();
         w.borderWidth = m.value(QStringLiteral("borderWidth"), -1).toInt();
         w.radius = m.value(QStringLiteral("radius"), -1).toInt();
+        // Task 33: フォント詳細も QVariantMap → WidgetData へ手動コピーする。
+        // bool は既定 false なのでキー欠落時も false（QVariant::toBool() の既定）。
+        w.fontBold = m.value(QStringLiteral("fontBold")).toBool();
+        w.fontItalic = m.value(QStringLiteral("fontItalic")).toBool();
+        w.fontFamily = m.value(QStringLiteral("fontFamily")).toString();
         screen.widgets.append(w);
     }
 
@@ -138,6 +143,10 @@ QVariantMap ProjectIo::load(const QUrl &fileUrl)
         m.insert(QStringLiteral("borderColor"), w.borderColor);
         m.insert(QStringLiteral("borderWidth"), w.borderWidth);
         m.insert(QStringLiteral("radius"), w.radius);
+        // Task 33: フォント詳細も QML delegate へ届ける（delegate が HmiButton へ渡す）。
+        m.insert(QStringLiteral("fontBold"), w.fontBold);
+        m.insert(QStringLiteral("fontItalic"), w.fontItalic);
+        m.insert(QStringLiteral("fontFamily"), w.fontFamily);
         widgetsVar.append(m);
     }
 

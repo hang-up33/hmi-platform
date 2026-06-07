@@ -243,7 +243,7 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 
 | # | タスク | 状態 |
 |---|---|---|
-| 33 | フォント詳細（bold/italic/family）全レイヤ貫通 + インスペクタ（A） | ⬜ 未着手 |
+| 33 | フォント詳細（bold/italic/family）全レイヤ貫通 + インスペクタ（A） | ✅ 完了（bool は既定値差分で省略書き出し・新インスペクタ UI〔CheckBox / ComboBox〕・空 family は `Qt.application.font.family` にフォールバック〔空文字直結は文字化けするため〕） |
 | 34 | テキスト配置（hAlign/vAlign）+ 不透明度（opacity）全レイヤ貫通（A） | ⬜ 未着手 |
 | 35 | グリッドスナップ + スナップ ON/OFF トグル（Editor）（C） | ⬜ 未着手 |
 | 36 | 複数選択 + 一括移動・整列・削除（Editor）（C） | ⬜ 未着手 |

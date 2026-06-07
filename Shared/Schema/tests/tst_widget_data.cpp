@@ -33,6 +33,8 @@ private slots:
     void roundTripOmitsDefaultStyleFields();
     void roundTripOmitsUnspecifiedBorderRadius();
     void zeroBorderWidthAndRadiusAreWrittenNotOmitted();
+    void roundTripOmitsDefaultFontDetails();
+    void trueFontFlagsAreWrittenFalseAreOmitted();
     void fromJsonFillsDefaultsForMissingKeys();
 
     void isValidJsonAcceptsMinimumRequiredFields();
@@ -59,6 +61,9 @@ void WidgetDataTest::roundTripFullFields()
     src.borderColor = "#112233";
     src.borderWidth = 3;
     src.radius = 8;
+    src.fontBold = true;
+    src.fontItalic = true;
+    src.fontFamily = "Courier New";
 
     const QJsonObject obj = src.toJson();
     const WidgetData restored = WidgetData::fromJson(obj);
@@ -77,6 +82,9 @@ void WidgetDataTest::roundTripFullFields()
     QCOMPARE(restored.borderColor, src.borderColor);
     QCOMPARE(restored.borderWidth, src.borderWidth);
     QCOMPARE(restored.radius, src.radius);
+    QCOMPARE(restored.fontBold, src.fontBold);
+    QCOMPARE(restored.fontItalic, src.fontItalic);
+    QCOMPARE(restored.fontFamily, src.fontFamily);
 }
 
 // Task 31: ボーダー＋角丸は未指定（色は空、数値は -1 センチネル）のとき toJson で
@@ -126,6 +134,53 @@ void WidgetDataTest::zeroBorderWidthAndRadiusAreWrittenNotOmitted()
     const WidgetData restored = WidgetData::fromJson(obj);
     QCOMPARE(restored.borderWidth, 0);
     QCOMPARE(restored.radius, 0);
+}
+
+// Task 33: フォント詳細は既定値（bold/italic=false、family=空 = 未指定）のとき
+// toJson で省略され、旧 JSON と後方互換になることを固定する（Task 28/31 の省略テストと対）。
+void WidgetDataTest::roundTripOmitsDefaultFontDetails()
+{
+    WidgetData src;
+    src.id = "btn006";
+    src.type = "Button";
+    src.width = 120;
+    src.height = 40;
+    // fontBold / fontItalic は既定 false、fontFamily は既定の空（未指定）。
+
+    const QJsonObject obj = src.toJson();
+
+    QVERIFY(!obj.contains("fontBold"));
+    QVERIFY(!obj.contains("fontItalic"));
+    QVERIFY(!obj.contains("fontFamily"));
+
+    const WidgetData restored = WidgetData::fromJson(obj);
+    QCOMPARE(restored.fontBold, false);
+    QCOMPARE(restored.fontItalic, false);
+    QVERIFY(restored.fontFamily.isEmpty());
+}
+
+// Task 33 の新規ポイント：bool は **既定値（false）と異なる時だけ書き出す**。
+// true は書き、false は省略する。fontBold=true / fontItalic=false の片側ケースで
+// 「true だけ書かれ false は省略され、読み戻しても保たれる」ことを固定する。
+void WidgetDataTest::trueFontFlagsAreWrittenFalseAreOmitted()
+{
+    WidgetData src;
+    src.id = "btn007";
+    src.type = "Button";
+    src.width = 120;
+    src.height = 40;
+    src.fontBold = true;     // 書かれる
+    src.fontItalic = false;  // 省略される
+
+    const QJsonObject obj = src.toJson();
+
+    QVERIFY(obj.contains("fontBold"));
+    QCOMPARE(obj.value("fontBold").toBool(), true);
+    QVERIFY(!obj.contains("fontItalic"));
+
+    const WidgetData restored = WidgetData::fromJson(obj);
+    QCOMPARE(restored.fontBold, true);
+    QCOMPARE(restored.fontItalic, false);
 }
 
 // Task 28: スタイル属性は既定値（空 / 0 = 未指定）のとき toJson で省略され、
@@ -194,6 +249,10 @@ void WidgetDataTest::fromJsonFillsDefaultsForMissingKeys()
     QVERIFY(w.borderColor.isEmpty());
     QCOMPARE(w.borderWidth, -1);
     QCOMPARE(w.radius, -1);
+    // Task 33: bool は欠落時 false、fontFamily は欠落時 空文字（= 未指定）。
+    QCOMPARE(w.fontBold, false);
+    QCOMPARE(w.fontItalic, false);
+    QVERIFY(w.fontFamily.isEmpty());
 }
 
 void WidgetDataTest::isValidJsonAcceptsMinimumRequiredFields()

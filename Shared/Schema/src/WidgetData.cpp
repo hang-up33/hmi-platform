@@ -40,6 +40,19 @@ QJsonObject WidgetData::toJson() const
     if (radius >= 0) {
         obj["radius"] = radius;
     }
+    // Task 33: フォント詳細。bool は **既定値（false）と異なる時だけ書く**（true のみ書き、
+    // false は省略）。一律 true 書き出しでも本フィールドは既定 false なので等価だが、
+    // 既定 true のフラグ（後続 Task の enabled 等）と規則を揃えるためこの形にする。
+    // fontFamily は空（= 未指定）のとき省略し、旧 JSON と後方互換を保つ。
+    if (fontBold) {
+        obj["fontBold"] = fontBold;
+    }
+    if (fontItalic) {
+        obj["fontItalic"] = fontItalic;
+    }
+    if (!fontFamily.isEmpty()) {
+        obj["fontFamily"] = fontFamily;
+    }
     return obj;
 }
 
@@ -64,6 +77,10 @@ WidgetData WidgetData::fromJson(const QJsonObject &obj)
     w.borderColor = obj.value("borderColor").toString();
     w.borderWidth = obj.value("borderWidth").toInt(-1);
     w.radius = obj.value("radius").toInt(-1);
+    // Task 33: bool は欠落時 false（toBool() の既定）。fontFamily は欠落時 空文字（= 未指定）。
+    w.fontBold = obj.value("fontBold").toBool();
+    w.fontItalic = obj.value("fontItalic").toBool();
+    w.fontFamily = obj.value("fontFamily").toString();
     return w;
 }
 

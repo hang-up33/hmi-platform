@@ -45,6 +45,13 @@ Item {
     property int widgetBorderWidth: -1
     property int widgetRadius: -1
 
+    // Task 33: フォント詳細のメタ。bool は既定 false（太字/斜体なし）、fontFamily は
+    // 空文字 = 未指定（システム既定）。既定外観は HmiButton 側に集約し、ここでは
+    // 値を素通しするだけ。delegate（Canvas.qml）で HmiButton へ渡す。
+    property bool widgetFontBold: false
+    property bool widgetFontItalic: false
+    property string widgetFontFamily: ""
+
     // Task 27: リサイズ時の最小サイズ。ハンドルドラッグ / 数値編集での縮小は
     // これ未満にならないよう clamp する（潰れて選択・操作不能になるのを防ぐ）。
     property real minWidth: 30
