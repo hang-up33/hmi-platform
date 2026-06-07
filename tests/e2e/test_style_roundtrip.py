@@ -1,12 +1,21 @@
-"""Phase 4 Task 30: スタイルの「データ経路 → Simulator 描画」cross-app E2E。
+"""Phase 4 Task 30 / Phase 5 Task 32: スタイルの「データ経路 → Simulator 描画」cross-app E2E。
 
 検証スコープ（Codex PR #60 指摘を受け **直接メタ更新の検証に限定**して明記）：
 Editor で ``widget_btn001`` を **選択** → 選択中 Widget の**スタイルメタ**
 （``widgetText`` / ``widgetBackgroundColor`` / ``widgetTextColor`` ＝インスペクタの
-``onTextEdited`` が書き戻すのと**同一プロパティ経路**）を更新 → ``saveTo`` で JSON 保存
-→ 保存 JSON にスタイルが乗っていることを Python で直接 assert → 同 JSON を Simulator に
-``--open`` で読み込ませ、HmiButton（``objectName: "hmiButton"``）にスタイルが反映されて
-描画されることを ``getStringProperty`` で確認する。Task 19/20 の座標 round-trip のスタイル版。
+``onTextEdited`` が書き戻すのと**同一プロパティ経路**。**Task 32 で border 系
+``widgetBorderColor`` / ``widgetBorderWidth`` / ``widgetRadius`` も追加**）を更新 →
+``saveTo`` で JSON 保存 → 保存 JSON にスタイルが乗っていることを Python で直接 assert
+→ 同 JSON を Simulator に ``--open`` で読み込ませ、HmiButton（``objectName: "hmiButton"``）
+にスタイルが反映されて描画されることを ``getStringProperty`` で確認する。
+Task 19/20 の座標 round-trip のスタイル版。
+
+**Task 32 の数値プロパティ留意点**：``borderWidth`` / ``radius`` は数値だが Spix の
+``getStringProperty`` は値を文字列化して返すため、座標 E2E（test_place_and_drag）と同じ
+``int(float(...))`` パーサ（``_get_int_property``）で読む。Simulator 側は JSON キー
+``radius`` を HmiButton 入力名 ``cornerRadius`` にマップして描画するので、Simulator では
+``cornerRadius`` を読む。border 色は **既定フォールバック値（``#1d3557``）と区別できる別値**
+を使い、「伝播失敗 → resolved 既定へフォールバック」を取り違えないようにする。
 
 **本 E2E が検証しないもの（重要）**：インスペクタの ``TextField`` UI そのもの
 （``inspectorBgColorField`` 等の ``onTextEdited`` 書き戻しや objectName）は**駆動しない**。
@@ -48,6 +57,12 @@ _SIM_WIN = "hmiSimulatorWindow"
 _NEW_TEXT = "RUN"
 _NEW_BG = "#e63946"
 _NEW_FG = "#ffffff"
+# Task 32: border / 角丸。border 色は HmiButton の resolved 既定値 "#1d3557" と
+# あえて別値にし、伝播失敗時のフォールバックと取り違えないようにする。
+# borderWidth=3（既定 1 と別）/ radius=8（既定 4 と別）も非既定で round-trip させる。
+_NEW_BORDER_COLOR = "#2a9d8f"
+_NEW_BORDER_WIDTH = 3
+_NEW_RADIUS = 8
 
 
 def _get_str_property(url: str, path: str, prop: str) -> str:
@@ -64,6 +79,22 @@ def _get_str_property(url: str, path: str, prop: str) -> str:
             f"Failed to extract {prop} from {path}. Response head: {body[:300]!r}"
         )
     return m.group(1).strip()
+
+
+def _get_int_property(url: str, path: str, prop: str) -> int:
+    """数値プロパティ（borderWidth / cornerRadius 等）を取得する。
+
+    ``getStringProperty`` は数値も文字列化して返す（``"3"`` や ``"3.0"`` の双方が
+    ありうる）ため、座標 E2E（test_place_and_drag / test_save_load_roundtrip）と同じ
+    ``int(float(...))`` で正規化する。
+    """
+    raw = _get_str_property(url, path, prop)
+    try:
+        return int(float(raw))
+    except ValueError as exc:
+        raise RuntimeError(
+            f"Failed to parse int {prop} from {path}: got {raw!r}"
+        ) from exc
 
 
 def _exists_and_visible(url: str, path: str) -> bool:
@@ -103,6 +134,11 @@ def _phase1_editor_edit_style_and_save(editor_binary: str, port: int, save_path:
         call_method(url, "setStringProperty", f"{_EDITOR_WIN}/widget_btn001", "widgetText", _NEW_TEXT)
         call_method(url, "setStringProperty", f"{_EDITOR_WIN}/widget_btn001", "widgetBackgroundColor", _NEW_BG)
         call_method(url, "setStringProperty", f"{_EDITOR_WIN}/widget_btn001", "widgetTextColor", _NEW_FG)
+        # Task 32: border / 角丸メタも同じ経路で書き戻す。数値は setStringProperty に
+        # 文字列で渡す（座標 E2E と同様、Spix が QVariant 変換する）。
+        call_method(url, "setStringProperty", f"{_EDITOR_WIN}/widget_btn001", "widgetBorderColor", _NEW_BORDER_COLOR)
+        call_method(url, "setStringProperty", f"{_EDITOR_WIN}/widget_btn001", "widgetBorderWidth", str(_NEW_BORDER_WIDTH))
+        call_method(url, "setStringProperty", f"{_EDITOR_WIN}/widget_btn001", "widgetRadius", str(_NEW_RADIUS))
         call_method(url, "wait", 100)
 
         if not _invoke_save_to(url, save_path):
@@ -131,6 +167,13 @@ def _assert_saved_json_has_style(save_path: str) -> None:
         problems.append(f"backgroundColor={btn.get('backgroundColor')!r} != {_NEW_BG!r}")
     if btn.get("textColor") != _NEW_FG:
         problems.append(f"textColor={btn.get('textColor')!r} != {_NEW_FG!r}")
+    # Task 32: border / 角丸。JSON キーは borderColor / borderWidth / radius。
+    if btn.get("borderColor") != _NEW_BORDER_COLOR:
+        problems.append(f"borderColor={btn.get('borderColor')!r} != {_NEW_BORDER_COLOR!r}")
+    if btn.get("borderWidth") != _NEW_BORDER_WIDTH:
+        problems.append(f"borderWidth={btn.get('borderWidth')!r} != {_NEW_BORDER_WIDTH!r}")
+    if btn.get("radius") != _NEW_RADIUS:
+        problems.append(f"radius={btn.get('radius')!r} != {_NEW_RADIUS!r}")
     if problems:
         raise RuntimeError("saved JSON style mismatch: " + "; ".join(problems))
 
@@ -148,6 +191,11 @@ def _phase2_simulator_renders_style(simulator_binary: str, port: int, save_path:
         text = _get_str_property(url, button, "text")
         bg = _get_str_property(url, button, "backgroundColor")
         fg = _get_str_property(url, button, "textColor")
+        # Task 32: HmiButton の入力プロパティを読む。borderColor / borderWidth は同名、
+        # 角丸は JSON キー radius → HmiButton 入力名 cornerRadius にマップされる。
+        border_color = _get_str_property(url, button, "borderColor")
+        border_width = _get_int_property(url, button, "borderWidth")
+        corner_radius = _get_int_property(url, button, "cornerRadius")
         problems = []
         if text != _NEW_TEXT:
             problems.append(f"text={text!r} != {_NEW_TEXT!r}")
@@ -155,6 +203,12 @@ def _phase2_simulator_renders_style(simulator_binary: str, port: int, save_path:
             problems.append(f"backgroundColor={bg!r} != {_NEW_BG!r}")
         if fg != _NEW_FG:
             problems.append(f"textColor={fg!r} != {_NEW_FG!r}")
+        if border_color != _NEW_BORDER_COLOR:
+            problems.append(f"borderColor={border_color!r} != {_NEW_BORDER_COLOR!r}")
+        if border_width != _NEW_BORDER_WIDTH:
+            problems.append(f"borderWidth={border_width!r} != {_NEW_BORDER_WIDTH!r}")
+        if corner_radius != _NEW_RADIUS:
+            problems.append(f"cornerRadius={corner_radius!r} != {_NEW_RADIUS!r}")
         if problems:
             raise RuntimeError("simulator HmiButton style mismatch: " + "; ".join(problems))
 
@@ -193,7 +247,9 @@ def main() -> int:
 
     print(
         "OK: editor style edit -> saved JSON -> simulator rendered "
-        f"text={_NEW_TEXT!r} backgroundColor={_NEW_BG!r} textColor={_NEW_FG!r}"
+        f"text={_NEW_TEXT!r} backgroundColor={_NEW_BG!r} textColor={_NEW_FG!r} "
+        f"borderColor={_NEW_BORDER_COLOR!r} borderWidth={_NEW_BORDER_WIDTH!r} "
+        f"radius={_NEW_RADIUS!r}"
     )
     return 0
 

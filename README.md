@@ -8,11 +8,11 @@ Yocto / i.MX8M Plus 向け Qt6 HMI ランタイムを対象に、HMI 作画ツ�
 
 ![HMI Editor](Docs/screenshots/editor.png)
 
-Editor の現状画面。`追加` / `開く` / `保存` で Widget 配置と JSON 入出力を行い、右側インスペクタで選択中 Widget の **text / tag / 座標・サイズ / スタイル（背景色・文字色・文字サイズ）を編集・削除**できる（Phase 4 / Task 25〜29）。
+Editor の現状画面。`追加` / `開く` / `保存` で Widget 配置と JSON 入出力を行い、右側インスペクタで選択中 Widget の **text / tag / 座標・サイズ / スタイル（背景色・文字色・文字サイズ・ボーダー色 / 幅・角丸）を編集・削除**できる（Phase 4 / Task 25〜29 + Phase 5 / Task 31）。`Rounded`（角丸＋赤ボーダー）/ `Square`（ボーダーのみ）/ `No Border`（ボーダーなし）/ `Default`（スタイル未指定）が border / radius の効きを示す。
 
 ![HMI Simulator](Docs/screenshots/simulator.png)
 
-Simulator（読み取り専用）で同じ JSON を描画した様子。Editor で付けた **背景色 / 文字色 / 文字サイズ** がそのまま反映される（最下段 `Default` はスタイル未指定で HmiButton の既定外観にフォールバック）。Runtime はこの Simulator のソースを共有する。
+Simulator（読み取り専用）で同じ JSON を描画した様子。Editor で付けた **背景色 / 文字色 / 文字サイズ / ボーダー色 / 幅 / 角丸** がそのまま反映される（最下段 `Default` はスタイル未指定で HmiButton の既定外観にフォールバック）。Runtime はこの Simulator のソースを共有する。
 
 ![hmi_runtime on i.MX8MP](Docs/screenshots/task-24-runtime-imx.jpg)
 
@@ -164,7 +164,7 @@ Explorer からダブルクリックで起動したい（「Qt の DLL が見つ
 
 ## フェーズ進捗
 
-Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入、**Phase 3-B / Runtime（Task 22〜24）まで全タスク完了**。新 BSP（scarthgap）で Qt6 入り実機 image と Qt6 クロス SDK を生成し、`hmi_runtime` を aarch64 にクロスビルド → **i.MX8MP 実機（weston / Wayland）で Editor 由来の JSON を描画**することを実機で確認済み。**Phase 4 / Button 縦スライス（Task 25〜30）も完了** — Widget 種別を横に増やす前に Button 1 つを全レイヤで深く作り込み「Widget 追加テンプレ」を確立した（選択・インスペクタ・リサイズ・削除・スタイル属性の Schema 拡張）。Task 30 の macOS `ctest -L e2e`（`e2e_style_roundtrip` 含む 5/5 緑）も確認済み。
+Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入、**Phase 3-B / Runtime（Task 22〜24）まで全タスク完了**。新 BSP（scarthgap）で Qt6 入り実機 image と Qt6 クロス SDK を生成し、`hmi_runtime` を aarch64 にクロスビルド → **i.MX8MP 実機（weston / Wayland）で Editor 由来の JSON を描画**することを実機で確認済み。**Phase 4 / Button 縦スライス（Task 25〜30）も完了** — Widget 種別を横に増やす前に Button 1 つを全レイヤで深く作り込み「Widget 追加テンプレ」を確立した（選択・インスペクタ・リサイズ・削除・スタイル属性の Schema 拡張）。Task 30 の macOS `ctest -L e2e`（`e2e_style_roundtrip` 含む 5/5 緑）も確認済み。**Phase 5 / Button 静的スタイル拡充（ボーダー＋角丸：`borderColor` / `borderWidth` / `radius`、Task 31〜32）も完了** — Phase 4 の「プロパティ追加テンプレ」を再実行し、`0` が正当値の数値プロパティを `-1` センチネルで optional 化、E2E に border / radius round-trip を追加して macOS `ctest`（unit 8 + e2e 5 = 13/13）緑を確認した。
 
 > 各タスクで何をしたか・どの PR で入ったか・何を学んだかの **時系列まとめ** は [Docs/development-history.md](Docs/development-history.md) を参照。第三者への説明用。
 >
@@ -242,7 +242,7 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 | # | タスク | 状態 |
 |---|---|---|
 | 31 | ボーダー＋角丸を全レイヤ貫通（Schema + HmiButton + Simulator/Runtime + インスペクタ）★ | ✅ 完了（Schema/ブリッジ/delegate/HmiButton/インスペクタ + unit テスト緑〔`0`=ボーダーなし／`-1`=未指定の境界含む〕+ Editor/Simulator スクショ） |
-| 32 | E2E 拡充 + 実機 styled 描画更新（全環境） | ⬜ 未着手 |
+| 32 | E2E 拡充 + 実機 styled 描画更新（全環境） | ✅ 完了（`e2e_style_roundtrip` に border / radius round-trip を追加 = 選択中メタ更新→保存 JSON 直接検証→Simulator の HmiButton を `getStringProperty`/`getIntProperty` 検証。**macOS `ctest` で unit 8 + e2e 5 = 13/13 緑**。README スクショを border 入りに更新。実機 border 再撮影は任意のため省略） |
 
 ## 共通データ仕様（Project Format）
 
