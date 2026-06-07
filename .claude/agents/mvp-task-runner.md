@@ -15,7 +15,8 @@ model: opus
 - Phase 2 / テスト基盤導入（Task 9〜15）：✅ 完了済み
 - Phase 3-A / E2E テスト導入（Task 16〜21）：✅ 完了済み
 - Phase 3-B / Runtime（Task 22〜24）：✅ 完了済み（CMake glue + Yocto SDK aarch64 クロスビルド + i.MX8MP 実機描画。新 BSP scarthgap / Qt6 6.8.1）
-- **Phase 4 / Button 縦スライス（Task 25〜30）**：⏳ 未着手 — 次タスク。Widget 種別を横に増やす前に Button 1 つを全レイヤ（Schema→Widgets→Editor→Simulator→Runtime→実機）で深く作り込み「Widget 追加テンプレ」を確立する。**次タスクは Task 25（選択モデル + 選択枠）**。タスク分割・完了基準・設計指針・Must Never は `Docs/phase4-button-slice-plan.md` を参照。要点：①widgetModel は `var` 配列据え置き（編集中は live `EditableWidget` が真実、構造変更時のみ Items→配列スナップショット後に再代入、選択は id 追跡。`QAbstractListModel` 化はしない）②編集 UI は Editor のみ（Simulator/Runtime は読み取り専用を維持）③Schema 新フィールドは optional + `isValidJson` 必須集合据え置き（後方互換）④新スタイルは `HmiButton` に公開し Editor / Simulator 双方の delegate に渡す（Runtime はソース共有で自動）。
+- **Phase 4 / Button 縦スライス（Task 25〜32）**：✅ 完了済み（旧 Phase 4〔Task 25〜30〕＋旧 Phase 5〔Task 31〜32〕を 1 本に統合）。選択・インスペクタ・リサイズ・削除・スタイル属性〔色・フォント・ボーダー・角丸〕の全レイヤ貫通・テスト/E2E 拡充・実機 styled 描画まで＝「Widget 追加テンプレ」確立。設計指針・Must Never・`-1` センチネル設計は `Docs/phase4-button-slice-plan.md` を参照。要点：①widgetModel は `var` 配列据え置き（編集中は live `EditableWidget` が真実、構造変更時のみ Items→配列スナップショット後に再代入、選択は id 追跡）②編集 UI は Editor のみ（Simulator/Runtime は読み取り専用）③Schema 新フィールドは optional + `isValidJson` 必須集合据え置き（`0` が正当値の数値は `-1` センチネル）④新スタイルは `HmiButton` に公開し Editor / Simulator 双方の delegate に渡す（Runtime はソース共有で自動）。
+- **Phase 5（横展開 Label / Lamp 等・状態/アクション・静的スタイルの続き）**：⬜ 未承認（候補）。`Docs/phase4-button-slice-plan.md`「Phase 5 候補」のスコープをユーザーと確定・承認してから着手する（自動着手しない）。状態/アクション（変数・タグ操作）は全 Widget が使う横断サブシステムのため Button 縦スライスとは分けて独立フェーズで設計する。
 
 ## 実行手順
 

@@ -16,7 +16,7 @@ origin: hmi-platform
 ## 手順（How It Works）
 
 1. **進捗確認**
-   - **まず `git fetch` してから `git log --oneline origin/main` を確認する**（最優先）。**ローカルクローンは origin/main から大きく遅れていることがあり、作業ツリーの CLAUDE.md / README が古いと「次タスク」を完全に誤認する**（実例：Phase 4 完了と書かれた古い CLAUDE.md を信じて存在しない「次フェーズ」を一から計画したが、origin/main では既に別内容の Phase 5 が進行し残りは Task 32 だけだった）。**ローカルが遅れていたら `git checkout main && git pull` で最新化してから判断する**（[dev-environment.md](../../rules/dev-environment.md)「リポジトリ運用の注意」）
+   - **まず `git fetch` してから `git log --oneline origin/main` を確認する**（最優先）。**ローカルクローンは origin/main から大きく遅れていることがあり、作業ツリーの CLAUDE.md / README が古いと「次タスク」を完全に誤認する**（実例：完了済みと書かれた古い CLAUDE.md を信じて存在しない「次フェーズ」を一から計画したが、origin/main では既に別内容の次フェーズが進行し残りは 1 タスクだけだった）。**ローカルが遅れていたら `git checkout main && git pull` で最新化してから判断する**（[dev-environment.md](../../rules/dev-environment.md)「リポジトリ運用の注意」）
    - 最新化した [CLAUDE.md](../../../CLAUDE.md)「現在のフェーズ」セクションと [README.md](../../../README.md)「フェーズ進捗」表を Read
    - 未着手の最も若い番号のタスクを次のタスクとして特定（フェーズを跨ぐ場合はフェーズ計画書 `Docs/phase*-plan.md` も併読）。**未承認フェーズ（「候補」段階）には自動着手せず、まずスコープをユーザーと確定する**
 
