@@ -226,7 +226,7 @@ flowchart LR
 |---|---|
 | スコープ | Task 28 / 31 と同じ **4 層 + インスペクタ + テスト**。`bool fontBold` / `bool fontItalic`（省略時 false）/ `QString fontFamily`（省略時 ""）を Schema → C++ ブリッジ → delegate〔Editor + Simulator〕→ HmiButton（`font.bold` / `font.italic` / `font.family`、空 family はシステム既定にフォールバック）→ インスペクタ。インスペクタは **新 UI 型**：bool = `CheckBox`（`inspectorFontBoldCheck` 等）、family = `ComboBox`（`Qt.fontFamilies()` 由来。`inspectorFontFamilyCombo`） |
 | 完了基準 | ビルド緑、`ctest`（Schema 単体 + ProjectIo / ProjectLoader）緑。bold/italic/family 込み JSON を保存→読込で再現。Editor / Simulator で反映。スクショ `Docs/screenshots/task-33-font-editor.png` |
-| 新規ポイント | **bool プロパティの optional**（`toJson` は true のときだけ書く／false は省略、`fromJson` は欠落時 false）。**ComboBox という新インスペクタ UI 型**（hex TextField・SpinBox に続く 3 つ目）。Spix 制約は Task 30 同様、E2E は直接メタ更新で検証 |
+| 新規ポイント | **bool プロパティの optional は「既定値と異なる時だけ書く」**（既定 false の `fontBold`/`fontItalic` は true のとき書き出し、`fromJson` は欠落時 false）。※既定 true の bool（T42 の `enabled`）は逆に **false のときだけ書き出す**点に注意（下記設計指針）。**ComboBox という新インスペクタ UI 型**（hex TextField・SpinBox に続く 3 つ目）。Spix 制約は Task 30 同様、E2E は直接メタ更新で検証 |
 
 #### T34: テキスト配置（`hAlign` / `vAlign`）+ 不透明度（`opacity`）全レイヤ貫通
 
@@ -259,8 +259,8 @@ flowchart LR
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | 選択 widget（複数可）を内部クリップボード（`WidgetData` 相当の配列スナップショット）へコピー。ペーストは **新 id を採番**しオフセット配置、複製（Ctrl+D）はコピー+即ペースト。ペースト後は新規 widget を選択状態にする。Shortcut：Ctrl+C / Ctrl+V / Ctrl+D（macOS は Cmd を `StandardKey` で吸収） |
-| 完了基準 | ビルド緑、QML テスト緑。コピペ / 複製で id 重複なく増える。スクショ `Docs/screenshots/task-37-copy-paste.png` |
+| スコープ | 選択 widget（複数可）を内部クリップボード（`WidgetData` 相当の配列スナップショット）へコピー。ペーストは **新 id を採番**しオフセット配置、複製はコピー+即ペースト。ペースト後は新規 widget を選択状態にする。Shortcut：コピー = `StandardKey.Copy`、ペースト = `StandardKey.Paste`（macOS は Cmd / Win/Linux は Ctrl を `StandardKey` が吸収）。**複製は `Ctrl+D` を使わない**：Qt の `StandardKey.Delete` は KDE/GNOME で `Ctrl+D` を含むため、T29 の削除（`StandardKey.Delete`）と衝突する（[QKeySequence standard shortcuts](https://doc.qt.io/qt-6/qkeysequence.html#standard-shortcuts)）。複製は **`Ctrl+Shift+D`（明示的な `Shortcut { sequence }`）** に割り当てる |
+| 完了基準 | ビルド緑、QML テスト緑。コピペ / 複製で id 重複なく増える。**複製ショートカットが削除と衝突しない**ことを確認。スクショ `Docs/screenshots/task-37-copy-paste.png` |
 | 新規ポイント | **id 採番ロジックの再利用**（`addWidget()` の採番と単一ソース化）。構造変更なので「Items→配列スナップショット→追加→再代入」経路を通す |
 
 #### T38: undo / redo（コマンドスタック）（Editor）
@@ -315,7 +315,7 @@ flowchart LR
 
 ### Phase 4 拡張で追加する設計指針
 
-- **新しい型のテンプレ拡張**：bool（true のみ書き出し）/ enum 文字列（JSON は文字列・QML で enum マップ・不正値フォールバック）/ real センチネル（`opacity` は `-1.0` センチネル、`toDouble(-1)`）を、既存の int センチネル（Task 31）と同じ「5 箇所を揃える」則で扱う。
+- **新しい型のテンプレ拡張**：bool（**既定値と異なる値だけ書き出す** — 既定 false の `fontBold`/`fontItalic`/`checkable`/`checked` は true のとき、**既定 true の `enabled` は false のとき**書く。一律「true のみ書き出し」にすると `enabled: false` が保存されず disabled の round-trip が壊れる）/ enum 文字列（JSON は文字列・QML で enum マップ・不正値フォールバック）/ real センチネル（`opacity` は `-1.0` センチネル、`toDouble(-1)`）を、既存の int センチネル（Task 31）と同じ「5 箇所を揃える」則で扱う。
 - **編集体験は Editor 専用**（トラック C）。Simulator / Runtime 無改修を維持。`var` 配列据え置き（live Item が真実・構造変更時のみスナップショット・選択は id 追跡）の方針を崩さない。複数選択は id 集合、undo は配列スナップショット方式で QML に閉じる。
 - **状態 / アクションは Widget 非依存**（トラック B）。変数ストア・アクション型・データバインドは Button に依存しない形で設計し、Phase 5 の横展開でそのまま再利用する。**実行は Simulator / Runtime**（編集は Editor）で役割分担を維持。
 - **アクション（書き手）とバインディング（読み手）は対**：アクションが変数を更新し、バインディングが変数 → widget プロパティへ流す。**両方を Schema に保存**しないと、読み取り専用の Simulator / Runtime が保存 JSON だけから「変数変化 → property 変化」を再現できない（T39 で `Binding` を Schema 化する理由）。`checked` のような状態は **初期値を JSON 保存しつつ実行時はバインディングで変数連動**できるよう、両立する設計にする。
