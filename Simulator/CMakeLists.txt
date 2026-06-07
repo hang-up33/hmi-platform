@@ -29,6 +29,7 @@ function(hmi_add_simulator_like_executable target)
         "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/src/main.cpp"
         "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/src/ProjectLoader.cpp"
         "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/src/ProjectLoader.h"
+        "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/src/ScreenshotGrabber.h"
     )
 
     target_link_libraries(${target}

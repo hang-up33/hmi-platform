@@ -1,4 +1,5 @@
 #include "ProjectIo.h"
+#include "ScreenshotGrabber.h"
 
 #include <QCommandLineOption>
 #include <QCommandLineParser>
@@ -41,9 +42,24 @@ int main(int argc, char *argv[])
     QCommandLineOption openOpt({QStringLiteral("o"), QStringLiteral("open")},
                                QStringLiteral("起動時に読み込むプロジェクト JSON のパス"),
                                QStringLiteral("path"));
+    // ヘッドレス動作証跡スクショ（Claude Code on the web 用）。
+    //   --screenshot <path>        : 起動直後のウィンドウを PNG 保存して終了
+    //   --screenshot-delay <ms>    : 撮影前の待機ミリ秒（既定 700）
+    // QT_QPA_PLATFORM=offscreen と組み合わせてウィンドウシステム無しで撮る。
+    QCommandLineOption screenshotOpt(
+        QStringLiteral("screenshot"),
+        QStringLiteral("起動直後のウィンドウを指定パスに PNG 保存して終了する（ヘッドレス証跡用）"),
+        QStringLiteral("path"));
+    QCommandLineOption screenshotDelayOpt(
+        QStringLiteral("screenshot-delay"),
+        QStringLiteral("スクショ撮影前の待機ミリ秒（既定 700）"),
+        QStringLiteral("ms"),
+        QStringLiteral("700"));
     parser.addOption(e2eOpt);
     parser.addOption(e2ePortOpt);
     parser.addOption(openOpt);
+    parser.addOption(screenshotOpt);
+    parser.addOption(screenshotDelayOpt);
     parser.process(app);
 
     // Task 19: 起動時自動ロード。Simulator/src/main.cpp と同じパターンで、
@@ -74,6 +90,17 @@ int main(int argc, char *argv[])
         &app,
         []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
+
+    // `--screenshot` 指定時のみ撮影フックを仕込む（loadFromModule の前）。
+    // 通常起動には影響しない。
+    if (parser.isSet(screenshotOpt)) {
+        bool delayOk = false;
+        int delayMs = parser.value(screenshotDelayOpt).toInt(&delayOk);
+        if (!delayOk || delayMs < 0) {
+            delayMs = 700;
+        }
+        installScreenshotGrabber(engine, parser.value(screenshotOpt), delayMs);
+    }
 
     engine.loadFromModule("HmiEditor", "Main");
 

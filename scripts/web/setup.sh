@@ -49,14 +49,17 @@ echo "[hmi/web-setup] Qt ${QT_VERSION}（${QT_ARCH}）を ${QT_OUTDIR} に導入
 # --- Qt のビルド・実行に必要な OS ライブラリ ---
 # - 実行時(offscreen/vnc/QtQuick): libgl1 libegl1 libxkbcommon0 libfontconfig1 ...
 # - ビルド時(find_package(Qt6 Gui) が WrapOpenGL=OpenGL dev を要求): *-dev 一式が無いと configure が失敗する
+# - フォント: ヘッドレス GUI スクショ（scripts/capture-app-screenshot-linux.sh）で
+#   テキストを正しく描くため。fonts-noto-cjk が無いと日本語ラベルが □（豆腐）になる。
 # 既に入っていれば apt はスキップ。-t64 系の名前ゆれは握りつぶす。
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq || true
 apt-get install -y --no-install-recommends \
   libgl1 libegl1 libegl-mesa0 libxkbcommon0 libfontconfig1 libfreetype6 libdbus-1-3 \
   libglib2.0-0t64 libx11-6 libxcb1 \
-  libgl-dev libglx-dev libopengl-dev libegl-dev mesa-common-dev || \
-  apt-get install -y --no-install-recommends libgl1 libegl1 libgl-dev libopengl-dev mesa-common-dev || true
+  libgl-dev libglx-dev libopengl-dev libegl-dev mesa-common-dev \
+  fonts-dejavu-core fonts-noto-cjk || \
+  apt-get install -y --no-install-recommends libgl1 libegl1 libgl-dev libopengl-dev mesa-common-dev fonts-dejavu-core || true
 
 # --- aqtinstall を venv に入れて Qt を取得 ---
 AQT_VENV="/opt/aqt-venv"

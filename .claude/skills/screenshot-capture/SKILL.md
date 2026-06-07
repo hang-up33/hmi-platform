@@ -1,6 +1,6 @@
 ---
 name: screenshot-capture
-description: GUI に変化がある PR（Editor / Simulator の見た目が変わる UI 変更・bugfix）の動作証跡スクリーンショットを撮る・PR に埋め込む・README 掲載スクショを同期する手順。macOS（capture-app-window.sh）/ Windows（capture-app-window.ps1）両対応、QML Button の自動クリック可否の差も含む。
+description: GUI に変化がある PR（Editor / Simulator の見た目が変わる UI 変更・bugfix）の動作証跡スクリーンショットを撮る・PR に埋め込む・README 掲載スクショを同期する手順。macOS（capture-app-window.sh）/ Windows（capture-app-window.ps1）/ Linux・Claude Code on the web（capture-app-screenshot-linux.sh, offscreen + --screenshot）対応、QML Button の自動クリック可否の差も含む。
 origin: hmi-platform
 ---
 
@@ -54,6 +54,25 @@ Stop-Process -Name hmi_editor -Force
 - **Windows では macOS と違い Qt QML の Button を自動クリックできる**。Win32 `mouse_event`（実マウスメッセージ）は QML の `MouseArea` / `clicked` に届くため、`SetWindowPos(hWnd, HWND_TOPMOST, ...)` ＋ `BringWindowToTop` で対象を**最前面に固定**してから対象座標へ `SetCursorPos`→`mouse_event(LDOWN/LUP)` でクリックすれば「操作後の状態」（選択枠が出た状態など）を撮れる。AppleScript の CGEvent が無反応なのと対照的（理由：AppleScript は合成イベント、Win32 は実 OS マウスメッセージ）。
   - 注意：**背景プロセスからの `SetForegroundWindow` は Windows に抑制される**ことがあり、ウィンドウが他に隠れたまま注入クリックすると別ウィンドウに当たる。必ず `HWND_TOPMOST` 固定で前面に出してからクリックする。座標は `GetWindowRect` の左上 ＋ クライアント原点（`ClientToScreen`）＋ QML 上の論理座標から算出する（起動直後で対象が最前面なら `SetForegroundWindow` だけでも通る。Task 26 はこれで `btn001` を実クリックできた）。**クリック座標の簡便な求め方**：先に `capture-app-window.ps1` で撮ったスクショ画像内のピクセル位置 ＝ ウィンドウ原点からのオフセット（`PrintWindow` は物理解像度でキャプチャするため画像 px = `GetWindowRect.Left/Top` からの px オフセットに一致）。
   - **テキスト入力も自動化できる**（Task 26 で確立）。`TextField` を上記方式でクリックしてフォーカスさせた後、`[System.Windows.Forms.SendKeys]::SendWait("^a")`（全選択）→ `SendWait("Run")` でフォーカス中の入力欄に文字を流し込める。これで「選択 → インスペクタで text 編集 → キャンバス即反映」のような**操作後の状態**を Windows 上で完全自動キャプチャできる（IME 経由が必要な日本語は不安定なので、動作証跡用の入力は ASCII にする）。macOS で AppleScript が QML を操作できないのと対照的。
+
+## 撮影手順（Linux / Claude Code on the web — ヘッドレス）
+
+ウィンドウシステムの無いリモート環境（Web セッション）/ CI では、外部キャプチャの代わりに
+**アプリ内蔵の `--screenshot` フラグ**を使う。`-platform offscreen` で起動し、
+`QQuickWindow::grabWindow()`（`Editor/src/ScreenshotGrabber.h` / `Simulator/src/ScreenshotGrabber.h`）で
+オフスクリーン描画結果を PNG に書き出して自動終了する。**Xvfb も X11/Wayland も不要**。
+
+```sh
+# 前提: scripts/web/setup.sh で Qt 導入済み + cmake --build build 済み（Docs/claude-web-dev.md）
+scripts/capture-app-screenshot-linux.sh -a editor    -o Docs/screenshots/task-<N>-<短い名>.png
+scripts/capture-app-screenshot-linux.sh -a simulator -o Docs/screenshots/task-<N>-<短い名>.png -j Docs/samples/web-gui-demo.json
+```
+
+- `-a editor|simulator|runtime`（既定 editor）/ `-o <out.png>` / `-j <json>`（起動時 `--open`、任意）/ `-d <ms>`（撮影前待機、既定 700）。
+- 撮影後は **必ず Read ツールで PNG を目視**（黒画面・崩れ・□ 文字化けが無いか）。日本語ラベルは `setup.sh` の `fonts-noto-cjk` で正しく出る。
+- **macOS で AppleScript が QML を操作できない問題と同様、offscreen でも実マウス操作は注入できない**。`--screenshot` は「起動直後の静止画」前提。FileDialog 操作後の状態を撮りたいときは `-j` で初期 JSON を自動ロードして見せる（macOS の手法と同じ発想）。
+- 実機 i.MX8MP の `scripts/yocto/vnc-capture.py`（VNC 経由）とは別経路。あちらは weston 実機専用、こちらは PC ビルドのヘッドレス用。
+- 詳細は [Docs/claude-web-dev.md](../../../Docs/claude-web-dev.md)「GUI スクショ（ヘッドレス）」。
 
 ## ファイル配置と PR への埋め込み
 

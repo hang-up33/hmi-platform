@@ -183,6 +183,7 @@ JSON 入出力は `QJsonDocument`（外部依存なし）。Editor / Simulator �
 かつて「Web 版は非対応」としていたが、**原因は環境の既定ネットワークポリシー `Trusted` が `download.qt.io` を遮断していた点**であり、**ポリシーを `Full`（または `Custom` + `*.qt.io`）にすれば CI と同じ `aqtinstall` で Qt6 を導入でき、Web コンテナ（Ubuntu 24.04）でも `cmake --build` とユニット + E2E（`-platform offscreen`）が通る**ことを実証済み（2026-06-07、Qt 6.10.0 / unit 8 + e2e 5 = 13/13 緑）。GUI ディスプレイは offscreen / vnc で不要。**手順は [Docs/claude-web-dev.md](Docs/claude-web-dev.md)**（`scripts/web/setup.sh` を環境の Setup script に設定 → `scripts/web/session-env.sh` が SessionStart hook で `CMAKE_PREFIX_PATH` を通す）。
 
 - **PC ビルド・ユニット・E2E（macOS 相当）は Web でも可能**になった。
+- **GUI スクショも Web で可能**：アプリ内蔵 `--screenshot`（`-platform offscreen` + `QQuickWindow::grabWindow()`、Xvfb 不要）を `scripts/capture-app-screenshot-linux.sh` で叩く（[Docs/claude-web-dev.md](Docs/claude-web-dev.md)「GUI スクショ（ヘッドレス）」）。実機 VNC キャプチャとは別経路。
 - ただし **Yocto SDK クロスビルド / i.MX8MP 実機描画は Web では不可**（WSL2 / 実機が要るため従来どおりローカル）。
 - かつての遮断理由（記録）：apt の Qt は 6.4.2 止まり、aqtinstall は既定 `Trusted` で Qt ミラーが `host_not_allowed` (HTTP 403) になる。ネットワークを `Full` にするとこれが解消する。
 - **前提**：環境ネットワーク = `Full`、Setup script に `bash scripts/web/setup.sh` を設定（初回のみ実行されスナップショットにキャッシュされる）。これらは Web UI でのみ設定でき、人手が必要。
