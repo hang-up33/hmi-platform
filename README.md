@@ -239,6 +239,22 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 | 31 | ボーダー＋角丸を全レイヤ貫通（Schema + HmiButton + Simulator/Runtime + インスペクタ）★ | ✅ 完了（PR #64。`0`=ボーダーなし／`-1`=未指定／キー欠落時省略の境界 unit テスト + インスペクタ ScrollView 化 + Editor/Simulator スクショ） |
 | 32 | E2E 拡充（border/radius）+ 実機 styled 描画更新（全環境） | ✅ 完了（PR #66。`e2e_style_roundtrip` を border/radius まで拡張〔数値は `int(float())`、border 色は既定 `#1d3557` と別値〕。**macOS `ctest` で unit 8 + e2e 5 = 13/13 緑**。README スクショを border 入りに更新。実機 border 再撮影は任意のため省略） |
 
+**Phase 4 拡張（Task 33〜43・2026-06-07 承認 / 未着手）** — Button をさらに深く作り込む 3 トラック。詳細は [Docs/phase4-button-slice-plan.md](Docs/phase4-button-slice-plan.md)「Phase 4 拡張」。
+
+| # | タスク | 状態 |
+|---|---|---|
+| 33 | フォント詳細（bold/italic/family）全レイヤ貫通 + インスペクタ（A） | ⬜ 未着手 |
+| 34 | テキスト配置（hAlign/vAlign）+ 不透明度（opacity）全レイヤ貫通（A） | ⬜ 未着手 |
+| 35 | グリッドスナップ + スナップ ON/OFF トグル（Editor）（C） | ⬜ 未着手 |
+| 36 | 複数選択 + 一括移動・整列・削除（Editor）（C） | ⬜ 未着手 |
+| 37 | コピー / ペースト / 複製（Editor）（C） | ⬜ 未着手 |
+| 38 | undo / redo（コマンドスタック）（Editor）（C） | ⬜ 未着手 |
+| 39 | 変数 / タグストア + Schema アクション型 + バインディング型（B） | ⬜ 未着手 |
+| 40 | インスペクタでアクション編集（Editor）（B） | ⬜ 未着手 |
+| 41 | Simulator / Runtime でアクション実行 + 状態反映（B） | ⬜ 未着手 |
+| 42 | 状態別スタイル（pressed / disabled / checked）（B） | ⬜ 未着手 |
+| 43 | アクション round-trip E2E + 実機動作確認（全環境）（B） | ⬜ 未着手 |
+
 ## 共通データ仕様（Project Format）
 
 `Shared/Schema` を唯一の真実とし、以下の JSON 形状で project / screen / widget を表現する。
