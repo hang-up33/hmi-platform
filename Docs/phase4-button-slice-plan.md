@@ -188,20 +188,152 @@ Task 28 と同じ **4層 + インスペクタ + テスト** を 1 タスクで�
 - Editor の編集系ソースを **Simulator / Runtime に共有**する（既存原則。Editor は別系統）。
 - スタイル属性を `HmiButton` を経由せず Editor / Simulator の delegate に**個別ハードコード**する（唯一の真実は HmiButton）。
 - `radius` を HmiButton の公開入力名に使う（Rectangle 組込みと衝突。**`cornerRadius`** を使い、JSON キー / WidgetData / メタは `radius` のまま統一）。
-- 本スライス（Button 縦スライス）に **状態 / アクション**（pressed/disabled/click action）や **横展開**（新 Widget 種別）を混ぜる（Phase 5 候補）。
+- **コア縦スライス（Task 25〜32）**に **状態 / アクション**（pressed/disabled/click action）や **横展開**（新 Widget 種別）を混ぜる。状態 / アクションは下記「Phase 4 拡張」トラック B（Task 39〜43）で **widget 非依存サブシステムとして独立タスク化**して扱い、コア縦スライスの個々のタスクには混ぜない。横展開（新 Widget 種別）は引き続き Phase 5 候補。
 
 ---
 
-## Phase 5 候補（Phase 4 ＝ Button 縦スライス完了後に別途承認）
+## Phase 4 拡張（Task 33〜43）
 
-- **静的スタイルの続き**：フォント詳細（`fontBold` / `fontItalic` / `fontFamily`）/ テキスト配置（`hAlign` / `vAlign`）/ 不透明度（`opacity`）。本フェーズと同じ縦スライスで Button にさらに追加。
-- **Widget 種別の横展開**：Phase 4 で固めたテンプレで Label / Lamp（表示灯）/ Gauge / Image 等を追加（`type` 分岐 + 各 HmiXxx.qml + Schema フィールド + インスペクタ）。
-- **状態 / アクション（動く HMI）**：pressed/disabled 状態、クリック時アクション（変数 / タグ操作など）。**Button 1 Widget の機能ではなく全 Widget が使う横断サブシステム**（実行時の変数 / タグストア + アクション/データバインド）になるため、**Button 縦スライスとは分けて独立した計画・フェーズで設計する**（初手は Button を駆動役にするが、設計は Widget 非依存にする）。
+> **2026-06-07 承認**：Phase 4 コア縦スライス（Task 25〜32）完了後、**Button をさらに深く作り込む拡張**としてユーザー承認（①静的スタイルの続き ②編集体験の強化 ③状態 / アクション）。横展開（新 Widget 種別）は引き続き Phase 5 候補に残す。確立済みの「プロパティ追加テンプレ」（**Schema → C++ ブリッジ〔ProjectIo / ProjectLoader〕→ delegate〔Editor + Simulator〕→ HmiButton → インスペクタ → テスト**）を反復しつつ、新しい型（bool / enum 文字列 / real センチネル）と新サブシステム（変数ストア・アクション・undo コマンドスタック）を段階習得する。
+
+順序は **A（静的スタイル T33〜34）→ C（編集体験 T35〜38）→ B（状態 / アクション T39〜43）**。低リスクなテンプレ反復で足場を固め、独立性の高い編集体験を挟み、最後に最も重い横断サブシステムを置く。各タスクは従来どおり **1 タスク = 1 ブランチ = 1 PR、`cmake --build` 緑 + 該当環境での動作確認（スクショ / 実機）** を完了基準にする。既定ポート（Editor=9876 / Simulator=9877）は据え置き。
+
+```mermaid
+flowchart LR
+    subgraph TA["A: 静的スタイルの続き"]
+      T33["T33 フォント詳細<br/>bold/italic/family"] --> T34["T34 配置 hAlign/vAlign<br/>+ opacity"]
+    end
+    subgraph TC["C: 編集体験の強化（Editor）"]
+      T35["T35 グリッドスナップ"] --> T36["T36 複数選択+整列"]
+      T36 --> T37["T37 コピー/ペースト/複製"]
+      T37 --> T38["T38 undo/redo"]
+    end
+    subgraph TB["B: 状態/アクション（動く HMI）"]
+      T39["T39 変数ストア+Schemaアクション型"] --> T40["T40 アクション編集UI"]
+      T40 --> T41["T41 Sim/Runtimeで実行"]
+      T41 --> T42["T42 状態別スタイル"]
+      T42 --> T43["T43 アクションE2E+実機"]
+    end
+    T34 --> T35
+    T38 --> T39
+```
+
+### トラック A：静的スタイルの続き（テンプレ反復）
+
+#### T33: フォント詳細（`fontBold` / `fontItalic` / `fontFamily`）全レイヤ貫通
+
+| 項目 | 内容 |
+|---|---|
+| スコープ | Task 28 / 31 と同じ **4 層 + インスペクタ + テスト**。`bool fontBold` / `bool fontItalic`（省略時 false）/ `QString fontFamily`（省略時 ""）を Schema → C++ ブリッジ → delegate〔Editor + Simulator〕→ HmiButton（`font.bold` / `font.italic` / `font.family`、空 family はシステム既定にフォールバック）→ インスペクタ。インスペクタは **新 UI 型**：bool = `CheckBox`（`inspectorFontBoldCheck` 等）、family = `ComboBox`（`Qt.fontFamilies()` 由来。`inspectorFontFamilyCombo`） |
+| 完了基準 | ビルド緑、`ctest`（Schema 単体 + ProjectIo / ProjectLoader）緑。bold/italic/family 込み JSON を保存→読込で再現。Editor / Simulator で反映。スクショ `Docs/screenshots/task-33-font-editor.png` |
+| 新規ポイント | **bool プロパティの optional**（`toJson` は true のときだけ書く／false は省略、`fromJson` は欠落時 false）。**ComboBox という新インスペクタ UI 型**（hex TextField・SpinBox に続く 3 つ目）。Spix 制約は Task 30 同様、E2E は直接メタ更新で検証 |
+
+#### T34: テキスト配置（`hAlign` / `vAlign`）+ 不透明度（`opacity`）全レイヤ貫通
+
+| 項目 | 内容 |
+|---|---|
+| スコープ | `QString hAlign`（"left"/"center"/"right"、省略時 ""）/ `QString vAlign`（"top"/"middle"/"bottom"）/ `qreal opacity`（0.0–1.0、`-1` センチネルで未指定）を 4 層 + インスペクタ + テスト。HmiButton で **enum 文字列 → `Text.horizontalAlignment` 等へマッピング**（`resolvedHAlign`：""→`Text.AlignHCenter`）、opacity は `resolvedOpacity`（`< 0`→1.0）。インスペクタは hAlign/vAlign = `ComboBox`、opacity = `SpinBox`（0–100% を 0.0–1.0 にスケール）または `Slider` |
+| 完了基準 | ビルド緑、`ctest` 緑。配置・opacity 込み JSON round-trip 再現。スクショ `Docs/screenshots/task-34-align-opacity-editor.png` |
+| 新規ポイント | **enum 文字列マッピング**（JSON は人間可読な文字列、QML 側で enum へ変換。不正値はフォールバック）。**real〔小数〕センチネル**：`borderWidth`（int `-1`）と違い `opacity` は qreal。`toJson` は `>= 0.0` で書き出し、`fromJson` は `toDouble(-1)`、C++ ブリッジ save は `m.value("opacity", -1.0).toDouble()`、resolved は `< 0`→1.0、の 5 箇所を揃える（Task 31 の `-1` センチネル則の real 版） |
+
+### トラック C：編集体験の強化（Editor 中心 / Simulator・Runtime 無改修）
+
+> **全タスク Editor のみ**。Schema / C++ ブリッジ / Simulator / Runtime は無改修（編集体験は読み取り専用アプリに持ち込まない）。`var` 配列据え置きの方針（live Item が真実・構造変更時のみスナップショット）を踏襲する。
+
+#### T35: グリッドスナップ + スナップ ON/OFF トグル（Editor）
+
+| 項目 | 内容 |
+|---|---|
+| スコープ | `Canvas.qml` にグリッド間隔プロパティ（既定 8px）と任意のグリッド線描画。移動ドラッグ（`dragArea`）とリサイズハンドル（Task 27）の確定座標を `Math.round(v / grid) * grid` で吸着。ツールバー / インスペクタにスナップ ON/OFF トグル（`snapEnabled`）。**JSON には保存しない**（編集時の補助のみ） |
+| 完了基準 | ビルド緑、既存 QML テスト緑。スナップ ON でドラッグ / リサイズが格子に吸着、OFF で従来通り。スクショ `Docs/screenshots/task-35-grid-snap.png` |
+
+#### T36: 複数選択 + 一括移動・整列・削除（Editor）
+
+| 項目 | 内容 |
+|---|---|
+| スコープ | `selectedWidgetId`（単一）を **選択 ID 集合（`selectedWidgetIds`）へ拡張**（Shift / Ctrl クリックで加除、背景ラバーバンドは任意）。複数選択時：一括ドラッグ移動、一括削除、整列（左 / 水平中央 / 右 / 上 / 垂直中央 / 下）と等間隔分布。インスペクタは複数選択時「N 個選択中」表示 + 共通プロパティのみ編集可（差異は空表示） |
+| 完了基準 | ビルド緑、QML テスト緑。複数選択 → 一括移動 / 整列 / 削除。スクショ `Docs/screenshots/task-36-multiselect-align.png` |
+| 新規ポイント | **選択を単一 id → 集合へ拡張**（T25 の `selected: widgetId === root.selectedWidgetId` を `selectedWidgetIds.includes(widgetId)` に。delegate 結線の互換に注意）。インスペクタの「複数選択時の共通値編集」 |
+
+#### T37: コピー / ペースト / 複製（Editor）
+
+| 項目 | 内容 |
+|---|---|
+| スコープ | 選択 widget（複数可）を内部クリップボード（`WidgetData` 相当の配列スナップショット）へコピー。ペーストは **新 id を採番**しオフセット配置、複製（Ctrl+D）はコピー+即ペースト。ペースト後は新規 widget を選択状態にする。Shortcut：Ctrl+C / Ctrl+V / Ctrl+D（macOS は Cmd を `StandardKey` で吸収） |
+| 完了基準 | ビルド緑、QML テスト緑。コピペ / 複製で id 重複なく増える。スクショ `Docs/screenshots/task-37-copy-paste.png` |
+| 新規ポイント | **id 採番ロジックの再利用**（`addWidget()` の採番と単一ソース化）。構造変更なので「Items→配列スナップショット→追加→再代入」経路を通す |
+
+#### T38: undo / redo（コマンドスタック）（Editor）
+
+| 項目 | 内容 |
+|---|---|
+| スコープ | Editor の編集（追加 / 削除 / 移動 / リサイズ / プロパティ変更 / コピペ）を**可逆化**。実装は **状態スナップショット方式**（widget 配列全体の前後スナップショットを undo / redo スタックに積む）を基本とし、QML 側で完結（C++ QUndoStack 導入は将来検討）。Shortcut：Ctrl+Z / Ctrl+Shift+Z（or Ctrl+Y）。ツールバーに undo/redo ボタン |
+| 完了基準 | ビルド緑、QML テスト（undo→redo で状態一致）緑。代表編集が元に戻る / やり直せる。スクショ `Docs/screenshots/task-38-undo-redo.png` |
+| 新規ポイント | **編集の境界（1 操作 = 1 スナップショット）の定義**。連続ドラッグは確定時のみ積む（中間フレームを積まない）。live Item 直編集との整合（編集確定時に配列スナップショットを取る） |
+
+### トラック B：状態 / アクション（動く HMI・横断サブシステム）
+
+> **設計原則（widget 非依存）**：状態 / アクションは Button 専用機能ではなく**全 Widget が使う横断サブシステム**（実行時の変数 / タグストア + アクション + データバインド）。**初手は Button を駆動役にするが、サブシステム自体は Widget 非依存に設計**する（Phase 5 で Label / Lamp 等に横展開した時にそのまま使える形）。編集 UI は Editor のみ、**実行は Simulator / Runtime**（読み取り専用アプリが「動く」のはここが初）。
+
+#### T39: 変数 / タグストア + Schema アクション型
+
+| 項目 | 内容 |
+|---|---|
+| スコープ | ①`Shared/Schema` に **変数定義**（`name` / 型〔bool / int / string〕/ 初期値）を Project レベルに追加。②`Action` 型（`trigger: "onClick"`、`op: "setVariable" / "toggleVariable"`、`target`〔変数名〕、`value`）を `WidgetData` に optional 配列で追加。③**ランタイム変数ストア**（実行時に変数の現在値を保持する widget 非依存オブジェクト。QML singleton か C++ いずれか着手時に決定）。Schema round-trip テスト |
+| 完了基準 | ビルド緑、`ctest`（Schema + ブリッジ）緑。変数定義 + アクション付き JSON が round-trip 再現。**この時点では描画/実行は変えない**（型と保存のみ） |
+| 新規ポイント | **配列 / ネストした型の JSON I/O**（これまでのフラットなスカラーと違う）。Project レベル要素の Schema 拡張（widget だけでなく Project に変数定義を持つ）。`isValidJson` 必須集合は据え置き（後方互換） |
+
+#### T40: インスペクタでアクション編集（Editor）
+
+| 項目 | 内容 |
+|---|---|
+| スコープ | 選択 Button に「クリック時アクション」を設定する UI（変数 ComboBox + 操作 ComboBox + 値入力）。Project の変数定義を管理する簡易パネル（変数の追加 / 削除 / 初期値）。Editor のみ |
+| 完了基準 | ビルド緑、QML テスト緑。アクション設定 → 保存 JSON に反映。スクショ `Docs/screenshots/task-40-action-editor.png` |
+
+#### T41: Simulator / Runtime でアクション実行 + 状態反映
+
+| 項目 | 内容 |
+|---|---|
+| スコープ | Simulator（`SimulatorCanvas.qml`）でロード時に変数ストアを初期化。Button クリックで紐づくアクションを実行 → 変数更新 → **変数にバインドした widget が追従**（最小デモ：変数値を表示する / 変数で `visible`・色を切替）。Runtime はソース共有で自動。**読み取り専用アプリが初めて「動く」** |
+| 完了基準 | ビルド緑、`ctest` 緑。Simulator でクリック→変数変化→表示追従。スクショ `Docs/screenshots/task-41-action-runtime.png` |
+| 新規ポイント | Simulator / Runtime に「実行」概念を入れる（選択 / 編集は持ち込まない原則は維持）。変数ストアを Simulator/Runtime 共有経路に置く |
+
+#### T42: 状態別スタイル（pressed / disabled / checked）
+
+| 項目 | 内容 |
+|---|---|
+| スコープ | HmiButton に視覚状態を追加：`enabled`（false で淡色 + クリック無効）、`checkable` / `checked`（トグル外観）。Schema に `bool enabled`（既定 true）/ `bool checkable`（既定 false）。pressed は既存導出（`Qt.darker`）を流用。アクション `op: "toggleVariable"` と `checked` を連動可能に。4 層 + インスペクタ + テスト |
+| 完了基準 | ビルド緑、`ctest` 緑。disabled / checked 込み JSON round-trip + 描画。スクショ `Docs/screenshots/task-42-states-editor.png` |
+
+#### T43: アクション round-trip E2E + 実機動作確認
+
+| 項目 | 内容 |
+|---|---|
+| スコープ | ①E2E（`tests/e2e/`）に「Editor でアクション設定 → `saveTo` → 保存 JSON 直接検証 → Simulator で**クリック → 変数変化 → 追従 widget の property 変化**を `getStringProperty` 検証」シナリオを追加。②変数 / アクション付き JSON を `hmi_runtime` で **i.MX8MP 実機**描画し、クリック→状態変化を撮影（VNC digital capture） |
+| 完了基準 | macOS で `ctest`（unit + e2e）緑。実機動作写真 `Docs/screenshots/task-43-runtime-action.png`。README スクショ更新 |
+| 新規ポイント | **E2E で「動き」を検証**（これまでは静的 round-trip のみ。Spix の `mouseClick` で実 Button をクリックし状態遷移を観測する） |
+
+### Phase 4 拡張で追加する設計指針
+
+- **新しい型のテンプレ拡張**：bool（true のみ書き出し）/ enum 文字列（JSON は文字列・QML で enum マップ・不正値フォールバック）/ real センチネル（`opacity` は `-1.0` センチネル、`toDouble(-1)`）を、既存の int センチネル（Task 31）と同じ「5 箇所を揃える」則で扱う。
+- **編集体験は Editor 専用**（トラック C）。Simulator / Runtime 無改修を維持。`var` 配列据え置き（live Item が真実・構造変更時のみスナップショット・選択は id 追跡）の方針を崩さない。複数選択は id 集合、undo は配列スナップショット方式で QML に閉じる。
+- **状態 / アクションは Widget 非依存**（トラック B）。変数ストア・アクション型・データバインドは Button に依存しない形で設計し、Phase 5 の横展開でそのまま再利用する。**実行は Simulator / Runtime**（編集は Editor）で役割分担を維持。
+
+---
+
+## Phase 5 候補（Phase 4 拡張完了後に別途承認）
+
+- **Widget 種別の横展開**：Phase 4（コア + 拡張）で固めたテンプレ（プロパティ追加 + 状態 / アクション）で Label / Lamp（表示灯）/ Gauge / Image 等を追加（`type` 分岐 + 各 HmiXxx.qml + Schema フィールド + インスペクタ）。Phase 4 拡張トラック B の変数 / アクションを各 Widget へ展開する。
+- **アクションの拡充**：画面遷移・外部 I/O（タグ通信）・条件分岐など、Phase 4 拡張トラック B の最小サブシステムを実用レベルへ。
 - **Phase 3-C 系インフラ**：Yocto レシピ焼込・実機 E2E・CI self-hosted runner・Windows キャプチャ（[phase3b-runtime-plan.md](phase3b-runtime-plan.md) §「Phase 3-C 候補」）。
+
+> 旧「Phase 5 候補」に挙げていた **静的スタイルの続き**（フォント詳細・配置・opacity）と **状態 / アクション** は、2026-06-07 の承認で **Phase 4 拡張（トラック A / B）に繰り上げ**た。
 
 ---
 
 ## 進捗
+
+### コア縦スライス（Task 25〜32）
 
 | # | タスク | 状態 |
 |---|---|---|
@@ -213,3 +345,19 @@ Task 28 と同じ **4層 + インスペクタ + テスト** を 1 タスクで�
 | 30 | テスト/E2E 拡充 + 実機 styled 描画（全環境） | ✅ 完了（QML テスト・E2E コード・スクショ・実機 styled 描画 + **macOS `ctest -L e2e` 緑（`e2e_style_roundtrip` 含む 5/5）**） |
 | 31 | ボーダー＋角丸を全レイヤ貫通（Schema + HmiButton + Simulator/Runtime + インスペクタ）★ | ✅ 完了（PR #64。`0`=ボーダーなし／`-1`=未指定／キー欠落時省略の境界 unit テスト + インスペクタ ScrollView 化 + Editor/Simulator スクショ） |
 | 32 | E2E 拡充（border/radius）+ 実機 styled 描画更新（全環境） | ✅ 完了（PR #66。`e2e_style_roundtrip` を border/radius まで拡張〔数値は `int(float())`、border 色は既定 `#1d3557` と別値〕。**macOS `ctest` で unit 8 + e2e 5 = 13/13 緑**。README スクショを border 入りに更新。実機 border 再撮影は任意のため省略） |
+
+### Phase 4 拡張（Task 33〜43）
+
+| # | タスク | 状態 |
+|---|---|---|
+| 33 | フォント詳細（bold/italic/family）全レイヤ貫通 + インスペクタ（A） | ⬜ 未着手 |
+| 34 | テキスト配置（hAlign/vAlign）+ 不透明度（opacity）全レイヤ貫通（A） | ⬜ 未着手 |
+| 35 | グリッドスナップ + スナップ ON/OFF トグル（Editor）（C） | ⬜ 未着手 |
+| 36 | 複数選択 + 一括移動・整列・削除（Editor）（C） | ⬜ 未着手 |
+| 37 | コピー / ペースト / 複製（Editor）（C） | ⬜ 未着手 |
+| 38 | undo / redo（コマンドスタック）（Editor）（C） | ⬜ 未着手 |
+| 39 | 変数 / タグストア + Schema アクション型（B） | ⬜ 未着手 |
+| 40 | インスペクタでアクション編集（Editor）（B） | ⬜ 未着手 |
+| 41 | Simulator / Runtime でアクション実行 + 状態反映（B） | ⬜ 未着手 |
+| 42 | 状態別スタイル（pressed / disabled / checked）（B） | ⬜ 未着手 |
+| 43 | アクション round-trip E2E + 実機動作確認（全環境）（B） | ⬜ 未着手 |

@@ -164,7 +164,7 @@ Explorer からダブルクリックで起動したい（「Qt の DLL が見つ
 
 ## フェーズ進捗
 
-Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入、**Phase 3-B / Runtime（Task 22〜24）まで全タスク完了**。新 BSP（scarthgap）で Qt6 入り実機 image と Qt6 クロス SDK を生成し、`hmi_runtime` を aarch64 にクロスビルド → **i.MX8MP 実機（weston / Wayland）で Editor 由来の JSON を描画**することを実機で確認済み。**Phase 4 / Button 縦スライス（Task 25〜32）も完了** — Widget 種別を横に増やす前に Button 1 つを全レイヤで深く作り込み「Widget 追加テンプレ」を確立した（選択・インスペクタ・リサイズ・削除・スタイル属性〔色・フォント・ボーダー・角丸〕の Schema 拡張）。`0` が正当値の数値プロパティを `-1` センチネルで optional 化、E2E に style / border / radius round-trip を追加し、macOS `ctest`（unit 8 + e2e 5 = 13/13）緑を確認した（旧 Phase 4〔Task 25〜30〕＋旧 Phase 5〔Task 31〜32〕を 1 本の Button 縦スライスに統合）。
+Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入、**Phase 3-B / Runtime（Task 22〜24）まで全タスク完了**。新 BSP（scarthgap）で Qt6 入り実機 image と Qt6 クロス SDK を生成し、`hmi_runtime` を aarch64 にクロスビルド → **i.MX8MP 実機（weston / Wayland）で Editor 由来の JSON を描画**することを実機で確認済み。**Phase 4 / Button 縦スライス（Task 25〜32）も完了** — Widget 種別を横に増やす前に Button 1 つを全レイヤで深く作り込み「Widget 追加テンプレ」を確立した（選択・インスペクタ・リサイズ・削除・スタイル属性〔色・フォント・ボーダー・角丸〕の Schema 拡張）。`0` が正当値の数値プロパティを `-1` センチネルで optional 化、E2E に style / border / radius round-trip を追加し、macOS `ctest`（unit 8 + e2e 5 = 13/13）緑を確認した（旧 Phase 4〔Task 25〜30〕＋旧 Phase 5〔Task 31〜32〕を 1 本の Button 縦スライスに統合）。続く **Phase 4 拡張（Task 33〜43）を承認済み・未着手** — ①静的スタイルの続き（フォント詳細 / 配置 / opacity）→②編集体験の強化（グリッドスナップ / 複数選択・整列 / コピペ / undo-redo）→③状態 / アクション（変数ストア + クリックアクション + 状態別スタイル）で Button をさらに深く作り込む。横展開（新 Widget 種別 Label / Lamp 等）は Phase 5 候補。
 
 > 各タスクで何をしたか・どの PR で入ったか・何を学んだかの **時系列まとめ** は [Docs/development-history.md](Docs/development-history.md) を参照。第三者への説明用。
 >
