@@ -22,8 +22,8 @@ Codex が PR レビューを行う際は、以下のルールに従ってくだ�
 
 ### スコープ
 
-- 本リポジトリは **Phase 4 / Button 縦スライス（Task 25〜30）まで完了**（Button 1 つを全レイヤ（Schema→Widgets→Editor→Simulator→Runtime→実機）で深く作り込み「Widget 追加テンプレ」を確立。選択・インスペクタ・リサイズ・削除・スタイル属性の Schema 拡張・テスト/E2E 拡充・i.MX8MP 実機 styled 描画・macOS E2E 緑まで到達。[CLAUDE.md](CLAUDE.md) の「現在のフェーズ」参照）。**Phase 4 までで未着手のフェーズタスクは無い**。**Phase 5（Button 静的スタイル拡充：ボーダー＋角丸 `borderColor` / `borderWidth` / `radius` の 1 バンドル、Task 31〜32）も完了**（Task 31 マージ済み PR #64、Task 32 で E2E `e2e_style_roundtrip` に border / radius round-trip 追加 + macOS `ctest` 13/13 緑）（[Docs/phase5-button-style-plan.md](Docs/phase5-button-style-plan.md)）。**Phase 5 までで未着手のフェーズタスクは無い**。次の **Phase 6（Widget 種別の横展開 Label / Lamp 等・状態/アクション・静的スタイルの続き）は「候補」段階で未承認**のため、`Docs/phase5-button-style-plan.md`「Phase 6 候補」のスコープをユーザーと確定・承認してから着手する（自動着手しない）。E2E 検証は macOS で実施（Windows MinGW は E2E 既定 OFF）。
-  進行予定のフェーズスコープ（[Docs/phase5-button-style-plan.md](Docs/phase5-button-style-plan.md)）を逸脱する大規模リファクタ提案は控えめにし、必要であれば `[Future]` ラベルで分離してください。
+- 本リポジトリは **Phase 4 / Button 縦スライス（Task 25〜32）まで完了**（旧 Phase 4〔Task 25〜30〕＋旧 Phase 5〔Task 31〜32〕を 1 本に統合。Button 1 つを全レイヤ（Schema→Widgets→Editor→Simulator→Runtime→実機）で深く作り込み「Widget 追加テンプレ」を確立。選択・インスペクタ・リサイズ・削除・スタイル属性〔色・フォント・ボーダー・角丸〕の Schema 拡張・テスト/E2E 拡充・i.MX8MP 実機 styled 描画・macOS E2E 緑まで到達。Task 31〜32 マージ済み PR #64 / #66。[CLAUDE.md](CLAUDE.md) の「現在のフェーズ」参照）。**Phase 4 までで未着手のフェーズタスクは無い**。次の **Phase 5（Widget 種別の横展開 Label / Lamp 等・状態/アクション・静的スタイルの続き）は「候補」段階で未承認**のため、`Docs/phase4-button-slice-plan.md`「Phase 5 候補」のスコープをユーザーと確定・承認してから着手する（自動着手しない）。E2E 検証は macOS で実施（Windows MinGW は E2E 既定 OFF）。
+  進行予定のフェーズスコープ（[Docs/phase4-button-slice-plan.md](Docs/phase4-button-slice-plan.md)）を逸脱する大規模リファクタ提案は控えめにし、必要であれば `[Future]` ラベルで分離してください。
 - フォルダ構成変更（`Editor/ Simulator/ Runtime/ Shared/Schema/ Shared/Widgets/ Docs/`）は禁止です。提案しないでください。
 - qmake その他の代替ビルドシステム導入は禁止です。CMake 前提でレビューしてください。
 
