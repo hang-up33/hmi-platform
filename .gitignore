@@ -35,3 +35,6 @@ Makefile
 # Python (E2E test runners)
 __pycache__/
 *.py[cod]
+
+# aqtinstall (Web setup) のログ
+aqtinstall.log

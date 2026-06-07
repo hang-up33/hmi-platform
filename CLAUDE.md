@@ -129,7 +129,7 @@ JSON 入出力は `QJsonDocument`（外部依存なし）。Editor / Simulator �
 - qmake その他の代替ビルドシステムを導入する。
 - main ブランチに直接 push / コミットする。タスクは必ず `task/<N>-<短い名>` ブランチ + PR で取り込む。
 - 設計書未承認のフレームワーク / ライブラリを独断で追加する。
-- Claude Code on the web でフェーズタスクの実装 / Codex 指摘対応 / ビルド検証を進める（理由は「Claude Code on the web は非対応」節を参照）。
+- Claude Code on the web で **Yocto SDK クロスビルド / i.MX8MP 実機描画** を伴う作業を進める（WSL2・実機が要るため不可）。PC ビルド・ユニット・E2E は `Full` ネットワーク + `scripts/web/setup.sh` で Web でも可能（「Claude Code on the web」節 / [Docs/claude-web-dev.md](Docs/claude-web-dev.md) 参照）。
 
 ---
 
@@ -178,14 +178,11 @@ JSON 入出力は `QJsonDocument`（外部依存なし）。Editor / Simulator �
 
 開発・動作確認は **macOS と Windows の両方**で実施（Editor / Simulator / Runtime PC ビルドともに GUI 起動確認済み）。**Phase 3-B / Task 22〜24 で 3 バイナリ構成（hmi_editor / hmi_simulator / hmi_runtime）に拡張済み**（Simulator のソースを共有して `hmi_runtime` バイナリを生成）。Task 23（Yocto SDK でのクロスビルド）・Task 24（i.MX8MP 実機 scp + 起動）も完了し、**実機（scarthgap / weston / Qt6 6.8.1）で Editor 由来 JSON の描画を確認済み**。詳細は [Docs/phase3b-runtime-plan.md](Docs/phase3b-runtime-plan.md)。
 
-### Claude Code on the web は非対応
+### Claude Code on the web（条件付きで PC ビルド・テスト可。実機は不可）
 
-**Claude Code on the web では本プロジェクトの実装作業を行わない**。フェーズタスクや Codex 指摘対応は必ず macOS / Windows のローカル環境で実施する（Phase 3-B-2 / Task 23 以降は WSL2 での Yocto SDK クロスビルドも追加）。
+かつて「Web 版は非対応」としていたが、**原因は環境の既定ネットワークポリシー `Trusted` が `download.qt.io` を遮断していた点**であり、**ポリシーを `Full`（または `Custom` + `*.qt.io`）にすれば CI と同じ `aqtinstall` で Qt6 を導入でき、Web コンテナ（Ubuntu 24.04）でも `cmake --build` とユニット + E2E（`-platform offscreen`）が通る**ことを実証済み（2026-06-07、Qt 6.10.0 / unit 8 + e2e 5 = 13/13 緑）。GUI ディスプレイは offscreen / vnc で不要。**手順は [Docs/claude-web-dev.md](Docs/claude-web-dev.md)**（`scripts/web/setup.sh` を環境の Setup script に設定 → `scripts/web/session-env.sh` が SessionStart hook で `CMAKE_PREFIX_PATH` を通す）。
 
-理由（2026-05 時点で調査済）：
-
-- 本プロジェクトは Qt 6.5+ を要求するが、Web 版コンテナ（Ubuntu 24.04）の apt は Qt 6.4.2 までしか提供しない。
-- aqtinstall で公式 Qt を取得しようとすると、コンテナの既定ネットワークポリシーが `download.qt.io` / `ftp.jaist.ac.jp` / `mirrors.dotsrc.org` 等 Qt ミラーを `host_not_allowed` (HTTP 403) で全遮断する。
-- 結果、`cmake --build` が通せずビルド検証ができない。GUI 動作確認も不可のため、ビルドが通ったとしても MVP の受け入れ基準を満たせない。
-
-Web 版で実装を進める運用は採用しない。Claude Code on the web のセッションを開いてしまった場合も、フェーズタスクや Codex 指摘対応に着手せず、ローカル環境に切り替えてから作業すること。
+- **PC ビルド・ユニット・E2E（macOS 相当）は Web でも可能**になった。
+- ただし **Yocto SDK クロスビルド / i.MX8MP 実機描画は Web では不可**（WSL2 / 実機が要るため従来どおりローカル）。
+- かつての遮断理由（記録）：apt の Qt は 6.4.2 止まり、aqtinstall は既定 `Trusted` で Qt ミラーが `host_not_allowed` (HTTP 403) になる。ネットワークを `Full` にするとこれが解消する。
+- **前提**：環境ネットワーク = `Full`、Setup script に `bash scripts/web/setup.sh` を設定（初回のみ実行されスナップショットにキャッシュされる）。これらは Web UI でのみ設定でき、人手が必要。
