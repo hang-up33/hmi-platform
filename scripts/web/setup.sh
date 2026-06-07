@@ -37,6 +37,21 @@ write_prefix_marker() {
     || echo "[hmi/web-setup] WARN: マーカー書込み不可: ${QT_PREFIX_FILE}（hook は glob で探索）" >&2
 }
 
+# フォントは Qt キャッシュの有無に関わらず必要（ヘッドレス GUI スクショの日本語ラベル
+# 豆腐 □ 回避）。下の「Qt 既導入なら exit 0」より **前** に冪等導入する。さもないと
+# スナップショット復元済みの Web 環境（＝常用ケース）でフォントだけ入らず文字化けする
+# （Codex PR #71 P2 指摘）。dpkg -s で既導入なら apt を呼ばず即 no-op。
+ensure_fonts() {
+  if dpkg -s fonts-noto-cjk >/dev/null 2>&1; then
+    return 0
+  fi
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update -qq || true
+  apt-get install -y --no-install-recommends fonts-dejavu-core fonts-noto-cjk \
+    || apt-get install -y --no-install-recommends fonts-dejavu-core || true
+}
+ensure_fonts
+
 # 既に導入済みなら即終了（環境キャッシュ復元後・SessionStart 再実行時の冪等性）
 if [ -d "${QT_PREFIX}/lib/cmake/Qt6" ]; then
   echo "[hmi/web-setup] Qt 既導入: ${QT_PREFIX}（スキップ）"
@@ -49,6 +64,7 @@ echo "[hmi/web-setup] Qt ${QT_VERSION}（${QT_ARCH}）を ${QT_OUTDIR} に導入
 # --- Qt のビルド・実行に必要な OS ライブラリ ---
 # - 実行時(offscreen/vnc/QtQuick): libgl1 libegl1 libxkbcommon0 libfontconfig1 ...
 # - ビルド時(find_package(Qt6 Gui) が WrapOpenGL=OpenGL dev を要求): *-dev 一式が無いと configure が失敗する
+# - フォント（fonts-noto-cjk 等）は上の ensure_fonts で Qt キャッシュ前に導入済み。
 # 既に入っていれば apt はスキップ。-t64 系の名前ゆれは握りつぶす。
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq || true

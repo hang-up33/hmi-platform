@@ -4,8 +4,9 @@
 コンテナの**ネットワークアクセスが既定の `Trusted`** で `download.qt.io` を遮断していた点にあった。
 **ポリシーを `Full` にすれば CI と同じ `aqtinstall` がそのまま通り、Web でもビルド〜テストできる**。
 
-GUI ディスプレイは不要：ビルド・ユニット・E2E は `-platform offscreen`、スクショは `QT_QPA_PLATFORM=vnc`
-で成立する（CI が毎回実証）。詳細な経緯・代替案は本ドキュメント末尾。
+GUI ディスプレイは不要：ビルド・ユニット・E2E は `-platform offscreen`、**GUI スクショも
+`-platform offscreen` + アプリ内蔵 `--screenshot`（`QQuickWindow::grabWindow()`）でウィンドウシステム
+無しに撮れる**（Xvfb 不要）。詳細な経緯・代替案は本ドキュメント末尾。
 
 ## セットアップ手順
 
@@ -28,9 +29,10 @@ flowchart LR
 
 | ファイル | 役割 | 実行場所 |
 |---|---|---|
-| `scripts/web/setup.sh` | apt 依存 + `aqtinstall` で Qt 6.10.0（`linux_gcc_64`）を `/opt/Qt` へ。冪等 | 環境の Setup script（キャッシュ） |
+| `scripts/web/setup.sh` | apt 依存（Qt ランタイム/開発ライブラリ + 日本語フォント `fonts-noto-cjk`）+ `aqtinstall` で Qt 6.10.0（`linux_gcc_64`）を `/opt/Qt` へ。冪等 | 環境の Setup script（キャッシュ） |
 | `scripts/web/session-env.sh` | prefix マーカー（`/opt/hmi-web-qt-prefix`）優先→無ければ `${HMI_QT_OUTDIR:-/opt/Qt}/*/gcc_64` を探索し、`export CMAKE_PREFIX_PATH=...` を `$CLAUDE_ENV_FILE` に書く | SessionStart hook（毎回・即 no-op 判定あり） |
 | `.claude/settings.json` | 上記 hook の登録 | — |
+| `scripts/capture-app-screenshot-linux.sh` | offscreen + `--screenshot` で GUI スクショを撮るラッパー（後述） | セッション内で手動 |
 
 ## ビルド・テスト（Web）
 
@@ -43,17 +45,49 @@ ctest --test-dir build --output-on-failure          # ユニット（QML テス�
 ctest --test-dir build -L e2e --output-on-failure    # E2E（harness.py が QT_QPA_PLATFORM=offscreen を設定）
 ```
 
+## GUI スクショ（ヘッドレス）
+
+Editor / Simulator / Runtime（PC ビルド）に **アプリ内蔵の `--screenshot <path>` フラグ**を追加した
+（`Editor/src/ScreenshotGrabber.h` / `Simulator/src/ScreenshotGrabber.h`）。`-platform offscreen` で起動し、
+`QQuickWindow::grabWindow()` でオフスクリーン描画結果を PNG に書き出して自動終了する。**Xvfb も
+X11/Wayland も不要**で、phantom_nexus の「アプリ自身が PNG を書き出して終了」方式と同じ思想（Qt 版）。
+
+```sh
+# ラッパー（推奨）: ビルド済みバイナリを offscreen 起動して撮る
+scripts/capture-app-screenshot-linux.sh -a editor    -o Docs/screenshots/editor.png
+scripts/capture-app-screenshot-linux.sh -a simulator -o Docs/screenshots/sim.png -j Docs/samples/web-gui-demo.json
+
+# 直接叩く場合
+QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software \
+  build/Simulator/hmi_simulator --open Docs/samples/web-gui-demo.json --screenshot out.png --screenshot-delay 1000
+```
+
+| オプション | 意味 |
+|---|---|
+| `-a <app>` | `editor` / `simulator` / `runtime`（既定 `editor`） |
+| `-o <path>` | 出力 PNG（既定 `Docs/screenshots/<app>-linux.png`） |
+| `-j <json>` | 起動時に `--open` で読み込むプロジェクト JSON（任意。`Docs/samples/web-gui-demo.json` が例） |
+| `-d <ms>` | 撮影前待機ミリ秒（既定 700。自動ロードや過渡状態を待つときに増やす） |
+
+撮影例（`Docs/samples/web-gui-demo.json` を Simulator で描画）：
+
+![web GUI スクショ例](screenshots/web-gui-demo.png)
+
+> 日本語ラベルを □（豆腐）にしないため、`setup.sh` が `fonts-noto-cjk` を導入する。
+> 実機 i.MX8MP の VNC キャプチャ（`scripts/yocto/vnc-capture.py`）とは別経路（あちらは実機 / weston 用）。
+
 ## なぜ GUI が無くても良いか
 
 | 用途 | 仕組み | 既存の使用箇所 |
 |---|---|---|
 | ユニット / QML テスト | `-platform offscreen` | `Editor/tests/`, `Shared/Widgets/tests/` |
 | E2E（Spix） | `QT_QPA_PLATFORM=offscreen` | `tests/e2e/harness.py` |
-| スクショ証跡 | `QT_QPA_PLATFORM=vnc` | `scripts/yocto/vnc-capture.py` |
+| GUI スクショ証跡（PC ビルド / Web） | `-platform offscreen` + `--screenshot`（`grabWindow`） | `scripts/capture-app-screenshot-linux.sh` |
+| スクショ証跡（実機 i.MX8MP） | `QT_QPA_PLATFORM=vnc` | `scripts/yocto/vnc-capture.py` |
 
 ただし offscreen には限界がある：Spix の実マウスドラッグ（`mouseBeginDrag/EndDrag`）は drag 閾値に
 届かず、座標変更は `setStringProperty` で代替している（`Docs/development-history.md` 参照）。
-真の手動操作検証は引き続きローカル / 実機で行う。
+`--screenshot` は「起動直後の静止画」前提なので、真の手動操作検証は引き続きローカル / 実機で行う。
 
 ## 代替案（ポリシーを変えられない場合）
 
