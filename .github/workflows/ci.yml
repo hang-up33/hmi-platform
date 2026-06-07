@@ -3,8 +3,14 @@ name: CI
 on:
   pull_request:
     branches: [main]
+    # 既定の types は opened/synchronize/reopened のみで、ラベル付与では workflow が
+    # 起動しない。desktop ジョブを PR の `ci-desktop` ラベルで有効化する設計のため、
+    # labeled を明示的に拾う（Codex PR #72 P2 指摘）。
+    types: [opened, synchronize, reopened, labeled]
   push:
     branches: [main]
+  # mac/win ジョブを手動で回したいとき（後述の desktop ジョブの実行条件）に使う。
+  workflow_dispatch:
 
 # 同じブランチで連続 push されたとき、古い CI をキャンセルして最新だけ走らせる。
 concurrency:
@@ -12,28 +18,106 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-test:
+  # Linux ジョブ：PR / push の毎回走る「主ゲート」。GitHub Actions の課金倍率が
+  # Linux=1x（mac=10x / win=2x）と最も安く、private リポジトリの無料枠を温存できる。
+  # このセッション（Ubuntu 24.04）で Qt 6.10.0 + offscreen により unit 8 + e2e 5 =
+  # 13/13 緑を実証済み。日常の PR 検証はこのジョブで完結させる。
+  linux:
+    name: Linux / Qt 6.10
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Qt6（offscreen / QtQuick）のビルド・実行に必要な OS ライブラリと、日本語ラベル用
+      # フォント、Ninja を導入する。一覧は scripts/web/setup.sh と揃えている
+      # （ubuntu-latest = 24.04 を前提。libglib2.0-0t64 は 24.04 のパッケージ名）。
+      - name: Install Linux deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgl1 libegl1 libegl-mesa0 libxkbcommon0 libfontconfig1 libfreetype6 libdbus-1-3 \
+            libglib2.0-0t64 libx11-6 libxcb1 \
+            libgl-dev libglx-dev libopengl-dev libegl-dev mesa-common-dev \
+            ninja-build fonts-dejavu-core fonts-noto-cjk
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.10.0"
+          host: linux
+          target: desktop
+          arch: linux_gcc_64
+          modules: ""
+          cache: true
+
+      - name: Show toolchain
+        run: |
+          cmake --version
+          g++ --version
+          ninja --version
+          echo "QT_ROOT_DIR=$QT_ROOT_DIR"
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR"
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      # ctest は QML テストで -platform offscreen を明示済み（add_test COMMAND 側）。
+      # E2E テスト（label "e2e"）も harness.py 側で QT_QPA_PLATFORM=offscreen を
+      # default 設定しているため GUI ディスプレイの無い CI ランナーでそのまま動く。
+      # Linux では HMI_ENABLE_E2E が既定 ON なので unit 8 + e2e 5 = 13/13 が走る。
+      - name: Test
+        run: ctest --test-dir build --output-on-failure -C Release
+
+      - name: E2E tests (label only, for visibility)
+        run: ctest --test-dir build -L e2e --output-on-failure -C Release
+
+      - name: Upload test logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ctest-logs-linux
+          path: |
+            build/Testing/Temporary/LastTest.log
+            build/Testing/Temporary/LastTestsFailed.log
+          if-no-files-found: ignore
+
+  # macOS / Windows ジョブ：課金倍率が高い（mac=10x / win=2x）ため **既定では PR で走らせない**。
+  # 走るのは (1) main への push、(2) 手動 workflow_dispatch、(3) PR に `ci-desktop` ラベルを
+  # 付けたとき の 3 ケースのみ。これで無料枠の消費を抑えつつ、必要な時だけ実機 2 OS の
+  # ビルド・テストを確認できる（ローカル開発は元々 macOS / Windows 母艦で行う）。
+  desktop:
     name: ${{ matrix.name }}
+    if: >-
+      github.event_name != 'pull_request'
+      || contains(github.event.pull_request.labels.*.name, 'ci-desktop')
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: macOS / Qt 6.11
+          - name: macOS / Qt 6.10
             os: macos-latest
             qt_host: mac
             qt_arch: clang_64
             build_dir: build
-            cmake_extra: ""
-            generator: ""
-          - name: Windows / Qt 6.11 MinGW
+          - name: Windows / Qt 6.10 MinGW
             os: windows-latest
             qt_host: windows
             qt_arch: win64_mingw
             build_dir: build-mingw
-            cmake_extra: ""
-            generator: "Ninja"
 
     steps:
       - name: Checkout
@@ -50,12 +134,9 @@ jobs:
           python-version: "3.12"
 
       # ローカル開発環境（macOS Homebrew Qt 6.11.1 / Windows Qt 6.11.0 MinGW）よりマイナーが
-      # 1 下の 6.10.0 を CI では使う。Qt 6.11.0 は本 PR 初回ランで aqtinstall mirror
-      # （download.qt.io）の Updates.xml にメタデータが見つからず failed to locate XML data
-      # で落ちた。Qt 6.10.0 は aqtinstall で安定取得できるため CI 用の基準バージョンに据える。
-      # API 互換性は Qt 6.x の minor 範囲で保たれており、本プロジェクトのテスト対象（Schema 単体
-      # ＋ Qt Quick Test ＋ E2E）は Qt 6.8+ の機能しか使っていないため、6.10 でビルド・テスト緑なら
-      # 6.11 ローカルでも同等を期待できる。
+      # 1 下の 6.10.0 を CI では使う。Qt 6.11.0 は aqtinstall mirror（download.qt.io）の
+      # Updates.xml にメタデータが見つからず failed to locate XML data で落ちた実績がある。
+      # Qt 6.10.0 は aqtinstall で安定取得できるため CI 用の基準バージョンに据える。
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
@@ -127,19 +208,12 @@ jobs:
       - name: Build
         run: cmake --build ${{ matrix.build_dir }} --config Release --parallel
 
-      # ctest は QML テストで -platform offscreen を明示済み（add_test COMMAND 側）。
-      # E2E テスト（label "e2e"）も harness.py 側で QT_QPA_PLATFORM=offscreen を
-      # default 設定しているため GUI ディスプレイの無い CI ランナーでそのまま動く。
-      # Windows MinGW では tests/e2e/CMakeLists.txt 側で HMI_ENABLE_E2E=OFF を検出して
-      # add_test が呼ばれないため、E2E は自動スキップされる（Spix × AnyRPC の MinGW
-      # 衝突を回避するための既存設計、CLAUDE.md「Spix（E2E）統合の罠」節）。
+      # macOS では E2E が再実行される（e2e_smoke / e2e_place_and_drag /
+      # e2e_save_load_roundtrip / e2e_simulator_display / e2e_style_roundtrip）。
+      # Windows MinGW では HMI_ENABLE_E2E=OFF のため add_test が呼ばれず E2E は自動スキップ。
       - name: Test
         run: ctest --test-dir ${{ matrix.build_dir }} --output-on-failure -C Release
 
-      # Task 21: E2E テストが実際に走ったことを CI 出力で見やすくする。
-      # macOS では 4 件（e2e_smoke / e2e_place_and_drag / e2e_save_load_roundtrip
-      # / e2e_simulator_display）が再実行される。Windows では 0 件（既知）でも
-      # ctest -L は no matching tests を warning 扱いで exit 0 を返すため fail しない。
       - name: E2E tests (label only, for visibility)
         run: ctest --test-dir ${{ matrix.build_dir }} -L e2e --output-on-failure -C Release
 
