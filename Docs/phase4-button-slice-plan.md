@@ -190,7 +190,7 @@ Task 28 と同じ **4層 + インスペクタ + テスト** を 1 タスクで�
 - Editor の編集系ソースを **Simulator / Runtime に共有**する（既存原則。Editor は別系統）。
 - スタイル属性を `HmiButton` を経由せず Editor / Simulator の delegate に**個別ハードコード**する（唯一の真実は HmiButton）。
 - `radius` を HmiButton の公開入力名に使う（Rectangle 組込みと衝突。**`cornerRadius`** を使い、JSON キー / WidgetData / メタは `radius` のまま統一）。
-- `opacity` を HmiButton / EditableWidget の公開入力名に使う（`Item.opacity` 組込みと衝突＝センチネル `-1` と resolved の分離ができない。**`widgetOpacity`** を入力にし `opacity: resolvedOpacity` で組込みへ割り当て、JSON キー / WidgetData / メタは `opacity` のまま統一。Task 34）。
+- `opacity` を HmiButton / EditableWidget の公開入力名・メタ名に使う（両者とも `Item` 派生で `Item.opacity` 組込みと衝突＝センチネル `-1` を組込み opacity に入れると未指定 Button が透明化し、`-1` と resolved の分離もできない）。**HmiButton 入力・EditableWidget メタ / delegate 入力をすべて `widgetOpacity`** に統一し `opacity: resolvedOpacity` で組込みへ割り当て、**`opacity` の名は JSON キー / `WidgetData` フィールドだけ**に使い保存/読込時にマップする（Task 34）。
 - **コア縦スライス（Task 25〜32）**に **状態 / アクション**（pressed/disabled/click action）や **横展開**（新 Widget 種別）を混ぜる。状態 / アクションは下記「Phase 4 拡張」トラック B（Task 39〜43）で **widget 非依存サブシステムとして独立タスク化**して扱い、コア縦スライスの個々のタスクには混ぜない。横展開（新 Widget 種別）は引き続き Phase 5 候補。
 
 ---
@@ -235,7 +235,7 @@ flowchart LR
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | `QString hAlign`（"left"/"center"/"right"、省略時 ""）/ `QString vAlign`（"top"/"middle"/"bottom"）/ `qreal opacity`（0.0–1.0、`-1` センチネルで未指定）を 4 層 + インスペクタ + テスト。HmiButton で **enum 文字列 → `Text.horizontalAlignment` 等へマッピング**（`resolvedHAlign`：""→`Text.AlignHCenter`）。**opacity の QML 公開入力は `widgetOpacity` に改名**（`Item.opacity` 組込みと衝突するため。T31 の `radius`→`cornerRadius` と同型の回避）：`property real widgetOpacity: -1` を入力にし、`resolvedOpacity`（`< 0`→1.0）を導出して **`opacity: resolvedOpacity`** で組込みプロパティへ割り当てる。JSON キー / WidgetData / EditableWidget メタは `opacity` のまま統一。インスペクタは hAlign/vAlign = `ComboBox`、opacity = `SpinBox`（0–100% を 0.0–1.0 にスケール）または `Slider` |
+| スコープ | `QString hAlign`（"left"/"center"/"right"、省略時 ""）/ `QString vAlign`（"top"/"middle"/"bottom"）/ `qreal opacity`（0.0–1.0、`-1` センチネルで未指定）を 4 層 + インスペクタ + テスト。HmiButton で **enum 文字列 → `Text.horizontalAlignment` 等へマッピング**（`resolvedHAlign`：""→`Text.AlignHCenter`）。**opacity の QML 入力名は HmiButton も EditableWidget も `widgetOpacity` に統一**（両方とも `Item` 派生で `Item.opacity` 組込みと衝突するため。T31 の `radius`→`cornerRadius` と同型の回避）：`property real widgetOpacity: -1` を入力にし、`resolvedOpacity`（`< 0`→1.0）を導出して **`opacity: resolvedOpacity`** で組込みプロパティへ割り当てる。**JSON キー / `WidgetData` フィールドだけ `opacity`** とし、保存（`saveTo` / `snapshotModel`）・読込（delegate バインド）時に `widgetOpacity` ↔ JSON `opacity` をマップする（EditableWidget のメタに `-1` を組込み `opacity` へ直接入れると未指定 Button が透明化するため厳禁）。インスペクタは hAlign/vAlign = `ComboBox`、opacity = `SpinBox`（0–100% を 0.0–1.0 にスケール）または `Slider` |
 | 完了基準 | ビルド緑、`ctest` 緑。配置・opacity 込み JSON round-trip 再現。スクショ `Docs/screenshots/task-34-align-opacity-editor.png` |
 | 新規ポイント | **enum 文字列マッピング**（JSON は人間可読な文字列、QML 側で enum へ変換。不正値はフォールバック）。**real〔小数〕センチネル**：`borderWidth`（int `-1`）と違い `opacity` は qreal。`toJson` は `>= 0.0` で書き出し、`fromJson` は `toDouble(-1)`、C++ ブリッジ save は `m.value("opacity", -1.0).toDouble()`、resolved は `< 0`→1.0、の 5 箇所を揃える（Task 31 の `-1` センチネル則の real 版） |
 
