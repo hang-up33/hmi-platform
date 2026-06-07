@@ -190,6 +190,7 @@ Task 28 と同じ **4層 + インスペクタ + テスト** を 1 タスクで�
 - Editor の編集系ソースを **Simulator / Runtime に共有**する（既存原則。Editor は別系統）。
 - スタイル属性を `HmiButton` を経由せず Editor / Simulator の delegate に**個別ハードコード**する（唯一の真実は HmiButton）。
 - `radius` を HmiButton の公開入力名に使う（Rectangle 組込みと衝突。**`cornerRadius`** を使い、JSON キー / WidgetData / メタは `radius` のまま統一）。
+- `opacity` を HmiButton / EditableWidget の公開入力名に使う（`Item.opacity` 組込みと衝突＝センチネル `-1` と resolved の分離ができない。**`widgetOpacity`** を入力にし `opacity: resolvedOpacity` で組込みへ割り当て、JSON キー / WidgetData / メタは `opacity` のまま統一。Task 34）。
 - **コア縦スライス（Task 25〜32）**に **状態 / アクション**（pressed/disabled/click action）や **横展開**（新 Widget 種別）を混ぜる。状態 / アクションは下記「Phase 4 拡張」トラック B（Task 39〜43）で **widget 非依存サブシステムとして独立タスク化**して扱い、コア縦スライスの個々のタスクには混ぜない。横展開（新 Widget 種別）は引き続き Phase 5 候補。
 
 ---
@@ -234,7 +235,7 @@ flowchart LR
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | `QString hAlign`（"left"/"center"/"right"、省略時 ""）/ `QString vAlign`（"top"/"middle"/"bottom"）/ `qreal opacity`（0.0–1.0、`-1` センチネルで未指定）を 4 層 + インスペクタ + テスト。HmiButton で **enum 文字列 → `Text.horizontalAlignment` 等へマッピング**（`resolvedHAlign`：""→`Text.AlignHCenter`）、opacity は `resolvedOpacity`（`< 0`→1.0）。インスペクタは hAlign/vAlign = `ComboBox`、opacity = `SpinBox`（0–100% を 0.0–1.0 にスケール）または `Slider` |
+| スコープ | `QString hAlign`（"left"/"center"/"right"、省略時 ""）/ `QString vAlign`（"top"/"middle"/"bottom"）/ `qreal opacity`（0.0–1.0、`-1` センチネルで未指定）を 4 層 + インスペクタ + テスト。HmiButton で **enum 文字列 → `Text.horizontalAlignment` 等へマッピング**（`resolvedHAlign`：""→`Text.AlignHCenter`）。**opacity の QML 公開入力は `widgetOpacity` に改名**（`Item.opacity` 組込みと衝突するため。T31 の `radius`→`cornerRadius` と同型の回避）：`property real widgetOpacity: -1` を入力にし、`resolvedOpacity`（`< 0`→1.0）を導出して **`opacity: resolvedOpacity`** で組込みプロパティへ割り当てる。JSON キー / WidgetData / EditableWidget メタは `opacity` のまま統一。インスペクタは hAlign/vAlign = `ComboBox`、opacity = `SpinBox`（0–100% を 0.0–1.0 にスケール）または `Slider` |
 | 完了基準 | ビルド緑、`ctest` 緑。配置・opacity 込み JSON round-trip 再現。スクショ `Docs/screenshots/task-34-align-opacity-editor.png` |
 | 新規ポイント | **enum 文字列マッピング**（JSON は人間可読な文字列、QML 側で enum へ変換。不正値はフォールバック）。**real〔小数〕センチネル**：`borderWidth`（int `-1`）と違い `opacity` は qreal。`toJson` は `>= 0.0` で書き出し、`fromJson` は `toDouble(-1)`、C++ ブリッジ save は `m.value("opacity", -1.0).toDouble()`、resolved は `< 0`→1.0、の 5 箇所を揃える（Task 31 の `-1` センチネル則の real 版） |
 
@@ -317,7 +318,7 @@ flowchart LR
 
 ### Phase 4 拡張で追加する設計指針
 
-- **新しい型のテンプレ拡張**：bool（**既定値と異なる値だけ書き出す** — 既定 false の `fontBold`/`fontItalic`/`checkable`/`checked` は true のとき、**既定 true の `enabled` は false のとき**書く。一律「true のみ書き出し」にすると `enabled: false` が保存されず disabled の round-trip が壊れる）/ enum 文字列（JSON は文字列・QML で enum マップ・不正値フォールバック）/ real センチネル（`opacity` は `-1.0` センチネル、`toDouble(-1)`）を、既存の int センチネル（Task 31）と同じ「5 箇所を揃える」則で扱う。
+- **新しい型のテンプレ拡張**：bool（**既定値と異なる値だけ書き出す** — 既定 false の `fontBold`/`fontItalic`/`checkable`/`checked` は true のとき、**既定 true の `enabled` は false のとき**書く。一律「true のみ書き出し」にすると `enabled: false` が保存されず disabled の round-trip が壊れる）/ enum 文字列（JSON は文字列・QML で enum マップ・不正値フォールバック）/ real センチネル（`opacity` は `-1.0` センチネル、`toDouble(-1)`。**QML 公開入力は `Item.opacity` 組込みと衝突するため `widgetOpacity` に改名**し `opacity: resolvedOpacity` で割り当てる＝Task 31 の `radius`→`cornerRadius` と同型）を、既存の int センチネル（Task 31）と同じ「5 箇所を揃える」則で扱う。
 - **編集体験は Editor 専用**（トラック C）。Simulator / Runtime 無改修を維持。`var` 配列据え置き（live Item が真実・構造変更時のみスナップショット・選択は id 追跡）の方針を崩さない。複数選択は id 集合、undo は配列スナップショット方式で QML に閉じる。
 - **状態 / アクションは Widget 非依存**（トラック B）。変数ストア・アクション型・データバインドは Button に依存しない形で設計し、Phase 5 の横展開でそのまま再利用する。**実行は Simulator / Runtime**（編集は Editor）で役割分担を維持。
 - **アクション（書き手）とバインディング（読み手）は対**：アクションが変数を更新し、バインディングが変数 → widget プロパティへ流す。**両方を Schema に保存**しないと、読み取り専用の Simulator / Runtime が保存 JSON だけから「変数変化 → property 変化」を再現できない（T39 で `Binding` を Schema 化する理由）。`checked` のような状態は **初期値を JSON 保存しつつ実行時はバインディングで変数連動**できるよう、両立する設計にする。
