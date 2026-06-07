@@ -9,8 +9,17 @@ set -euo pipefail
 
 [ "${CLAUDE_CODE_REMOTE:-}" != "true" ] && exit 0
 
-# /opt/Qt/<version>/gcc_64 を探す（最新を採用）
-QT_PREFIX="$(ls -d /opt/Qt/*/gcc_64 2>/dev/null | sort -V | tail -1 || true)"
+# 1) setup.sh が残したマーカーを最優先で読む（HMI_QT_OUTDIR でカスタム出力先にしても追従。Codex PR #70 P2）
+# 2) 無ければ ${HMI_QT_OUTDIR:-/opt/Qt}/<version>/gcc_64 を glob で探索（最新を採用）
+QT_PREFIX_FILE="${HMI_QT_PREFIX_FILE:-/opt/hmi-web-qt-prefix}"
+QT_OUTDIR="${HMI_QT_OUTDIR:-/opt/Qt}"
+QT_PREFIX=""
+if [ -f "${QT_PREFIX_FILE}" ]; then
+  QT_PREFIX="$(cat "${QT_PREFIX_FILE}" 2>/dev/null || true)"
+fi
+if [ -z "${QT_PREFIX}" ] || [ ! -d "${QT_PREFIX}/lib/cmake/Qt6" ]; then
+  QT_PREFIX="$(ls -d "${QT_OUTDIR}"/*/gcc_64 2>/dev/null | sort -V | tail -1 || true)"
+fi
 [ -z "${QT_PREFIX}" ] && exit 0
 [ ! -d "${QT_PREFIX}/lib/cmake/Qt6" ] && exit 0
 

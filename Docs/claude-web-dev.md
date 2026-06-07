@@ -29,7 +29,7 @@ flowchart LR
 | ファイル | 役割 | 実行場所 |
 |---|---|---|
 | `scripts/web/setup.sh` | apt 依存 + `aqtinstall` で Qt 6.10.0（`linux_gcc_64`）を `/opt/Qt` へ。冪等 | 環境の Setup script（キャッシュ） |
-| `scripts/web/session-env.sh` | `/opt/Qt/*/gcc_64` を探し `CMAKE_PREFIX_PATH` を `$CLAUDE_ENV_FILE` に書く | SessionStart hook（毎回・即 no-op 判定あり） |
+| `scripts/web/session-env.sh` | prefix マーカー（`/opt/hmi-web-qt-prefix`）優先→無ければ `${HMI_QT_OUTDIR:-/opt/Qt}/*/gcc_64` を探索し、`export CMAKE_PREFIX_PATH=...` を `$CLAUDE_ENV_FILE` に書く | SessionStart hook（毎回・即 no-op 判定あり） |
 | `.claude/settings.json` | 上記 hook の登録 | — |
 
 ## ビルド・テスト（Web）

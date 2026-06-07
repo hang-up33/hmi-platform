@@ -20,6 +20,9 @@ QT_ARCH="linux_gcc_64"          # Qt 6.7+ の Linux x86_64 デスクトップ ar
 QT_OUTDIR="${HMI_QT_OUTDIR:-/opt/Qt}"
 # aqt はディスク上 <outdir>/<version>/gcc_64 に展開する（arch 名と実ディレクトリ名が異なる点に注意）
 QT_PREFIX="${QT_OUTDIR}/${QT_VERSION}/gcc_64"
+# 解決した prefix を固定パスのマーカーに残し、SessionStart hook（session-env.sh）が
+# HMI_QT_OUTDIR を知らなくても読めるようにする（Codex PR #70 P2 指摘）。
+QT_PREFIX_FILE="${HMI_QT_PREFIX_FILE:-/opt/hmi-web-qt-prefix}"
 
 # ローカル（非クラウド）では何もしない。SessionStart hook 経由でも安全に no-op になる。
 if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
@@ -27,9 +30,17 @@ if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
   exit 0
 fi
 
+# 解決した prefix をマーカーへ書く（hook がカスタム出力先でも読めるように）
+write_prefix_marker() {
+  echo "${QT_PREFIX}" > "${QT_PREFIX_FILE}" 2>/dev/null \
+    && echo "[hmi/web-setup] prefix マーカー: ${QT_PREFIX_FILE} -> ${QT_PREFIX}" \
+    || echo "[hmi/web-setup] WARN: マーカー書込み不可: ${QT_PREFIX_FILE}（hook は glob で探索）" >&2
+}
+
 # 既に導入済みなら即終了（環境キャッシュ復元後・SessionStart 再実行時の冪等性）
 if [ -d "${QT_PREFIX}/lib/cmake/Qt6" ]; then
   echo "[hmi/web-setup] Qt 既導入: ${QT_PREFIX}（スキップ）"
+  write_prefix_marker
   exit 0
 fi
 
@@ -71,5 +82,6 @@ if [ ! -d "${QT_PREFIX}/lib/cmake/Qt6" ]; then
   exit 1
 fi
 
+write_prefix_marker
 echo "[hmi/web-setup] 完了。CMAKE_PREFIX_PATH=${QT_PREFIX}"
 echo "[hmi/web-setup] ビルド例: cmake -S . -B build -DCMAKE_PREFIX_PATH=${QT_PREFIX} && cmake --build build"
