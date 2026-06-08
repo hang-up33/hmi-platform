@@ -98,7 +98,12 @@ Item {
                 // Task 33: フォント詳細も live Item から取り込む（bool / 空文字 = 未指定）。
                 fontBold: item.widgetFontBold,
                 fontItalic: item.widgetFontItalic,
-                fontFamily: item.widgetFontFamily
+                fontFamily: item.widgetFontFamily,
+                // Task 34: 配置 + 不透明度も live Item から取り込む（空 / -1 = 未指定）。
+                // JSON キーは `opacity`、live Item 側は `widgetOpacity`（組込み衝突回避）。
+                hAlign: item.widgetHAlign,
+                vAlign: item.widgetVAlign,
+                opacity: item.widgetOpacity
             })
         }
         return result
@@ -219,6 +224,11 @@ Item {
                     widgetFontBold: modelData.fontBold !== undefined ? modelData.fontBold : false
                     widgetFontItalic: modelData.fontItalic !== undefined ? modelData.fontItalic : false
                     widgetFontFamily: modelData.fontFamily !== undefined ? modelData.fontFamily : ""
+                    // Task 34: 配置 + 不透明度を流す（未指定は空 / -1）。JSON キー opacity →
+                    // メタは widgetOpacity（組込み Item.opacity 衝突回避でリネーム）。
+                    widgetHAlign: modelData.hAlign !== undefined ? modelData.hAlign : ""
+                    widgetVAlign: modelData.vAlign !== undefined ? modelData.vAlign : ""
+                    widgetOpacity: modelData.opacity !== undefined ? modelData.opacity : -1
                     // Task 18: Spix から `widget_<id>` で参照できるようにする。
                     objectName: "widget_" + widgetId
                     x: modelData.x !== undefined ? modelData.x : 0
@@ -258,6 +268,12 @@ Item {
                         fontBold: wrapper.widgetFontBold
                         fontItalic: wrapper.widgetFontItalic
                         fontFamily: wrapper.widgetFontFamily
+                        // Task 34: 配置 + 不透明度を HmiButton へ渡す。不透明度は widgetOpacity
+                        // → HmiButton.widgetOpacity（両者とも組込み opacity 衝突回避でリネーム）。
+                        // 空 / -1 は HmiButton 側で既定（中央寄せ・不透明度 1.0）にフォールバック。
+                        hAlign: wrapper.widgetHAlign
+                        vAlign: wrapper.widgetVAlign
+                        widgetOpacity: wrapper.widgetOpacity
                         // Task 25: ドラッグ用の親 MouseArea は drag.filterChildren 下で
                         // クリックを発火しない（子が消費する）。よってクリック検出は
                         // HmiButton 側の clicked を中継して選択要求に使う。

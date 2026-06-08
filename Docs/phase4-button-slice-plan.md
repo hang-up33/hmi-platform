@@ -355,7 +355,7 @@ flowchart LR
 | # | タスク | 状態 |
 |---|---|---|
 | 33 | フォント詳細（bold/italic/family）全レイヤ貫通 + インスペクタ（A） | ✅ 完了（PR #69。Schema→C++ ブリッジ→delegate→HmiButton→EditableWidget メタ→インスペクタ〔CheckBox ×2 + ComboBox〕貫通。bool は既定値差分で省略書き出し。**空 fontFamily は `Qt.application.font.family` にフォールバック**〔`font.family: ""` 直結は Qt/macOS で文字化けする〕。unit 8 + e2e 5 = 13/13 緑、Editor/Simulator スクショ） |
-| 34 | テキスト配置（hAlign/vAlign）+ 不透明度（opacity）全レイヤ貫通（A） | ⬜ 未着手 |
+| 34 | テキスト配置（hAlign/vAlign）+ 不透明度（opacity）全レイヤ貫通（A） | ✅ 完了（Schema→C++ ブリッジ→delegate→HmiButton→EditableWidget メタ→インスペクタ〔ComboBox ×2 + SpinBox〕貫通。配置は **enum 文字列**を `Text.horizontalAlignment` 等へマップ〔空・不正値は中央〕、**Text を `anchors.fill` 化**して配置を効かせる。opacity は **real センチネル `-1.0`**〔`0.0`=完全透明は正当値〕で、公開入力は `Item.opacity` 組込み衝突回避のため **`widgetOpacity`** に統一〔JSON キー / WidgetData は `opacity`〕。unit 8 + e2e 5 = 13/13 緑、Editor/Simulator スクショ） |
 | 35 | グリッドスナップ + スナップ ON/OFF トグル（Editor）（C） | ⬜ 未着手 |
 | 36 | 複数選択 + 一括移動・整列・削除（Editor）（C） | ⬜ 未着手 |
 | 37 | コピー / ペースト / 複製（Editor）（C） | ⬜ 未着手 |

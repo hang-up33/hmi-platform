@@ -52,6 +52,15 @@ Item {
     property bool widgetFontItalic: false
     property string widgetFontFamily: ""
 
+    // Task 34: 配置 + 不透明度のメタ。配置は文字列（空 = 未指定 = 中央）。
+    // 不透明度は **`widgetOpacity`** に統一する（HmiButton と同じく `Item.opacity` 組込みと
+    // 衝突するため。`-1` = 未指定）。delegate（Canvas.qml）で HmiButton へ渡す。
+    // JSON キー / WidgetData フィールドだけ `opacity` で、保存（snapshotModel）・
+    // 読込（delegate バインド）時に widgetOpacity ↔ opacity をマップする。
+    property string widgetHAlign: ""
+    property string widgetVAlign: ""
+    property real widgetOpacity: -1
+
     // Task 27: リサイズ時の最小サイズ。ハンドルドラッグ / 数値編集での縮小は
     // これ未満にならないよう clamp する（潰れて選択・操作不能になるのを防ぐ）。
     property real minWidth: 30

@@ -75,6 +75,12 @@ Item {
                     fontBold: wrapper.modelData.fontBold !== undefined ? wrapper.modelData.fontBold : false
                     fontItalic: wrapper.modelData.fontItalic !== undefined ? wrapper.modelData.fontItalic : false
                     fontFamily: wrapper.modelData.fontFamily !== undefined ? wrapper.modelData.fontFamily : ""
+                    // Task 34: 配置 + 不透明度も HmiButton へ渡す（Editor delegate と対）。
+                    // 不透明度は JSON キー opacity → HmiButton.widgetOpacity（組込み衝突回避）。
+                    // 未指定（空 / -1）は HmiButton 側で既定（中央寄せ・不透明度 1.0）になる。
+                    hAlign: wrapper.modelData.hAlign !== undefined ? wrapper.modelData.hAlign : ""
+                    vAlign: wrapper.modelData.vAlign !== undefined ? wrapper.modelData.vAlign : ""
+                    widgetOpacity: wrapper.modelData.opacity !== undefined ? wrapper.modelData.opacity : -1
                 }
             }
         }

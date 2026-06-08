@@ -53,6 +53,18 @@ QJsonObject WidgetData::toJson() const
     if (!fontFamily.isEmpty()) {
         obj["fontFamily"] = fontFamily;
     }
+    // Task 34: 配置は空（= 未指定）のとき省略。opacity は **`>= 0.0`** で書き出す
+    // （borderWidth の int センチネルと同型の real 版。`0.0` = 完全透明も明示値として
+    // 保存し、未指定の `-1.0` のときだけ省略する）。後方互換のため旧 JSON は据え置き。
+    if (!hAlign.isEmpty()) {
+        obj["hAlign"] = hAlign;
+    }
+    if (!vAlign.isEmpty()) {
+        obj["vAlign"] = vAlign;
+    }
+    if (opacity >= 0.0) {
+        obj["opacity"] = opacity;
+    }
     return obj;
 }
 
@@ -81,6 +93,12 @@ WidgetData WidgetData::fromJson(const QJsonObject &obj)
     w.fontBold = obj.value("fontBold").toBool();
     w.fontItalic = obj.value("fontItalic").toBool();
     w.fontFamily = obj.value("fontFamily").toString();
+    // Task 34: 配置は欠落時 空文字（= 未指定）。opacity は **`toDouble(-1)`**（欠落時
+    // -1 = 未指定）で読む。`toDouble()`〔欠落時 0.0〕にすると「キー欠落 = 完全透明」と
+    // 誤解され、HmiButton の既定（1.0）にフォールバックしなくなる（borderWidth と同じ罠）。
+    w.hAlign = obj.value("hAlign").toString();
+    w.vAlign = obj.value("vAlign").toString();
+    w.opacity = obj.value("opacity").toDouble(-1.0);
     return w;
 }
 

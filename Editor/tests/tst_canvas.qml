@@ -304,6 +304,38 @@ TestCase {
         compare(entry.fontFamily, "Courier New");
     }
 
+    // Task 34: 選択中 live Item の配置 + 不透明度メタ（widgetHAlign / widgetVAlign /
+    // widgetOpacity）を直接更新でき、snapshotModel（保存経路）にも乗ること。opacity は
+    // **live Item では widgetOpacity** だが、snapshot の JSON キーは **opacity** にマップ
+    // されることを固定する（組込み Item.opacity 衝突回避のリネームが保存で正しく戻る）。
+    // 0.0（完全透明）も正当値としてスナップショットされることを確認する。
+    function test_align_opacity_props_are_writable_on_live_item() {
+        canvas.selectedWidgetId = "btn001";
+        tryVerify(function() {
+            return canvas.selectedItem !== null
+                && canvas.selectedItem.widgetId === "btn001";
+        }, 1000, "btn001 が選択 Item にならない");
+
+        canvas.selectedItem.widgetHAlign = "left";
+        canvas.selectedItem.widgetVAlign = "top";
+        canvas.selectedItem.widgetOpacity = 0.0;
+
+        compare(canvas.selectedItem.widgetHAlign, "left");
+        compare(canvas.selectedItem.widgetVAlign, "top");
+        compare(canvas.selectedItem.widgetOpacity, 0.0);
+
+        const snap = canvas.snapshotModel();
+        let entry = null;
+        for (let i = 0; i < snap.length; ++i) {
+            if (snap[i].id === "btn001") { entry = snap[i]; break; }
+        }
+        verify(entry !== null, "snapshotModel に btn001 が無い");
+        compare(entry.hAlign, "left");
+        compare(entry.vAlign, "top");
+        // live の widgetOpacity が JSON キー opacity にマップされて乗る。
+        compare(entry.opacity, 0.0);
+    }
+
     // Task 29: deleteWidget(id) は該当 id を除いて widgetModel を再代入し、
     // 選択中だった場合は選択を解除する（インスペクタ削除ボタン / Delete キーの
     // 呼び先）。他 widget は残ることも確認する（構造変更スナップショットの対称性）。

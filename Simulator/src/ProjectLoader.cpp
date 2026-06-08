@@ -81,6 +81,12 @@ QVariantMap ProjectLoader::load(const QUrl &fileUrl)
         m.insert(QStringLiteral("fontBold"), w.fontBold);
         m.insert(QStringLiteral("fontItalic"), w.fontItalic);
         m.insert(QStringLiteral("fontFamily"), w.fontFamily);
+        // Task 34: 配置 + opacity も QML delegate へ届ける（Editor の ProjectIo.load と同形）。
+        // Simulator / Runtime は読み取り専用だが描画に新スタイルを渡す口は必要。
+        // 空 / -1 は HmiButton 側で既定（中央寄せ・不透明度 1.0）にフォールバックされる。
+        m.insert(QStringLiteral("hAlign"), w.hAlign);
+        m.insert(QStringLiteral("vAlign"), w.vAlign);
+        m.insert(QStringLiteral("opacity"), w.opacity);
         widgetsVar.append(m);
     }
 

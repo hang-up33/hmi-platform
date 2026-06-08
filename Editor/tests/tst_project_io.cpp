@@ -26,7 +26,10 @@ QVariantMap makeWidgetVariant(const QString &id,
                               int radius = -1,
                               bool fontBold = false,
                               bool fontItalic = false,
-                              const QString &fontFamily = QString())
+                              const QString &fontFamily = QString(),
+                              const QString &hAlign = QString(),
+                              const QString &vAlign = QString(),
+                              qreal opacity = -1.0)
 {
     QVariantMap m;
     m.insert("id", id);
@@ -49,6 +52,11 @@ QVariantMap makeWidgetVariant(const QString &id,
     m.insert("fontBold", fontBold);
     m.insert("fontItalic", fontItalic);
     m.insert("fontFamily", fontFamily);
+    // Task 34: 配置 + 不透明度も QML（QVariantMap）→ save → load を往復する。
+    // opacity は -1 = 未指定（0.0 は正当値 = 完全透明）。
+    m.insert("hAlign", hAlign);
+    m.insert("vAlign", vAlign);
+    m.insert("opacity", opacity);
     return m;
 }
 
@@ -83,7 +91,7 @@ void ProjectIoTest::saveThenLoadRoundTrip()
     QVariantList widgets;
     widgets.append(makeWidgetVariant("btn001", 10, 20, 120, 40, "Start", "PLC.START",
                                      "#ff0000", "#00ff00", 22, "#112233", 3, 8,
-                                     true, true, "Courier New"));
+                                     true, true, "Courier New", "left", "top", 0.5));
     widgets.append(makeWidgetVariant("btn002", 50, 80, 100, 30));
 
     ProjectIo io;
@@ -119,6 +127,10 @@ void ProjectIoTest::saveThenLoadRoundTrip()
     QCOMPARE(w0.value("fontBold").toBool(), true);
     QCOMPARE(w0.value("fontItalic").toBool(), true);
     QCOMPARE(w0.value("fontFamily").toString(), QStringLiteral("Courier New"));
+    // Task 34: 配置 + 不透明度も往復する。
+    QCOMPARE(w0.value("hAlign").toString(), QStringLiteral("left"));
+    QCOMPARE(w0.value("vAlign").toString(), QStringLiteral("top"));
+    QCOMPARE(w0.value("opacity").toDouble(), 0.5);
 
     const QVariantMap w1 = loaded.at(1).toMap();
     QCOMPARE(w1.value("id").toString(), QStringLiteral("btn002"));
@@ -136,6 +148,10 @@ void ProjectIoTest::saveThenLoadRoundTrip()
     QCOMPARE(w1.value("fontBold").toBool(), false);
     QCOMPARE(w1.value("fontItalic").toBool(), false);
     QVERIFY(w1.value("fontFamily").toString().isEmpty());
+    // Task 34: 未指定の配置は空、opacity は -1（センチネル）で戻る（toJson 省略 → fromJson 既定埋め）。
+    QVERIFY(w1.value("hAlign").toString().isEmpty());
+    QVERIFY(w1.value("vAlign").toString().isEmpty());
+    QCOMPARE(w1.value("opacity").toDouble(), -1.0);
 }
 
 // Task 31: borderWidth=0（ボーダーなし）/ radius=0（角丸なし）が C++ ブリッジ
@@ -148,8 +164,11 @@ void ProjectIoTest::zeroBorderRoundTripsThroughBridge()
     QVERIFY(dir.isValid());
 
     QVariantList widgets;
+    // Task 34: opacity=0.0（完全透明）も 0 が正当値の real センチネル。borderWidth/radius=0 と
+    // 同じく C++ ブリッジ往復で 0.0 のまま保たれること（落ちて未指定にならないこと）を併せて固定する。
     widgets.append(makeWidgetVariant("btn001", 0, 0, 120, 40, "NoBorder", QString(),
-                                     QString(), QString(), 0, QString(), 0, 0));
+                                     QString(), QString(), 0, QString(), 0, 0,
+                                     false, false, QString(), QString(), QString(), 0.0));
 
     ProjectIo io;
     const QUrl url = urlForFile(dir, "zero_border.json");
@@ -162,6 +181,7 @@ void ProjectIoTest::zeroBorderRoundTripsThroughBridge()
     const QVariantMap w0 = loaded.at(0).toMap();
     QCOMPARE(w0.value("borderWidth").toInt(), 0);
     QCOMPARE(w0.value("radius").toInt(), 0);
+    QCOMPARE(w0.value("opacity").toDouble(), 0.0);
 }
 
 // Task 31（Codex PR #62 P2 の回帰固定）：border キーを **持たない** QVariantMap

@@ -35,6 +35,8 @@ private slots:
     void zeroBorderWidthAndRadiusAreWrittenNotOmitted();
     void roundTripOmitsDefaultFontDetails();
     void trueFontFlagsAreWrittenFalseAreOmitted();
+    void roundTripOmitsDefaultAlignOpacity();
+    void zeroOpacityIsWrittenNotOmitted();
     void fromJsonFillsDefaultsForMissingKeys();
 
     void isValidJsonAcceptsMinimumRequiredFields();
@@ -64,6 +66,9 @@ void WidgetDataTest::roundTripFullFields()
     src.fontBold = true;
     src.fontItalic = true;
     src.fontFamily = "Courier New";
+    src.hAlign = "left";
+    src.vAlign = "top";
+    src.opacity = 0.5;
 
     const QJsonObject obj = src.toJson();
     const WidgetData restored = WidgetData::fromJson(obj);
@@ -85,6 +90,9 @@ void WidgetDataTest::roundTripFullFields()
     QCOMPARE(restored.fontBold, src.fontBold);
     QCOMPARE(restored.fontItalic, src.fontItalic);
     QCOMPARE(restored.fontFamily, src.fontFamily);
+    QCOMPARE(restored.hAlign, src.hAlign);
+    QCOMPARE(restored.vAlign, src.vAlign);
+    QCOMPARE(restored.opacity, src.opacity);
 }
 
 // Task 31: ボーダー＋角丸は未指定（色は空、数値は -1 センチネル）のとき toJson で
@@ -183,6 +191,50 @@ void WidgetDataTest::trueFontFlagsAreWrittenFalseAreOmitted()
     QCOMPARE(restored.fontItalic, false);
 }
 
+// Task 34: 配置 + 不透明度は既定値（hAlign/vAlign=空 = 未指定、opacity=-1 = 未指定）
+// のとき toJson で省略され、旧 JSON と後方互換になることを固定する（Task 28/31/33 の対）。
+void WidgetDataTest::roundTripOmitsDefaultAlignOpacity()
+{
+    WidgetData src;
+    src.id = "btn008";
+    src.type = "Button";
+    src.width = 120;
+    src.height = 40;
+    // hAlign / vAlign は既定の空（未指定）、opacity は既定 -1（未指定）。
+
+    const QJsonObject obj = src.toJson();
+
+    QVERIFY(!obj.contains("hAlign"));
+    QVERIFY(!obj.contains("vAlign"));
+    QVERIFY(!obj.contains("opacity"));
+
+    const WidgetData restored = WidgetData::fromJson(obj);
+    QVERIFY(restored.hAlign.isEmpty());
+    QVERIFY(restored.vAlign.isEmpty());
+    QCOMPARE(restored.opacity, -1.0);
+}
+
+// Task 34 の新規ポイント：opacity は **real センチネル**（-1 = 未指定）。`0.0`（完全透明）は
+// 正当値であり、borderWidth=0 と同じく **省略されず書き出される**ことを固定する
+// （zeroBorderWidthAndRadius の real 版）。
+void WidgetDataTest::zeroOpacityIsWrittenNotOmitted()
+{
+    WidgetData src;
+    src.id = "btn009";
+    src.type = "Button";
+    src.width = 120;
+    src.height = 40;
+    src.opacity = 0.0;  // 完全透明（正当値）。-1 でないので書き出される。
+
+    const QJsonObject obj = src.toJson();
+
+    QVERIFY(obj.contains("opacity"));
+    QCOMPARE(obj.value("opacity").toDouble(), 0.0);
+
+    const WidgetData restored = WidgetData::fromJson(obj);
+    QCOMPARE(restored.opacity, 0.0);
+}
+
 // Task 28: スタイル属性は既定値（空 / 0 = 未指定）のとき toJson で省略され、
 // 旧 JSON と後方互換になることを固定する。
 void WidgetDataTest::roundTripOmitsDefaultStyleFields()
@@ -253,6 +305,11 @@ void WidgetDataTest::fromJsonFillsDefaultsForMissingKeys()
     QCOMPARE(w.fontBold, false);
     QCOMPARE(w.fontItalic, false);
     QVERIFY(w.fontFamily.isEmpty());
+    // Task 34: 配置は欠落時 空文字（= 未指定）。opacity は欠落時 -1（= 未指定センチネル）。
+    // 0.0 に落ちると「完全透明」と誤解されるため `toDouble(-1)` で読むことを固定する。
+    QVERIFY(w.hAlign.isEmpty());
+    QVERIFY(w.vAlign.isEmpty());
+    QCOMPARE(w.opacity, -1.0);
 }
 
 void WidgetDataTest::isValidJsonAcceptsMinimumRequiredFields()

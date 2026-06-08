@@ -47,6 +47,31 @@ Rectangle {
     readonly property string resolvedFontFamily: fontFamily !== "" ? fontFamily
                                                                    : Qt.application.font.family
 
+    // Task 34: テキスト配置の入力。enum を人間可読な **文字列**で受ける
+    // （hAlign: "left"/"center"/"right"、vAlign: "top"/"middle"/"bottom"。空 = 未指定）。
+    // 下の resolvedHAlign / resolvedVAlign で `Text.horizontalAlignment` 等の enum へ
+    // マッピングする（不正値・空は中央＝既定にフォールバック）。
+    property string hAlign: ""
+    property string vAlign: ""
+
+    // Task 34: 不透明度の入力。**`Item.opacity` 組込みと名前衝突するため公開入力は
+    // `widgetOpacity`** にする（root は Rectangle = Item 派生で `opacity` は組込み。
+    // T31 の `radius`→`cornerRadius` と同型の回避）。`-1` をセンチネル（未指定）にし、
+    // 下の resolvedOpacity（`< 0`→1.0）を導出して組込み `opacity:` へ割り当てる。
+    // `0.0`（完全透明）が正当値のため 0 を未指定に使えず -1 センチネルにする（borderWidth 同様）。
+    property real widgetOpacity: -1
+
+    // Task 34: 配置文字列 → Text の enum へのマッピング。空・不正値は中央寄せにフォールバック
+    // （既定外観の単一ソースとして他の resolved* と揃える）。
+    readonly property int resolvedHAlign: hAlign === "left" ? Text.AlignLeft
+                                        : hAlign === "right" ? Text.AlignRight
+                                        : Text.AlignHCenter
+    readonly property int resolvedVAlign: vAlign === "top" ? Text.AlignTop
+                                        : vAlign === "bottom" ? Text.AlignBottom
+                                        : Text.AlignVCenter
+    // Task 34: 未指定（`< 0`）のとき不透明度 1.0（完全不透明）にフォールバック。
+    readonly property real resolvedOpacity: widgetOpacity >= 0 ? widgetOpacity : 1.0
+
     // 未指定（空 / 0）のときの既定外観。プロジェクト全体でここだけが既定値を持つ。
     readonly property color resolvedBackgroundColor: backgroundColor !== "" ? backgroundColor : "#4cc9f0"
     readonly property color resolvedTextColor: textColor !== "" ? textColor : "white"
@@ -62,6 +87,10 @@ Rectangle {
 
     width: 120
     height: 40
+    // Task 34: 不透明度は組込み `opacity` へ resolvedOpacity（未指定→1.0）を割り当てる。
+    // 公開入力 widgetOpacity と組込み opacity を分けることで、未指定 Button が透明化する
+    // 事故（-1 を組込み opacity に直接入れると起きる）を防ぐ。
+    opacity: root.resolvedOpacity
     // Task 31: 角丸・ボーダーは resolved*（HmiButton 1 箇所に集約した既定値）を参照する。
     radius: root.resolvedCornerRadius
     // press フィードバックは背景色から Qt.darker で導出する（個別の press 色を持たない）。
@@ -71,7 +100,11 @@ Rectangle {
     border.width: root.resolvedBorderWidth
 
     Text {
-        anchors.centerIn: parent
+        // Task 34: 配置を効かせるため `anchors.centerIn` をやめ `anchors.fill` にして
+        // Text の領域を Button 全体に広げ、horizontalAlignment / verticalAlignment で
+        // テキストを寄せる（未指定は resolvedHAlign/VAlign で中央＝従来の見た目に一致）。
+        anchors.fill: parent
+        anchors.margins: 4
         text: root.text
         color: root.resolvedTextColor
         font.pixelSize: root.resolvedFontSize
@@ -80,6 +113,9 @@ Rectangle {
         font.bold: root.fontBold
         font.italic: root.fontItalic
         font.family: root.resolvedFontFamily
+        // Task 34: 配置（文字列 → enum を resolved* でマップ。空・不正値は中央）。
+        horizontalAlignment: root.resolvedHAlign
+        verticalAlignment: root.resolvedVAlign
     }
 
     MouseArea {

@@ -103,6 +103,9 @@ Window {
             && !inspectorBorderWidthSpin.activeFocus
             && !inspectorRadiusSpin.activeFocus
             && !inspectorFontFamilyCombo.activeFocus
+            && !inspectorHAlignCombo.activeFocus
+            && !inspectorVAlignCombo.activeFocus
+            && !inspectorOpacitySpin.activeFocus
             && !fieldX.activeFocus && !fieldY.activeFocus
             && !fieldW.activeFocus && !fieldH.activeFocus
         onActivated: canvas.deleteWidget(canvas.selectedWidgetId)
@@ -576,6 +579,84 @@ Window {
                                 // 0 は正当値（角丸なし）なのでそのまま表示する。
                                 inspectorRadiusSpin.value = (it && it.widgetRadius >= 0)
                                     ? it.widgetRadius : 4
+                            }
+                        }
+                    }
+
+                    // Task 34: テキスト配置（水平 / 垂直）+ 不透明度。配置は ComboBox（フォント
+                    // と同型）で、表示ラベルと enum 文字列を **parallel な values 配列** でマップ
+                    // する（index 0 = "(既定:中央)" = 空文字 = 未指定）。2 本立て（onActivated で
+                    // 書き戻し、Connections.onSelectedItemChanged で表示同期）は他項目と同じ。
+                    Label { text: qsTr("水平配置") }
+                    ComboBox {
+                        id: inspectorHAlignCombo
+                        objectName: "inspectorHAlignCombo"
+                        width: parent.width
+                        // 表示ラベル（model）と書き戻す enum 文字列（values）を index で対応させる。
+                        readonly property var values: ["", "left", "center", "right"]
+                        model: [qsTr("(既定:中央)"), qsTr("左"), qsTr("中央"), qsTr("右")]
+                        onActivated: {
+                            if (canvas.selectedItem) {
+                                canvas.selectedItem.widgetHAlign = values[currentIndex]
+                            }
+                        }
+                        Connections {
+                            target: canvas
+                            function onSelectedItemChanged() {
+                                const it = canvas.selectedItem
+                                const v = it ? it.widgetHAlign : ""
+                                const idx = inspectorHAlignCombo.values.indexOf(v)
+                                inspectorHAlignCombo.currentIndex = idx >= 0 ? idx : 0
+                            }
+                        }
+                    }
+
+                    Label { text: qsTr("垂直配置") }
+                    ComboBox {
+                        id: inspectorVAlignCombo
+                        objectName: "inspectorVAlignCombo"
+                        width: parent.width
+                        readonly property var values: ["", "top", "middle", "bottom"]
+                        model: [qsTr("(既定:中央)"), qsTr("上"), qsTr("中央"), qsTr("下")]
+                        onActivated: {
+                            if (canvas.selectedItem) {
+                                canvas.selectedItem.widgetVAlign = values[currentIndex]
+                            }
+                        }
+                        Connections {
+                            target: canvas
+                            function onSelectedItemChanged() {
+                                const it = canvas.selectedItem
+                                const v = it ? it.widgetVAlign : ""
+                                const idx = inspectorVAlignCombo.values.indexOf(v)
+                                inspectorVAlignCombo.currentIndex = idx >= 0 ? idx : 0
+                            }
+                        }
+                    }
+
+                    // 不透明度は SpinBox（0–100% を 0.0–1.0 にスケール）。editable は付けない
+                    //（Task 27: editable な SpinBox は value プログラム設定で表示が更新されない不具合）。
+                    // 書き戻しは value/100.0、表示同期は widgetOpatity*100（未指定 -1 は既定 100% を表示）。
+                    Label { text: qsTr("不透明度 (%)") }
+                    SpinBox {
+                        id: inspectorOpacitySpin
+                        objectName: "inspectorOpacitySpin"
+                        from: 0
+                        to: 100
+                        value: 100
+                        onValueModified: {
+                            if (canvas.selectedItem) {
+                                canvas.selectedItem.widgetOpacity = value / 100.0
+                            }
+                        }
+                        Connections {
+                            target: canvas
+                            function onSelectedItemChanged() {
+                                const it = canvas.selectedItem
+                                // -1/未指定は既定 100%（不透明度 1.0）を表示
+                                //（HmiButton の resolvedOpacity と整合）。
+                                inspectorOpacitySpin.value = (it && it.widgetOpacity >= 0)
+                                    ? Math.round(it.widgetOpacity * 100) : 100
                             }
                         }
                     }

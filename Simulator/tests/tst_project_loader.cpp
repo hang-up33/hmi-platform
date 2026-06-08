@@ -32,7 +32,10 @@ constexpr auto kValidProjectJson = R"({
           "radius": 8,
           "fontBold": true,
           "fontItalic": true,
-          "fontFamily": "Courier New"
+          "fontFamily": "Courier New",
+          "hAlign": "left",
+          "vAlign": "top",
+          "opacity": 0.5
         }
       ]
     }
@@ -104,6 +107,10 @@ void ProjectLoaderTest::loadsValidProject()
     QCOMPARE(w.value("fontBold").toBool(), true);
     QCOMPARE(w.value("fontItalic").toBool(), true);
     QCOMPARE(w.value("fontFamily").toString(), QStringLiteral("Courier New"));
+    // Task 34: 配置 + 不透明度も load を経て delegate へ届く。
+    QCOMPARE(w.value("hAlign").toString(), QStringLiteral("left"));
+    QCOMPARE(w.value("vAlign").toString(), QStringLiteral("top"));
+    QCOMPARE(w.value("opacity").toDouble(), 0.5);
 }
 
 // Task 31: borderWidth=0（ボーダーなし）/ radius=0（角丸なし）は正当値であり、

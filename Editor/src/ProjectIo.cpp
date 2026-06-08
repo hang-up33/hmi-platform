@@ -57,6 +57,13 @@ bool ProjectIo::save(const QUrl &fileUrl,
         w.fontBold = m.value(QStringLiteral("fontBold")).toBool();
         w.fontItalic = m.value(QStringLiteral("fontItalic")).toBool();
         w.fontFamily = m.value(QStringLiteral("fontFamily")).toString();
+        // Task 34: 配置 + opacity も QVariantMap → WidgetData へ手動コピーする。配置は
+        // 欠落時 空文字（= 未指定）。opacity は **`m.value(key, -1.0).toDouble()`**
+        // （QVariantMap の value 側で既定 -1 を与える。`QVariant::toDouble(-1)` は引数を
+        // 取らないので不可。borderWidth と同じ罠の real 版）。
+        w.hAlign = m.value(QStringLiteral("hAlign")).toString();
+        w.vAlign = m.value(QStringLiteral("vAlign")).toString();
+        w.opacity = m.value(QStringLiteral("opacity"), -1.0).toDouble();
         screen.widgets.append(w);
     }
 
@@ -147,6 +154,11 @@ QVariantMap ProjectIo::load(const QUrl &fileUrl)
         m.insert(QStringLiteral("fontBold"), w.fontBold);
         m.insert(QStringLiteral("fontItalic"), w.fontItalic);
         m.insert(QStringLiteral("fontFamily"), w.fontFamily);
+        // Task 34: 配置 + opacity も QML delegate へ届ける。未指定（空 / -1）は QML 側で
+        // HmiButton の既定（中央寄せ・不透明度 1.0）にフォールバックされる（素通しする）。
+        m.insert(QStringLiteral("hAlign"), w.hAlign);
+        m.insert(QStringLiteral("vAlign"), w.vAlign);
+        m.insert(QStringLiteral("opacity"), w.opacity);
         widgetsVar.append(m);
     }
 

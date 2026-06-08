@@ -43,6 +43,18 @@ struct WidgetData {
     bool fontItalic = false;
     QString fontFamily;
 
+    // Task 34: テキスト配置（hAlign/vAlign）+ 不透明度（opacity）。配置は enum を
+    // 人間可読な **文字列**で持つ（hAlign: "left"/"center"/"right"、vAlign:
+    // "top"/"middle"/"bottom"。空 = 未指定）。HmiButton 側で `Text.horizontalAlignment`
+    // 等へマッピングし、不正値・空はフォールバック（中央）になる。
+    // opacity は qreal で **`-1` をセンチネル**（未指定）にする：borderWidth の int
+    // センチネルと同型だが real 版で、`0.0`（完全透明）が正当値のため 0 を未指定に使えない。
+    // `toJson` は `>= 0.0` で書き出し（0.0 も書く）、`fromJson` は `toDouble(-1)`。
+    // 既定（中央寄せ・不透明度 1.0）は HmiButton 側に集約する。
+    QString hAlign;
+    QString vAlign;
+    qreal opacity = -1.0;
+
     QJsonObject toJson() const;
     static WidgetData fromJson(const QJsonObject &obj);
 
