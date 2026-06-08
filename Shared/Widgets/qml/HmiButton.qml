@@ -83,7 +83,10 @@ Rectangle {
     readonly property int resolvedBorderWidth: borderWidth >= 0 ? borderWidth : 1
     readonly property int resolvedCornerRadius: cornerRadius >= 0 ? cornerRadius : 4
 
-    signal clicked()
+    // Task 36: クリックを通知する。Editor の複数選択（Shift / Ctrl クリックで加除）の
+    // ため、押下時のキーボード modifiers を引数で渡す。Simulator は clicked に接続して
+    // いないため影響なし（引数を無視する接続は従来どおり動く）。
+    signal clicked(int modifiers)
 
     width: 120
     height: 40
@@ -121,6 +124,6 @@ Rectangle {
     MouseArea {
         id: mouseArea
         anchors.fill: parent
-        onClicked: root.clicked()
+        onClicked: function(mouse) { root.clicked(mouse.modifiers) }
     }
 }

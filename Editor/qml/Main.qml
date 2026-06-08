@@ -93,7 +93,7 @@ Window {
     // 限定する。削除ロジックはボタンと同じ Canvas.deleteWidget() に集約。
     Shortcut {
         sequence: StandardKey.Delete
-        enabled: canvas.selectedWidgetId !== ""
+        enabled: canvas.selectedWidgetIds.length > 0
             && !inspectorTextField.activeFocus
             && !inspectorTagField.activeFocus
             && !inspectorBgColorField.activeFocus
@@ -108,7 +108,7 @@ Window {
             && !inspectorOpacitySpin.activeFocus
             && !fieldX.activeFocus && !fieldY.activeFocus
             && !fieldW.activeFocus && !fieldH.activeFocus
-        onActivated: canvas.deleteWidget(canvas.selectedWidgetId)
+        onActivated: canvas.deleteWidgets(canvas.selectedWidgetIds)
     }
 
     // 薄いグレーの余白背景
@@ -188,14 +188,59 @@ Window {
                         font.bold: true
                     }
 
-                // 未選択時の案内
+                // 未選択時の案内（Task 36: 0 個選択のときのみ）
                 Label {
                     objectName: "inspectorEmptyLabel"
-                    visible: canvas.selectedItem === null
+                    visible: canvas.selectedWidgetIds.length === 0
                     width: parent.width
                     wrapMode: Text.WordWrap
                     color: "#888888"
                     text: qsTr("Widget を選択してください")
+                }
+
+                // Task 36: 複数選択時のパネル。単一プロパティ編集は単一選択時のみとし、
+                // 複数選択時は「N 個選択中」+ 一括整列 / 分布 / 削除のアクションを提供する。
+                Column {
+                    objectName: "inspectorMultiPanel"
+                    visible: canvas.selectedWidgetIds.length > 1
+                    width: parent.width
+                    spacing: 8
+
+                    Label {
+                        objectName: "inspectorMultiLabel"
+                        width: parent.width
+                        font.bold: true
+                        text: canvas.selectedWidgetIds.length + qsTr(" 個選択中")
+                    }
+
+                    Label { text: qsTr("整列"); color: "#555555" }
+                    // 水平方向の整列（左 / 中央 / 右）
+                    Row {
+                        spacing: 4
+                        Button { objectName: "alignLeftButton";    text: qsTr("左");   onClicked: canvas.alignSelected("left") }
+                        Button { objectName: "alignHCenterButton"; text: qsTr("中央"); onClicked: canvas.alignSelected("hcenter") }
+                        Button { objectName: "alignRightButton";   text: qsTr("右");   onClicked: canvas.alignSelected("right") }
+                    }
+                    // 垂直方向の整列（上 / 中央 / 下）
+                    Row {
+                        spacing: 4
+                        Button { objectName: "alignTopButton";     text: qsTr("上");   onClicked: canvas.alignSelected("top") }
+                        Button { objectName: "alignVCenterButton"; text: qsTr("中央"); onClicked: canvas.alignSelected("vcenter") }
+                        Button { objectName: "alignBottomButton";  text: qsTr("下");   onClicked: canvas.alignSelected("bottom") }
+                    }
+
+                    Label { text: qsTr("等間隔分布（3 個以上）"); color: "#555555" }
+                    Row {
+                        spacing: 4
+                        Button { objectName: "distributeHButton"; text: qsTr("水平"); onClicked: canvas.distributeSelected("h") }
+                        Button { objectName: "distributeVButton"; text: qsTr("垂直"); onClicked: canvas.distributeSelected("v") }
+                    }
+
+                    Button {
+                        objectName: "inspectorMultiDeleteButton"
+                        text: qsTr("選択をすべて削除")
+                        onClicked: canvas.deleteWidgets(canvas.selectedWidgetIds)
+                    }
                 }
 
                 // 選択中の編集フォーム

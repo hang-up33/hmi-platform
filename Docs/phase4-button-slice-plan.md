@@ -254,8 +254,9 @@ flowchart LR
 
 | 項目 | 内容 |
 |---|---|
-| スコープ | `selectedWidgetId`（単一）を **選択 ID 集合（`selectedWidgetIds`）へ拡張**（Shift / Ctrl クリックで加除、背景ラバーバンドは任意）。複数選択時：一括ドラッグ移動、一括削除、整列（左 / 水平中央 / 右 / 上 / 垂直中央 / 下）と等間隔分布。インスペクタは複数選択時「N 個選択中」表示 + 共通プロパティのみ編集可（差異は空表示） |
+| スコープ | `selectedWidgetId`（単一）を **選択 ID 集合（`selectedWidgetIds`）へ拡張**（Shift / Ctrl クリックで加除、背景ラバーバンドは任意）。複数選択時：一括ドラッグ移動、一括削除、整列（左 / 水平中央 / 右 / 上 / 垂直中央 / 下）と等間隔分布。インスペクタは複数選択時「N 個選択中」表示 + 整列 / 分布 / 削除アクション。**※実装では単一プロパティのフィールド編集は単一選択時のみとし、複数選択時の共通プロパティ編集は範囲外（後続候補）に簡略化した**（移動 / 整列 / 分布 / 削除の一括操作を優先） |
 | 完了基準 | ビルド緑、QML テスト緑。複数選択 → 一括移動 / 整列 / 削除。スクショ `Docs/screenshots/task-36-multiselect-align.png` |
+| 完了 | ✅ 実装済み（[Docs/phase4-button-slice-plan.md](phase4-button-slice-plan.md) 進捗表参照）。選択真実を `selectedWidgetIds` 集合へ移し `selectedWidgetId` は単一選択時のみ非空の派生に。HmiButton.clicked が modifiers を中継、Canvas に selectWidget / deleteWidgets / alignSelected / distributeSelected / begin・updateBatchDrag を実装 |
 | 新規ポイント | **選択を単一 id → 集合へ拡張**（T25 の `selected: widgetId === root.selectedWidgetId` を `selectedWidgetIds.includes(widgetId)` に。delegate 結線の互換に注意）。インスペクタの「複数選択時の共通値編集」 |
 
 #### T37: コピー / ペースト / 複製（Editor）
@@ -357,7 +358,7 @@ flowchart LR
 | 33 | フォント詳細（bold/italic/family）全レイヤ貫通 + インスペクタ（A） | ✅ 完了（PR #69。Schema→C++ ブリッジ→delegate→HmiButton→EditableWidget メタ→インスペクタ〔CheckBox ×2 + ComboBox〕貫通。bool は既定値差分で省略書き出し。**空 fontFamily は `Qt.application.font.family` にフォールバック**〔`font.family: ""` 直結は Qt/macOS で文字化けする〕。unit 8 + e2e 5 = 13/13 緑、Editor/Simulator スクショ） |
 | 34 | テキスト配置（hAlign/vAlign）+ 不透明度（opacity）全レイヤ貫通（A） | ✅ 完了（Schema→C++ ブリッジ→delegate→HmiButton→EditableWidget メタ→インスペクタ〔ComboBox ×2 + SpinBox〕貫通。配置は **enum 文字列**を `Text.horizontalAlignment` 等へマップ〔空・不正値は中央〕、**Text を `anchors.fill` 化**して配置を効かせる。opacity は **real センチネル `-1.0`**〔`0.0`=完全透明は正当値〕で、公開入力は `Item.opacity` 組込み衝突回避のため **`widgetOpacity`** に統一〔JSON キー / WidgetData は `opacity`〕。unit 8 + e2e 5 = 13/13 緑、Editor/Simulator スクショ） |
 | 35 | グリッドスナップ + スナップ ON/OFF トグル（Editor）（C） | ✅ 完了（Canvas に `snapEnabled`/`gridSize`〔既定 8px〕+ グリッド線描画〔Repeater の薄 Rectangle、snapEnabled 時のみ〕。移動ドラッグ確定〔`dragArea.onReleased`〕/ リサイズ確定〔`resizeArea.onReleased`〕で `Math.round(v/grid)*grid` 吸着。ツールバーに「スナップ」CheckBox。**JSON 非保存**〔編集補助のみ〕。unit 8 + e2e 5 = 13/13 緑、グリッドスクショ） |
-| 36 | 複数選択 + 一括移動・整列・削除（Editor）（C） | ⬜ 未着手 |
+| 36 | 複数選択 + 一括移動・整列・削除（Editor）（C） | ✅ 完了（`selectedWidgetIds`〔集合〕へ拡張、Shift/Ctrl クリックで加除〔HmiButton.clicked が modifiers を中継〕。一括ドラッグ移動〔リーダーの差分を選択全体へ〕・一括削除〔`deleteWidgets`〕・整列〔左/水平中央/右/上/垂直中央/下〕・等間隔分布〔水平/垂直、3 個以上〕。インスペクタは複数選択時「N 個選択中」+ 整列/分布/削除アクション。**単一プロパティ編集は単一選択時のみ**〔共通プロパティのフィールド編集は範囲外＝後続候補〕。unit 8 + e2e 5 = 13/13 緑、複数選択スクショ） |
 | 37 | コピー / ペースト / 複製（Editor）（C） | ⬜ 未着手 |
 | 38 | undo / redo（コマンドスタック）（Editor）（C） | ⬜ 未着手 |
 | 39 | 変数 / タグストア + Schema アクション型 + バインディング型（B） | ⬜ 未着手 |

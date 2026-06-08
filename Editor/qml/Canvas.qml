@@ -28,11 +28,38 @@ Item {
     property bool snapEnabled: false
     property int gridSize: 8
 
-    // Task 25: 選択中 Widget の id。選択状態の所有者はここ（Canvas）に集約する。
-    // 各 EditableWidget は delegate 側で `selected: widgetId === selectedWidgetId`
-    // をバインドし、自身が選ばれているかを受け取る。空文字 "" は未選択。
-    // Main.qml はこの値をインスペクタ（Task 26 以降）の編集対象解決に使う。
-    property string selectedWidgetId: ""
+    // Task 25 / 36: 選択。**選択の真実は集合 `selectedWidgetIds`（id 配列）** に集約する
+    // （Task 36 で単一 id から複数選択へ拡張。Shift / Ctrl クリックで加除）。
+    // 各 EditableWidget は delegate 側で `selected: selectedWidgetIds.indexOf(widgetId) >= 0`
+    // をバインドし、自身が選ばれているかを受け取る。
+    property var selectedWidgetIds: []
+
+    // Task 36: 単一選択時の id（後方互換の便利値。インスペクタの単一編集 / 削除引数
+    // 既定に使う）。**集合からの派生 readonly** で、ちょうど 1 個選択のときだけ非空。
+    // 複数選択 / 未選択では "" になり、selectedItem も null（単一プロパティ編集は単一選択時のみ）。
+    readonly property string selectedWidgetId: selectedWidgetIds.length === 1 ? selectedWidgetIds[0] : ""
+
+    // Task 36: クリック選択。modifiers に Shift / Ctrl が立っていれば集合へ加除（トグル）、
+    // 無ければ単一選択に置き換える。delegate の selectRequested から呼ばれる。
+    function selectWidget(id, modifiers) {
+        if (!id) {
+            return
+        }
+        const additive = (modifiers & (Qt.ShiftModifier | Qt.ControlModifier)) !== 0
+        if (additive) {
+            const arr = selectedWidgetIds.slice()
+            const idx = arr.indexOf(id)
+            if (idx >= 0) {
+                arr.splice(idx, 1)  // 既に選択中ならトグルで外す
+            } else {
+                arr.push(id)
+            }
+            selectedWidgetIds = arr
+        } else {
+            selectedWidgetIds = [id]
+        }
+    }
+
 
     // 配置されている Widget 群（Task 6 の JSON 保存で走査するため公開）
     property alias widgetItems: widgetLayer.children
@@ -161,27 +188,184 @@ Item {
     // 構造変更（削除）なので live Item 群をスナップショット → 該当 id を除いた配列を
     // 再代入して Repeater をリトリガする（var 配列据え置き＝Phase 4 設計指針）。
     // これにより未保存の他 widget の編集（text/座標/スタイル）が巻き戻らない。
-    // 削除後は選択を解除（selectedWidgetId = ""）し、selectedItem も null に解決される。
-    // 引数省略時は現在の選択 id を対象にする。Main.qml の削除ボタンから呼ばれる。
+    // 引数省略時は現在の選択 id を対象にする。Task 36 で複数削除 deleteWidgets() に委譲。
     function deleteWidget(targetId) {
         const id = (targetId !== undefined && targetId !== "")
             ? targetId : selectedWidgetId
         if (!id) {
             return
         }
+        deleteWidgets([id])
+    }
+
+    // Task 36: 複数 Widget を一括削除する（Delete キー / 削除ボタンの呼び先）。
+    // deleteWidget(id) と同じく snapshot → 除外 → 再代入。削除した id を選択集合からも
+    // 外す（破棄済み Item を掴まないよう先に外してから model 再代入）。
+    function deleteWidgets(ids) {
+        if (!ids || ids.length === 0) {
+            return
+        }
         const snapshot = snapshotModel()
         const next = []
         for (let i = 0; i < snapshot.length; ++i) {
-            if (snapshot[i].id !== id) {
+            if (ids.indexOf(snapshot[i].id) < 0) {
                 next.push(snapshot[i])
             }
         }
-        // 削除対象が選択中なら選択を解除する。先に解除しておくことで、
-        // 配列再代入に伴う Repeater 再生成中も破棄済み Item を掴まない。
-        if (selectedWidgetId === id) {
-            selectedWidgetId = ""
-        }
+        selectedWidgetIds = selectedWidgetIds.filter(function(sid) {
+            return ids.indexOf(sid) < 0
+        })
         widgetModel = next
+    }
+
+    // Task 36: 現在 live な選択 Item（複数可）を配列で返す（整列 / 分布 / 一括移動が使う）。
+    function selectedItemsList() {
+        const items = widgetItems
+        const result = []
+        for (let i = 0; i < items.length; ++i) {
+            const it = items[i]
+            if (it && it.widgetId !== undefined && selectedWidgetIds.indexOf(it.widgetId) >= 0) {
+                result.push(it)
+            }
+        }
+        return result
+    }
+
+    // Task 36: 一括整列。選択 Item 群のバウンディングボックスを基準に左 / 水平中央 / 右 /
+    // 上 / 垂直中央 / 下へ揃える（2 個以上で有効）。live Item の x/y を直接更新し、保存は
+    // snapshotModel が live 値を読む（座標編集と同じ運用）。
+    function alignSelected(mode) {
+        const items = selectedItemsList()
+        if (items.length < 2) {
+            return
+        }
+        let minX = Infinity, maxR = -Infinity, minY = Infinity, maxB = -Infinity
+        for (let i = 0; i < items.length; ++i) {
+            const it = items[i]
+            minX = Math.min(minX, it.x)
+            maxR = Math.max(maxR, it.x + it.width)
+            minY = Math.min(minY, it.y)
+            maxB = Math.max(maxB, it.y + it.height)
+        }
+        const cx = (minX + maxR) / 2
+        const cy = (minY + maxB) / 2
+        for (let i = 0; i < items.length; ++i) {
+            const it = items[i]
+            switch (mode) {
+            case "left":    it.x = minX; break
+            case "hcenter": it.x = cx - it.width / 2; break
+            case "right":   it.x = maxR - it.width; break
+            case "top":     it.y = minY; break
+            case "vcenter": it.y = cy - it.height / 2; break
+            case "bottom":  it.y = maxB - it.height; break
+            }
+        }
+    }
+
+    // Task 36: 等間隔分布。両端の Widget は固定し、間の Widget を左端（/上端）基準で
+    // 等間隔に並べる（3 個以上で有効）。
+    function distributeSelected(axis) {
+        const items = selectedItemsList()
+        if (items.length < 3) {
+            return
+        }
+        if (axis === "h") {
+            items.sort(function(a, b) { return a.x - b.x })
+            const left = items[0].x
+            const right = items[items.length - 1].x
+            const step = (right - left) / (items.length - 1)
+            for (let i = 1; i < items.length - 1; ++i) {
+                items[i].x = left + step * i
+            }
+        } else {
+            items.sort(function(a, b) { return a.y - b.y })
+            const top = items[0].y
+            const bottom = items[items.length - 1].y
+            const step = (bottom - top) / (items.length - 1)
+            for (let i = 1; i < items.length - 1; ++i) {
+                items[i].y = top + step * i
+            }
+        }
+    }
+
+    // Task 36: 複数選択時の一括ドラッグ移動。ドラッグ中の「リーダー」Widget の移動量
+    // （drag 開始位置からの差分）を、他の選択 Widget へ同じだけ適用する。リーダー自身は
+    // drag.target が動かすのでここでは触らない。EditableWidget の dragging / x / y 変化を
+    // delegate の Connections が購読して beginBatchDrag / updateBatchDrag を呼ぶ。
+    property string _dragLeaderId: ""
+    property var _batchStart: ({})
+
+    function beginBatchDrag(leaderId) {
+        // 単一選択 or リーダーが選択外なら一括移動しない。
+        if (selectedWidgetIds.length <= 1 || selectedWidgetIds.indexOf(leaderId) < 0) {
+            _dragLeaderId = ""
+            return
+        }
+        _dragLeaderId = leaderId
+        const start = {}
+        const items = selectedItemsList()
+        for (let i = 0; i < items.length; ++i) {
+            start[items[i].widgetId] = { x: items[i].x, y: items[i].y }
+        }
+        _batchStart = start
+    }
+
+    function updateBatchDrag(leaderId) {
+        if (_dragLeaderId !== leaderId || !_batchStart[leaderId]) {
+            return
+        }
+        const leader = resolveSelectedItem(leaderId, widgetItems)
+        if (!leader) {
+            return
+        }
+        const dx = leader.x - _batchStart[leaderId].x
+        const dy = leader.y - _batchStart[leaderId].y
+        const maxX = Math.max(0, width)
+        const maxY = Math.max(0, height)
+        for (let sid in _batchStart) {
+            if (sid === leaderId) {
+                continue
+            }
+            const it = resolveSelectedItem(sid, widgetItems)
+            if (!it) {
+                continue
+            }
+            it.x = Math.max(0, Math.min(maxX - it.width, _batchStart[sid].x + dx))
+            it.y = Math.max(0, Math.min(maxY - it.height, _batchStart[sid].y + dy))
+        }
+    }
+
+    // Task 36: ドラッグ確定時の最終反映。リーダーは EditableWidget 側で吸着済みなので、
+    // その snapped 差分を兄弟へもう一度適用してから _dragLeaderId をクリアする。これが
+    // ないと snap ON のとき兄弟だけ非グリッド位置に残る（Codex PR #75 [P2]）。
+    function endBatchDrag(leaderId) {
+        if (_dragLeaderId !== leaderId) {
+            return
+        }
+        updateBatchDrag(leaderId)
+        _dragLeaderId = ""
+    }
+
+    // Task 36（Codex PR #75 [P2]）：widgetModel 差し替え（プロジェクト読込など）で、
+    // 新モデルに存在しない選択 id を選択集合から外す。これをしないと、読込後に直前の
+    // 選択 id が残り「selectedItem は null なのに未選択案内も単一フォームも出ない空の
+    // インスペクタ」や「実在しない id を含む N 個選択中」になる。モデルにある id だけへ
+    // 絞り込む（件数が変わる時だけ再代入してバインディング無限ループを避ける）。
+    onWidgetModelChanged: {
+        if (selectedWidgetIds.length === 0) {
+            return
+        }
+        const present = {}
+        for (let i = 0; i < widgetModel.length; ++i) {
+            const w = widgetModel[i]
+            if (w && w.id !== undefined) {
+                present[w.id] = true
+            }
+        }
+        const filtered = selectedWidgetIds.filter(function(id) { return present[id] === true })
+        if (filtered.length !== selectedWidgetIds.length) {
+            selectedWidgetIds = filtered
+        }
     }
 
     implicitWidth: canvasWidth
@@ -203,7 +387,7 @@ Item {
         MouseArea {
             id: backgroundClickArea
             anchors.fill: parent
-            onClicked: root.selectedWidgetId = ""
+            onClicked: root.selectedWidgetIds = []
         }
 
         // Task 35: グリッド線。snapEnabled 時のみ描画する。MouseArea を持たないので
@@ -281,13 +465,39 @@ Item {
                     width: modelData.width !== undefined ? modelData.width : 120
                     height: modelData.height !== undefined ? modelData.height : 40
 
-                    // Task 25: 選択状態の結線。EditableWidget からは Canvas の id
-                    // （root）が見えないため、可視な delegate 側で双方向を結ぶ：
-                    //  - 自分が選択中かを selectedWidgetId との一致で受け取る
-                    //  - クリックされたら selectRequested 経由で selectedWidgetId を更新
-                    selected: wrapper.widgetId === root.selectedWidgetId
-                    onSelectRequested: function(requestedId) {
-                        root.selectedWidgetId = requestedId
+                    // Task 25 / 36: 選択状態の結線。EditableWidget からは Canvas の id
+                    // （root）が見えないため、可視な delegate 側で結ぶ：
+                    //  - 自分が選択集合に含まれるかを受け取る
+                    //  - クリック（modifiers 付き）されたら selectWidget で加除 / 置換
+                    selected: root.selectedWidgetIds.indexOf(wrapper.widgetId) >= 0
+                    onSelectRequested: function(requestedId, modifiers) {
+                        root.selectWidget(requestedId, modifiers)
+                    }
+
+                    // Task 36: 一括ドラッグ移動の購読。リーダー（このドラッグ中 Widget）の
+                    // 移動を Canvas が他の選択 Widget へ伝播する。siblings の x/y 変化は
+                    // dragging=false なのでガードで無視され、フィードバックループにならない。
+                    Connections {
+                        target: wrapper
+                        function onDraggingChanged() {
+                            if (wrapper.dragging) {
+                                root.beginBatchDrag(wrapper.widgetId)
+                            }
+                        }
+                        function onXChanged() {
+                            if (wrapper.dragging) {
+                                root.updateBatchDrag(wrapper.widgetId)
+                            }
+                        }
+                        function onYChanged() {
+                            if (wrapper.dragging) {
+                                root.updateBatchDrag(wrapper.widgetId)
+                            }
+                        }
+                        // Task 36: ドラッグ確定（リーダー吸着後）に兄弟へ最終差分を反映。
+                        function onDragFinished() {
+                            root.endBatchDrag(wrapper.widgetId)
+                        }
                     }
 
                     // 現状 MVP は Button のみ。型分岐は将来 Widget 種別が増えた時に拡張。
@@ -322,7 +532,10 @@ Item {
                         // Task 25: ドラッグ用の親 MouseArea は drag.filterChildren 下で
                         // クリックを発火しない（子が消費する）。よってクリック検出は
                         // HmiButton 側の clicked を中継して選択要求に使う。
-                        onClicked: wrapper.selectRequested(wrapper.widgetId)
+                        // Task 36: modifiers（Shift / Ctrl）を渡して複数選択の加除を可能にする。
+                        onClicked: function(modifiers) {
+                            wrapper.selectRequested(wrapper.widgetId, modifiers)
+                        }
                     }
                 }
             }

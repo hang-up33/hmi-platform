@@ -83,11 +83,13 @@ TestCase {
         compare(editable.selected, true);
     }
 
-    // Task 25: selectRequested シグナルが id 付きで発火する
+    // Task 25 / 36: selectRequested シグナルが id + modifiers 付きで発火する
+    // （Task 36 で複数選択のため modifiers 引数を追加）。
     function test_select_requested_signal_emits() {
-        editable.selectRequested("btn001");
+        editable.selectRequested("btn001", Qt.ControlModifier);
         compare(selectSpy.count, 1);
         compare(selectSpy.signalArguments[0][0], "btn001");
+        compare(selectSpy.signalArguments[0][1], Qt.ControlModifier);
     }
 
     function test_meta_properties_are_settable() {

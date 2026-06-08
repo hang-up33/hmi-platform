@@ -23,6 +23,11 @@ Item {
     // ドラッグ中かどうか（将来：選択ハンドルや座標表示の切替に使う想定）
     readonly property bool dragging: dragArea.drag.active
 
+    // Task 36: ドラッグ確定（active→false）を、**リーダーの吸着を済ませた後**に通知する。
+    // Canvas が一括移動の最終差分（snapped）を兄弟 Widget へ反映するのに使う
+    // （Codex PR #75 [P2]：snap 後に兄弟が追従せず相対位置がズレる問題の修正）。
+    signal dragFinished()
+
     // Shared/Schema の WidgetData に書き出すためのメタ情報。
     // Task 6（JSON 保存）で参照する。子の HmiButton 等はこの値をバインディングで参照する。
     property string widgetId: ""
@@ -89,7 +94,8 @@ Item {
     // EditableWidget から Canvas を直接触らず、このシグナル経由で結線する。
     // 引数名は QML 予約語 `id` / 既存プロパティ `widgetId` との衝突を避けて
     // `requestedId` とする。
-    signal selectRequested(string requestedId)
+    // Task 36: modifiers（Shift / Ctrl）も渡し、Canvas 側で複数選択の加除を判断する。
+    signal selectRequested(string requestedId, int modifiers)
 
     MouseArea {
         id: dragArea
@@ -112,12 +118,18 @@ Item {
         // の active→false 遷移で行う。これで「選択のためにクリックしただけ」では位置が
         // 動かない（Codex PR #74 [Major]：非グリッド値の Widget を誤クリックで書き換える問題）。
         // 丸めで親領域を超えないよう 0..(parent-size) に clamp する。
+        // **吸着を先に済ませてから dragFinished() を発火**する：Task 36 の一括移動で
+        // Canvas が「リーダーの最終（snapped）座標」を兄弟へ反映できるよう、順序を保証する
+        // （Codex PR #75 [P2]：snap 後の差分が兄弟へ反映されずズレる問題）。
         drag.onActiveChanged: {
-            if (!dragArea.drag.active && root.snapEnabled && root.parent) {
-                const maxX = Math.max(0, root.parent.width - root.width)
-                const maxY = Math.max(0, root.parent.height - root.height)
-                root.x = Math.max(0, Math.min(maxX, root.snappedValue(root.x)))
-                root.y = Math.max(0, Math.min(maxY, root.snappedValue(root.y)))
+            if (!dragArea.drag.active) {
+                if (root.snapEnabled && root.parent) {
+                    const maxX = Math.max(0, root.parent.width - root.width)
+                    const maxY = Math.max(0, root.parent.height - root.height)
+                    root.x = Math.max(0, Math.min(maxX, root.snappedValue(root.x)))
+                    root.y = Math.max(0, Math.min(maxY, root.snappedValue(root.y)))
+                }
+                root.dragFinished()
             }
         }
 

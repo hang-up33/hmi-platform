@@ -47,7 +47,7 @@ TestCase {
         // 前の test が変更した状態が次に漏れないように）
         canvas.canvasWidth = 800;
         canvas.canvasHeight = 600;
-        canvas.selectedWidgetId = "";
+        canvas.selectedWidgetIds = [];
         canvas.snapEnabled = false;  // Task 35: テスト間でスナップ状態を漏らさない
         canvas.gridSize = 8;
         canvas.widgetModel = [
@@ -149,7 +149,7 @@ TestCase {
         tryVerify(function() { return editableChildren().length === 2; }, 1000,
                   "2 件モデルが反映されない");
 
-        canvas.selectedWidgetId = "b";
+        canvas.selectedWidgetIds = ["b"];
         tryVerify(function() {
             const ws = editableChildren();
             if (ws.length !== 2) return false;
@@ -162,13 +162,13 @@ TestCase {
 
     // Task 25: 選択解除（空文字）で全 delegate の selected が false に戻る。
     function test_clearing_selection_unmarks_all() {
-        canvas.selectedWidgetId = "btn001";
+        canvas.selectedWidgetIds = ["btn001"];
         tryVerify(function() {
             const ws = editableChildren();
             return ws.length === 1 && ws[0].selected === true;
         }, 1000, "btn001 が選択状態にならない");
 
-        canvas.selectedWidgetId = "";
+        canvas.selectedWidgetIds = [];
         tryVerify(function() {
             const ws = editableChildren();
             return ws.length === 1 && ws[0].selected === false;
@@ -180,13 +180,13 @@ TestCase {
     function test_selected_item_resolves_to_live_item() {
         compare(canvas.selectedItem, null);
 
-        canvas.selectedWidgetId = "btn001";
+        canvas.selectedWidgetIds = ["btn001"];
         tryVerify(function() {
             return canvas.selectedItem !== null
                 && canvas.selectedItem.widgetId === "btn001";
         }, 1000, "selectedItem が btn001 の live Item を指さない");
 
-        canvas.selectedWidgetId = "";
+        canvas.selectedWidgetIds = [];
         tryVerify(function() { return canvas.selectedItem === null; }, 1000,
                   "選択解除後も selectedItem が残る");
     }
@@ -196,7 +196,7 @@ TestCase {
     // Item** に解決し直される（Codex PR #52 P2 指摘の回帰固定）。再解決された
     // Item へ書けば反映されること（= 破棄済み参照でないこと）まで検証する。
     function test_selected_item_reresolves_after_add() {
-        canvas.selectedWidgetId = "btn001";
+        canvas.selectedWidgetIds = ["btn001"];
         tryVerify(function() {
             return canvas.selectedItem !== null
                 && canvas.selectedItem.widgetId === "btn001";
@@ -222,7 +222,7 @@ TestCase {
     // 直接更新できる（インスペクタの onTextEdited / onValueModified が書き戻す先）。
     // var 配列を据え置きつつ live Item を真実とする設計の確認。
     function test_style_props_are_writable_on_live_item() {
-        canvas.selectedWidgetId = "btn001";
+        canvas.selectedWidgetIds = ["btn001"];
         tryVerify(function() {
             return canvas.selectedItem !== null
                 && canvas.selectedItem.widgetId === "btn001";
@@ -252,7 +252,7 @@ TestCase {
     // snapshotModel（保存経路）にも乗ること。**borderWidth=0（ボーダーなし）** が
     // スナップショットで 0 のまま保たれること（未指定 -1 と混同して落とさない）も固定する。
     function test_border_props_are_writable_on_live_item() {
-        canvas.selectedWidgetId = "btn001";
+        canvas.selectedWidgetIds = ["btn001"];
         tryVerify(function() {
             return canvas.selectedItem !== null
                 && canvas.selectedItem.widgetId === "btn001";
@@ -281,7 +281,7 @@ TestCase {
     // snapshotModel（保存経路）にも乗ること。bool は false 自体が「指定なし」と一致するため
     // 片側（bold=true / italic=false）でも正しくスナップショットされることを固定する。
     function test_font_props_are_writable_on_live_item() {
-        canvas.selectedWidgetId = "btn001";
+        canvas.selectedWidgetIds = ["btn001"];
         tryVerify(function() {
             return canvas.selectedItem !== null
                 && canvas.selectedItem.widgetId === "btn001";
@@ -312,7 +312,7 @@ TestCase {
     // されることを固定する（組込み Item.opacity 衝突回避のリネームが保存で正しく戻る）。
     // 0.0（完全透明）も正当値としてスナップショットされることを確認する。
     function test_align_opacity_props_are_writable_on_live_item() {
-        canvas.selectedWidgetId = "btn001";
+        canvas.selectedWidgetIds = ["btn001"];
         tryVerify(function() {
             return canvas.selectedItem !== null
                 && canvas.selectedItem.widgetId === "btn001";
@@ -381,7 +381,7 @@ TestCase {
         tryVerify(function() { return editableChildren().length === 3; }, 1000,
                   "3 件モデルが反映されない");
 
-        canvas.selectedWidgetId = "b";
+        canvas.selectedWidgetIds = ["b"];
         canvas.deleteWidget("b");
 
         // b だけ消えて a / c は残る
@@ -401,7 +401,7 @@ TestCase {
     // Task 29: 引数省略の deleteWidget() は現在の選択 id を対象にする
     //（インスペクタ削除ボタンは選択 id を明示渡しするが、フォールバック仕様を固定）。
     function test_delete_widget_uses_selection_when_no_arg() {
-        canvas.selectedWidgetId = "btn001";
+        canvas.selectedWidgetIds = ["btn001"];
         tryVerify(function() { return canvas.selectedItem !== null; }, 1000,
                   "btn001 が選択されない");
 
@@ -426,7 +426,7 @@ TestCase {
                   "2 件モデルが反映されない");
 
         // keep のスタイルを未保存編集（インスペクタの書き戻し相当：live Item を直接更新）
-        canvas.selectedWidgetId = "keep";
+        canvas.selectedWidgetIds = ["keep"];
         tryVerify(function() {
             return canvas.selectedItem !== null && canvas.selectedItem.widgetId === "keep";
         }, 1000, "keep が選択 Item にならない");
@@ -455,5 +455,139 @@ TestCase {
         compare(snap[0].backgroundColor, "#123456");
         compare(snap[0].textColor, "#abcdef");
         compare(snap[0].fontSize, 27);
+    }
+
+    // Task 36: 3 件モデルを用意するヘルパ（整列 / 分布 / 複数選択テスト用）。
+    function setThreeWidgets() {
+        canvas.widgetModel = [
+            { id: "a", type: "Button", x:  10, y:  10, width: 100, height: 40, text: "A", tag: "" },
+            { id: "b", type: "Button", x:  50, y:  80, width:  80, height: 30, text: "B", tag: "" },
+            { id: "c", type: "Button", x: 200, y: 150, width: 120, height: 50, text: "C", tag: "" }
+        ];
+        tryVerify(function() { return editableChildren().length === 3; }, 1000,
+                  "3 件モデルが反映されない");
+    }
+
+    function itemById(id) {
+        const ch = editableChildren();
+        for (let i = 0; i < ch.length; ++i) {
+            if (ch[i].widgetId === id) return ch[i];
+        }
+        return null;
+    }
+
+    // Task 36: selectWidget は modifiers 無しで単一選択へ置換、Shift / Ctrl 付きで
+    // 集合へ加除（トグル）する。単一選択時のみ selectedWidgetId（派生）が非空になる。
+    function test_select_widget_single_and_additive() {
+        setThreeWidgets();
+
+        // modifiers 無し → 単一選択に置換
+        canvas.selectWidget("a", Qt.NoModifier);
+        compare(canvas.selectedWidgetIds.length, 1);
+        compare(canvas.selectedWidgetIds[0], "a");
+        compare(canvas.selectedWidgetId, "a");  // 単一なので派生は非空
+
+        // Ctrl 付き → 集合へ追加（複数選択）
+        canvas.selectWidget("b", Qt.ControlModifier);
+        compare(canvas.selectedWidgetIds.length, 2);
+        verify(canvas.selectedWidgetIds.indexOf("a") >= 0);
+        verify(canvas.selectedWidgetIds.indexOf("b") >= 0);
+        compare(canvas.selectedWidgetId, "");  // 複数選択中は派生 id は空
+
+        // Shift で既選択を再クリック → トグルで外れる
+        canvas.selectWidget("a", Qt.ShiftModifier);
+        compare(canvas.selectedWidgetIds.length, 1);
+        compare(canvas.selectedWidgetIds[0], "b");
+
+        // modifiers 無しクリック → 単一へリセット
+        canvas.selectWidget("c", Qt.NoModifier);
+        compare(canvas.selectedWidgetIds.length, 1);
+        compare(canvas.selectedWidgetIds[0], "c");
+    }
+
+    // Task 36: deleteWidgets は複数 id を一括削除し、選択集合からも外す。
+    function test_delete_widgets_removes_multiple() {
+        setThreeWidgets();
+        canvas.selectedWidgetIds = ["a", "c"];
+        canvas.deleteWidgets(["a", "c"]);
+        tryVerify(function() {
+            const ch = editableChildren();
+            return ch.length === 1 && ch[0].widgetId === "b";
+        }, 1000, "一括削除で b だけ残らない");
+        compare(canvas.selectedWidgetIds.length, 0);  // 削除した id は選択からも外れる
+    }
+
+    // Task 36: alignSelected("left") は選択 Item を最小 x（左端）へ揃える。
+    function test_align_selected_left() {
+        setThreeWidgets();
+        canvas.selectedWidgetIds = ["a", "b", "c"];  // x = 10, 50, 200 → 左端 10 へ
+        canvas.alignSelected("left");
+        compare(itemById("a").x, 10);
+        compare(itemById("b").x, 10);
+        compare(itemById("c").x, 10);
+        // 整列は live Item を更新し、保存経路にも乗る。
+        const snap = canvas.snapshotModel();
+        for (let i = 0; i < snap.length; ++i) compare(snap[i].x, 10);
+    }
+
+    // Task 36: alignSelected("top") は最小 y（上端）へ揃える。
+    function test_align_selected_top() {
+        setThreeWidgets();
+        canvas.selectedWidgetIds = ["a", "b", "c"];  // y = 10, 80, 150 → 上端 10 へ
+        canvas.alignSelected("top");
+        compare(itemById("a").y, 10);
+        compare(itemById("b").y, 10);
+        compare(itemById("c").y, 10);
+    }
+
+    // Task 36（Codex PR #75 [P2]）：widgetModel 差し替え（プロジェクト読込相当）で、
+    // 新モデルに無い選択 id が選択集合から外れる（インスペクタが空表示に戻る）。
+    function test_selection_pruned_on_model_replace() {
+        setThreeWidgets();
+        canvas.selectedWidgetIds = ["a", "b"];
+        compare(canvas.selectedWidgetIds.length, 2);
+
+        // 別プロジェクトを読み込んだ想定で、a/b を含まない新モデルへ差し替え。
+        canvas.widgetModel = [
+            { id: "x", type: "Button", x: 0, y: 0, width: 80, height: 30, text: "X", tag: "" }
+        ];
+        // a/b は新モデルに無いので選択から外れる（"x" は未選択なので空集合になる）。
+        compare(canvas.selectedWidgetIds.length, 0);
+        compare(canvas.selectedWidgetId, "");
+        compare(canvas.selectedItem, null);
+    }
+
+    // Task 36: 一括ドラッグ移動。beginBatchDrag で開始位置を取り込み、リーダーを動かして
+    // updateBatchDrag を呼ぶと、他の選択 Widget が同じ差分だけ移動する。endBatchDrag は
+    // リーダー吸着後の最終差分を兄弟へ反映する（Codex PR #75 [P2]：snap 後の追従）。
+    function test_batch_drag_moves_siblings() {
+        setThreeWidgets();
+        canvas.selectedWidgetIds = ["a", "b", "c"];
+        canvas.beginBatchDrag("a");
+
+        // リーダー a を +20/+30 移動させ、追従を反映。
+        itemById("a").x += 20;
+        itemById("a").y += 30;
+        canvas.updateBatchDrag("a");
+        compare(itemById("b").x, 50 + 20);
+        compare(itemById("b").y, 80 + 30);
+        compare(itemById("c").x, 200 + 20);
+        compare(itemById("c").y, 150 + 30);
+
+        // 確定（endBatchDrag）後も最終差分が保たれ、リーダー id がクリアされる。
+        canvas.endBatchDrag("a");
+        compare(itemById("b").x, 70);
+        compare(itemById("c").x, 220);
+    }
+
+    // Task 36: distributeSelected("h") は両端を固定し、中間を左端基準で等間隔にする。
+    // x = 10, 50, 200（左端基準）→ 中間 b は (10 + 200)/2 = 105 へ。
+    function test_distribute_selected_horizontal() {
+        setThreeWidgets();
+        canvas.selectedWidgetIds = ["a", "b", "c"];
+        canvas.distributeSelected("h");
+        compare(itemById("a").x, 10);   // 左端は固定
+        compare(itemById("c").x, 200);  // 右端は固定
+        compare(itemById("b").x, 105);  // 中間が等間隔
     }
 }
