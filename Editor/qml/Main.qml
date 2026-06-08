@@ -18,10 +18,114 @@ Window {
     // QML Item を指定する。
     objectName: "hmiEditorWindow"
 
-    // Task 39: 読み込んだ Project レベルの変数定義を保持する。Editor は T40 まで変数編集
-    // UI を持たないが、**読み込んだ定義を保存で失わない**ため state として持ち、save() へ
-    // そのまま渡す（Codex PR #78 [P1]）。
+    // Task 39 / 40: Project レベルの変数定義。T40 でインスペクタの変数パネルから編集する。
+    // save() へそのまま渡し、読み込んだ定義を保存で失わない（Codex PR #78 [P1]）。
     property var projectVariables: []
+
+    // Task 40: 変数パネルの動的 TextField（Repeater 由来で id 固定できない）の編集中フラグ。
+    // Delete ショートカットの抑止に使う（各行が onActiveFocusChanged で増減する）。
+    property int variableFieldFocusCount: 0
+
+    // Task 40: 変数定義の編集ヘルパー。projectVariables は var 配列なので、編集は必ず
+    // 新しい配列を再代入してバインディング（ComboBox model 等）へ通知する。
+    function addVariable() {
+        const next = projectVariables.slice()
+        // 重複しない既定名を採番（var1, var2, ...）。
+        let n = next.length + 1
+        const existing = {}
+        for (let i = 0; i < next.length; ++i) {
+            existing[next[i].name] = true
+        }
+        while (existing["var" + n]) {
+            ++n
+        }
+        next.push({ name: "var" + n, type: "bool", initial: "false" })
+        projectVariables = next
+    }
+    function updateVariable(index, key, value) {
+        if (index < 0 || index >= projectVariables.length) {
+            return
+        }
+        const next = projectVariables.slice()
+        const v = Object.assign({}, next[index])
+        v[key] = value
+        next[index] = v
+        projectVariables = next
+    }
+    function removeVariable(index) {
+        if (index < 0 || index >= projectVariables.length) {
+            return
+        }
+        const next = projectVariables.slice()
+        next.splice(index, 1)
+        projectVariables = next
+    }
+    // ComboBox（アクション target / バインディング variable）の選択肢：先頭に "(未選択)"。
+    function variableNameModel() {
+        const names = ["(未選択)"]
+        for (let i = 0; i < projectVariables.length; ++i) {
+            names.push(projectVariables[i].name)
+        }
+        return names
+    }
+
+    // Task 40: アクション編集（onClick 1 件）。op ComboBox / target ComboBox / value から
+    // 選択 Item の widgetActions を組み立てる。op "(なし)" は空配列（アクション無し）。
+    function applyActionFromInspector() {
+        if (!canvas.selectedItem) {
+            return
+        }
+        if (inspectorActionOpCombo.currentIndex === 0) {
+            canvas.selectedItem.widgetActions = []
+            return
+        }
+        const op = inspectorActionOpCombo.currentText
+        const target = inspectorActionTargetCombo.currentIndex > 0
+            ? inspectorActionTargetCombo.currentText : ""
+        const value = (op === "setVariable") ? inspectorActionValueField.text : ""
+        canvas.selectedItem.widgetActions = [{
+            trigger: "onClick", op: op, target: target, value: value
+        }]
+    }
+    // 選択切替時にアクション編集 UI を選択 Item の値へ同期する。
+    function syncActionToInspector() {
+        const it = canvas.selectedItem
+        const a = (it && it.widgetActions && it.widgetActions.length > 0)
+            ? it.widgetActions[0] : null
+        inspectorActionOpCombo.currentIndex = a
+            ? Math.max(0, inspectorActionOpCombo.model.indexOf(a.op)) : 0
+        const names = variableNameModel()
+        inspectorActionTargetCombo.currentIndex = (a && a.target)
+            ? Math.max(0, names.indexOf(a.target)) : 0
+        inspectorActionValueField.text = (a && a.value !== undefined) ? a.value : ""
+    }
+
+    // Task 40: バインディング編集（1 件）。property ComboBox / variable ComboBox から
+    // 選択 Item の widgetBindings を組み立てる。property "(なし)" or variable "(未選択)" は空。
+    function applyBindingFromInspector() {
+        if (!canvas.selectedItem) {
+            return
+        }
+        if (inspectorBindingPropCombo.currentIndex === 0
+                || inspectorBindingVarCombo.currentIndex === 0) {
+            canvas.selectedItem.widgetBindings = []
+            return
+        }
+        canvas.selectedItem.widgetBindings = [{
+            property: inspectorBindingPropCombo.currentText,
+            variable: inspectorBindingVarCombo.currentText
+        }]
+    }
+    function syncBindingToInspector() {
+        const it = canvas.selectedItem
+        const b = (it && it.widgetBindings && it.widgetBindings.length > 0)
+            ? it.widgetBindings[0] : null
+        inspectorBindingPropCombo.currentIndex = b
+            ? Math.max(0, inspectorBindingPropCombo.model.indexOf(b.property)) : 0
+        const names = variableNameModel()
+        inspectorBindingVarCombo.currentIndex = (b && b.variable)
+            ? Math.max(0, names.indexOf(b.variable)) : 0
+    }
 
     // Task 26: 選択中の live な EditableWidget はインスペクタの編集対象。
     // 解決ロジックと所有は Canvas に集約した（canvas.selectedItem）。Repeater
@@ -86,9 +190,11 @@ Window {
                 console.warn("起動時プロジェクト読込に失敗:", initialJsonUrl)
                 return
             }
-            canvas.widgetModel = result.widgets
-            // Task 39: Project レベルの変数定義を保持（保存で失わないため）。
+            // Task 40: 変数定義を **widgetModel より先に** 設定する。widgetModel 変更で
+            // selectedItemChanged → アクション/バインディング sync が走るとき、target/variable
+            // ComboBox の選択肢（variableNameModel）が揃っているようにするため。
             rootWindow.projectVariables = result.variables !== undefined ? result.variables : []
+            canvas.widgetModel = result.widgets
             canvas.clearHistory()  // Task 38: 起動時読込後は undo 履歴を空にする
             console.log("起動時プロジェクト読込:", initialJsonUrl,
                         "widgets =", result.widgets.length)
@@ -112,6 +218,12 @@ Window {
         || inspectorHAlignCombo.activeFocus
         || inspectorVAlignCombo.activeFocus
         || inspectorOpacitySpin.activeFocus
+        || inspectorActionOpCombo.activeFocus
+        || inspectorActionTargetCombo.activeFocus
+        || inspectorActionValueField.activeFocus
+        || inspectorBindingPropCombo.activeFocus
+        || inspectorBindingVarCombo.activeFocus
+        || rootWindow.variableFieldFocusCount > 0
         || fieldX.activeFocus || fieldY.activeFocus
         || fieldW.activeFocus || fieldH.activeFocus
 
@@ -284,6 +396,65 @@ Window {
                         font.pixelSize: 16
                         font.bold: true
                     }
+
+                // Task 40: Project レベルの変数定義パネル（選択に依らず常時表示）。
+                // 変数の追加 / 削除 / 名前・型・初期値の編集を行い、rootWindow.projectVariables を
+                // 駆動する。アクション target / バインディング variable の ComboBox 選択肢になる。
+                Column {
+                    objectName: "variablePanel"
+                    width: parent.width
+                    spacing: 4
+
+                    Label { text: qsTr("変数定義"); font.bold: true; color: "#555555" }
+
+                    Repeater {
+                        model: rootWindow.projectVariables
+                        delegate: Row {
+                            id: varRow
+                            required property var modelData
+                            required property int index
+                            width: parent.width
+                            spacing: 4
+
+                            TextField {
+                                objectName: "variableName_" + varRow.index
+                                width: 80
+                                text: varRow.modelData.name !== undefined ? varRow.modelData.name : ""
+                                placeholderText: qsTr("名前")
+                                onEditingFinished: rootWindow.updateVariable(varRow.index, "name", text)
+                                onActiveFocusChanged: rootWindow.variableFieldFocusCount += activeFocus ? 1 : -1
+                            }
+                            ComboBox {
+                                objectName: "variableType_" + varRow.index
+                                width: 80
+                                model: ["bool", "int", "string"]
+                                currentIndex: Math.max(0, model.indexOf(varRow.modelData.type))
+                                onActivated: rootWindow.updateVariable(varRow.index, "type", currentText)
+                            }
+                            TextField {
+                                objectName: "variableInitial_" + varRow.index
+                                width: 60
+                                text: varRow.modelData.initial !== undefined ? varRow.modelData.initial : ""
+                                placeholderText: qsTr("初期値")
+                                onEditingFinished: rootWindow.updateVariable(varRow.index, "initial", text)
+                                onActiveFocusChanged: rootWindow.variableFieldFocusCount += activeFocus ? 1 : -1
+                            }
+                            Button {
+                                objectName: "variableDelete_" + varRow.index
+                                text: qsTr("×")
+                                onClicked: rootWindow.removeVariable(varRow.index)
+                            }
+                        }
+                    }
+
+                    Button {
+                        objectName: "addVariableButton"
+                        text: qsTr("変数を追加")
+                        onClicked: rootWindow.addVariable()
+                    }
+
+                    Rectangle { width: parent.width; height: 1; color: "#dddddd" }
+                }
 
                 // 未選択時の案内（Task 36: 0 個選択のときのみ）
                 Label {
@@ -823,6 +994,71 @@ Window {
                         }
                     }
 
+                    // Task 40: クリック時アクション（onClick 1 件）。op / target / value を選び
+                    // 選択 Item の widgetActions へ書き戻す。target は変数定義 ComboBox 由来。
+                    Rectangle { width: parent.width; height: 1; color: "#dddddd" }
+                    Label { text: qsTr("クリック時アクション"); font.bold: true; color: "#555555" }
+
+                    Label { text: qsTr("操作") }
+                    ComboBox {
+                        id: inspectorActionOpCombo
+                        objectName: "inspectorActionOpCombo"
+                        width: parent.width
+                        model: ["(なし)", "setVariable", "toggleVariable"]
+                        onActivated: rootWindow.applyActionFromInspector()
+                    }
+                    Label { text: qsTr("対象変数") }
+                    ComboBox {
+                        id: inspectorActionTargetCombo
+                        objectName: "inspectorActionTargetCombo"
+                        width: parent.width
+                        model: rootWindow.variableNameModel()
+                        onActivated: rootWindow.applyActionFromInspector()
+                    }
+                    // 値は setVariable のときだけ意味を持つ（toggleVariable では無視）。
+                    Label {
+                        text: qsTr("値")
+                        visible: inspectorActionOpCombo.currentText === "setVariable"
+                    }
+                    TextField {
+                        id: inspectorActionValueField
+                        objectName: "inspectorActionValueField"
+                        width: parent.width
+                        visible: inspectorActionOpCombo.currentText === "setVariable"
+                        placeholderText: qsTr("例: true / 10 / hello")
+                        onEditingFinished: rootWindow.applyActionFromInspector()
+                    }
+
+                    // Task 40: データバインディング（1 件）。property を変数に追従させる。
+                    Rectangle { width: parent.width; height: 1; color: "#dddddd" }
+                    Label { text: qsTr("バインディング"); font.bold: true; color: "#555555" }
+
+                    Label { text: qsTr("プロパティ") }
+                    ComboBox {
+                        id: inspectorBindingPropCombo
+                        objectName: "inspectorBindingPropCombo"
+                        width: parent.width
+                        model: ["(なし)", "visible", "backgroundColor", "text", "textColor"]
+                        onActivated: rootWindow.applyBindingFromInspector()
+                    }
+                    Label { text: qsTr("追従変数") }
+                    ComboBox {
+                        id: inspectorBindingVarCombo
+                        objectName: "inspectorBindingVarCombo"
+                        width: parent.width
+                        model: rootWindow.variableNameModel()
+                        onActivated: rootWindow.applyBindingFromInspector()
+                    }
+
+                    // Task 40: 選択切替時にアクション / バインディング編集 UI を同期する。
+                    Connections {
+                        target: canvas
+                        function onSelectedItemChanged() {
+                            rootWindow.syncActionToInspector()
+                            rootWindow.syncBindingToInspector()
+                        }
+                    }
+
                     // Task 29: 削除ボタン。構造変更（削除）は Canvas.deleteWidget() に
                     // 集約する（addWidget と対称：live Item をスナップショット → 該当 id
                     // を除いて再代入 → 選択解除）。これで未保存の他 widget 編集が
@@ -889,10 +1125,10 @@ Window {
                 console.warn("プロジェクト読込に失敗:", openDialog.selectedFile)
                 return
             }
+            // Task 40: 変数定義を widgetModel より先に設定（sync 時に ComboBox 選択肢を揃える）。
+            rootWindow.projectVariables = result.variables !== undefined ? result.variables : []
             // Repeater の model を差し替えて Widget 群を再構築する
             canvas.widgetModel = result.widgets
-            // Task 39: Project レベルの変数定義を保持（保存で失わないため）。
-            rootWindow.projectVariables = result.variables !== undefined ? result.variables : []
             canvas.clearHistory()  // Task 38: 読込前プロジェクトの undo 履歴は破棄
             console.log("プロジェクト読込:", openDialog.selectedFile,
                         "widgets =", result.widgets.length)
