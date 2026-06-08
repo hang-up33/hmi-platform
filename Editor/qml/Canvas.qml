@@ -175,6 +175,7 @@ Item {
         // スナップショットしてから追加する。これによりインスペクタでの未保存
         // 編集（text/tag）やドラッグ後の位置が、追加に伴う Repeater 再生成で
         // 巻き戻らない（Codex PR #52 指摘）。
+        pushUndo()  // Task 38: 追加の直前状態を undo へ
         const snapshot = snapshotModel()
         const id = nextWidgetId(snapshot)
         const newWidget = {
@@ -208,6 +209,7 @@ Item {
         if (!entries || entries.length === 0) {
             return
         }
+        pushUndo()  // Task 38: ペースト / 複製の直前状態を undo へ
         const snapshot = snapshotModel()
         const newIds = []
         const maxX = Math.max(0, width)
@@ -246,6 +248,86 @@ Item {
         pasteEntries(sel)
     }
 
+    // Task 38: undo / redo（状態スナップショット方式・QML 完結）。1 操作 = 1 スナップショット
+    // を undoStack / redoStack（snapshotModel() の配列）で積む。構造変更（追加/削除/ペースト/
+    // 整列/分布）は **操作前に pushUndo()** で前状態を積む。連続操作（ドラッグ/リサイズ/
+    // インスペクタ編集）は beginEdit()（開始時に前状態を保留）→ commitEdit()（確定時、状態が
+    // 変わっていれば積む）で「中間フレームを積まず確定時のみ 1 件」にする。
+    property var undoStack: []
+    property var redoStack: []
+    property var _pendingUndo: null
+    property bool _editing: false
+
+    readonly property bool canUndo: undoStack.length > 0
+    readonly property bool canRedo: redoStack.length > 0
+
+    // 構造変更の直前に現在状態を undo へ積む（redo はクリア）。配列は再代入して
+    // バインディング（canUndo/canRedo）に通知する（push では通知されない）。
+    function pushUndo() {
+        undoStack = undoStack.concat([snapshotModel()])
+        redoStack = []
+    }
+
+    // 連続編集の開始：前状態を保留（多重 begin はガード）。
+    function beginEdit() {
+        if (_editing) {
+            return
+        }
+        _pendingUndo = snapshotModel()
+        _editing = true
+    }
+
+    // 連続編集の確定：状態が実際に変わっていれば保留前状態を undo へ積む（no-op は捨てる）。
+    function commitEdit() {
+        if (!_editing) {
+            return
+        }
+        _editing = false
+        const before = _pendingUndo
+        _pendingUndo = null
+        if (before === null) {
+            return
+        }
+        if (JSON.stringify(snapshotModel()) !== JSON.stringify(before)) {
+            undoStack = undoStack.concat([before])
+            redoStack = []
+        }
+    }
+
+    function cancelEdit() {
+        _editing = false
+        _pendingUndo = null
+    }
+
+    function undo() {
+        if (undoStack.length === 0) {
+            return
+        }
+        const prev = undoStack[undoStack.length - 1]
+        undoStack = undoStack.slice(0, undoStack.length - 1)
+        redoStack = redoStack.concat([snapshotModel()])
+        selectedWidgetIds = []  // 復元で消える Item の stale 選択を避ける
+        widgetModel = prev
+    }
+
+    function redo() {
+        if (redoStack.length === 0) {
+            return
+        }
+        const next = redoStack[redoStack.length - 1]
+        redoStack = redoStack.slice(0, redoStack.length - 1)
+        undoStack = undoStack.concat([snapshotModel()])
+        selectedWidgetIds = []
+        widgetModel = next
+    }
+
+    // プロジェクト読込時など、履歴を破棄する。
+    function clearHistory() {
+        undoStack = []
+        redoStack = []
+        cancelEdit()
+    }
+
     // Task 29: 選択中（または指定 id）の Widget を削除する。addWidget() と対称で、
     // 構造変更（削除）なので live Item 群をスナップショット → 該当 id を除いた配列を
     // 再代入して Repeater をリトリガする（var 配列据え置き＝Phase 4 設計指針）。
@@ -267,6 +349,7 @@ Item {
         if (!ids || ids.length === 0) {
             return
         }
+        pushUndo()  // Task 38: 削除の直前状態を undo へ
         const snapshot = snapshotModel()
         const next = []
         for (let i = 0; i < snapshot.length; ++i) {
@@ -301,6 +384,7 @@ Item {
         if (items.length < 2) {
             return
         }
+        pushUndo()  // Task 38: 整列の直前状態を undo へ
         let minX = Infinity, maxR = -Infinity, minY = Infinity, maxB = -Infinity
         for (let i = 0; i < items.length; ++i) {
             const it = items[i]
@@ -331,6 +415,7 @@ Item {
         if (items.length < 3) {
             return
         }
+        pushUndo()  // Task 38: 分布の直前状態を undo へ
         if (axis === "h") {
             items.sort(function(a, b) { return a.x - b.x })
             const left = items[0].x
@@ -543,6 +628,7 @@ Item {
                         target: wrapper
                         function onDraggingChanged() {
                             if (wrapper.dragging) {
+                                root.beginEdit()  // Task 38: ドラッグ前状態を保留
                                 root.beginBatchDrag(wrapper.widgetId)
                             }
                         }
@@ -557,8 +643,17 @@ Item {
                             }
                         }
                         // Task 36: ドラッグ確定（リーダー吸着後）に兄弟へ最終差分を反映。
+                        // Task 38: 確定時に undo を 1 件積む（移動が無ければ commitEdit が no-op 判定で捨てる）。
                         function onDragFinished() {
                             root.endBatchDrag(wrapper.widgetId)
+                            root.commitEdit()
+                        }
+                        // Task 38: リサイズの開始 / 確定を undo の操作境界にする。
+                        function onResizeStarted() {
+                            root.beginEdit()
+                        }
+                        function onResizeFinished() {
+                            root.commitEdit()
                         }
                     }
 

@@ -81,6 +81,7 @@ Window {
                 return
             }
             canvas.widgetModel = result.widgets
+            canvas.clearHistory()  // Task 38: 起動時読込後は undo 履歴を空にする
             console.log("起動時プロジェクト読込:", initialJsonUrl,
                         "widgets =", result.widgets.length)
         }
@@ -105,6 +106,18 @@ Window {
         || inspectorOpacitySpin.activeFocus
         || fieldX.activeFocus || fieldY.activeFocus
         || fieldW.activeFocus || fieldH.activeFocus
+
+    // Task 38: インスペクタの編集を undo の 1 操作境界にする。どれかの入力欄が
+    // フォーカスを得た時に前状態を保留（beginEdit）し、全フィールドからフォーカスが
+    // 外れた時に確定（commitEdit、状態が変わっていれば 1 件積む）。これで「フィールドを
+    // 触った 1 セッション = 1 undo」になり、キーストロークごとに積まれない。
+    onInspectorFieldFocusedChanged: {
+        if (inspectorFieldFocused) {
+            canvas.beginEdit()
+        } else {
+            canvas.commitEdit()
+        }
+    }
 
     // Task 29: Delete キーで選択中 Widget を削除する。Shortcut なら個別 Item の
     // フォーカス・Keys ハンドリングを増やさず Window 全体に効かせられる。
@@ -132,6 +145,24 @@ Window {
         sequence: "Ctrl+Shift+D"
         enabled: canvas.selectedWidgetIds.length > 0 && !rootWindow.inspectorFieldFocused
         onActivated: canvas.duplicateSelected()
+    }
+
+    // Task 38: undo / redo。StandardKey は OS 差（Cmd/Ctrl）を吸収する。フィールド編集中は
+    // 無効（テキストの undo を妨げない）。redo は StandardKey.Redo（Ctrl+Y / Cmd+Shift+Z）に
+    // 加え Ctrl+Shift+Z も受ける（Windows の Ctrl+Y に対する保険）。redo は **1 つの
+    // Shortcut の `sequences`（複数）にまとめる**：別々の Shortcut にすると、macOS/KDE/GNOME
+    // では StandardKey.Redo 自体が Ctrl+Shift+Z に解決され、同じキーに 2 つの有効な
+    // Shortcut が存在して activatedAmbiguously になり onActivated（redo）が呼ばれない
+    // （Codex PR #77 [P2]）。同一 Shortcut 内の重複シーケンスは曖昧化しない。
+    Shortcut {
+        sequence: StandardKey.Undo
+        enabled: canvas.canUndo && !rootWindow.inspectorFieldFocused
+        onActivated: canvas.undo()
+    }
+    Shortcut {
+        sequences: [StandardKey.Redo, "Ctrl+Shift+Z"]
+        enabled: canvas.canRedo && !rootWindow.inspectorFieldFocused
+        onActivated: canvas.redo()
     }
 
     // 薄いグレーの余白背景
@@ -193,6 +224,20 @@ Window {
                 text: qsTr("複製")
                 enabled: canvas.selectedWidgetIds.length > 0
                 onClicked: canvas.duplicateSelected()
+            }
+
+            // Task 38: undo / redo ボタン（ショートカットと同じ Canvas 関数）。
+            Button {
+                objectName: "undoButton"
+                text: qsTr("元に戻す")
+                enabled: canvas.canUndo
+                onClicked: canvas.undo()
+            }
+            Button {
+                objectName: "redoButton"
+                text: qsTr("やり直す")
+                enabled: canvas.canRedo
+                onClicked: canvas.redo()
             }
         }
 
@@ -540,9 +585,15 @@ Window {
                         id: inspectorFontBoldCheck
                         objectName: "inspectorFontBoldCheck"
                         text: qsTr("太字")
+                        // Task 38（Codex PR #77 [Major]）：CheckBox はフォーカス境界
+                        // （inspectorFieldFocused）に含まれず onToggled で live Item を直接
+                        // 変えるため、ここで明示的に beginEdit→commitEdit して 1 操作を
+                        // undo へ積む（離散操作なので開始即確定で 1 件）。
                         onToggled: {
                             if (canvas.selectedItem) {
+                                canvas.beginEdit()
                                 canvas.selectedItem.widgetFontBold = checked
+                                canvas.commitEdit()
                             }
                         }
                         Connections {
@@ -558,9 +609,13 @@ Window {
                         id: inspectorFontItalicCheck
                         objectName: "inspectorFontItalicCheck"
                         text: qsTr("斜体")
+                        // Task 38（Codex PR #77 [Major]）：太字 CheckBox と同様に明示で
+                        // undo へ積む（フォーカス境界に含まれないため）。
                         onToggled: {
                             if (canvas.selectedItem) {
+                                canvas.beginEdit()
                                 canvas.selectedItem.widgetFontItalic = checked
+                                canvas.commitEdit()
                             }
                         }
                         Connections {
@@ -826,6 +881,7 @@ Window {
             }
             // Repeater の model を差し替えて Widget 群を再構築する
             canvas.widgetModel = result.widgets
+            canvas.clearHistory()  // Task 38: 読込前プロジェクトの undo 履歴は破棄
             console.log("プロジェクト読込:", openDialog.selectedFile,
                         "widgets =", result.widgets.length)
         }

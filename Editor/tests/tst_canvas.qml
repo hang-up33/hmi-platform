@@ -50,6 +50,7 @@ TestCase {
         canvas.selectedWidgetIds = [];
         canvas.snapEnabled = false;  // Task 35: テスト間でスナップ状態を漏らさない
         canvas.gridSize = 8;
+        canvas.clearHistory();        // Task 38: undo/redo 履歴をテスト間で漏らさない
         canvas.widgetModel = [
             { id: "btn001", type: "Button", x: 100, y: 50, width: 120, height: 40,
               text: "Start", tag: "PLC.START" }
@@ -586,6 +587,67 @@ TestCase {
             all[ch[i].widgetId] = true;
         }
         compare(ch.length, 5);
+    }
+
+    // Task 38: 構造変更（追加）が undo / redo できる。canUndo/canRedo も連動する。
+    function test_undo_redo_structural_add() {
+        setThreeWidgets();
+        compare(canvas.canUndo, false);
+        compare(canvas.canRedo, false);
+
+        canvas.addWidget();  // pushUndo（前状態=3 件）してから 4 件目を追加
+        tryVerify(function() { return editableChildren().length === 4; }, 1000,
+                  "追加されない");
+        compare(canvas.canUndo, true);
+        compare(canvas.canRedo, false);
+
+        canvas.undo();  // 3 件へ戻る
+        tryVerify(function() { return editableChildren().length === 3; }, 1000,
+                  "undo で 3 件に戻らない");
+        compare(canvas.canRedo, true);
+
+        canvas.redo();  // 4 件へやり直し
+        tryVerify(function() { return editableChildren().length === 4; }, 1000,
+                  "redo で 4 件に進まない");
+        compare(canvas.canUndo, true);
+        compare(canvas.canRedo, false);
+    }
+
+    // Task 38: 削除を undo すると Widget が復活する。
+    function test_undo_restores_deleted_widget() {
+        setThreeWidgets();
+        canvas.selectedWidgetIds = ["a"];
+        canvas.deleteWidgets(["a"]);
+        tryVerify(function() { return editableChildren().length === 2; }, 1000,
+                  "削除されない");
+
+        canvas.undo();
+        tryVerify(function() {
+            return editableChildren().length === 3 && itemById("a") !== null;
+        }, 1000, "undo で a が復活しない");
+    }
+
+    // Task 38: beginEdit→（変化なし）→commitEdit は undo を積まない（no-op を捨てる）。
+    function test_commit_edit_noop_pushes_nothing() {
+        setThreeWidgets();
+        compare(canvas.canUndo, false);
+        canvas.beginEdit();
+        canvas.commitEdit();
+        compare(canvas.canUndo, false);
+    }
+
+    // Task 38: beginEdit→（live Item 変更）→commitEdit は undo を 1 件積み、undo で戻る。
+    function test_commit_edit_with_change_is_undoable() {
+        setThreeWidgets();
+        canvas.beginEdit();
+        itemById("a").x = 999;  // インスペクタ編集 / ドラッグ相当の live 変更
+        canvas.commitEdit();
+        compare(canvas.canUndo, true);
+
+        canvas.undo();
+        tryVerify(function() {
+            return itemById("a") !== null && itemById("a").x === 10;
+        }, 1000, "undo で a.x が元（10）に戻らない");
     }
 
     // Task 36（Codex PR #75 [P2]）：widgetModel 差し替え（プロジェクト読込相当）で、

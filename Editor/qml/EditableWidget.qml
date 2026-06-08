@@ -28,6 +28,11 @@ Item {
     // （Codex PR #75 [P2]：snap 後に兄弟が追従せず相対位置がズレる問題の修正）。
     signal dragFinished()
 
+    // Task 38: リサイズの開始 / 確定を Canvas へ通知し、undo の 1 操作境界にする
+    // （Canvas は id が見えないため signal で結ぶ。delegate 側で beginEdit/commitEdit に結線）。
+    signal resizeStarted()
+    signal resizeFinished()
+
     // Shared/Schema の WidgetData に書き出すためのメタ情報。
     // Task 6（JSON 保存）で参照する。子の HmiButton 等はこの値をバインディングで参照する。
     property string widgetId: ""
@@ -200,6 +205,7 @@ Item {
                 pressW = root.width
                 pressH = root.height
                 resized = false
+                root.resizeStarted()  // Task 38: undo 前状態の保留開始
             }
             onPositionChanged: function(mouse) {
                 if (!pressed) {
@@ -220,6 +226,7 @@ Item {
                     root.height = Math.max(root.minHeight, root.snappedValue(root.height))
                 }
                 resized = false
+                root.resizeFinished()  // Task 38: undo 確定（変化なければ捨てられる）
             }
         }
     }
