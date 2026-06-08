@@ -210,11 +210,15 @@ Window {
         }
     }
 
-    // Task 29 / 37: インスペクタのどれかの入力欄が編集フォーカス中か。Delete / Copy /
-    // Paste / Duplicate のショートカットは、フィールド編集中（文字削除やテキストの
-    // コピペに同じキーを使う）に奪うと困るため、このガードで無効化する。
-    // Task 37 で Delete のインライン列挙をこの単一プロパティに集約した（重複排除）。
-    readonly property bool inspectorFieldFocused:
+    // Task 38: 選択中 Widget を編集するインスペクタ欄が編集フォーカス中か。これらの
+    // 変更は Canvas の widgetModel に入る（snapshotModel が拾う）ため、Canvas undo の
+    // 1 操作境界（beginEdit/commitEdit）のトリガにする。
+    // Task 40: 変数定義欄（variableFieldFocusCount）は **ここに含めない**。変数編集は
+    // rootWindow.projectVariables を変えるだけで Canvas の widgetModel には入らず、
+    // Canvas undo スタックには載らない。リネーム時は widget 参照も書き換えるが、それも
+    // beginEdit/commitEdit の外で行うため undo に載らず、変数定義と widget 参照が
+    // 常に一致したまま動く（混ぜると Undo で widget 参照だけ旧名に戻り参照切れになる）。
+    readonly property bool widgetEditFieldFocused:
         inspectorTextField.activeFocus
         || inspectorTagField.activeFocus
         || inspectorBgColorField.activeFocus
@@ -232,16 +236,26 @@ Window {
         || inspectorActionValueField.activeFocus
         || inspectorBindingPropCombo.activeFocus
         || inspectorBindingVarCombo.activeFocus
-        || rootWindow.variableFieldFocusCount > 0
         || fieldX.activeFocus || fieldY.activeFocus
         || fieldW.activeFocus || fieldH.activeFocus
 
-    // Task 38: インスペクタの編集を undo の 1 操作境界にする。どれかの入力欄が
+    // Task 29 / 37: インスペクタのどれかの入力欄が編集フォーカス中か。Delete / Copy /
+    // Paste / Duplicate のショートカットは、フィールド編集中（文字削除やテキストの
+    // コピペに同じキーを使う）に奪うと困るため、このガードで無効化する。
+    // Task 37 で Delete のインライン列挙をこの単一プロパティに集約した（重複排除）。
+    // Task 40: 変数定義欄（variableFieldFocusCount）も Delete ガードには含める（変数名
+    // を Backspace/Delete で消すときに widget が消えないように）が、Canvas undo の
+    // widgetEditFieldFocused とは分離する（上のコメント参照）。
+    readonly property bool inspectorFieldFocused:
+        widgetEditFieldFocused
+        || rootWindow.variableFieldFocusCount > 0
+
+    // Task 38: インスペクタの Widget 編集を undo の 1 操作境界にする。どれかの入力欄が
     // フォーカスを得た時に前状態を保留（beginEdit）し、全フィールドからフォーカスが
     // 外れた時に確定（commitEdit、状態が変わっていれば 1 件積む）。これで「フィールドを
     // 触った 1 セッション = 1 undo」になり、キーストロークごとに積まれない。
-    onInspectorFieldFocusedChanged: {
-        if (inspectorFieldFocused) {
+    onWidgetEditFieldFocusedChanged: {
+        if (widgetEditFieldFocused) {
             canvas.beginEdit()
         } else {
             canvas.commitEdit()

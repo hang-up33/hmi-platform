@@ -687,7 +687,13 @@ TestCase {
         tryVerify(function() { return editableChildren().length === 2; }, 1000,
                   "2 件モデルが反映されない");
 
+        // Task 40（Codex PR #80 [P2]）：変数リネームは Canvas undo に載せない。
+        // 載せると Undo で widget 参照だけ旧名に戻り、変数定義（projectVariables）は
+        // 新名のまま残って参照切れになる。renameVariableReferences は pushUndo せず
+        // widgetModel を直接再代入するだけ（変数定義と widget 参照が常に一致）。
+        canvas.clearHistory();
         canvas.renameVariableReferences("running", "isRunning");
+        compare(canvas.canUndo, false, "変数リネームが undo スタックに積まれている");
 
         const snap = canvas.snapshotModel();
         let a = null, b = null;
