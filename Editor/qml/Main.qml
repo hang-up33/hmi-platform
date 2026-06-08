@@ -69,6 +69,23 @@ Window {
         // Task 40（Codex PR #80 [P2]）：削除した変数を参照している Widget の
         // actions/bindings も取り除き、未定義変数への dangling 参照を残さない。
         canvas.removeVariableReferences(removedName)
+        // Task 40（Codex PR #80 [P2]）：削除で variableNameModel() が縮むと、
+        // アクション/バインディング ComboBox の currentIndex が古い数値のままズレる
+        // （selectedItem は変わらないので onSelectedItemChanged の再同期が走らない）。
+        // 選択中 Widget の現在値から名前で index を取り直す（未選択時は index 0 に戻る）。
+        syncActionToInspector()
+        syncBindingToInspector()
+    }
+    // Task 40（Codex PR #80 [P2]）：変数名の重複を保存前に防ぐ。VariableStore は名前を
+    // キーにした map で、アクション/バインディングも名前で解決するため、同名が複数あると
+    // 後勝ちで参照先を区別できない。index 行を除く他行に同名があれば true。
+    function isVariableNameTaken(index, name) {
+        for (let i = 0; i < projectVariables.length; ++i) {
+            if (i !== index && projectVariables[i].name === name) {
+                return true
+            }
+        }
+        return false
     }
     // ComboBox（アクション target / バインディング variable）の選択肢：先頭に "(未選択)"。
     function variableNameModel() {
@@ -449,11 +466,14 @@ Window {
                                 width: 80
                                 text: varRow.modelData.name !== undefined ? varRow.modelData.name : ""
                                 placeholderText: qsTr("名前")
-                                // **空名を保存しない**：VariableData.isValidJson が空 name を無効とし
-                                // プロジェクト全体が再読込不能になるため、空のときは元の名前へ戻す
-                                // （削除は × ボタンで行う。Codex PR #80 [P1]）。
+                                // **空名・重複名を保存しない**：空名は VariableData.isValidJson が
+                                // 無効としプロジェクト全体が再読込不能になり（Codex PR #80 [P1]）、
+                                // 重複名は VariableStore（名前キー map）で後勝ちになり参照先を
+                                // 区別できなくなる（Codex PR #80 [P2]）。どちらも元の名前へ戻す
+                                // （削除は × ボタンで行う）。
                                 onEditingFinished: {
-                                    if (text.length > 0) {
+                                    if (text.length > 0
+                                            && !rootWindow.isVariableNameTaken(varRow.index, text)) {
                                         rootWindow.updateVariable(varRow.index, "name", text)
                                     } else {
                                         text = Qt.binding(function() {
