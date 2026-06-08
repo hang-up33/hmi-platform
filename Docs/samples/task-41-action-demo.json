@@ -1,7 +1,7 @@
 {
   "project": "Task 41 Action Demo",
   "variables": [
-    { "name": "power",      "type": "bool",   "initial": "true" },
+    { "name": "power",      "type": "bool",   "initial": true },
     { "name": "statusText", "type": "string", "initial": "電源 ON（変数バインド）" },
     { "name": "lampColor",  "type": "string", "initial": "#2a9d8f" }
   ],
