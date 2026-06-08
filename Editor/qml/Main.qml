@@ -140,6 +140,16 @@ Window {
                 text: qsTr("保存")
                 onClicked: saveDialog.open()
             }
+
+            // Task 35: グリッドスナップ ON/OFF トグル。canvas.snapEnabled を駆動し、
+            // ON でドラッグ / リサイズが格子に吸着しグリッド線も表示される。
+            // 編集時の補助のみで JSON には保存しない。
+            CheckBox {
+                objectName: "snapToggle"
+                text: qsTr("スナップ")
+                checked: canvas.snapEnabled
+                onToggled: canvas.snapEnabled = checked
+            }
         }
 
         // Task 26: 右側インスペクタ。選択中 Widget の text / tag を編集する。

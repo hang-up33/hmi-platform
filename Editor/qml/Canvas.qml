@@ -21,6 +21,13 @@ Item {
           text: "Start", tag: "PLC.START" }
     ]
 
+    // Task 35: グリッドスナップ。snapEnabled でドラッグ / リサイズの確定座標を
+    // gridSize の格子へ吸着する（実装は EditableWidget 側）。グリッド線も snapEnabled
+    // 時のみ描画する。**編集時の補助のみで JSON には保存しない**（Main.qml のツール
+    // バーのトグルが snapEnabled を駆動する）。
+    property bool snapEnabled: false
+    property int gridSize: 8
+
     // Task 25: 選択中 Widget の id。選択状態の所有者はここ（Canvas）に集約する。
     // 各 EditableWidget は delegate 側で `selected: widgetId === selectedWidgetId`
     // をバインドし、自身が選ばれているかを受け取る。空文字 "" は未選択。
@@ -199,6 +206,40 @@ Item {
             onClicked: root.selectedWidgetId = ""
         }
 
+        // Task 35: グリッド線。snapEnabled 時のみ描画する。MouseArea を持たないので
+        // クリックは下の backgroundClickArea / 上の widgetLayer がそのまま処理する
+        //（グリッドは見た目だけの補助レイヤ）。widgetLayer より前に宣言し Widget の背面に置く。
+        Item {
+            id: gridLayer
+            objectName: "gridLayer"
+            anchors.fill: parent
+            visible: root.snapEnabled
+            // 縦線（x = 0, grid, 2*grid, ...）
+            Repeater {
+                model: root.snapEnabled ? Math.floor(root.width / root.gridSize) + 1 : 0
+                delegate: Rectangle {
+                    required property int index
+                    x: index * root.gridSize
+                    y: 0
+                    width: 1
+                    height: gridLayer.height
+                    color: "#e0e0e0"
+                }
+            }
+            // 横線（y = 0, grid, 2*grid, ...）
+            Repeater {
+                model: root.snapEnabled ? Math.floor(root.height / root.gridSize) + 1 : 0
+                delegate: Rectangle {
+                    required property int index
+                    x: 0
+                    y: index * root.gridSize
+                    width: gridLayer.width
+                    height: 1
+                    color: "#e0e0e0"
+                }
+            }
+        }
+
         Item {
             id: widgetLayer
             anchors.fill: parent
@@ -210,6 +251,10 @@ Item {
                     required property var modelData
                     widgetId: modelData.id !== undefined ? modelData.id : ""
                     widgetType: modelData.type !== undefined ? modelData.type : "Button"
+                    // Task 35: グリッドスナップ設定を Canvas から各 Widget へ流す
+                    //（吸着は EditableWidget の移動 / リサイズ確定ハンドラで行う）。
+                    snapEnabled: root.snapEnabled
+                    gridSize: root.gridSize
                     widgetText: modelData.text !== undefined ? modelData.text : ""
                     widgetTag: modelData.tag !== undefined ? modelData.tag : ""
                     // Task 28: スタイル属性を modelData → wrapper メタへ流す（未指定は空 / 0）。

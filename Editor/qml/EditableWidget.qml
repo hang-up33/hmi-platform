@@ -66,6 +66,18 @@ Item {
     property real minWidth: 30
     property real minHeight: 24
 
+    // Task 35: グリッドスナップ。値は Canvas から delegate 経由で流し込む（編集時の補助
+    // のみで **JSON には保存しない**）。snapEnabled が true のとき、移動ドラッグ確定 /
+    // リサイズ確定の座標・サイズを gridSize の格子へ吸着する。
+    property bool snapEnabled: false
+    property int gridSize: 8
+
+    // Task 35: 値を格子へ吸着する純関数（snapEnabled が false なら素通し）。移動 / リサイズ
+    // 双方の確定ハンドラから使う。tst_canvas で直接呼んで吸着ロジックを回帰固定する。
+    function snappedValue(v) {
+        return root.snapEnabled ? Math.round(v / root.gridSize) * root.gridSize : v
+    }
+
     // Task 25: 選択状態。値の所有は Canvas（root.selectedWidgetId）にあり、
     // この EditableWidget は「選ばれているか」を受け取って選択枠を描画するだけ
     // （plain な bool プロパティ）。結線は delegate 側（Canvas.qml）で
@@ -94,6 +106,20 @@ Item {
         drag.maximumX: root.parent ? root.parent.width - root.width : 0
         drag.maximumY: root.parent ? root.parent.height - root.height : 0
         cursorShape: drag.active ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+
+        // Task 35: 移動ドラッグ確定時にグリッドへ吸着する。**実ドラッグが起きた時だけ**
+        // 吸着するため `onReleased`（純クリックでも発火する）ではなく `drag.onActiveChanged`
+        // の active→false 遷移で行う。これで「選択のためにクリックしただけ」では位置が
+        // 動かない（Codex PR #74 [Major]：非グリッド値の Widget を誤クリックで書き換える問題）。
+        // 丸めで親領域を超えないよう 0..(parent-size) に clamp する。
+        drag.onActiveChanged: {
+            if (!dragArea.drag.active && root.snapEnabled && root.parent) {
+                const maxX = Math.max(0, root.parent.width - root.width)
+                const maxY = Math.max(0, root.parent.height - root.height)
+                root.x = Math.max(0, Math.min(maxX, root.snappedValue(root.x)))
+                root.y = Math.max(0, Math.min(maxY, root.snappedValue(root.y)))
+            }
+        }
 
         Item {
             id: container
@@ -151,6 +177,9 @@ Item {
             property real pressSceneY: 0
             property real pressW: 0
             property real pressH: 0
+            // Task 35: 実際にリサイズ移動が起きたか。単なるハンドルのクリックで
+            // サイズが書き換わらないよう、吸着は移動があった release に限定する。
+            property bool resized: false
 
             onPressed: function(mouse) {
                 const p = mapToItem(root.parent, mouse.x, mouse.y)
@@ -158,14 +187,27 @@ Item {
                 pressSceneY = p.y
                 pressW = root.width
                 pressH = root.height
+                resized = false
             }
             onPositionChanged: function(mouse) {
                 if (!pressed) {
                     return
                 }
+                resized = true
                 const p = mapToItem(root.parent, mouse.x, mouse.y)
                 root.width = Math.max(root.minWidth, pressW + (p.x - pressSceneX))
                 root.height = Math.max(root.minHeight, pressH + (p.y - pressSceneY))
+            }
+            // Task 35: リサイズ確定時にサイズをグリッドへ吸着する（最小サイズは死守）。
+            // **実リサイズが起きた時だけ**吸着する（純クリックでは resized=false のまま
+            // で、非グリッド値の Widget をクリックしてもサイズが書き換わらない。
+            // Codex PR #74 [Major]）。
+            onReleased: {
+                if (root.snapEnabled && resized) {
+                    root.width = Math.max(root.minWidth, root.snappedValue(root.width))
+                    root.height = Math.max(root.minHeight, root.snappedValue(root.height))
+                }
+                resized = false
             }
         }
     }

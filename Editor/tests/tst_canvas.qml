@@ -48,6 +48,8 @@ TestCase {
         canvas.canvasWidth = 800;
         canvas.canvasHeight = 600;
         canvas.selectedWidgetId = "";
+        canvas.snapEnabled = false;  // Task 35: テスト間でスナップ状態を漏らさない
+        canvas.gridSize = 8;
         canvas.widgetModel = [
             { id: "btn001", type: "Button", x: 100, y: 50, width: 120, height: 40,
               text: "Start", tag: "PLC.START" }
@@ -334,6 +336,37 @@ TestCase {
         compare(entry.vAlign, "top");
         // live の widgetOpacity が JSON キー opacity にマップされて乗る。
         compare(entry.opacity, 0.0);
+    }
+
+    // Task 35: グリッドスナップの既定値（OFF / 8px）と、Canvas → delegate への伝播、
+    // および吸着ロジック（snappedValue）を回帰固定する。実際の吸着は移動 / リサイズの
+    // 確定ハンドラで起きる（マウス操作が必要）が、その中核は純関数 snappedValue なので
+    // ここで直接呼んで検証する（OFF なら素通し、ON なら gridSize へ丸め）。
+    function test_grid_snap_defaults_and_logic() {
+        // 既定は OFF / 8px。
+        compare(canvas.snapEnabled, false);
+        compare(canvas.gridSize, 8);
+
+        canvas.snapEnabled = true;
+        canvas.gridSize = 8;
+
+        const items = editableChildren();
+        compare(items.length, 1);
+        const item = items[0];
+        // Canvas の設定が delegate へ伝播している。
+        compare(item.snapEnabled, true);
+        compare(item.gridSize, 8);
+
+        // ON：最寄りの格子（8 の倍数）へ丸める。13→16、20→24（2.5 は四捨五入で 3）、4→8。
+        compare(item.snappedValue(13), 16);
+        compare(item.snappedValue(20), 24);
+        compare(item.snappedValue(4), 8);
+        compare(item.snappedValue(16), 16);  // 既に格子上なら不変
+
+        // OFF：素通し。
+        canvas.snapEnabled = false;
+        compare(item.snapEnabled, false);
+        compare(item.snappedValue(13), 13);
     }
 
     // Task 29: deleteWidget(id) は該当 id を除いて widgetModel を再代入し、
