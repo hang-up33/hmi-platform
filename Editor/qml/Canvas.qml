@@ -243,6 +243,40 @@ Item {
         pasteEntries(clipboard)
     }
 
+    // Task 40（Codex PR #80 [P2]）：変数名を変更したとき、既存 Widget の
+    // actions[].target / bindings[].variable の旧名参照を新名へ置換する（変数は名前で
+    // 解決されるため、旧名のままだと T41 の実行 / 追従が参照切れになる）。構造変更と同じく
+    // live Item をスナップショット → 置換 → 再代入する。変更があった時だけ再代入する。
+    function renameVariableReferences(oldName, newName) {
+        if (!oldName || oldName === newName) {
+            return
+        }
+        const snap = snapshotModel()
+        let changed = false
+        for (let i = 0; i < snap.length; ++i) {
+            const w = snap[i]
+            if (w.actions) {
+                for (let a = 0; a < w.actions.length; ++a) {
+                    if (w.actions[a].target === oldName) {
+                        w.actions[a].target = newName
+                        changed = true
+                    }
+                }
+            }
+            if (w.bindings) {
+                for (let b = 0; b < w.bindings.length; ++b) {
+                    if (w.bindings[b].variable === oldName) {
+                        w.bindings[b].variable = newName
+                        changed = true
+                    }
+                }
+            }
+        }
+        if (changed) {
+            widgetModel = snap
+        }
+    }
+
     // Task 37: 選択中 Widget を即複製（クリップボードを汚さず現在の選択から直接ペースト）。
     function duplicateSelected() {
         const snap = snapshotModel()

@@ -672,6 +672,36 @@ TestCase {
         compare(snap[0].bindings[0].variable, "runColor");
     }
 
+    // Task 40（Codex PR #80 [P2]）：変数名変更時、既存 Widget の actions.target /
+    // bindings.variable の旧名参照が新名へ置換される（参照切れを防ぐ）。
+    function test_rename_variable_references_updates_widgets() {
+        canvas.widgetModel = [{
+            id: "btnA", type: "Button", x: 0, y: 0, width: 100, height: 40, text: "A", tag: "",
+            actions: [{ trigger: "onClick", op: "toggleVariable", target: "running", value: "" }],
+            bindings: [{ property: "backgroundColor", variable: "running" }]
+        }, {
+            id: "btnB", type: "Button", x: 0, y: 50, width: 100, height: 40, text: "B", tag: "",
+            actions: [{ trigger: "onClick", op: "setVariable", target: "other", value: "1" }],
+            bindings: []
+        }];
+        tryVerify(function() { return editableChildren().length === 2; }, 1000,
+                  "2 件モデルが反映されない");
+
+        canvas.renameVariableReferences("running", "isRunning");
+
+        const snap = canvas.snapshotModel();
+        let a = null, b = null;
+        for (let i = 0; i < snap.length; ++i) {
+            if (snap[i].id === "btnA") a = snap[i];
+            if (snap[i].id === "btnB") b = snap[i];
+        }
+        // btnA の running 参照は isRunning へ更新される。
+        compare(a.actions[0].target, "isRunning");
+        compare(a.bindings[0].variable, "isRunning");
+        // btnB の別変数 other は影響を受けない。
+        compare(b.actions[0].target, "other");
+    }
+
     // Task 36（Codex PR #75 [P2]）：widgetModel 差し替え（プロジェクト読込相当）で、
     // 新モデルに無い選択 id が選択集合から外れる（インスペクタが空表示に戻る）。
     function test_selection_pruned_on_model_replace() {

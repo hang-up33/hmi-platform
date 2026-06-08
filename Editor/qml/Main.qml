@@ -46,11 +46,17 @@ Window {
         if (index < 0 || index >= projectVariables.length) {
             return
         }
+        const oldName = projectVariables[index].name
         const next = projectVariables.slice()
         const v = Object.assign({}, next[index])
         v[key] = value
         next[index] = v
         projectVariables = next
+        // Task 40（Codex PR #80 [P2]）：変数名変更時は既存 Widget の参照（actions.target /
+        // bindings.variable）も旧名→新名へ置換し、参照切れを防ぐ。
+        if (key === "name") {
+            canvas.renameVariableReferences(oldName, value)
+        }
     }
     function removeVariable(index) {
         if (index < 0 || index >= projectVariables.length) {
