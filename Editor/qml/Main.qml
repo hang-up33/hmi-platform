@@ -62,9 +62,13 @@ Window {
         if (index < 0 || index >= projectVariables.length) {
             return
         }
+        const removedName = projectVariables[index].name
         const next = projectVariables.slice()
         next.splice(index, 1)
         projectVariables = next
+        // Task 40（Codex PR #80 [P2]）：削除した変数を参照している Widget の
+        // actions/bindings も取り除き、未定義変数への dangling 参照を残さない。
+        canvas.removeVariableReferences(removedName)
     }
     // ComboBox（アクション target / バインディング variable）の選択肢：先頭に "(未選択)"。
     function variableNameModel() {
