@@ -1,0 +1,43 @@
+{
+  "project": "Task 41 Action Demo",
+  "variables": [
+    { "name": "power",      "type": "bool",   "initial": true },
+    { "name": "statusText", "type": "string", "initial": "電源 ON（変数バインド）" },
+    { "name": "lampColor",  "type": "string", "initial": "#2a9d8f" }
+  ],
+  "screens": [
+    {
+      "name": "Main",
+      "widgets": [
+        {
+          "id": "btnToggle", "type": "Button",
+          "x": 80, "y": 80, "width": 440, "height": 90,
+          "text": "電源トグル（クリックで power 反転）",
+          "backgroundColor": "#4cc9f0", "textColor": "#ffffff", "fontSize": 22, "radius": 10,
+          "actions": [
+            { "trigger": "onClick", "op": "toggleVariable", "target": "power" }
+          ]
+        },
+        {
+          "id": "btnStatus", "type": "Button",
+          "x": 80, "y": 210, "width": 440, "height": 90,
+          "text": "（静的テキスト・未使用）",
+          "textColor": "#ffffff", "fontSize": 24, "radius": 10,
+          "bindings": [
+            { "property": "text",            "variable": "statusText" },
+            { "property": "backgroundColor", "variable": "lampColor" }
+          ]
+        },
+        {
+          "id": "btnLamp", "type": "Button",
+          "x": 80, "y": 340, "width": 440, "height": 90,
+          "text": "power=true のとき表示されるランプ",
+          "backgroundColor": "#e9c46a", "textColor": "#1d3557", "fontSize": 22, "radius": 10,
+          "bindings": [
+            { "property": "visible", "variable": "power" }
+          ]
+        }
+      ]
+    }
+  ]
+}

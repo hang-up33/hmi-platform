@@ -60,6 +60,9 @@ Window {
             && String(initialJsonUrl) !== "") {
             const result = projectLoader.load(initialJsonUrl)
             if (result && result.ok) {
+                // Task 41: 変数定義を widgetModel より先に設定し、delegate 生成時に
+                // 変数ストアが初期化済みになるようにする（binding の初期表示を正す）。
+                canvas.variableModel = result.variables !== undefined ? result.variables : []
                 canvas.widgetModel = result.widgets
                 canvas.loaded = true
                 console.log("起動時 JSON 読込:", initialJsonUrl,
@@ -81,6 +84,8 @@ Window {
                 console.warn("プロジェクト読込に失敗:", openDialog.selectedFile)
                 return
             }
+            // Task 41: 変数定義を widgetModel より先に設定する（上記 onCompleted と同様）。
+            canvas.variableModel = result.variables !== undefined ? result.variables : []
             canvas.widgetModel = result.widgets
             canvas.loaded = true
             console.log("プロジェクト読込:", openDialog.selectedFile,

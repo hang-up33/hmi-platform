@@ -164,7 +164,7 @@ Explorer からダブルクリックで起動したい（「Qt の DLL が見つ
 
 ## フェーズ進捗
 
-Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入、**Phase 3-B / Runtime（Task 22〜24）まで全タスク完了**。新 BSP（scarthgap）で Qt6 入り実機 image と Qt6 クロス SDK を生成し、`hmi_runtime` を aarch64 にクロスビルド → **i.MX8MP 実機（weston / Wayland）で Editor 由来の JSON を描画**することを実機で確認済み。**Phase 4 / Button 縦スライス（Task 25〜32）も完了** — Widget 種別を横に増やす前に Button 1 つを全レイヤで深く作り込み「Widget 追加テンプレ」を確立した（選択・インスペクタ・リサイズ・削除・スタイル属性〔色・フォント・ボーダー・角丸〕の Schema 拡張）。`0` が正当値の数値プロパティを `-1` センチネルで optional 化、E2E に style / border / radius round-trip を追加し、macOS `ctest`（unit 8 + e2e 5 = 13/13）緑を確認した（旧 Phase 4〔Task 25〜30〕＋旧 Phase 5〔Task 31〜32〕を 1 本の Button 縦スライスに統合）。続く **Phase 4 拡張（Task 33〜43）を承認済み・未着手** — ①静的スタイルの続き（フォント詳細 / 配置 / opacity）→②編集体験の強化（グリッドスナップ / 複数選択・整列 / コピペ / undo-redo）→③状態 / アクション（変数ストア + クリックアクション + 状態別スタイル）で Button をさらに深く作り込む（**Task 33〜43 の一覧は下記「フェーズ進捗」表を参照**）。横展開（新 Widget 種別 Label / Lamp 等）は Phase 5 候補。
+Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入、**Phase 3-B / Runtime（Task 22〜24）まで全タスク完了**。新 BSP（scarthgap）で Qt6 入り実機 image と Qt6 クロス SDK を生成し、`hmi_runtime` を aarch64 にクロスビルド → **i.MX8MP 実機（weston / Wayland）で Editor 由来の JSON を描画**することを実機で確認済み。**Phase 4 / Button 縦スライス（Task 25〜32）も完了** — Widget 種別を横に増やす前に Button 1 つを全レイヤで深く作り込み「Widget 追加テンプレ」を確立した（選択・インスペクタ・リサイズ・削除・スタイル属性〔色・フォント・ボーダー・角丸〕の Schema 拡張）。`0` が正当値の数値プロパティを `-1` センチネルで optional 化、E2E に style / border / radius round-trip を追加し、macOS `ctest`（unit 8 + e2e 5 = 13/13）緑を確認した（旧 Phase 4〔Task 25〜30〕＋旧 Phase 5〔Task 31〜32〕を 1 本の Button 縦スライスに統合）。続く **Phase 4 拡張（Task 33〜43）を承認済み・進行中（Task 33〜41 完了）** — ①静的スタイルの続き（フォント詳細 / 配置 / opacity）→②編集体験の強化（グリッドスナップ / 複数選択・整列 / コピペ / undo-redo）→③状態 / アクション（変数ストア + クリックアクション + 状態別スタイル）で Button をさらに深く作り込む（**Task 33〜43 の一覧は下記「フェーズ進捗」表を参照**）。横展開（新 Widget 種別 Label / Lamp 等）は Phase 5 候補。
 
 > 各タスクで何をしたか・どの PR で入ったか・何を学んだかの **時系列まとめ** は [Docs/development-history.md](Docs/development-history.md) を参照。第三者への説明用。
 >
@@ -239,7 +239,7 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 | 31 | ボーダー＋角丸を全レイヤ貫通（Schema + HmiButton + Simulator/Runtime + インスペクタ）★ | ✅ 完了（PR #64。`0`=ボーダーなし／`-1`=未指定／キー欠落時省略の境界 unit テスト + インスペクタ ScrollView 化 + Editor/Simulator スクショ） |
 | 32 | E2E 拡充（border/radius）+ 実機 styled 描画更新（全環境） | ✅ 完了（PR #66。`e2e_style_roundtrip` を border/radius まで拡張〔数値は `int(float())`、border 色は既定 `#1d3557` と別値〕。**macOS `ctest` で unit 8 + e2e 5 = 13/13 緑**。README スクショを border 入りに更新。実機 border 再撮影は任意のため省略） |
 
-**Phase 4 拡張（Task 33〜43・2026-06-07 承認 / 未着手）** — Button をさらに深く作り込む 3 トラック。詳細は [Docs/phase4-button-slice-plan.md](Docs/phase4-button-slice-plan.md)「Phase 4 拡張」。
+**Phase 4 拡張（Task 33〜43・2026-06-07 承認 / 進行中：Task 33〜41 完了）** — Button をさらに深く作り込む 3 トラック。詳細は [Docs/phase4-button-slice-plan.md](Docs/phase4-button-slice-plan.md)「Phase 4 拡張」。
 
 | # | タスク | 状態 |
 |---|---|---|
@@ -251,7 +251,7 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 | 38 | undo / redo（コマンドスタック）（Editor）（C） | ✅ 完了（状態スナップショット方式・QML 完結。構造変更は操作前に積み、連続操作は確定時に 1 件。Undo/Redo ショートカット〔StandardKey + Ctrl+Shift+Z〕とツールバーボタン） |
 | 39 | 変数 / タグストア + Schema アクション型 + バインディング型（B） | ✅ 完了（Schema に変数定義/アクション/バインディング型を追加し JSON round-trip + C++ ブリッジ往復。ランタイム変数ストア（QML singleton）を新設。**型と保存のみ**で描画/実行は未接続＝T41） |
 | 40 | インスペクタでアクション編集（Editor）（B） | ✅ 完了（インスペクタに変数定義パネル + クリック時アクション編集〔操作/対象変数/値〕+ バインディング編集〔property/追従変数〕を追加。設定は保存 JSON に反映） |
-| 41 | Simulator / Runtime でアクション実行 + 状態反映（B） | ⬜ 未着手 |
+| 41 | Simulator / Runtime でアクション実行 + 状態反映（B） | ✅ 完了（Simulator/Runtime に「実行」を追加：読込時に変数ストアを初期化、Button クリックでアクション〔setVariable / toggleVariable〕実行 → 変数更新 → binding〔visible / text / 背景色 / 文字色〕が追従。読み取り専用アプリが初めて「動く」。Simulator QML テスト追加・unit 10/10 緑） |
 | 42 | 状態別スタイル（pressed / disabled / checked）（B） | ⬜ 未着手 |
 | 43 | アクション round-trip E2E + 実機動作確認（全環境）（B） | ⬜ 未着手 |
 
