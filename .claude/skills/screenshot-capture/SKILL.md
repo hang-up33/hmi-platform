@@ -76,14 +76,32 @@ scripts/capture-app-screenshot-linux.sh -a simulator -o Docs/screenshots/task-<N
 
 ## ファイル配置と PR への埋め込み
 
-- 出力先：`Docs/screenshots/task-<N>-<短い名>.png`（branch 名と揃える）
-- PR 本文には **commit SHA 固定の raw URL** で参照する。タスクブランチ削除後も生きる：
+- 出力先：`Docs/screenshots/task-<N>-<短い名>.png`（branch 名と揃える）。**PNG はこれまで通りコミットする**（リポジトリ内の恒久的な証跡。Codex / レビュアーは GitHub のファイルビューアや checkout で確認できる）。
+- **PR 本文のインライン画像は GitHub 添付（user-attachments）URL を使う**。`raw.githubusercontent.com` は使わない：
   ```markdown
   ## Screenshot
-  ![Task N: <短い説明>](https://raw.githubusercontent.com/hang-up33/hmi-platform/<commit-sha>/Docs/screenshots/task-<N>-<短い名>.png)
+  ![Task N: <短い説明>](https://github.com/user-attachments/assets/<uuid>)
   ```
-- SHA は push 後 `git rev-parse HEAD` で取得。PR 本文を `gh pr edit <N> --body-file ...` で更新する場合も同じ SHA を使い続ける（後続の修正コミットでスクショ自体を撮り直したら SHA も更新する）。
 - GUI 変化が無いタスク（純粋な Schema / docs / CMake のみ）はスクショ省略可。
+
+### なぜ raw.githubusercontent.com はダメなのか（private リポジトリの 404 罠）
+
+本リポジトリは **private**。`https://raw.githubusercontent.com/...` は github.com とドメインが別でログインセッションの cookie が効かず、private コンテンツへのアクセスには一時 `?token=` が必須。トークンの無い PR 本文の埋め込みは **404 not found** になり、スクショが映らない（実害：全 PR でスクショが表示されなかった。2026-06-08 にこの方式から user-attachments へ移行）。`github.com/<owner>/<repo>/raw/...` や `blob/...?raw=true` も、private ではマークダウンのインライン画像として安定表示されない。**ログイン中の閲覧者に確実にインライン表示されるのは user-attachments のみ**（GitHub が署名付き URL で配信するため）。
+
+### user-attachments URL の取得（手動アップロードが必要）
+
+`github.com/user-attachments/assets/<uuid>` URL は、**GitHub web の PR 説明 / コメント編集ボックスに画像をドラッグ&ドロップ（または貼り付け）すると自動生成される**。これは github.com のログインセッション + CSRF を要するため `gh` CLI / GitHub MCP / REST API では**自動化できない**（Claude 単独では取得不可）。そのため運用は次の分担にする：
+
+1. **Claude**：スクショ撮影 → `Docs/screenshots/task-<N>-...png` をコミット → `gh pr create` で PR 作成。Screenshot セクションには **下記プレースホルダ**を置く（raw URL は書かない）。
+2. **ユーザー（= browser セッションを持つ側）**：コミット済み PNG（`Docs/screenshots/...`）を PR 説明欄にドラッグ&ドロップしてインライン化する。GitHub が `github.com/user-attachments/assets/<uuid>` を生成して埋め込む。
+3. ユーザーが添付 URL を Claude に渡した場合は、Claude が `gh pr edit <N> --body-file ...` でプレースホルダを当該 URL に置換する。
+
+PR 作成時に置くプレースホルダ例：
+```markdown
+## Screenshot
+<!-- ↓ Docs/screenshots/task-<N>-<短い名>.png をこの欄にドラッグ&ドロップしてインライン化してください（private repo のため user-attachments URL が必要） -->
+撮影済み（コミット済み）: `Docs/screenshots/task-<N>-<短い名>.png`
+```
 
 ## README 掲載スクショの同期
 
