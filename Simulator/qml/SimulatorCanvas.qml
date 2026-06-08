@@ -94,7 +94,11 @@ Item {
                 }
 
                 // Task 41: onClick アクションを実行する（setVariable / toggleVariable）。
-                // trigger は "onClick"（既定）のみ反応。target / op が揃ったものだけ実行。
+                // trigger は "onClick"（既定）のみ反応する。**trigger 省略 / 空も onClick
+                // とみなす**：Schema の ActionData.trigger 既定が "onClick" で、Editor の
+                // インスペクタ（Task 40）も "onClick" 固定で保存するため、未設定 = onClick
+                // と解釈して取りこぼさない（将来 "onPress" 等を足す時はここで分岐を増やす）。
+                // target / op が揃ったものだけ実行。
                 // 値は変数の型に合わせて coerce する。読み取り専用アプリの「実行」概念は
                 // ここだけに閉じ、選択 / 編集は持ち込まない原則を維持する。
                 function runClickActions() {

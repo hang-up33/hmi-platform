@@ -10,7 +10,7 @@
       "name": "Main",
       "widgets": [
         {
-          "id": "btnToggle", "type": "button",
+          "id": "btnToggle", "type": "Button",
           "x": 80, "y": 80, "width": 440, "height": 90,
           "text": "電源トグル（クリックで power 反転）",
           "backgroundColor": "#4cc9f0", "textColor": "#ffffff", "fontSize": 22, "radius": 10,
@@ -19,7 +19,7 @@
           ]
         },
         {
-          "id": "btnStatus", "type": "button",
+          "id": "btnStatus", "type": "Button",
           "x": 80, "y": 210, "width": 440, "height": 90,
           "text": "（静的テキスト・未使用）",
           "textColor": "#ffffff", "fontSize": 24, "radius": 10,
@@ -29,7 +29,7 @@
           ]
         },
         {
-          "id": "btnLamp", "type": "button",
+          "id": "btnLamp", "type": "Button",
           "x": 80, "y": 340, "width": 440, "height": 90,
           "text": "power=true のとき表示されるランプ",
           "backgroundColor": "#e9c46a", "textColor": "#1d3557", "fontSize": 22, "radius": 10,
