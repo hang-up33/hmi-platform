@@ -61,7 +61,9 @@ TestCase {
     }
 
     function init() {
-        verify(canvas !== null, "SimulatorCanvas が未ロード");
+        // canvas は Component.onCompleted で非同期生成されるため、低速 / headless
+        // 環境での生成レースを避けて tryVerify で生成完了を待つ（CodeRabbit 指摘）。
+        tryVerify(function() { return canvas !== null; }, 1000, "SimulatorCanvas が未ロード");
         // singleton の VariableStore はテスト間で状態を共有するため空へ戻す。
         VariableStore.clear();
         canvas.variableModel = [];
