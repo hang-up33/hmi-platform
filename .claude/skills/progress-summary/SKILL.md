@@ -23,22 +23,34 @@ origin: hmi-platform
 
 ## 手順（How It Works）
 
-### Step 1: 期間内のコミット / マージを集める
+### Step 1: 期間内のマージ済み PR を集める
+
+**主情報源は GitHub のマージ済み PR 一覧**にする（git log だけだと PR 境界を取りこぼす。下の罠参照）。
+
+```
+# GitHub MCP（推奨）：期間に被るマージ済み PR を取る
+mcp__github__list_pull_requests  state=closed  sort=updated  direction=desc
+  → merged_at が期間内のものだけ残す
+```
+
+git log を併用する場合は、**2 種類のマージ形式の両方**を PR 境界として拾う：
 
 ```sh
-# 日付は %m/%d で見やすく。--all で全ブランチのマージコミットも拾う
+git fetch origin   # ローカルが origin/main から遅れていることがある（[dev-environment.md]）
 git log --since="<開始> 00:00" --until="<終了+1日> 00:00" \
   --pretty=format:"%h | %ad | %s" --date=format:"%m/%d %H:%M" --all
 ```
 
-- `Merge pull request #N from <branch>` 行が PR 単位の区切り。これを基準にグルーピングする。
-- ローカルが `origin/main` から遅れていることがある（[dev-environment.md] 参照）。
-  正確を期すなら先に `git fetch origin` し、必要なら GitHub MCP（`mcp__github__list_pull_requests` を
-  `state=closed` / `sort=updated`）でマージ済み PR を突き合わせる。
+- `Merge pull request #N from <branch>`（マージコミット方式）
+- `Task N: ... (#N)` のように **末尾 `(#N)` が付く squash コミット**（Squash and merge 方式）
+
+本リポジトリの PR 規約は **Squash and merge**（[CLAUDE.md]「マージ戦略」）だが履歴には両方式が混在する。
+**どちらか一方だけを境界にすると、別方式の PR を見落とす / 誤グルーピングする**。
 
 ### Step 2: PR / タスクごとに「実装した機能」を 1 行で抽出
 
-- 1 PR = 1 項目。コミットメッセージから **ユーザーに見える機能の変化**だけを拾う
+- 1 PR = 1 項目（`(#N)` または `Merge ... #N` の `#N` を PR 番号として使う）。
+  コミットメッセージから **ユーザーに見える機能の変化**だけを拾う
   （`Task N: ...` 本体や `feat:` を優先。`Codex 指摘対応` `empty commit` `lint` などの過程コミットは既定では畳む）。
 - docs/計画・CI・環境整備の PR も「機能」ではないが成果なので、簡潔版では **1 行に圧縮**して残す。
 
@@ -63,5 +75,8 @@ git log --since="<開始> 00:00" --until="<終了+1日> 00:00" \
 - **過程コミットを機能として数えない**：`Codex #N P2 対応` / `empty commit` / `trigger CI` は成果の本体ではない。
 - **粒度はユーザー指定に従う**：「長いので機能列挙だけ」と言われたら PR 番号もサマリも落として箇条書きのみにする。
 - **マージされていない作業中ブランチを「実装済み」と書かない**：基準は **マージ済み PR**。
+- **PR 境界は 2 方式ある**：`Merge pull request #N`（マージコミット）と `... (#N)`（squash）。
+  片方だけ見ると Squash and merge した PR（例 `Task 38: ... (#77)`）を取りこぼす。
+  確実にするなら GitHub のマージ済み PR 一覧を主情報源にする（Step 1）。
 
 関連：[[user-language-japanese]] / development-history への記録は [Docs/development-history.md] が正。
