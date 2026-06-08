@@ -251,7 +251,7 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 | 38 | undo / redo（コマンドスタック）（Editor）（C） | ✅ 完了（状態スナップショット方式・QML 完結。構造変更は操作前に積み、連続操作は確定時に 1 件。Undo/Redo ショートカット〔StandardKey + Ctrl+Shift+Z〕とツールバーボタン） |
 | 39 | 変数 / タグストア + Schema アクション型 + バインディング型（B） | ✅ 完了（Schema に変数定義/アクション/バインディング型を追加し JSON round-trip + C++ ブリッジ往復。ランタイム変数ストア（QML singleton）を新設。**型と保存のみ**で描画/実行は未接続＝T41） |
 | 40 | インスペクタでアクション編集（Editor）（B） | ✅ 完了（インスペクタに変数定義パネル + クリック時アクション編集〔操作/対象変数/値〕+ バインディング編集〔property/追従変数〕を追加。設定は保存 JSON に反映） |
-| 41 | Simulator / Runtime でアクション実行 + 状態反映（B） | ⬜ 未着手 |
+| 41 | Simulator / Runtime でアクション実行 + 状態反映（B） | ✅ 完了（Simulator/Runtime に「実行」を追加：読込時に変数ストアを初期化、Button クリックでアクション〔setVariable / toggleVariable〕実行 → 変数更新 → binding〔visible / text / 背景色 / 文字色〕が追従。読み取り専用アプリが初めて「動く」。Simulator QML テスト追加・unit 10/10 緑） |
 | 42 | 状態別スタイル（pressed / disabled / checked）（B） | ⬜ 未着手 |
 | 43 | アクション round-trip E2E + 実機動作確認（全環境）（B） | ⬜ 未着手 |
 
