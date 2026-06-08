@@ -86,29 +86,52 @@ Window {
         }
     }
 
+    // Task 29 / 37: インスペクタのどれかの入力欄が編集フォーカス中か。Delete / Copy /
+    // Paste / Duplicate のショートカットは、フィールド編集中（文字削除やテキストの
+    // コピペに同じキーを使う）に奪うと困るため、このガードで無効化する。
+    // Task 37 で Delete のインライン列挙をこの単一プロパティに集約した（重複排除）。
+    readonly property bool inspectorFieldFocused:
+        inspectorTextField.activeFocus
+        || inspectorTagField.activeFocus
+        || inspectorBgColorField.activeFocus
+        || inspectorTextColorField.activeFocus
+        || inspectorFontSizeSpin.activeFocus
+        || inspectorBorderColorField.activeFocus
+        || inspectorBorderWidthSpin.activeFocus
+        || inspectorRadiusSpin.activeFocus
+        || inspectorFontFamilyCombo.activeFocus
+        || inspectorHAlignCombo.activeFocus
+        || inspectorVAlignCombo.activeFocus
+        || inspectorOpacitySpin.activeFocus
+        || fieldX.activeFocus || fieldY.activeFocus
+        || fieldW.activeFocus || fieldH.activeFocus
+
     // Task 29: Delete キーで選択中 Widget を削除する。Shortcut なら個別 Item の
-    // フォーカス・Keys ハンドリングを増やさず Window 全体に効かせられる。ただし
-    // インスペクタの TextField 編集中（文字削除に Delete を使う）に奪うと困るため、
-    // enabled を「選択あり かつ どのインスペクタ入力もフォーカスしていない」に
-    // 限定する。削除ロジックはボタンと同じ Canvas.deleteWidget() に集約。
+    // フォーカス・Keys ハンドリングを増やさず Window 全体に効かせられる。
     Shortcut {
         sequence: StandardKey.Delete
-        enabled: canvas.selectedWidgetIds.length > 0
-            && !inspectorTextField.activeFocus
-            && !inspectorTagField.activeFocus
-            && !inspectorBgColorField.activeFocus
-            && !inspectorTextColorField.activeFocus
-            && !inspectorFontSizeSpin.activeFocus
-            && !inspectorBorderColorField.activeFocus
-            && !inspectorBorderWidthSpin.activeFocus
-            && !inspectorRadiusSpin.activeFocus
-            && !inspectorFontFamilyCombo.activeFocus
-            && !inspectorHAlignCombo.activeFocus
-            && !inspectorVAlignCombo.activeFocus
-            && !inspectorOpacitySpin.activeFocus
-            && !fieldX.activeFocus && !fieldY.activeFocus
-            && !fieldW.activeFocus && !fieldH.activeFocus
+        enabled: canvas.selectedWidgetIds.length > 0 && !rootWindow.inspectorFieldFocused
         onActivated: canvas.deleteWidgets(canvas.selectedWidgetIds)
+    }
+
+    // Task 37: コピー / ペースト / 複製のショートカット。コピペは StandardKey で OS 差
+    // （macOS = Cmd / Win・Linux = Ctrl）を吸収する。複製は **Ctrl+D を避け Ctrl+Shift+D**
+    // にする（Ctrl+D は KDE/GNOME で StandardKey.Delete に含まれ T29 削除と衝突するため）。
+    // いずれもインスペクタ編集中は無効（テキストの copy/paste を妨げない）。
+    Shortcut {
+        sequence: StandardKey.Copy
+        enabled: canvas.selectedWidgetIds.length > 0 && !rootWindow.inspectorFieldFocused
+        onActivated: canvas.copySelected()
+    }
+    Shortcut {
+        sequence: StandardKey.Paste
+        enabled: canvas.clipboard.length > 0 && !rootWindow.inspectorFieldFocused
+        onActivated: canvas.pasteClipboard()
+    }
+    Shortcut {
+        sequence: "Ctrl+Shift+D"
+        enabled: canvas.selectedWidgetIds.length > 0 && !rootWindow.inspectorFieldFocused
+        onActivated: canvas.duplicateSelected()
     }
 
     // 薄いグレーの余白背景
@@ -149,6 +172,27 @@ Window {
                 text: qsTr("スナップ")
                 checked: canvas.snapEnabled
                 onToggled: canvas.snapEnabled = checked
+            }
+
+            // Task 37: コピー / ペースト / 複製。ショートカット（Cmd/Ctrl+C/V・Ctrl+Shift+D）
+            // と同じ Canvas 関数を叩く（ボタンは発見性とヘッドレススクショ用）。
+            Button {
+                objectName: "copyButton"
+                text: qsTr("コピー")
+                enabled: canvas.selectedWidgetIds.length > 0
+                onClicked: canvas.copySelected()
+            }
+            Button {
+                objectName: "pasteButton"
+                text: qsTr("ペースト")
+                enabled: canvas.clipboard.length > 0
+                onClicked: canvas.pasteClipboard()
+            }
+            Button {
+                objectName: "duplicateButton"
+                text: qsTr("複製")
+                enabled: canvas.selectedWidgetIds.length > 0
+                onClicked: canvas.duplicateSelected()
             }
         }
 

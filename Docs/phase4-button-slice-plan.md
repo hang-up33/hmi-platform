@@ -359,7 +359,7 @@ flowchart LR
 | 34 | テキスト配置（hAlign/vAlign）+ 不透明度（opacity）全レイヤ貫通（A） | ✅ 完了（Schema→C++ ブリッジ→delegate→HmiButton→EditableWidget メタ→インスペクタ〔ComboBox ×2 + SpinBox〕貫通。配置は **enum 文字列**を `Text.horizontalAlignment` 等へマップ〔空・不正値は中央〕、**Text を `anchors.fill` 化**して配置を効かせる。opacity は **real センチネル `-1.0`**〔`0.0`=完全透明は正当値〕で、公開入力は `Item.opacity` 組込み衝突回避のため **`widgetOpacity`** に統一〔JSON キー / WidgetData は `opacity`〕。unit 8 + e2e 5 = 13/13 緑、Editor/Simulator スクショ） |
 | 35 | グリッドスナップ + スナップ ON/OFF トグル（Editor）（C） | ✅ 完了（Canvas に `snapEnabled`/`gridSize`〔既定 8px〕+ グリッド線描画〔Repeater の薄 Rectangle、snapEnabled 時のみ〕。移動ドラッグ確定〔`dragArea.onReleased`〕/ リサイズ確定〔`resizeArea.onReleased`〕で `Math.round(v/grid)*grid` 吸着。ツールバーに「スナップ」CheckBox。**JSON 非保存**〔編集補助のみ〕。unit 8 + e2e 5 = 13/13 緑、グリッドスクショ） |
 | 36 | 複数選択 + 一括移動・整列・削除（Editor）（C） | ✅ 完了（`selectedWidgetIds`〔集合〕へ拡張、Shift/Ctrl クリックで加除〔HmiButton.clicked が modifiers を中継〕。一括ドラッグ移動〔リーダーの差分を選択全体へ〕・一括削除〔`deleteWidgets`〕・整列〔左/水平中央/右/上/垂直中央/下〕・等間隔分布〔水平/垂直、3 個以上〕。インスペクタは複数選択時「N 個選択中」+ 整列/分布/削除アクション。**単一プロパティ編集は単一選択時のみ**〔共通プロパティのフィールド編集は範囲外＝後続候補〕。unit 8 + e2e 5 = 13/13 緑、複数選択スクショ） |
-| 37 | コピー / ペースト / 複製（Editor）（C） | ⬜ 未着手 |
+| 37 | コピー / ペースト / 複製（Editor）（C） | ✅ 完了（内部クリップボード〔選択のスナップショット配列〕。`copySelected`/`pasteClipboard`/`duplicateSelected` を Canvas に実装、id 採番を `nextWidgetId` に単一ソース化し連続採番でも重複なし、ペーストは +20 オフセット配置 + 新規を選択。ショートカット：コピー/ペースト = `StandardKey`、複製 = **`Ctrl+Shift+D`**〔`Ctrl+D` は `StandardKey.Delete` と衝突するため回避〕。フィールド編集中ガードを `inspectorFieldFocused` に集約。ツールバーにボタンも追加。unit 8 + e2e 5 = 13/13 緑、スクショ） |
 | 38 | undo / redo（コマンドスタック）（Editor）（C） | ⬜ 未着手 |
 | 39 | 変数 / タグストア + Schema アクション型 + バインディング型（B） | ⬜ 未着手 |
 | 40 | インスペクタでアクション編集（Editor）（B） | ⬜ 未着手 |

@@ -146,16 +146,11 @@ Item {
     // Task 18: 既定サイズ/位置で Widget を 1 個追加する。Main.qml の追加
     // ボタンから呼ばれる。E2E（Spix）からは追加ボタンの mouseClick 経由で
     // 同じパスを通る。
-    function addWidget() {
-        // Task 26: 古い widgetModel を直接 concat せず、現在の live Item 群を
-        // スナップショットしてから追加する。これによりインスペクタでの未保存
-        // 編集（text/tag）やドラッグ後の位置が、追加に伴う Repeater 再生成で
-        // 巻き戻らない（Codex PR #52 指摘）。
-        const snapshot = snapshotModel()
-
-        // 既存 id（live Item 由来）から btnNNN 形式の最大連番を走査し、
-        // カウンタと比較する。読込で外部 JSON が入った後の追加でも ID が
-        // 衝突しないよう保つ。
+    // Task 18 / 37: 次の btnNNN 形式 id を採番する（addWidget / ペースト / 複製で共用）。
+    // 渡された snapshot 内の btnNNN 最大連番と widgetIdCounter を比較して衝突を避ける
+    // （読込で外部 JSON が入った後でも安全。ペーストで連続採番する時は、push 済みの新 id も
+    // snapshot に含めて渡せば次の採番が重複しない）。
+    function nextWidgetId(snapshot) {
         let maxFound = widgetIdCounter
         for (let i = 0; i < snapshot.length; ++i) {
             const existingId = snapshot[i].id
@@ -172,7 +167,16 @@ Item {
             }
         }
         widgetIdCounter = maxFound + 1
-        const id = "btn" + String(widgetIdCounter).padStart(3, "0")
+        return "btn" + String(widgetIdCounter).padStart(3, "0")
+    }
+
+    function addWidget() {
+        // Task 26: 古い widgetModel を直接 concat せず、現在の live Item 群を
+        // スナップショットしてから追加する。これによりインスペクタでの未保存
+        // 編集（text/tag）やドラッグ後の位置が、追加に伴う Repeater 再生成で
+        // 巻き戻らない（Codex PR #52 指摘）。
+        const snapshot = snapshotModel()
+        const id = nextWidgetId(snapshot)
         const newWidget = {
             id: id,
             type: "Button",
@@ -182,6 +186,64 @@ Item {
         snapshot.push(newWidget)
         // 新しい配列を代入することで Repeater に確実にモデル変更を通知する。
         widgetModel = snapshot
+    }
+
+    // Task 37: コピー / ペースト / 複製。選択 Widget を内部クリップボード（WidgetData
+    // 相当の配列スナップショット）へコピーし、ペーストで新 id を採番してオフセット配置する。
+    property var clipboard: []
+    // ペースト位置のオフセット（px）。
+    readonly property int pasteOffset: 20
+
+    // Task 37: 選択中 Widget を内部クリップボードへコピー（live 値をスナップショット）。
+    function copySelected() {
+        const snap = snapshotModel()
+        clipboard = snap.filter(function(w) {
+            return selectedWidgetIds.indexOf(w.id) >= 0
+        })
+    }
+
+    // Task 37: 与えられた WidgetData 相当配列を、新 id + オフセットで複製配置する共通経路
+    // （ペースト / 複製が共用）。構造変更なので snapshot→追加→再代入し、追加した新 id を選択する。
+    function pasteEntries(entries) {
+        if (!entries || entries.length === 0) {
+            return
+        }
+        const snapshot = snapshotModel()
+        const newIds = []
+        const maxX = Math.max(0, width)
+        const maxY = Math.max(0, height)
+        for (let i = 0; i < entries.length; ++i) {
+            const src = entries[i]
+            const copy = {}
+            for (const key in src) {
+                copy[key] = src[key]
+            }
+            // push 済みの新 id も含む snapshot を渡すので連続採番でも重複しない。
+            copy.id = nextWidgetId(snapshot)
+            const w = (src.width !== undefined ? src.width : 120)
+            const h = (src.height !== undefined ? src.height : 40)
+            copy.x = Math.max(0, Math.min(maxX - w, (src.x !== undefined ? src.x : 0) + pasteOffset))
+            copy.y = Math.max(0, Math.min(maxY - h, (src.y !== undefined ? src.y : 0) + pasteOffset))
+            snapshot.push(copy)
+            newIds.push(copy.id)
+        }
+        widgetModel = snapshot
+        // ペースト後は新規 Widget を選択状態にする（onWidgetModelChanged の prune より後に代入）。
+        selectedWidgetIds = newIds
+    }
+
+    // Task 37: クリップボードからペースト。
+    function pasteClipboard() {
+        pasteEntries(clipboard)
+    }
+
+    // Task 37: 選択中 Widget を即複製（クリップボードを汚さず現在の選択から直接ペースト）。
+    function duplicateSelected() {
+        const snap = snapshotModel()
+        const sel = snap.filter(function(w) {
+            return selectedWidgetIds.indexOf(w.id) >= 0
+        })
+        pasteEntries(sel)
     }
 
     // Task 29: 選択中（または指定 id）の Widget を削除する。addWidget() と対称で、

@@ -247,7 +247,7 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 | 34 | テキスト配置（hAlign/vAlign）+ 不透明度（opacity）全レイヤ貫通（A） | ✅ 完了（配置は **enum 文字列**を `Text` の alignment enum へマップ〔Text を `anchors.fill` 化〕・opacity は **real センチネル `-1.0`** で公開入力を `widgetOpacity` に統一〔`Item.opacity` 組込み衝突回避〕・新インスペクタ UI〔ComboBox ×2 + SpinBox〕） |
 | 35 | グリッドスナップ + スナップ ON/OFF トグル（Editor）（C） | ✅ 完了（Canvas に 8px グリッド線描画 + 移動/リサイズ確定座標の格子吸着・ツールバーの「スナップ」CheckBox で ON/OFF。**JSON 非保存**＝編集補助のみ） |
 | 36 | 複数選択 + 一括移動・整列・削除（Editor）（C） | ✅ 完了（Shift/Ctrl クリックで複数選択・一括ドラッグ移動・整列〔左/中央/右・上/中央/下〕・等間隔分布・一括削除。インスペクタに「N 個選択中」+ 整列/分布/削除。プロパティ編集は単一選択時のみ） |
-| 37 | コピー / ペースト / 複製（Editor）（C） | ⬜ 未着手 |
+| 37 | コピー / ペースト / 複製（Editor）（C） | ✅ 完了（内部クリップボードでコピー/ペースト/複製。新 id 採番 + オフセット配置 + ペースト後選択。ショートカット〔コピー/ペースト = StandardKey、複製 = Ctrl+Shift+D〕とツールバーボタン） |
 | 38 | undo / redo（コマンドスタック）（Editor）（C） | ⬜ 未着手 |
 | 39 | 変数 / タグストア + Schema アクション型 + バインディング型（B） | ⬜ 未着手 |
 | 40 | インスペクタでアクション編集（Editor）（B） | ⬜ 未着手 |

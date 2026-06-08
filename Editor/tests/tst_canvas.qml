@@ -540,6 +540,54 @@ TestCase {
         compare(itemById("c").y, 10);
     }
 
+    // Task 37: copySelected → pasteClipboard で選択 Widget が新 id + オフセットで複製され、
+    // ペースト後は新規 Widget が選択状態になる（id は重複しない）。
+    function test_copy_paste_creates_offset_copy_with_new_id() {
+        setThreeWidgets();
+        canvas.selectedWidgetIds = ["a"];
+        canvas.copySelected();
+        compare(canvas.clipboard.length, 1);
+
+        canvas.pasteClipboard();
+        tryVerify(function() { return editableChildren().length === 4; }, 1000,
+                  "ペーストで Widget が増えない");
+
+        // 新規 id が 1 個選択され、a とは別 id。
+        compare(canvas.selectedWidgetIds.length, 1);
+        const newId = canvas.selectedWidgetIds[0];
+        verify(newId !== "a", "ペースト後の id が元と同じ");
+
+        // オフセット配置（元 a は x=10,y=10 → +20）。
+        const pasted = itemById(newId);
+        verify(pasted !== null, "ペースト Item が見つからない");
+        compare(pasted.x, 30);
+        compare(pasted.y, 30);
+
+        // 元の a も残っている（コピーであって移動ではない）。
+        verify(itemById("a") !== null, "元の a が消えた");
+    }
+
+    // Task 37: duplicateSelected は複数選択をまとめて複製し、すべて一意 id になる。
+    function test_duplicate_multiple_unique_ids() {
+        setThreeWidgets();
+        canvas.selectedWidgetIds = ["a", "b"];
+        canvas.duplicateSelected();
+        tryVerify(function() { return editableChildren().length === 5; }, 1000,
+                  "複製で 2 件増えない");
+
+        // 複製された 2 個が選択され、id が互いに / 既存と重複しない。
+        compare(canvas.selectedWidgetIds.length, 2);
+        const ids = canvas.selectedWidgetIds;
+        verify(ids[0] !== ids[1], "複製 id が重複");
+        const all = {};
+        const ch = editableChildren();
+        for (let i = 0; i < ch.length; ++i) {
+            verify(all[ch[i].widgetId] === undefined, "全体で id が重複: " + ch[i].widgetId);
+            all[ch[i].widgetId] = true;
+        }
+        compare(ch.length, 5);
+    }
+
     // Task 36（Codex PR #75 [P2]）：widgetModel 差し替え（プロジェクト読込相当）で、
     // 新モデルに無い選択 id が選択集合から外れる（インスペクタが空表示に戻る）。
     function test_selection_pruned_on_model_replace() {
