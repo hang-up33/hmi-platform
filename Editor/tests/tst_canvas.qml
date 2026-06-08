@@ -672,6 +672,76 @@ TestCase {
         compare(snap[0].bindings[0].variable, "runColor");
     }
 
+    // Task 40（Codex PR #80 [P2]）：変数名変更時、既存 Widget の actions.target /
+    // bindings.variable の旧名参照が新名へ置換される（参照切れを防ぐ）。
+    function test_rename_variable_references_updates_widgets() {
+        canvas.widgetModel = [{
+            id: "btnA", type: "Button", x: 0, y: 0, width: 100, height: 40, text: "A", tag: "",
+            actions: [{ trigger: "onClick", op: "toggleVariable", target: "running", value: "" }],
+            bindings: [{ property: "backgroundColor", variable: "running" }]
+        }, {
+            id: "btnB", type: "Button", x: 0, y: 50, width: 100, height: 40, text: "B", tag: "",
+            actions: [{ trigger: "onClick", op: "setVariable", target: "other", value: "1" }],
+            bindings: []
+        }];
+        tryVerify(function() { return editableChildren().length === 2; }, 1000,
+                  "2 件モデルが反映されない");
+
+        // Task 40（Codex PR #80 [P2]）：変数リネームは Canvas undo に載せない。
+        // 載せると Undo で widget 参照だけ旧名に戻り、変数定義（projectVariables）は
+        // 新名のまま残って参照切れになる。renameVariableReferences は pushUndo せず
+        // widgetModel を直接再代入するだけ（変数定義と widget 参照が常に一致）。
+        canvas.clearHistory();
+        canvas.renameVariableReferences("running", "isRunning");
+        compare(canvas.canUndo, false, "変数リネームが undo スタックに積まれている");
+
+        const snap = canvas.snapshotModel();
+        let a = null, b = null;
+        for (let i = 0; i < snap.length; ++i) {
+            if (snap[i].id === "btnA") a = snap[i];
+            if (snap[i].id === "btnB") b = snap[i];
+        }
+        // btnA の running 参照は isRunning へ更新される。
+        compare(a.actions[0].target, "isRunning");
+        compare(a.bindings[0].variable, "isRunning");
+        // btnB の別変数 other は影響を受けない。
+        compare(b.actions[0].target, "other");
+    }
+
+    // Task 40（Codex PR #80 [P2]）：変数を削除したら、その変数を参照している Widget の
+    // actions（target）/ bindings（variable）も取り除く。残すと未定義変数への dangling
+    // 参照が JSON に残り、T41 の実行で参照切れになる。undo には載せない。
+    function test_remove_variable_references_clears_widgets() {
+        canvas.widgetModel = [{
+            id: "btnA", type: "Button", x: 0, y: 0, width: 100, height: 40, text: "A", tag: "",
+            actions: [{ trigger: "onClick", op: "toggleVariable", target: "running", value: "" }],
+            bindings: [{ property: "backgroundColor", variable: "running" }]
+        }, {
+            id: "btnB", type: "Button", x: 0, y: 50, width: 100, height: 40, text: "B", tag: "",
+            actions: [{ trigger: "onClick", op: "setVariable", target: "other", value: "1" }],
+            bindings: []
+        }];
+        tryVerify(function() { return editableChildren().length === 2; }, 1000,
+                  "2 件モデルが反映されない");
+
+        canvas.clearHistory();
+        canvas.removeVariableReferences("running");
+        compare(canvas.canUndo, false, "変数参照削除が undo スタックに積まれている");
+
+        const snap = canvas.snapshotModel();
+        let a = null, b = null;
+        for (let i = 0; i < snap.length; ++i) {
+            if (snap[i].id === "btnA") a = snap[i];
+            if (snap[i].id === "btnB") b = snap[i];
+        }
+        // btnA の running 参照は actions/bindings ともに取り除かれる。
+        compare(a.actions.length, 0);
+        compare(a.bindings.length, 0);
+        // btnB の別変数 other は影響を受けない。
+        compare(b.actions.length, 1);
+        compare(b.actions[0].target, "other");
+    }
+
     // Task 36（Codex PR #75 [P2]）：widgetModel 差し替え（プロジェクト読込相当）で、
     // 新モデルに無い選択 id が選択集合から外れる（インスペクタが空表示に戻る）。
     function test_selection_pruned_on_model_replace() {

@@ -243,6 +243,73 @@ Item {
         pasteEntries(clipboard)
     }
 
+    // Task 40（Codex PR #80 [P2]）：変数名を変更したとき、既存 Widget の
+    // actions[].target / bindings[].variable の旧名参照を新名へ置換する（変数は名前で
+    // 解決されるため、旧名のままだと T41 の実行 / 追従が参照切れになる）。構造変更と同じく
+    // live Item をスナップショット → 置換 → 再代入する。変更があった時だけ再代入する。
+    function renameVariableReferences(oldName, newName) {
+        if (!oldName || oldName === newName) {
+            return
+        }
+        const snap = snapshotModel()
+        let changed = false
+        for (let i = 0; i < snap.length; ++i) {
+            const w = snap[i]
+            if (w.actions) {
+                for (let a = 0; a < w.actions.length; ++a) {
+                    if (w.actions[a].target === oldName) {
+                        w.actions[a].target = newName
+                        changed = true
+                    }
+                }
+            }
+            if (w.bindings) {
+                for (let b = 0; b < w.bindings.length; ++b) {
+                    if (w.bindings[b].variable === oldName) {
+                        w.bindings[b].variable = newName
+                        changed = true
+                    }
+                }
+            }
+        }
+        if (changed) {
+            widgetModel = snap
+        }
+    }
+
+    // Task 40（Codex PR #80 [P2]）：変数定義を削除する時は、その変数を参照している
+    // 既存 Widget の actions（target === name）/ bindings（variable === name）も取り除く。
+    // 残すと JSON に未定義変数への dangling 参照が残り、T41 の実行で参照切れになる。
+    // renameVariableReferences と同じく live Item をスナップショット → 置換 → 再代入する。
+    // undo には載せない（変数削除自体が Canvas undo 外なので、参照クリーンアップも同じ境界）。
+    function removeVariableReferences(name) {
+        if (!name) {
+            return
+        }
+        const snap = snapshotModel()
+        let changed = false
+        for (let i = 0; i < snap.length; ++i) {
+            const w = snap[i]
+            if (w.actions) {
+                const keptA = w.actions.filter(function(a) { return a.target !== name })
+                if (keptA.length !== w.actions.length) {
+                    w.actions = keptA
+                    changed = true
+                }
+            }
+            if (w.bindings) {
+                const keptB = w.bindings.filter(function(b) { return b.variable !== name })
+                if (keptB.length !== w.bindings.length) {
+                    w.bindings = keptB
+                    changed = true
+                }
+            }
+        }
+        if (changed) {
+            widgetModel = snap
+        }
+    }
+
     // Task 37: 選択中 Widget を即複製（クリップボードを汚さず現在の選択から直接ペースト）。
     function duplicateSelected() {
         const snap = snapshotModel()
