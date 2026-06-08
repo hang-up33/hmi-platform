@@ -75,22 +75,19 @@ git push -u origin task/<N>-<短い名>
 
 ### 5. PR 作成
 
-**HEREDOC は必ず `'EOF'`（quoted）で書き、本文中のシェル展開を完全に止める**。`${SHA}` のような可変値はプレースホルダで書いておき、後で `sed` 置換 → `--body-file` で渡す（PR 本文に `$VAR` / `$(...)` / バッククォートが混ざっても安全な構成）。
+**HEREDOC は必ず `'EOF'`（quoted）で書き、本文中のシェル展開を完全に止める**。可変値を本文へ差し込む場合はプレースホルダで書いておき、後で `sed` 置換 → `--body-file` で渡す（PR 本文に `$VAR` / `$(...)` / バッククォートが混ざっても安全な構成）。
 
 ```sh
-# GUI 変化がある場合は事前に push 済み SHA を控えておく（スクショ URL 用）
-SHA=$(git rev-parse HEAD)
-
 # 本文テンプレートをファイルに書き出す（HEREDOC 内は完全リテラル）
-cat <<'EOF' | sed "s|__SHA__|${SHA}|g" > /tmp/pr_body.md
+cat <<'EOF' > /tmp/pr_body.md
 ## Summary
 - <変更点の箇条書き 1>
 - <変更点の箇条書き 2>
 
 ## Screenshot
-![Task N: <短い説明>](https://raw.githubusercontent.com/hang-up33/hmi-platform/__SHA__/Docs/screenshots/task-<N>-<短い名>.png)
-
-<スクショの簡単な説明：何が描画されている画面か>
+<!-- private リポジトリのため raw.githubusercontent.com は 404 になる。インライン表示は user-attachments のみ。
+     ↓ Docs/screenshots/task-<N>-<短い名>.png を PR 説明欄にドラッグ&ドロップしてインライン化する（詳細は screenshot-capture スキル） -->
+撮影済み（コミット済み）: `Docs/screenshots/task-<N>-<短い名>.png`
 
 ## 設計書との対応
 - Task N: <タスク名>（該当フェーズ：MVP / Phase 2 / Phase 3-A / Phase 3-B …）
@@ -115,7 +112,7 @@ gh pr create --title "Task N: <短い説明>" --body-file /tmp/pr_body.md
 
 - `--draft` を **付けない**（Codex がレビュー対象として扱いやすい状態にする）
 - 不安な観点があれば `Codex 向け補足` セクションを具体的に書く（汎用的な「全体的に見てほしい」より、特定の観点を 1〜3 個提示）
-- `## Screenshot` セクションは **GUI 変化があるタスクで必須**（純粋な Schema / docs / CMake のみのタスクは省略可）。撮影方法と運用の詳細は [screenshot-capture](../screenshot-capture/SKILL.md) スキルを参照。
+- `## Screenshot` セクションは **GUI 変化があるタスクで必須**（純粋な Schema / docs / CMake のみのタスクは省略可）。撮影方法と運用の詳細は [screenshot-capture](../screenshot-capture/SKILL.md) スキルを参照。**本リポジトリは private のため `raw.githubusercontent.com` の URL は PR 本文で 404 になる**。インライン表示は user-attachments（PR 説明欄へ画像をドラッグ&ドロップ）でのみ可能で、これは Claude では自動化できない手動ステップ → PR 作成時はプレースホルダを置き、ユーザーにドラッグ&ドロップを依頼する（[screenshot-capture](../screenshot-capture/SKILL.md) スキル「ファイル配置と PR への埋め込み」）。
 - **`gh pr create --body "$(cat <<EOF ... EOF)"` で unquoted HEREDOC を使うのは禁止**。本文中の `$VAR` / `$(...)` / バッククォートが全てシェルに展開されて意図しないコマンド実行・本文破壊を招く。可変値は必ずプレースホルダ + 後置換で扱う。
 
 ### 6. `@codex review` コメントで明示的にレビュー依頼
