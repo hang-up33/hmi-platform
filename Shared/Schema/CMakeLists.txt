@@ -2,6 +2,9 @@ qt_add_library(hmi_schema STATIC
     src/WidgetData.cpp
     src/ScreenData.cpp
     src/ProjectData.cpp
+    src/VariableData.cpp
+    src/ActionData.cpp
+    src/BindingData.cpp
 )
 
 target_include_directories(hmi_schema PUBLIC include)

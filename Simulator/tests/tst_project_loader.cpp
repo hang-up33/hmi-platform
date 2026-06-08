@@ -35,10 +35,19 @@ constexpr auto kValidProjectJson = R"({
           "fontFamily": "Courier New",
           "hAlign": "left",
           "vAlign": "top",
-          "opacity": 0.5
+          "opacity": 0.5,
+          "actions": [
+            { "trigger": "onClick", "op": "toggleVariable", "target": "running", "value": "" }
+          ],
+          "bindings": [
+            { "property": "backgroundColor", "variable": "runColor" }
+          ]
         }
       ]
     }
+  ],
+  "variables": [
+    { "name": "running", "type": "bool", "initial": "false" }
   ]
 })";
 
@@ -111,6 +120,20 @@ void ProjectLoaderTest::loadsValidProject()
     QCOMPARE(w.value("hAlign").toString(), QStringLiteral("left"));
     QCOMPARE(w.value("vAlign").toString(), QStringLiteral("top"));
     QCOMPARE(w.value("opacity").toDouble(), 0.5);
+    // Task 39: アクション / バインディングも load を経て QML（実行 / 追従）へ届く。
+    const QVariantList actions = w.value("actions").toList();
+    QCOMPARE(actions.size(), 1);
+    QCOMPARE(actions.at(0).toMap().value("op").toString(), QStringLiteral("toggleVariable"));
+    QCOMPARE(actions.at(0).toMap().value("target").toString(), QStringLiteral("running"));
+    const QVariantList bindings = w.value("bindings").toList();
+    QCOMPARE(bindings.size(), 1);
+    QCOMPARE(bindings.at(0).toMap().value("property").toString(), QStringLiteral("backgroundColor"));
+
+    // Task 39: Project レベルの変数定義も load 結果に含まれる（実行ストア初期化用）。
+    const QVariantList vars = result.value("variables").toList();
+    QCOMPARE(vars.size(), 1);
+    QCOMPARE(vars.at(0).toMap().value("name").toString(), QStringLiteral("running"));
+    QCOMPARE(vars.at(0).toMap().value("type").toString(), QStringLiteral("bool"));
 }
 
 // Task 31: borderWidth=0（ボーダーなし）/ radius=0（角丸なし）は正当値であり、

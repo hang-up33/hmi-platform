@@ -1,5 +1,6 @@
 #include "hmi/schema/ProjectData.h"
 #include "hmi/schema/ScreenData.h"
+#include "hmi/schema/VariableData.h"
 #include "hmi/schema/WidgetData.h"
 
 #include <QJsonArray>
@@ -8,6 +9,7 @@
 
 using hmi::schema::ProjectData;
 using hmi::schema::ScreenData;
+using hmi::schema::VariableData;
 using hmi::schema::WidgetData;
 
 namespace {
@@ -51,6 +53,9 @@ class ProjectDataTest : public QObject
 
 private slots:
     void roundTripWithMultipleScreens();
+    void variablesRoundTrip();
+    void omitsEmptyVariables();
+    void isValidJsonRejectsInvalidVariables();
 
     void isValidJsonAcceptsNormalProject();
     void isValidJsonRejectsEmptyScreensArray();
@@ -81,6 +86,86 @@ void ProjectDataTest::roundTripWithMultipleScreens()
             QCOMPARE(restored.screens[i].widgets[j].width, src.screens[i].widgets[j].width);
             QCOMPARE(restored.screens[i].widgets[j].height, src.screens[i].widgets[j].height);
         }
+    }
+}
+
+// Task 39: Project レベルの変数定義配列が round-trip で要素ごと再現される。
+void ProjectDataTest::variablesRoundTrip()
+{
+    ProjectData src;
+    src.project = "Sample";
+    src.screens.append(makeScreen("Main"));
+
+    VariableData v1;
+    v1.name = "running";
+    v1.type = "bool";
+    v1.initial = "false";
+    src.variables.append(v1);
+
+    VariableData v2;
+    v2.name = "count";
+    v2.type = "int";
+    v2.initial = "3";
+    src.variables.append(v2);
+
+    const QJsonObject obj = src.toJson();
+    QVERIFY(obj.contains("variables"));
+
+    const ProjectData r = ProjectData::fromJson(obj);
+    QCOMPARE(r.variables.size(), 2);
+    QCOMPARE(r.variables.at(0).name, QStringLiteral("running"));
+    QCOMPARE(r.variables.at(0).type, QStringLiteral("bool"));
+    QCOMPARE(r.variables.at(0).initial, QStringLiteral("false"));
+    QCOMPARE(r.variables.at(1).name, QStringLiteral("count"));
+    QCOMPARE(r.variables.at(1).type, QStringLiteral("int"));
+    QCOMPARE(r.variables.at(1).initial, QStringLiteral("3"));
+}
+
+// Task 39: 変数が空のとき toJson で省略され、後方互換になる（旧 JSON は variables を持たない）。
+void ProjectDataTest::omitsEmptyVariables()
+{
+    ProjectData src;
+    src.project = "Sample";
+    src.screens.append(makeScreen("Main"));
+    // variables は既定の空。
+
+    const QJsonObject obj = src.toJson();
+    QVERIFY(!obj.contains("variables"));
+
+    const ProjectData r = ProjectData::fromJson(obj);
+    QVERIFY(r.variables.isEmpty());
+    // 変数を持たない JSON も従来どおり有効（必須集合は据え置き）。
+    QVERIFY(ProjectData::isValidJson(obj));
+}
+
+// Task 39（Codex PR #78 [P2]）：variables は存在するなら配列 + 各要素が VariableData として
+// 有効であることを isValidJson が要求する（不在は後方互換で許容）。
+void ProjectDataTest::isValidJsonRejectsInvalidVariables()
+{
+    // variables が配列でない → 無効。
+    {
+        QJsonObject obj = validProjectJson();
+        obj["variables"] = QStringLiteral("not-an-array");
+        QVERIFY(!ProjectData::isValidJson(obj));
+    }
+    // 未知の type → 無効。
+    {
+        QJsonObject badVar;
+        badVar["name"] = "x";
+        badVar["type"] = "float";  // 3 種に無い
+        QJsonObject obj = validProjectJson();
+        obj["variables"] = QJsonArray{ badVar };
+        QVERIFY(!ProjectData::isValidJson(obj));
+    }
+    // 妥当な variables は有効。
+    {
+        QJsonObject var;
+        var["name"] = "running";
+        var["type"] = "bool";
+        var["initial"] = "false";
+        QJsonObject obj = validProjectJson();
+        obj["variables"] = QJsonArray{ var };
+        QVERIFY(ProjectData::isValidJson(obj));
     }
 }
 

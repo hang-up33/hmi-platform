@@ -650,6 +650,28 @@ TestCase {
         }, 1000, "undo で a.x が元（10）に戻らない");
     }
 
+    // Task 39（Codex PR #78 [P1]）：読み込んだ actions / bindings が live Item を経て
+    // snapshotModel（保存経路）に保持される（Editor で開いて保存しても定義を失わない）。
+    function test_snapshot_preserves_actions_bindings() {
+        canvas.widgetModel = [{
+            id: "btnA", type: "Button", x: 0, y: 0, width: 100, height: 40,
+            text: "A", tag: "",
+            actions: [{ trigger: "onClick", op: "toggleVariable", target: "running", value: "" }],
+            bindings: [{ property: "backgroundColor", variable: "runColor" }]
+        }];
+        tryVerify(function() { return editableChildren().length === 1; }, 1000,
+                  "btnA が反映されない");
+
+        const snap = canvas.snapshotModel();
+        compare(snap.length, 1);
+        compare(snap[0].actions.length, 1);
+        compare(snap[0].actions[0].op, "toggleVariable");
+        compare(snap[0].actions[0].target, "running");
+        compare(snap[0].bindings.length, 1);
+        compare(snap[0].bindings[0].property, "backgroundColor");
+        compare(snap[0].bindings[0].variable, "runColor");
+    }
+
     // Task 36（Codex PR #75 [P2]）：widgetModel 差し替え（プロジェクト読込相当）で、
     // 新モデルに無い選択 id が選択集合から外れる（インスペクタが空表示に戻る）。
     function test_selection_pruned_on_model_replace() {

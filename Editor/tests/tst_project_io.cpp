@@ -81,6 +81,7 @@ private slots:
     void loadRejectsMissingFile();
     void loadRejectsEmptyUrl();
     void saveRejectsEmptyUrl();
+    void actionsBindingsVariablesRoundTripThroughBridge();
 };
 
 void ProjectIoTest::saveThenLoadRoundTrip()
@@ -306,6 +307,64 @@ void ProjectIoTest::saveRejectsEmptyUrl()
 {
     ProjectIo io;
     QVERIFY(!io.save(QUrl{}, "Sample", "Main", QVariantList{}));
+}
+
+// Task 39: アクション / バインディング（per-widget）+ 変数定義（Project レベル）が、
+// QVariantMap → save → JSON → load → QVariantMap の C++ ブリッジを往復しても再現される。
+void ProjectIoTest::actionsBindingsVariablesRoundTripThroughBridge()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+
+    // widget に actions / bindings を QVariantList of QVariantMap で添える。
+    QVariantMap action;
+    action.insert("trigger", "onClick");
+    action.insert("op", "toggleVariable");
+    action.insert("target", "running");
+    action.insert("value", "");
+
+    QVariantMap binding;
+    binding.insert("property", "backgroundColor");
+    binding.insert("variable", "runColor");
+
+    QVariantMap w = makeWidgetVariant("btn001", 0, 0, 120, 40, "Run", "PLC.RUN");
+    w.insert("actions", QVariantList{ action });
+    w.insert("bindings", QVariantList{ binding });
+
+    // Project レベルの変数定義。
+    QVariantMap var1;
+    var1.insert("name", "running");
+    var1.insert("type", "bool");
+    var1.insert("initial", "false");
+
+    ProjectIo io;
+    const QUrl url = urlForFile(dir, "actions.json");
+    QVERIFY(io.save(url, "Sample", "Main", QVariantList{ w }, QVariantList{ var1 }));
+
+    const QVariantMap result = io.load(url);
+    QCOMPARE(result.value("ok").toBool(), true);
+
+    // 変数定義が往復する。
+    const QVariantList vars = result.value("variables").toList();
+    QCOMPARE(vars.size(), 1);
+    QCOMPARE(vars.at(0).toMap().value("name").toString(), QStringLiteral("running"));
+    QCOMPARE(vars.at(0).toMap().value("type").toString(), QStringLiteral("bool"));
+    QCOMPARE(vars.at(0).toMap().value("initial").toString(), QStringLiteral("false"));
+
+    // widget のアクション / バインディングが往復する。
+    const QVariantList widgets = result.value("widgets").toList();
+    QCOMPARE(widgets.size(), 1);
+    const QVariantMap w0 = widgets.at(0).toMap();
+
+    const QVariantList actions = w0.value("actions").toList();
+    QCOMPARE(actions.size(), 1);
+    QCOMPARE(actions.at(0).toMap().value("op").toString(), QStringLiteral("toggleVariable"));
+    QCOMPARE(actions.at(0).toMap().value("target").toString(), QStringLiteral("running"));
+
+    const QVariantList bindings = w0.value("bindings").toList();
+    QCOMPARE(bindings.size(), 1);
+    QCOMPARE(bindings.at(0).toMap().value("property").toString(), QStringLiteral("backgroundColor"));
+    QCOMPARE(bindings.at(0).toMap().value("variable").toString(), QStringLiteral("runColor"));
 }
 
 QTEST_APPLESS_MAIN(ProjectIoTest)

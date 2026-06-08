@@ -14,10 +14,14 @@ class ProjectIo : public QObject {
 public:
     explicit ProjectIo(QObject *parent = nullptr);
 
+    // Task 39: 変数定義（Project レベル）を optional 引数で受ける。Editor は T40 まで
+    // 変数編集 UI を持たないため既定は空。各 widget の QVariantMap には optional で
+    // "actions" / "bindings"（QVariantList of QVariantMap）を含められる。
     Q_INVOKABLE bool save(const QUrl &fileUrl,
                           const QString &projectName,
                           const QString &screenName,
-                          const QVariantList &widgets);
+                          const QVariantList &widgets,
+                          const QVariantList &variables = {});
 
     // Task 7: 指定 JSON ファイルからプロジェクトを読み込む。
     // 戻り値は QML で扱いやすい QVariantMap。

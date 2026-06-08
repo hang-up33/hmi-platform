@@ -30,3 +30,12 @@ target_link_libraries(tst_project_data
         hmi_schema
 )
 add_test(NAME tst_project_data COMMAND tst_project_data)
+
+# Task 39: 変数 / アクション / バインディングの新スキーマ型
+add_executable(tst_variable_data tst_variable_data.cpp)
+target_link_libraries(tst_variable_data
+    PRIVATE
+        Qt6::Test
+        hmi_schema
+)
+add_test(NAME tst_variable_data COMMAND tst_variable_data)

@@ -1,8 +1,11 @@
 #include "hmi/schema/WidgetData.h"
 
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QTest>
 
+using hmi::schema::ActionData;
+using hmi::schema::BindingData;
 using hmi::schema::WidgetData;
 
 namespace {
@@ -37,6 +40,9 @@ private slots:
     void trueFontFlagsAreWrittenFalseAreOmitted();
     void roundTripOmitsDefaultAlignOpacity();
     void zeroOpacityIsWrittenNotOmitted();
+    void actionsAndBindingsRoundTrip();
+    void omitsEmptyActionsAndBindings();
+    void isValidJsonRejectsInvalidActionsBindings();
     void fromJsonFillsDefaultsForMissingKeys();
 
     void isValidJsonAcceptsMinimumRequiredFields();
@@ -233,6 +239,109 @@ void WidgetDataTest::zeroOpacityIsWrittenNotOmitted()
 
     const WidgetData restored = WidgetData::fromJson(obj);
     QCOMPARE(restored.opacity, 0.0);
+}
+
+// Task 39: アクション / バインディング配列が round-trip で要素ごと再現される。
+void WidgetDataTest::actionsAndBindingsRoundTrip()
+{
+    WidgetData src;
+    src.id = "btn010";
+    src.type = "Button";
+    src.width = 120;
+    src.height = 40;
+
+    ActionData a;
+    a.trigger = "onClick";
+    a.op = "toggleVariable";
+    a.target = "running";
+    a.value = "";
+    src.actions.append(a);
+
+    BindingData b;
+    b.property = "backgroundColor";
+    b.variable = "runColor";
+    src.bindings.append(b);
+
+    const QJsonObject obj = src.toJson();
+    QVERIFY(obj.contains("actions"));
+    QVERIFY(obj.contains("bindings"));
+
+    const WidgetData r = WidgetData::fromJson(obj);
+    QCOMPARE(r.actions.size(), 1);
+    QCOMPARE(r.actions.at(0).trigger, QStringLiteral("onClick"));
+    QCOMPARE(r.actions.at(0).op, QStringLiteral("toggleVariable"));
+    QCOMPARE(r.actions.at(0).target, QStringLiteral("running"));
+    QCOMPARE(r.bindings.size(), 1);
+    QCOMPARE(r.bindings.at(0).property, QStringLiteral("backgroundColor"));
+    QCOMPARE(r.bindings.at(0).variable, QStringLiteral("runColor"));
+}
+
+// Task 39: アクション / バインディングが空のとき toJson で省略され、後方互換になる。
+void WidgetDataTest::omitsEmptyActionsAndBindings()
+{
+    WidgetData src;
+    src.id = "btn011";
+    src.type = "Button";
+    src.width = 120;
+    src.height = 40;
+    // actions / bindings は既定の空。
+
+    const QJsonObject obj = src.toJson();
+    QVERIFY(!obj.contains("actions"));
+    QVERIFY(!obj.contains("bindings"));
+
+    const WidgetData r = WidgetData::fromJson(obj);
+    QVERIFY(r.actions.isEmpty());
+    QVERIFY(r.bindings.isEmpty());
+}
+
+// Task 39（Codex PR #78 [P2]）：actions / bindings は存在するなら配列 + 各要素が子型として
+// 有効であることを isValidJson が要求する（不在は後方互換で許容）。
+void WidgetDataTest::isValidJsonRejectsInvalidActionsBindings()
+{
+    // 基本は有効（必須集合を満たす）。
+    QJsonObject base;
+    base["id"] = "btn001";
+    base["type"] = "Button";
+    base["width"] = 120;
+    base["height"] = 40;
+    QVERIFY(WidgetData::isValidJson(base));
+
+    // actions が配列でない → 無効。
+    {
+        QJsonObject obj = base;
+        obj["actions"] = QStringLiteral("not-an-array");
+        QVERIFY(!WidgetData::isValidJson(obj));
+    }
+    // action 要素に target が無い → 無効。
+    {
+        QJsonObject badAction;
+        badAction["op"] = "toggleVariable";  // target 欠落
+        QJsonObject obj = base;
+        obj["actions"] = QJsonArray{ badAction };
+        QVERIFY(!WidgetData::isValidJson(obj));
+    }
+    // binding 要素に variable が無い → 無効。
+    {
+        QJsonObject badBinding;
+        badBinding["property"] = "text";  // variable 欠落
+        QJsonObject obj = base;
+        obj["bindings"] = QJsonArray{ badBinding };
+        QVERIFY(!WidgetData::isValidJson(obj));
+    }
+    // 妥当な actions / bindings は有効。
+    {
+        QJsonObject action;
+        action["op"] = "setVariable";
+        action["target"] = "running";
+        QJsonObject binding;
+        binding["property"] = "visible";
+        binding["variable"] = "running";
+        QJsonObject obj = base;
+        obj["actions"] = QJsonArray{ action };
+        obj["bindings"] = QJsonArray{ binding };
+        QVERIFY(WidgetData::isValidJson(obj));
+    }
 }
 
 // Task 28: スタイル属性は既定値（空 / 0 = 未指定）のとき toJson で省略され、

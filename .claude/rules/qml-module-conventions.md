@@ -23,6 +23,7 @@ metadata:
   - **プレフィックス命名**（推奨）：`EditorCanvas.qml` / `HmiButton.qml` のように接頭辞を付ける。
   - **自モジュールを明示 import**：`Canvas.qml` のような名前を採用した場合、利用側 QML に `import HmiEditor`（または `HmiWidgets`）を必ず記述する。
 - 共有 Widget（`HmiWidgets`）を新規追加する際は、上記の命名衝突に特に注意する（`Button` / `Label` / `Slider` 等は Controls と衝突しうる）。
+- **QML singleton（`pragma Singleton`）は CMake 側でも `QT_QML_SINGLETON_TYPE TRUE` を立てる**（Task 39 で `VariableStore` 追加時に踏んだ）。`pragma Singleton` を書いて `QML_FILES` に足すだけでは **qmldir に singleton 登録されず**、利用側で `VariableStore.foo()` が「Property 'foo' of object VariableStore is not a function」になる（型参照に解決されメソッドが見えない）。`qt_add_qml_module` の **前** に `set_source_files_properties(qml/VariableStore.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)` を置く。singleton は状態がテスト間で共有されるため、Qt Quick Test では `init()` でリセット（例：`VariableStore.clear()`）してから検証する。
 - **複数バイナリ間で共有する QML モジュールは `STATIC` でビルドし、利用側アプリで plugin ターゲットをリンクする**。これは Qt 公式の「Multiple QML Modules in One Binary」推奨構成：
   - 共有側（`Shared/Widgets/CMakeLists.txt`、`Simulator/CMakeLists.txt` の `hmi_simulator_qml`）：`qt_add_qml_module(<name> STATIC URI <Uri> ...)`
   - 利用側（`Editor` / `Simulator` / `Runtime`）：`target_link_libraries(<app> PRIVATE <name>plugin)`

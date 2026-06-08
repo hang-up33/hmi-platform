@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ScreenData.h"
+#include "VariableData.h"
 
 #include <QJsonObject>
 #include <QList>
@@ -11,6 +12,10 @@ namespace hmi::schema {
 struct ProjectData {
     QString project;
     QList<ScreenData> screens;
+
+    // Task 39: Project レベルの変数（タグ）定義。optional 配列で、空のとき toJson で省略
+    // （後方互換）。実行時の現在値はランタイム変数ストア（T41）が保持し、ここは定義のみ。
+    QList<VariableData> variables;
 
     QJsonObject toJson() const;
     static ProjectData fromJson(const QJsonObject &obj);

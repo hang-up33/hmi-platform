@@ -137,7 +137,11 @@ Item {
                 // JSON キーは `opacity`、live Item 側は `widgetOpacity`（組込み衝突回避）。
                 hAlign: item.widgetHAlign,
                 vAlign: item.widgetVAlign,
-                opacity: item.widgetOpacity
+                opacity: item.widgetOpacity,
+                // Task 39: アクション / バインディングも保存スナップショットへ含める
+                //（読み込んだ定義を Editor の保存で失わないため。Codex PR #78 [P1]）。
+                actions: item.widgetActions,
+                bindings: item.widgetBindings
             })
         }
         return result
@@ -605,6 +609,9 @@ Item {
                     widgetHAlign: modelData.hAlign !== undefined ? modelData.hAlign : ""
                     widgetVAlign: modelData.vAlign !== undefined ? modelData.vAlign : ""
                     widgetOpacity: modelData.opacity !== undefined ? modelData.opacity : -1
+                    // Task 39: アクション / バインディングを素通し保持（保存で失わないため）。
+                    widgetActions: modelData.actions !== undefined ? modelData.actions : []
+                    widgetBindings: modelData.bindings !== undefined ? modelData.bindings : []
                     // Task 18: Spix から `widget_<id>` で参照できるようにする。
                     objectName: "widget_" + widgetId
                     x: modelData.x !== undefined ? modelData.x : 0

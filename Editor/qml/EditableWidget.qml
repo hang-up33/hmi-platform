@@ -71,6 +71,12 @@ Item {
     property string widgetVAlign: ""
     property real widgetOpacity: -1
 
+    // Task 39: アクション / バインディングのメタ。Editor は T40 まで編集 UI を持たないが、
+    // **読み込んだ定義を保存で失わない**ため、ここで素通し保持する（delegate が modelData
+    // から流し込み、snapshotModel が保存へ書き戻す。Codex PR #78 [P1]）。配列をそのまま持つ。
+    property var widgetActions: []
+    property var widgetBindings: []
+
     // Task 27: リサイズ時の最小サイズ。ハンドルドラッグ / 数値編集での縮小は
     // これ未満にならないよう clamp する（潰れて選択・操作不能になるのを防ぐ）。
     property real minWidth: 30

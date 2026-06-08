@@ -10,6 +10,56 @@
 #include <QVariantList>
 #include <QVariantMap>
 
+#include "hmi/schema/ActionData.h"
+#include "hmi/schema/BindingData.h"
+#include "hmi/schema/VariableData.h"
+
+namespace {
+using namespace hmi::schema;
+
+// Task 39: Schema 型 → QVariantList of QVariantMap（QML 描画 / 実行へ渡す。読み取り専用なので
+// load 方向のみ。Editor の ProjectIo と同形だが、規約どおり Editor/Simulator は独立保持）。
+QVariantList actionsToVariant(const QList<ActionData> &actions)
+{
+    QVariantList result;
+    for (const ActionData &a : actions) {
+        QVariantMap m;
+        m.insert(QStringLiteral("trigger"), a.trigger);
+        m.insert(QStringLiteral("op"), a.op);
+        m.insert(QStringLiteral("target"), a.target);
+        m.insert(QStringLiteral("value"), a.value);
+        result.append(m);
+    }
+    return result;
+}
+
+QVariantList bindingsToVariant(const QList<BindingData> &bindings)
+{
+    QVariantList result;
+    for (const BindingData &b : bindings) {
+        QVariantMap m;
+        m.insert(QStringLiteral("property"), b.property);
+        m.insert(QStringLiteral("variable"), b.variable);
+        result.append(m);
+    }
+    return result;
+}
+
+QVariantList variablesToVariant(const QList<VariableData> &variables)
+{
+    QVariantList result;
+    for (const VariableData &var : variables) {
+        QVariantMap m;
+        m.insert(QStringLiteral("name"), var.name);
+        m.insert(QStringLiteral("type"), var.type);
+        m.insert(QStringLiteral("initial"), var.initial);
+        result.append(m);
+    }
+    return result;
+}
+
+} // namespace
+
 ProjectLoader::ProjectLoader(QObject *parent) : QObject(parent) {}
 
 QVariantMap ProjectLoader::load(const QUrl &fileUrl)
@@ -87,6 +137,9 @@ QVariantMap ProjectLoader::load(const QUrl &fileUrl)
         m.insert(QStringLiteral("hAlign"), w.hAlign);
         m.insert(QStringLiteral("vAlign"), w.vAlign);
         m.insert(QStringLiteral("opacity"), w.opacity);
+        // Task 39: アクション / バインディングも QML へ届ける（T41 で実行 / 追従に使う）。
+        m.insert(QStringLiteral("actions"), actionsToVariant(w.actions));
+        m.insert(QStringLiteral("bindings"), bindingsToVariant(w.bindings));
         widgetsVar.append(m);
     }
 
@@ -94,5 +147,7 @@ QVariantMap ProjectLoader::load(const QUrl &fileUrl)
     result.insert(QStringLiteral("project"), proj.project);
     result.insert(QStringLiteral("screen"), screen.name);
     result.insert(QStringLiteral("widgets"), widgetsVar);
+    // Task 39: 変数定義も QML へ届ける（T41 で実行ストアの初期化に使う）。
+    result.insert(QStringLiteral("variables"), variablesToVariant(proj.variables));
     return result;
 }

@@ -12,17 +12,113 @@
 #include <QVariantList>
 #include <QVariantMap>
 
+#include "hmi/schema/ActionData.h"
+#include "hmi/schema/BindingData.h"
+#include "hmi/schema/VariableData.h"
+
+namespace {
+using namespace hmi::schema;
+
+// Task 39: QVariantMap（QML 由来）↔ Schema 型の相互変換ヘルパー（アクション / バインディング
+// / 変数定義）。配列はそれぞれ QVariantList of QVariantMap で QML へ渡す / から受ける。
+
+QList<ActionData> actionsFromVariant(const QVariantList &list)
+{
+    QList<ActionData> result;
+    for (const QVariant &v : list) {
+        const QVariantMap m = v.toMap();
+        ActionData a;
+        a.trigger = m.value(QStringLiteral("trigger")).toString();
+        a.op = m.value(QStringLiteral("op")).toString();
+        a.target = m.value(QStringLiteral("target")).toString();
+        a.value = m.value(QStringLiteral("value")).toString();
+        result.append(a);
+    }
+    return result;
+}
+
+QVariantList actionsToVariant(const QList<ActionData> &actions)
+{
+    QVariantList result;
+    for (const ActionData &a : actions) {
+        QVariantMap m;
+        m.insert(QStringLiteral("trigger"), a.trigger);
+        m.insert(QStringLiteral("op"), a.op);
+        m.insert(QStringLiteral("target"), a.target);
+        m.insert(QStringLiteral("value"), a.value);
+        result.append(m);
+    }
+    return result;
+}
+
+QList<BindingData> bindingsFromVariant(const QVariantList &list)
+{
+    QList<BindingData> result;
+    for (const QVariant &v : list) {
+        const QVariantMap m = v.toMap();
+        BindingData b;
+        b.property = m.value(QStringLiteral("property")).toString();
+        b.variable = m.value(QStringLiteral("variable")).toString();
+        result.append(b);
+    }
+    return result;
+}
+
+QVariantList bindingsToVariant(const QList<BindingData> &bindings)
+{
+    QVariantList result;
+    for (const BindingData &b : bindings) {
+        QVariantMap m;
+        m.insert(QStringLiteral("property"), b.property);
+        m.insert(QStringLiteral("variable"), b.variable);
+        result.append(m);
+    }
+    return result;
+}
+
+QList<VariableData> variablesFromVariant(const QVariantList &list)
+{
+    QList<VariableData> result;
+    for (const QVariant &v : list) {
+        const QVariantMap m = v.toMap();
+        VariableData var;
+        var.name = m.value(QStringLiteral("name")).toString();
+        var.type = m.value(QStringLiteral("type")).toString();
+        var.initial = m.value(QStringLiteral("initial")).toString();
+        result.append(var);
+    }
+    return result;
+}
+
+QVariantList variablesToVariant(const QList<VariableData> &variables)
+{
+    QVariantList result;
+    for (const VariableData &var : variables) {
+        QVariantMap m;
+        m.insert(QStringLiteral("name"), var.name);
+        m.insert(QStringLiteral("type"), var.type);
+        m.insert(QStringLiteral("initial"), var.initial);
+        result.append(m);
+    }
+    return result;
+}
+
+} // namespace
+
 ProjectIo::ProjectIo(QObject *parent) : QObject(parent) {}
 
 bool ProjectIo::save(const QUrl &fileUrl,
                      const QString &projectName,
                      const QString &screenName,
-                     const QVariantList &widgets)
+                     const QVariantList &widgets,
+                     const QVariantList &variables)
 {
     using namespace hmi::schema;
 
     ProjectData proj;
     proj.project = projectName;
+    // Task 39: Project レベルの変数定義（optional。空可）。
+    proj.variables = variablesFromVariant(variables);
 
     ScreenData screen;
     screen.name = screenName;
@@ -64,6 +160,9 @@ bool ProjectIo::save(const QUrl &fileUrl,
         w.hAlign = m.value(QStringLiteral("hAlign")).toString();
         w.vAlign = m.value(QStringLiteral("vAlign")).toString();
         w.opacity = m.value(QStringLiteral("opacity"), -1.0).toDouble();
+        // Task 39: アクション / バインディング（optional 配列。QVariantList of QVariantMap）。
+        w.actions = actionsFromVariant(m.value(QStringLiteral("actions")).toList());
+        w.bindings = bindingsFromVariant(m.value(QStringLiteral("bindings")).toList());
         screen.widgets.append(w);
     }
 
@@ -159,6 +258,9 @@ QVariantMap ProjectIo::load(const QUrl &fileUrl)
         m.insert(QStringLiteral("hAlign"), w.hAlign);
         m.insert(QStringLiteral("vAlign"), w.vAlign);
         m.insert(QStringLiteral("opacity"), w.opacity);
+        // Task 39: アクション / バインディングも QML へ届ける（T40 の編集 UI / T41 の実行が読む）。
+        m.insert(QStringLiteral("actions"), actionsToVariant(w.actions));
+        m.insert(QStringLiteral("bindings"), bindingsToVariant(w.bindings));
         widgetsVar.append(m);
     }
 
@@ -166,5 +268,7 @@ QVariantMap ProjectIo::load(const QUrl &fileUrl)
     result.insert(QStringLiteral("project"), proj.project);
     result.insert(QStringLiteral("screen"), screen.name);
     result.insert(QStringLiteral("widgets"), widgetsVar);
+    // Task 39: Project レベルの変数定義も QML へ届ける（T40 の編集 / T41 の実行ストア初期化が読む）。
+    result.insert(QStringLiteral("variables"), variablesToVariant(proj.variables));
     return result;
 }

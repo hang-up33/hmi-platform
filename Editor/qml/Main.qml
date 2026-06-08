@@ -18,6 +18,11 @@ Window {
     // QML Item を指定する。
     objectName: "hmiEditorWindow"
 
+    // Task 39: 読み込んだ Project レベルの変数定義を保持する。Editor は T40 まで変数編集
+    // UI を持たないが、**読み込んだ定義を保存で失わない**ため state として持ち、save() へ
+    // そのまま渡す（Codex PR #78 [P1]）。
+    property var projectVariables: []
+
     // Task 26: 選択中の live な EditableWidget はインスペクタの編集対象。
     // 解決ロジックと所有は Canvas に集約した（canvas.selectedItem）。Repeater
     // 再生成後も同一 id の新しい live Item に解決し直される（Codex PR #52 P2 指摘
@@ -66,7 +71,8 @@ Window {
         // E2E は macOS / Linux でのみ走る（Windows MinGW は HMI_ENABLE_E2E=OFF）
         // ため POSIX 絶対パス前提でよい。
         const url = Qt.resolvedUrl("file://" + path)
-        return projectIo.save(url, "Sample", "Main", widgets)
+        // Task 39: 読み込んだ変数定義もそのまま保存へ渡す（失わないため）。
+        return projectIo.save(url, "Sample", "Main", widgets, rootWindow.projectVariables)
     }
 
     // Task 19: 起動時自動ロード。`--open <path>` で初期 JSON URL が渡された
@@ -81,6 +87,8 @@ Window {
                 return
             }
             canvas.widgetModel = result.widgets
+            // Task 39: Project レベルの変数定義を保持（保存で失わないため）。
+            rootWindow.projectVariables = result.variables !== undefined ? result.variables : []
             canvas.clearHistory()  // Task 38: 起動時読込後は undo 履歴を空にする
             console.log("起動時プロジェクト読込:", initialJsonUrl,
                         "widgets =", result.widgets.length)
@@ -858,7 +866,9 @@ Window {
             // Canvas 上の live EditableWidget 群を Shared/Schema 互換の Widget
             // リストへ変換（Task 26 で Canvas.snapshotModel() に集約・共用）。
             const widgets = canvas.snapshotModel()
-            const ok = projectIo.save(saveDialog.selectedFile, "Sample", "Main", widgets)
+            // Task 39: 読み込んだ変数定義もそのまま保存へ渡す（失わないため）。
+            const ok = projectIo.save(saveDialog.selectedFile, "Sample", "Main", widgets,
+                                      rootWindow.projectVariables)
             if (!ok) {
                 console.warn("プロジェクト保存に失敗:", saveDialog.selectedFile)
             } else {
@@ -881,6 +891,8 @@ Window {
             }
             // Repeater の model を差し替えて Widget 群を再構築する
             canvas.widgetModel = result.widgets
+            // Task 39: Project レベルの変数定義を保持（保存で失わないため）。
+            rootWindow.projectVariables = result.variables !== undefined ? result.variables : []
             canvas.clearHistory()  // Task 38: 読込前プロジェクトの undo 履歴は破棄
             console.log("プロジェクト読込:", openDialog.selectedFile,
                         "widgets =", result.widgets.length)

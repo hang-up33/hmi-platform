@@ -1,6 +1,10 @@
 #pragma once
 
+#include "hmi/schema/ActionData.h"
+#include "hmi/schema/BindingData.h"
+
 #include <QJsonObject>
+#include <QList>
 #include <QString>
 
 namespace hmi::schema {
@@ -54,6 +58,12 @@ struct WidgetData {
     QString hAlign;
     QString vAlign;
     qreal opacity = -1.0;
+
+    // Task 39: アクション（書き手）/ バインディング（読み手）。いずれも optional 配列で、
+    // 空のとき toJson で省略（後方互換）。実行 / 描画への反映は T41 以降で、本タスクでは
+    // 型と保存（round-trip）のみ。isValidJson の必須集合には含めない（後方互換）。
+    QList<ActionData> actions;
+    QList<BindingData> bindings;
 
     QJsonObject toJson() const;
     static WidgetData fromJson(const QJsonObject &obj);

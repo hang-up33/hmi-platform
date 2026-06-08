@@ -1,5 +1,7 @@
 #include "hmi/schema/WidgetData.h"
 
+#include <QJsonArray>
+
 namespace hmi::schema {
 
 QJsonObject WidgetData::toJson() const
@@ -65,6 +67,21 @@ QJsonObject WidgetData::toJson() const
     if (opacity >= 0.0) {
         obj["opacity"] = opacity;
     }
+    // Task 39: アクション / バインディングは optional 配列。空のとき省略（後方互換）。
+    if (!actions.isEmpty()) {
+        QJsonArray actionsArr;
+        for (const ActionData &a : actions) {
+            actionsArr.append(a.toJson());
+        }
+        obj["actions"] = actionsArr;
+    }
+    if (!bindings.isEmpty()) {
+        QJsonArray bindingsArr;
+        for (const BindingData &b : bindings) {
+            bindingsArr.append(b.toJson());
+        }
+        obj["bindings"] = bindingsArr;
+    }
     return obj;
 }
 
@@ -99,15 +116,52 @@ WidgetData WidgetData::fromJson(const QJsonObject &obj)
     w.hAlign = obj.value("hAlign").toString();
     w.vAlign = obj.value("vAlign").toString();
     w.opacity = obj.value("opacity").toDouble(-1.0);
+    // Task 39: アクション / バインディング配列（欠落時は空配列）。
+    const QJsonArray actionsArr = obj.value("actions").toArray();
+    for (const QJsonValue &v : actionsArr) {
+        w.actions.append(ActionData::fromJson(v.toObject()));
+    }
+    const QJsonArray bindingsArr = obj.value("bindings").toArray();
+    for (const QJsonValue &v : bindingsArr) {
+        w.bindings.append(BindingData::fromJson(v.toObject()));
+    }
     return w;
 }
 
 bool WidgetData::isValidJson(const QJsonObject &obj)
 {
-    return obj.value("id").isString()
-        && obj.value("type").isString()
-        && obj.value("width").isDouble()
-        && obj.value("height").isDouble();
+    if (!obj.value("id").isString()
+        || !obj.value("type").isString()
+        || !obj.value("width").isDouble()
+        || !obj.value("height").isDouble()) {
+        return false;
+    }
+    // Task 39（Codex PR #78 [P2]）：actions / bindings は optional だが、**存在する場合は**
+    // 配列で各要素が子型として有効であることを要求する（不在は後方互換で許容）。これで
+    // target / variable 欠落の不正アクション・バインディングを load の入口で弾ける。
+    if (obj.contains("actions")) {
+        if (!obj.value("actions").isArray()) {
+            return false;
+        }
+        const QJsonArray actionsArr = obj.value("actions").toArray();
+        for (const QJsonValue &v : actionsArr) {
+            if (!v.isObject() || !ActionData::isValidJson(v.toObject())) {
+                return false;
+            }
+        }
+    }
+    if (obj.contains("bindings")) {
+        if (!obj.value("bindings").isArray()) {
+            return false;
+        }
+        const QJsonArray bindingsArr = obj.value("bindings").toArray();
+        for (const QJsonValue &v : bindingsArr) {
+            if (!v.isObject() || !BindingData::isValidJson(v.toObject())) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 } // namespace hmi::schema
