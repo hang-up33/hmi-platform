@@ -75,13 +75,16 @@ Window {
         if (!canvas.selectedItem) {
             return
         }
-        if (inspectorActionOpCombo.currentIndex === 0) {
+        // 操作 "(なし)" または対象変数 "(未選択)" のときはアクション無し（空配列）。
+        // **空 target のアクションを保存しない**：ActionData.isValidJson が空 target を
+        // 無効としプロジェクト全体が再読込不能になるため（Codex PR #80 [P1]）。
+        if (inspectorActionOpCombo.currentIndex === 0
+                || inspectorActionTargetCombo.currentIndex === 0) {
             canvas.selectedItem.widgetActions = []
             return
         }
         const op = inspectorActionOpCombo.currentText
-        const target = inspectorActionTargetCombo.currentIndex > 0
-            ? inspectorActionTargetCombo.currentText : ""
+        const target = inspectorActionTargetCombo.currentText
         const value = (op === "setVariable") ? inspectorActionValueField.text : ""
         canvas.selectedItem.widgetActions = [{
             trigger: "onClick", op: op, target: target, value: value
@@ -417,11 +420,24 @@ Window {
                             spacing: 4
 
                             TextField {
+                                id: varNameField
                                 objectName: "variableName_" + varRow.index
                                 width: 80
                                 text: varRow.modelData.name !== undefined ? varRow.modelData.name : ""
                                 placeholderText: qsTr("名前")
-                                onEditingFinished: rootWindow.updateVariable(varRow.index, "name", text)
+                                // **空名を保存しない**：VariableData.isValidJson が空 name を無効とし
+                                // プロジェクト全体が再読込不能になるため、空のときは元の名前へ戻す
+                                // （削除は × ボタンで行う。Codex PR #80 [P1]）。
+                                onEditingFinished: {
+                                    if (text.length > 0) {
+                                        rootWindow.updateVariable(varRow.index, "name", text)
+                                    } else {
+                                        text = Qt.binding(function() {
+                                            return varRow.modelData.name !== undefined
+                                                ? varRow.modelData.name : ""
+                                        })
+                                    }
+                                }
                                 onActiveFocusChanged: rootWindow.variableFieldFocusCount += activeFocus ? 1 : -1
                             }
                             ComboBox {
