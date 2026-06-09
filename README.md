@@ -8,11 +8,11 @@ Yocto / i.MX8M Plus 向け Qt6 HMI ランタイムを対象に、HMI 作画ツ�
 
 ![HMI Editor](Docs/screenshots/editor.png)
 
-Editor の現状画面。`追加` / `開く` / `保存` で Widget 配置と JSON 入出力を行い、右側インスペクタで選択中 Widget の **text / tag / 座標・サイズ / スタイル（背景色・文字色・文字サイズ・ボーダー色 / 幅・角丸）を編集・削除**できる（Phase 4 / Task 25〜31）。`Rounded`（角丸＋赤ボーダー）/ `Square`（ボーダーのみ）/ `No Border`（ボーダーなし）/ `Default`（スタイル未指定）が border / radius の効きを示す。
+Editor の現状画面（Phase 4 拡張 / Task 25〜41）。上部ツールバーは Widget 追加・JSON 入出力（`追加` / `開く` / `保存`）に加え、**グリッドスナップ（`スナップ`）・コピー / ペースト / 複製・元に戻す / やり直す（undo-redo）** を備える。右側インスペクタは **変数定義** パネルと、Widget 選択時の **text / tag / 座標・サイズ / スタイル（背景色・文字色・フォント〔サイズ・太字・斜体・フォント名〕・テキスト配置・不透明度・ボーダー色 / 幅・角丸）/ クリックアクション・バインディング** の編集・削除に対応（複数選択時は整列・分布・一括削除）。キャンバスの `Start` / `Stop` / `設定` は色・角丸・ボーダーが効いた描画例。
 
 ![HMI Simulator](Docs/screenshots/simulator.png)
 
-Simulator（読み取り専用）で同じ JSON を描画した様子。Editor で付けた **背景色 / 文字色 / 文字サイズ / ボーダー色 / 幅 / 角丸** がそのまま反映される（最下段 `Default` はスタイル未指定で HmiButton の既定外観にフォールバック）。Runtime はこの Simulator のソースを共有する。
+Simulator（読み取り専用）で同じ JSON を描画した様子。Editor で付けた **背景色 / 文字色 / フォント / テキスト配置 / 不透明度 / ボーダー / 角丸** がそのまま反映される。さらに Task 41 で **変数・クリックアクション・バインディングを実行**できるようになり、ボタンクリックで変数を更新 → `visible` / `text` / 色などのバインディングが追従する（読み取り専用アプリが初めて「動く」）。Runtime はこの Simulator のソースを共有する。
 
 ![hmi_runtime on i.MX8MP](Docs/screenshots/task-24-runtime-imx.jpg)
 
