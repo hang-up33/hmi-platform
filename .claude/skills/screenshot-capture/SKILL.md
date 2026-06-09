@@ -105,6 +105,8 @@ PR 作成時に置くプレースホルダ例：
 
 ## README 掲載スクショの同期
 
+> **自動化メモ**：この同期がオンデマンドの skill 内に埋もれて効かず、Task 33〜41 で `editor.png` / `simulator.png` が古いまま残った（2026-06-09）。再発防止に **path-scoped rule [readme-screenshot-sync](../../rules/readme-screenshot-sync.md)（UI 本体 / README / screenshots を触る時に自動ロード）＋ Stop hook `scripts/hooks/check-readme-screenshots.sh`（UI〔QML〕差分があるのに固定スクショ未更新ならリマインド）** の二段構えで効かせている。本節はその撮影手順の正本。
+
 README.md には **「常に最新」を表す固定ファイル名** のスクショを別途掲載している（[README.md](../../../README.md) の「スクリーンショット」節）。
 
 | 固定ファイル | 対応アプリ |

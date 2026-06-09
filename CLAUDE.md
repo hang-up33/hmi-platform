@@ -163,6 +163,7 @@ JSON 入出力は `QJsonDocument`（外部依存なし）。Editor / Simulator �
 |---|---|---|
 | Schema 型・JSON I/O 実装規約（struct + namespace、`toJson`/`fromJson`/`isValidJson`） | [.claude/rules/schema-conventions.md](.claude/rules/schema-conventions.md) | `Shared/Schema/**` |
 | QML モジュール規約（URI・命名衝突回避・STATIC plugin 共有・EditableWidget の選択/編集/リサイズ結線・C++ ヘルパー公開・Simulator/Runtime ソース共有・ルート CMake の `add_subdirectory` 順序制約） | [.claude/rules/qml-module-conventions.md](.claude/rules/qml-module-conventions.md) | `**/*.qml` / `Editor/**` / `Simulator/**` / `Runtime/**` / `Shared/Widgets/**` / `**/CMakeLists.txt` |
+| README スクショ同期（見た目が変わったら `editor.png`/`simulator.png` とキャプションを同コミットで撮り直す。Stop hook `scripts/hooks/check-readme-screenshots.sh` と二段構えで強制） | [.claude/rules/readme-screenshot-sync.md](.claude/rules/readme-screenshot-sync.md) | `**/*.qml` / `Editor/**` / `Simulator/**` / `Runtime/**` / `Shared/Widgets/**` / `README.md` / `Docs/screenshots/**` |
 
 ---
 
