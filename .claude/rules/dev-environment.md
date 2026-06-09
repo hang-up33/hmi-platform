@@ -40,6 +40,8 @@
   - VS の `cl.exe` や別 MinGW が PATH を汚染しないよう `setup-env.ps1` が Qt 付属ツールチェインを PATH 先頭に挿入。
   - EXE 出力先はビルドツリー直下（`build-mingw\hmi_editor.exe`）。macOS の `.app` とは構造が違う。
   - 初回のみ `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` が必要。
+  - **PowerShell から WSL を呼ぶとき `$HOME` 等の `$` 変数は PowerShell 側で先に展開される**（2026-06-09 実証）。`wsl ... bash -lc "... HMI_BUILD_DIR=$HOME/... "` と書くと PS が `$HOME`(=`C:\Users\k`) を埋め、WSL では `C:Usersk/...`（`:` と `\` が落ちた壊れたパス）になり CMake が `try_compile`/source-dir で落ちる。回避：**WSL の絶対パスを直書き**（`/home/ubuntu/...`）するか、`bash -lc` の引数を**単一引用符**で囲って PS の変数展開を止める。
+  - **GUI サブシステムの exe（hmi_editor.exe 等）は PowerShell の `&` で起動しても待たれない**（`$LASTEXITCODE` も取れない）。`--screenshot` のような「起動→処理→終了」を待つには `Start-Process -Wait -PassThru` を使う。
 
 ### macOS の詳細
 
@@ -93,6 +95,13 @@ Task 23（Yocto SDK で `hmi_runtime` をクロスビルド）用の WSL2 環境
 - **SDK**：当初 `imx-image-full -c populate_sdk`（フル SDK）を試したが、**`onnxruntime-dbg`（692MB の ML デバッグ deb）の dpkg 展開で失敗**。Qt6 のクロスビルドに ML/opencv は不要なので **`bitbake meta-toolchain-qt6`（Qt6 だけの軽量 SDK, ~1.8GB `.sh`）に切替** → これで成功。
 - **install**：`.sh -y -d ~/qt6-sdk`。env スクリプト名は NXP tune の都合で **`environment-setup-armv8a-poky-linux`**（`aarch64` ではない点に注意）。
 - **クロスビルド**：`./scripts/yocto/cross-build.sh` で実行（env source → toolchain file 明示 → `-DHMI_ENABLE_E2E=OFF -DBUILD_TESTING=OFF` → `--target hmi_runtime`）。`~/build-yocto/Runtime/hmi_runtime` が aarch64 ELF で生成され、実機描画も確認済み（Task 24）。
+- **実機で「最新の実装」を描画する前に必ず runtime を再クロスビルドする**（2026-06-09 実証＝最重要）。実機 `/tmp/hmi_runtime` は**過去にデプロイした時点のバイナリで固定**されるため、後続タスクで足した機能（配置 hAlign/vAlign・太字 fontBold・状態 checked・アクション/バインディング等）は**古いバイナリでは黙って無視され描画されない**。色・サイズ・枠・角丸など古い機能だけは効くので**一見動いて見え気付きにくい**（実際 6/3 ビルドで「配置だけ効かない」状態を踏んだ）。現ソースからのビルドは Windows 内クローン不要で `/mnt/c` を直接使える：
+  ```bash
+  # WSL2 内（Windows のソースをそのまま使う。build dir は WSL ext4 に置く）
+  HMI_SRC_DIR=/mnt/c/repo/hmi-platform HMI_BUILD_DIR=/home/ubuntu/build-yocto-latest \
+    bash scripts/yocto/cross-build.sh
+  ```
+  既存 `~/build-yocto` は別ソースパスで configure 済みだと CMake キャッシュが衝突するので、ソース dir を変えるときは **build dir も別名**にする（上記は `build-yocto-latest`）。生成後は WSL→Windows→`scp -O` で実機 `/tmp/hmi_runtime` を**上書き前に `pkill -x hmi_runtime` で停止**する（実行中だと `Text file busy` で scp 失敗）。
 
 #### Yocto ビルドで踏んだ罠（再ビルド時の備忘）
 
@@ -117,10 +126,11 @@ Task 23（Yocto SDK で `hmi_runtime` をクロスビルド）用の WSL2 環境
   - **ネットワーク**：LAN 直結だと DHCP 無しで **link-local（169.254.x.x）** になる。**WSL2 は NAT 越しで link-local に届きにくいので Windows 母艦から `scp`** する（Windows の ethernet も 169.254.x.x が付き ping 可）。
   - **起動**：weston は **root（uid 0）** で動作、Wayland socket は `/run/user/0/wayland-1`。`export XDG_RUNTIME_DIR=/run/user/0; export WAYLAND_DISPLAY=wayland-1; export QT_QPA_PLATFORM=wayland` してから `hmi_runtime --open <json>`。
 - **実機キャプチャ・接続メモ（Task 30 で確立）**：
-  - **mDNS で IP が引ける**：実機は avahi 稼働。`imx8mp-lpddr4-evk.local` が link-local IP（実績 `169.254.29.17`）に解決される。
-  - **link-local の宛先 IF 選択がぶれる**：母艦に複数の link-local IF（VirtualBox `192.168.56.x` / WSL `172.18.x` 等）があると `169.254.x.x` への ping/ssh が別 IF 経由で **host unreachable** になる。実機直結アダプタ（実績「イーサネット 2」`169.254.32.193`）を**送信元に固定**する：ping は `-S <src>`、ssh/scp は **`-b <src>`**。
+  - **mDNS で IP が引ける**：実機は avahi 稼働。`imx8mp-lpddr4-evk.local` が link-local IP に解決される（実績 `169.254.29.17` / `169.254.48.18` など **DHCP 無しの link-local は毎回変わる**ので、記録値を使い回さず**都度 mDNS で解決**する。Windows は `Resolve-DnsName imx8mp-lpddr4-evk.local`）。
+  - **link-local の宛先 IF 選択がぶれる**：母艦に複数の link-local IF（VirtualBox `192.168.56.x` / WSL `172.18.x` 等）があると `169.254.x.x` への ping/ssh が別 IF 経由で **host unreachable** になる。実機直結アダプタ（実績「イーサネット 2」`169.254.32.193`）を**送信元に固定**する：ping は `-S <src>`、**ssh は `-b <src>`、scp は `-o BindAddress=<src>`**（**Windows OpenSSH の `scp` に `-b` は無い** — 渡すと `unknown option -- b` で落ちる。`scp` のバインドは ssh_config 経由の `-o BindAddress=` で行う。ssh 本体は従来どおり `-b`。2026-06-09 実証）。
   - **`pkill -f hmi_runtime` 厳禁**：ssh のリモートシェルのコマンドライン自身に "hmi_runtime" が含まれ、`pkill -f` が**自分の親シェルを kill** して ssh が exit 255 で即死する。停止は **`pkill -x hmi_runtime`**。
-  - **HDMI 未接続だと weston に出力が無い**（`DRM: head 'HDMI-A-1' ... is disconnected`）→ Qt は "fake screen" 描画で `weston-screenshooter` も撮れない。物理モニタ無しで撮るには **`QT_QPA_PLATFORM='vnc:size=1280x720'` で起動 → 母艦から `scripts/yocto/vnc-capture.py <ip> 5900 out.png <src>`**（Qt 内蔵 VNC, 依存なし）。実機 image に**日本語フォント無し**でラベルは □ になる（描画自体は正常）。
+  - **HDMI 未接続だと weston に出力が無い**（`DRM: head 'HDMI-A-1' ... is disconnected`）→ Qt は "fake screen" 描画で `weston-screenshooter` も撮れない。物理モニタ無しで撮るには **`QT_QPA_PLATFORM='vnc:size=1024x768'` で起動 → 母艦から `scripts/yocto/vnc-capture.py <ip> 5900 out.png <src>`**（Qt 内蔵 VNC, 依存なし。**size は runtime ウィンドウ実寸＝1024×768 に合わせる**と余白の黒帯・見切れが出ない。canvas 描画域は 800×600）。実機 image に**日本語フォント無し**で和文ラベルは □ になる（**ASCII は正常描画**。動作証跡 JSON はラベルを英数字にすると豆腐を避けられる）。
+  - **HDMI 接続済みでも `weston-screenshooter` が `unauthorized` で撮れないことがある**（`Output capture error: unauthorized` — この weston ビルドは screenshooter プロトコルを許可していない。2026-06-09、HDMI=connected でも発生を実証）。**HDMI の有無に関わらず動作証跡は上記 VNC 経路が確実**。VNC は `QT_QPA_PLATFORM=vnc` で**別インスタンス**を立てるだけ（weston には繋がない）なので、**HDMI モニタ表示用の weston インスタンスを止めずに並行起動**して撮れる（撮影後は VNC 側だけ pid 指定で kill すればモニタ表示は維持される）。
 - 詳細手順は [scripts/yocto/README.md](../../scripts/yocto/README.md)、設計判断は [phase3b-runtime-plan.md](../../Docs/phase3b-runtime-plan.md)。
 
 ---

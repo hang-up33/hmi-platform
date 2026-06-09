@@ -77,7 +77,10 @@ chmod +x /tmp/hmi_runtime
 ## ディスプレイ未接続でも描画を digital capture する（Task 30 で確立）
 
 実機の **HDMI が未接続**だと weston に出力が無く（`DRM: head 'HDMI-A-1' ... is disconnected`）、
-Qt は "fake screen" に描画して `weston-screenshooter` でも何も撮れない。物理モニタ無しで
+Qt は "fake screen" に描画して `weston-screenshooter` でも何も撮れない（**HDMI 接続済みでも `weston-screenshooter` が
+`Output capture error: unauthorized` で撮れない weston ビルドがある**ため、HDMI の有無に
+関わらず下記 VNC 経路が確実。VNC は weston とは別インスタンスなのでモニタ表示用 weston を
+止めず並行起動できる）。物理モニタ無しで
 実機 GPU/CPU の描画を撮るには **Qt 内蔵 VNC platform** を使う（image に `libqvnc.so` 同梱済み）：
 
 ```sh
@@ -96,8 +99,10 @@ python scripts/yocto/vnc-capture.py <board-ip> 5900 out.png <source-ip>
   即死する（出力も出ない）。プロセス停止は **`pkill -x hmi_runtime`**（実行ファイル名完全一致）。
 - **link-local の宛先 IF 選択がぶれる**：母艦に複数の link-local IF（VirtualBox / WSL の仮想
   アダプタ等）があると `169.254.x.x` への ping/ssh が**別 IF 経由で host unreachable** になる。
-  実機直結アダプタの IP を送信元に固定する：ping は `-S <src>`、ssh/scp は **`-b <src>`**、
-  `vnc-capture.py` は第 4 引数 `<src>`。実機 IP は mDNS（`imx8mp-lpddr4-evk.local`）で引ける。
+  実機直結アダプタの IP を送信元に固定する：ping は `-S <src>`、**ssh は `-b <src>`、scp は
+  `-o BindAddress=<src>`**（Windows OpenSSH の `scp` に `-b` は無い＝`unknown option -- b`）、
+  `vnc-capture.py` は第 4 引数 `<src>`。実機 IP は mDNS（`imx8mp-lpddr4-evk.local`）で引ける
+  （link-local は毎回変わるので都度解決する）。
 - **scp は `-O`**（実機 sshd は socket-activated・sftp-server 無し）。鍵認証なら非対話で回せる
   （母艦で `ssh-keygen` → 公開鍵を実機 `/root/.ssh/authorized_keys` にシリアル経由で 1 行追記）。
 - 実機 image に**日本語フォントが無い**ため、ツールバー等の日本語ラベルは □ になる（描画自体は正常）。
