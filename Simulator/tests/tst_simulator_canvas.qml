@@ -152,4 +152,53 @@ TestCase {
         const button = findByObjectName(wrapper, "hmiButton");
         compare(button.text, "plain");
     }
+
+    // Task 42: enabled=false の Button はクリックしてもアクションを実行しない
+    //（runClickActions が enabled を見て早期 return する）。
+    function test_disabled_button_does_not_run_actions() {
+        canvas.variableModel = [{ name: "n", type: "int", initial: "0" }];
+        canvas.widgetModel = [{
+            id: "b1", type: "Button", x: 0, y: 0, width: 120, height: 40, text: "X",
+            enabled: false,
+            actions: [{ trigger: "onClick", op: "setVariable", target: "n", value: "9" }]
+        }];
+
+        var wrapper = null;
+        tryVerify(function() {
+            wrapper = findByObjectName(canvas, "widget_b1");
+            return wrapper !== null;
+        }, 1000, "delegate widget_b1 が生成されない");
+
+        compare(VariableStore.get("n"), 0);
+        wrapper.runClickActions();   // disabled なので何も起きない
+        compare(VariableStore.get("n"), 0);
+
+        // HmiButton 側は淡色表示（widgetEnabled=false）になっている。
+        const button = findByObjectName(wrapper, "hmiButton");
+        compare(button.widgetEnabled, false);
+    }
+
+    // Task 42: checked が binding で bool 変数へ追従する（toggleVariable + Binding(checked) の連動）。
+    function test_checked_follows_binding() {
+        canvas.variableModel = [{ name: "on", type: "bool", initial: "false" }];
+        canvas.widgetModel = [{
+            id: "b1", type: "Button", x: 0, y: 0, width: 120, height: 40, text: "T",
+            checkable: true,
+            bindings: [{ property: "checked", variable: "on" }],
+            actions: [{ trigger: "onClick", op: "toggleVariable", target: "on" }]
+        }];
+
+        var wrapper = null;
+        tryVerify(function() {
+            wrapper = findByObjectName(canvas, "widget_b1");
+            return wrapper !== null;
+        }, 1000, "delegate widget_b1 が生成されない");
+
+        const button = findByObjectName(wrapper, "hmiButton");
+        compare(button.checked, false);   // on=false に追従
+
+        wrapper.runClickActions();         // on を反転 → checked 追従
+        compare(VariableStore.get("on"), true);
+        compare(button.checked, true);
+    }
 }

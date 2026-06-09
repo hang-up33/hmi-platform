@@ -1,0 +1,39 @@
+{
+  "project": "Task 42 States Demo",
+  "screens": [
+    {
+      "name": "Main",
+      "widgets": [
+        {
+          "id": "btnNormal", "type": "Button",
+          "x": 80, "y": 70, "width": 440, "height": 80,
+          "text": "通常ボタン（enabled）",
+          "backgroundColor": "#4cc9f0", "textColor": "#ffffff", "fontSize": 24, "radius": 10
+        },
+        {
+          "id": "btnDisabled", "type": "Button",
+          "x": 80, "y": 180, "width": 440, "height": 80,
+          "text": "無効ボタン（enabled=false・淡色）",
+          "backgroundColor": "#4cc9f0", "textColor": "#ffffff", "fontSize": 22, "radius": 10,
+          "enabled": false
+        },
+        {
+          "id": "btnCheckedOn", "type": "Button",
+          "x": 80, "y": 290, "width": 440, "height": 80,
+          "text": "トグル ON（checked・暗く＋太枠）",
+          "backgroundColor": "#2a9d8f", "textColor": "#ffffff", "fontSize": 22, "radius": 10,
+          "borderColor": "#1d3557", "borderWidth": 2,
+          "checkable": true, "checked": true
+        },
+        {
+          "id": "btnCheckedOff", "type": "Button",
+          "x": 80, "y": 400, "width": 440, "height": 80,
+          "text": "トグル OFF（checkable・未チェック）",
+          "backgroundColor": "#2a9d8f", "textColor": "#ffffff", "fontSize": 22, "radius": 10,
+          "borderColor": "#1d3557", "borderWidth": 2,
+          "checkable": true, "checked": false
+        }
+      ]
+    }
+  ]
+}

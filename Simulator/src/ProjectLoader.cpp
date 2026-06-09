@@ -137,6 +137,11 @@ QVariantMap ProjectLoader::load(const QUrl &fileUrl)
         m.insert(QStringLiteral("hAlign"), w.hAlign);
         m.insert(QStringLiteral("vAlign"), w.vAlign);
         m.insert(QStringLiteral("opacity"), w.opacity);
+        // Task 42: 状態別スタイル（enabled / checkable / checked）も QML delegate へ届ける。
+        // Simulator / Runtime は読み取り専用だが、描画（淡色 / トグル外観）に渡す口は必要。
+        m.insert(QStringLiteral("enabled"), w.enabled);
+        m.insert(QStringLiteral("checkable"), w.checkable);
+        m.insert(QStringLiteral("checked"), w.checked);
         // Task 39: アクション / バインディングも QML へ届ける（T41 で実行 / 追従に使う）。
         m.insert(QStringLiteral("actions"), actionsToVariant(w.actions));
         m.insert(QStringLiteral("bindings"), bindingsToVariant(w.bindings));

@@ -61,6 +61,16 @@ Rectangle {
     // `0.0`（完全透明）が正当値のため 0 を未指定に使えず -1 センチネルにする（borderWidth 同様）。
     property real widgetOpacity: -1
 
+    // Task 42: 状態別スタイル。**`enabled` は `Item.enabled` 組込みと衝突するため公開入力は
+    // `widgetEnabled`**（widgetOpacity と同型の回避）。false で淡色表示にする。
+    // クリック自体は MouseArea を止めず（Editor の選択が clicked 経由のため）、実行（アクション）
+    // 側で無効化する＝SimulatorCanvas.runClickActions が enabled を見る。
+    // checkable / checked は `Item` に同名組込みが無いためそのまま公開できる。checked かつ
+    // checkable のとき「押下中」風のトグル外観（背景を暗く + ボーダーを太く）にする。
+    property bool widgetEnabled: true
+    property bool checkable: false
+    property bool checked: false
+
     // Task 34: 配置文字列 → Text の enum へのマッピング。空・不正値は中央寄せにフォールバック
     // （既定外観の単一ソースとして他の resolved* と揃える）。
     readonly property int resolvedHAlign: hAlign === "left" ? Text.AlignLeft
@@ -93,14 +103,20 @@ Rectangle {
     // Task 34: 不透明度は組込み `opacity` へ resolvedOpacity（未指定→1.0）を割り当てる。
     // 公開入力 widgetOpacity と組込み opacity を分けることで、未指定 Button が透明化する
     // 事故（-1 を組込み opacity に直接入れると起きる）を防ぐ。
-    opacity: root.resolvedOpacity
+    // Task 42: disabled（widgetEnabled=false）のとき淡色（0.4 倍）にする。
+    opacity: root.resolvedOpacity * (root.widgetEnabled ? 1.0 : 0.4)
     // Task 31: 角丸・ボーダーは resolved*（HmiButton 1 箇所に集約した既定値）を参照する。
     radius: root.resolvedCornerRadius
     // press フィードバックは背景色から Qt.darker で導出する（個別の press 色を持たない）。
-    color: mouseArea.pressed ? Qt.darker(root.resolvedBackgroundColor, 1.2)
-                             : root.resolvedBackgroundColor
+    // Task 42: ①disabled のときは press 暗転しない ②checked（トグル ON）のとき押下風に暗く。
+    color: (mouseArea.pressed && root.widgetEnabled)
+                ? Qt.darker(root.resolvedBackgroundColor, 1.2)
+         : (root.checkable && root.checked)
+                ? Qt.darker(root.resolvedBackgroundColor, 1.15)
+         : root.resolvedBackgroundColor
     border.color: root.resolvedBorderColor
-    border.width: root.resolvedBorderWidth
+    // Task 42: checked（トグル ON）のときボーダーを太くして「押し込まれている」感を出す。
+    border.width: root.resolvedBorderWidth + ((root.checkable && root.checked) ? 2 : 0)
 
     Text {
         // Task 34: 配置を効かせるため `anchors.centerIn` をやめ `anchors.fill` にして

@@ -40,6 +40,8 @@ private slots:
     void trueFontFlagsAreWrittenFalseAreOmitted();
     void roundTripOmitsDefaultAlignOpacity();
     void zeroOpacityIsWrittenNotOmitted();
+    void roundTripOmitsDefaultStates();
+    void nonDefaultStatesAreWrittenAndRestored();
     void actionsAndBindingsRoundTrip();
     void omitsEmptyActionsAndBindings();
     void isValidJsonRejectsInvalidActionsBindings();
@@ -239,6 +241,59 @@ void WidgetDataTest::zeroOpacityIsWrittenNotOmitted()
 
     const WidgetData restored = WidgetData::fromJson(obj);
     QCOMPARE(restored.opacity, 0.0);
+}
+
+// Task 42: 状態別スタイルが既定値（enabled=true / checkable=false / checked=false）の
+// とき toJson で省略され、fromJson が既定へ復元することを固定する。**特に enabled は
+// 既定 true なので省略され、欠落時 true で読み戻される**（旧 JSON 後方互換）。
+void WidgetDataTest::roundTripOmitsDefaultStates()
+{
+    WidgetData src;
+    src.id = "btn010";
+    src.type = "Button";
+    src.width = 120;
+    src.height = 40;
+    // enabled=true / checkable=false / checked=false は既定。
+
+    const QJsonObject obj = src.toJson();
+
+    QVERIFY(!obj.contains("enabled"));
+    QVERIFY(!obj.contains("checkable"));
+    QVERIFY(!obj.contains("checked"));
+
+    const WidgetData restored = WidgetData::fromJson(obj);
+    QCOMPARE(restored.enabled, true);
+    QCOMPARE(restored.checkable, false);
+    QCOMPARE(restored.checked, false);
+}
+
+// Task 42 の新規ポイント：**enabled=false は既定 true と異なるので書き出され、round-trip で
+// 保たれる**（既定 true のフラグを一律 true 書き出しすると false が失われる罠を防ぐ）。
+// checkable=true / checked=true も同様に書かれ復元される。
+void WidgetDataTest::nonDefaultStatesAreWrittenAndRestored()
+{
+    WidgetData src;
+    src.id = "btn011";
+    src.type = "Button";
+    src.width = 120;
+    src.height = 40;
+    src.enabled = false;    // 既定 true と異なる → 書かれる
+    src.checkable = true;   // 既定 false と異なる → 書かれる
+    src.checked = true;     // 既定 false と異なる → 書かれる
+
+    const QJsonObject obj = src.toJson();
+
+    QVERIFY(obj.contains("enabled"));
+    QCOMPARE(obj.value("enabled").toBool(), false);
+    QVERIFY(obj.contains("checkable"));
+    QCOMPARE(obj.value("checkable").toBool(), true);
+    QVERIFY(obj.contains("checked"));
+    QCOMPARE(obj.value("checked").toBool(), true);
+
+    const WidgetData restored = WidgetData::fromJson(obj);
+    QCOMPARE(restored.enabled, false);
+    QCOMPARE(restored.checkable, true);
+    QCOMPARE(restored.checked, true);
 }
 
 // Task 39: アクション / バインディング配列が round-trip で要素ごと再現される。

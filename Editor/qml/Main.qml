@@ -866,6 +866,73 @@ Window {
                         }
                     }
 
+                    // Task 42: 状態別スタイル（有効 / チェック可能 / チェック状態）。
+                    // フォント CheckBox と同じ 2 本立て + 明示 beginEdit/commitEdit（CheckBox は
+                    // フォーカス境界に含まれないため離散操作として 1 件 undo へ積む）。
+                    Label { text: qsTr("状態") }
+                    CheckBox {
+                        id: inspectorEnabledCheck
+                        objectName: "inspectorEnabledCheck"
+                        text: qsTr("有効")
+                        onToggled: {
+                            if (canvas.selectedItem) {
+                                canvas.beginEdit()
+                                canvas.selectedItem.widgetEnabled = checked
+                                canvas.commitEdit()
+                            }
+                        }
+                        Connections {
+                            target: canvas
+                            function onSelectedItemChanged() {
+                                // enabled は既定 true。未選択時も true 表示にする。
+                                inspectorEnabledCheck.checked = canvas.selectedItem
+                                    ? canvas.selectedItem.widgetEnabled : true
+                            }
+                        }
+                    }
+
+                    CheckBox {
+                        id: inspectorCheckableCheck
+                        objectName: "inspectorCheckableCheck"
+                        text: qsTr("チェック可能")
+                        onToggled: {
+                            if (canvas.selectedItem) {
+                                canvas.beginEdit()
+                                canvas.selectedItem.widgetCheckable = checked
+                                canvas.commitEdit()
+                            }
+                        }
+                        Connections {
+                            target: canvas
+                            function onSelectedItemChanged() {
+                                inspectorCheckableCheck.checked = canvas.selectedItem
+                                    ? canvas.selectedItem.widgetCheckable : false
+                            }
+                        }
+                    }
+
+                    CheckBox {
+                        id: inspectorCheckedCheck
+                        objectName: "inspectorCheckedCheck"
+                        text: qsTr("チェック状態（初期）")
+                        // checkable が ON のときだけ意味を持つ（外観に反映される）。
+                        enabled: inspectorCheckableCheck.checked
+                        onToggled: {
+                            if (canvas.selectedItem) {
+                                canvas.beginEdit()
+                                canvas.selectedItem.widgetChecked = checked
+                                canvas.commitEdit()
+                            }
+                        }
+                        Connections {
+                            target: canvas
+                            function onSelectedItemChanged() {
+                                inspectorCheckedCheck.checked = canvas.selectedItem
+                                    ? canvas.selectedItem.widgetChecked : false
+                            }
+                        }
+                    }
+
                     // フォント family は ComboBox。model 先頭に「(既定フォント)」を置き、
                     // index 0 = 未指定（空文字 = システム既定）にマップする。残りは
                     // Qt.fontFamilies()（生成時に一度評価）。読込 JSON の family が
@@ -1098,7 +1165,7 @@ Window {
                         id: inspectorBindingPropCombo
                         objectName: "inspectorBindingPropCombo"
                         width: parent.width
-                        model: ["(なし)", "visible", "backgroundColor", "text", "textColor"]
+                        model: ["(なし)", "visible", "backgroundColor", "text", "textColor", "checked"]
                         onActivated: rootWindow.applyBindingFromInspector()
                     }
                     Label { text: qsTr("追従変数") }

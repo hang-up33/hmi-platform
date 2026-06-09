@@ -138,6 +138,12 @@ Item {
                 hAlign: item.widgetHAlign,
                 vAlign: item.widgetVAlign,
                 opacity: item.widgetOpacity,
+                // Task 42: 状態別スタイルも live Item から取り込む（JSON キーは enabled /
+                // checkable / checked、live Item 側は widgetEnabled 等）。Schema 側で
+                // enabled は false のとき・checkable/checked は true のときだけ書き出される。
+                enabled: item.widgetEnabled,
+                checkable: item.widgetCheckable,
+                checked: item.widgetChecked,
                 // Task 39: アクション / バインディングも保存スナップショットへ含める
                 //（読み込んだ定義を Editor の保存で失わないため。Codex PR #78 [P1]）。
                 actions: item.widgetActions,
@@ -676,6 +682,11 @@ Item {
                     widgetHAlign: modelData.hAlign !== undefined ? modelData.hAlign : ""
                     widgetVAlign: modelData.vAlign !== undefined ? modelData.vAlign : ""
                     widgetOpacity: modelData.opacity !== undefined ? modelData.opacity : -1
+                    // Task 42: 状態別スタイルを流す（未指定は enabled=true / checkable=false /
+                    // checked=false）。JSON キー enabled → メタ widgetEnabled（組込み衝突回避）。
+                    widgetEnabled: modelData.enabled !== undefined ? modelData.enabled : true
+                    widgetCheckable: modelData.checkable !== undefined ? modelData.checkable : false
+                    widgetChecked: modelData.checked !== undefined ? modelData.checked : false
                     // Task 39: アクション / バインディングを素通し保持（保存で失わないため）。
                     widgetActions: modelData.actions !== undefined ? modelData.actions : []
                     widgetBindings: modelData.bindings !== undefined ? modelData.bindings : []
@@ -760,6 +771,12 @@ Item {
                         hAlign: wrapper.widgetHAlign
                         vAlign: wrapper.widgetVAlign
                         widgetOpacity: wrapper.widgetOpacity
+                        // Task 42: 状態別スタイルを HmiButton へ渡す。enabled → widgetEnabled
+                        // （組込み衝突回避）。Editor では淡色プレビューになるだけで、選択用の
+                        // clicked は MouseArea を止めないため disabled でも選択・編集できる。
+                        widgetEnabled: wrapper.widgetEnabled
+                        checkable: wrapper.widgetCheckable
+                        checked: wrapper.widgetChecked
                         // Task 25: ドラッグ用の親 MouseArea は drag.filterChildren 下で
                         // クリックを発火しない（子が消費する）。よってクリック検出は
                         // HmiButton 側の clicked を中継して選択要求に使う。

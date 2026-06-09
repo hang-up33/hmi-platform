@@ -102,6 +102,11 @@ Item {
                 // 値は変数の型に合わせて coerce する。読み取り専用アプリの「実行」概念は
                 // ここだけに閉じ、選択 / 編集は持ち込まない原則を維持する。
                 function runClickActions() {
+                    // Task 42: disabled（enabled=false）の Button はクリックしてもアクションを
+                    // 実行しない（「クリック無効」の実体。視覚の淡色は HmiButton.widgetEnabled）。
+                    if (modelData.enabled === false) {
+                        return
+                    }
                     const actions = modelData.actions
                     if (!actions) {
                         return
@@ -180,6 +185,18 @@ Item {
                     hAlign: wrapper.modelData.hAlign !== undefined ? wrapper.modelData.hAlign : ""
                     vAlign: wrapper.modelData.vAlign !== undefined ? wrapper.modelData.vAlign : ""
                     widgetOpacity: wrapper.modelData.opacity !== undefined ? wrapper.modelData.opacity : -1
+                    // Task 42: 状態別スタイルも HmiButton へ渡す（Editor delegate と対）。
+                    // enabled は JSON キー enabled → HmiButton.widgetEnabled（組込み衝突回避）。
+                    // 未指定は既定（enabled=true / checkable=false / checked=false）になる。
+                    widgetEnabled: wrapper.modelData.enabled !== undefined ? wrapper.modelData.enabled : true
+                    checkable: wrapper.modelData.checkable !== undefined ? wrapper.modelData.checkable : false
+                    // Task 42: checked は binding があれば変数へ追従（toggleVariable + Binding で
+                    // トグル連動）、無ければ modelData の初期値（静的）を使う。
+                    checked: {
+                        const v = wrapper.boundValue("checked")
+                        return v !== undefined ? VariableStore.coerce("bool", v)
+                            : (wrapper.modelData.checked !== undefined ? wrapper.modelData.checked : false)
+                    }
                     // Task 41: クリックで紐づくアクションを実行する（変数更新 → binding 追従）。
                     // 読み取り専用アプリに初めて「実行」概念が入る箇所。引数 modifiers は使わない。
                     onClicked: wrapper.runClickActions()
