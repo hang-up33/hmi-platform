@@ -249,7 +249,7 @@ void WidgetDataTest::zeroOpacityIsWrittenNotOmitted()
 void WidgetDataTest::roundTripOmitsDefaultStates()
 {
     WidgetData src;
-    src.id = "btn010";
+    src.id = "btn012";
     src.type = "Button";
     src.width = 120;
     src.height = 40;
@@ -273,7 +273,7 @@ void WidgetDataTest::roundTripOmitsDefaultStates()
 void WidgetDataTest::nonDefaultStatesAreWrittenAndRestored()
 {
     WidgetData src;
-    src.id = "btn011";
+    src.id = "btn013";
     src.type = "Button";
     src.width = 120;
     src.height = 40;
