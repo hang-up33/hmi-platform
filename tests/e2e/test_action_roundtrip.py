@@ -211,7 +211,7 @@ def _phase2_simulator_runs_action(simulator_binary: str, port: int, save_path: s
             after = _get_str_property(url, button, "text")
             if after == _ACTION_VALUE:
                 break
-            call_method(url, "wait", 50)
+            time.sleep(0.05)
         if after != _ACTION_VALUE:
             raise RuntimeError(
                 f"after click text={after!r} != {_ACTION_VALUE!r} "
@@ -228,18 +228,21 @@ def main() -> int:
     parser.add_argument("--simulator-port", type=int, default=9877)
     args = parser.parse_args()
 
-    fd, fixture_path = tempfile.mkstemp(prefix="hmi_task43_fixture_", suffix=".json")
-    with os.fdopen(fd, "w", encoding="utf-8") as f:
-        json.dump(_fixture_json(), f, ensure_ascii=False, indent=2)
-
-    fd2, save_path = tempfile.mkstemp(prefix="hmi_task43_saved_", suffix=".json")
-    os.close(fd2)
+    # mkstemp が万一失敗しても finally で NameError にならないよう先に初期化する
+    # （CodeRabbit PR #87 軽微指摘）。save_path は mkstemp 後に一旦 unlink して
+    # 「saveTo が実際に生成したか」を _phase1 の isfile チェックで担保できるようにする
+    # （空の mkstemp ファイルを残すと saveTo 失敗を取りこぼす）。
+    fixture_path = ""
+    save_path = ""
     try:
+        fd, fixture_path = tempfile.mkstemp(prefix="hmi_task43_fixture_", suffix=".json")
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(_fixture_json(), f, ensure_ascii=False, indent=2)
+
+        fd2, save_path = tempfile.mkstemp(prefix="hmi_task43_saved_", suffix=".json")
+        os.close(fd2)
         os.unlink(save_path)
-    except FileNotFoundError:
-        pass
 
-    try:
         _phase1_editor_roundtrips_actions(
             args.editor_binary, args.editor_port, fixture_path, save_path
         )
@@ -252,6 +255,8 @@ def main() -> int:
         return 1
     finally:
         for p in (fixture_path, save_path):
+            if not p:
+                continue
             try:
                 os.unlink(p)
             except FileNotFoundError:
