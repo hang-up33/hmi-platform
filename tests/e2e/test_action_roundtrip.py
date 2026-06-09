@@ -42,6 +42,7 @@ import os
 import re
 import sys
 import tempfile
+import time
 
 from harness import call_method, spix_app
 
@@ -106,11 +107,13 @@ def _get_str_property(url: str, path: str, prop: str) -> str:
 
 
 def _exists_and_visible(url: str, path: str) -> bool:
+    """対象パスの Item が存在し可視かを Spix の existsAndVisible で確認する。"""
     body = call_method(url, "existsAndVisible", path)
     return "<boolean>1</boolean>" in body
 
 
 def _invoke_save_to(url: str, save_path: str) -> bool:
+    """Editor Window の ``saveTo(path)`` を invokeMethod で呼び、成功可否を返す。"""
     body = call_method(url, "invokeMethod", _EDITOR_WIN, "saveTo", [save_path])
     if "<fault>" in body:
         raise RuntimeError(f"invokeMethod returned fault. Body: {body[:500]!r}")
@@ -199,10 +202,16 @@ def _phase2_simulator_runs_action(simulator_binary: str, port: int, save_path: s
 
         # 新規ポイント：実ボタンをクリック → onClick アクション（setVariable）実行
         # → label = "ON" → text バインディングが追従する。
+        # 反映は同期的だが、CI 負荷時の false negative を避けるため固定 wait ではなく
+        # 短いポーリング（最大 3 秒）で期待値到達を待つ（CodeRabbit PR #87 Major 指摘）。
         call_method(url, "mouseClick", button)
-        call_method(url, "wait", 200)
-
-        after = _get_str_property(url, button, "text")
+        deadline = time.monotonic() + 3.0
+        after = ""
+        while time.monotonic() < deadline:
+            after = _get_str_property(url, button, "text")
+            if after == _ACTION_VALUE:
+                break
+            call_method(url, "wait", 50)
         if after != _ACTION_VALUE:
             raise RuntimeError(
                 f"after click text={after!r} != {_ACTION_VALUE!r} "
@@ -211,6 +220,7 @@ def _phase2_simulator_runs_action(simulator_binary: str, port: int, save_path: s
 
 
 def main() -> int:
+    """fixture 生成 → Editor round-trip 保存 → JSON 検証 → Simulator クリック実行を順に走らせる。"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--editor-binary", required=True)
     parser.add_argument("--simulator-binary", required=True)
