@@ -67,6 +67,18 @@ QJsonObject WidgetData::toJson() const
     if (opacity >= 0.0) {
         obj["opacity"] = opacity;
     }
+    // Task 42: 状態別スタイル。**enabled は既定 true なので false のとき書く**（一律 true
+    // 書き出しだと false が保存されず disabled の round-trip が壊れる）。checkable / checked は
+    // 既定 false なので true のとき書く。いずれも未指定（既定値）のとき省略し後方互換を保つ。
+    if (!enabled) {
+        obj["enabled"] = enabled;
+    }
+    if (checkable) {
+        obj["checkable"] = checkable;
+    }
+    if (checked) {
+        obj["checked"] = checked;
+    }
     // Task 39: アクション / バインディングは optional 配列。空のとき省略（後方互換）。
     if (!actions.isEmpty()) {
         QJsonArray actionsArr;
@@ -116,6 +128,12 @@ WidgetData WidgetData::fromJson(const QJsonObject &obj)
     w.hAlign = obj.value("hAlign").toString();
     w.vAlign = obj.value("vAlign").toString();
     w.opacity = obj.value("opacity").toDouble(-1.0);
+    // Task 42: 状態別スタイル。**enabled は欠落時 true**（`toBool(true)`。`toBool()` の既定
+    // false をコピペすると旧 JSON〔enabled キー無し〕が disabled 扱いになる）。
+    // checkable / checked は欠落時 false。
+    w.enabled = obj.value("enabled").toBool(true);
+    w.checkable = obj.value("checkable").toBool();
+    w.checked = obj.value("checked").toBool();
     // Task 39: アクション / バインディング配列（欠落時は空配列）。
     const QJsonArray actionsArr = obj.value("actions").toArray();
     for (const QJsonValue &v : actionsArr) {

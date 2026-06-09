@@ -160,6 +160,12 @@ bool ProjectIo::save(const QUrl &fileUrl,
         w.hAlign = m.value(QStringLiteral("hAlign")).toString();
         w.vAlign = m.value(QStringLiteral("vAlign")).toString();
         w.opacity = m.value(QStringLiteral("opacity"), -1.0).toDouble();
+        // Task 42: 状態別スタイル（bool 3 つ）。**enabled は QVariantMap の既定を true** に
+        // して読む（`m.value(key, true).toBool()`。キーが無い経路で false 扱いにしない）。
+        // checkable / checked は既定 false（素の `.toBool()`）。
+        w.enabled = m.value(QStringLiteral("enabled"), true).toBool();
+        w.checkable = m.value(QStringLiteral("checkable")).toBool();
+        w.checked = m.value(QStringLiteral("checked")).toBool();
         // Task 39: アクション / バインディング（optional 配列。QVariantList of QVariantMap）。
         w.actions = actionsFromVariant(m.value(QStringLiteral("actions")).toList());
         w.bindings = bindingsFromVariant(m.value(QStringLiteral("bindings")).toList());
@@ -258,6 +264,10 @@ QVariantMap ProjectIo::load(const QUrl &fileUrl)
         m.insert(QStringLiteral("hAlign"), w.hAlign);
         m.insert(QStringLiteral("vAlign"), w.vAlign);
         m.insert(QStringLiteral("opacity"), w.opacity);
+        // Task 42: 状態別スタイルも QML delegate へ届ける（delegate が HmiButton へ渡す）。
+        m.insert(QStringLiteral("enabled"), w.enabled);
+        m.insert(QStringLiteral("checkable"), w.checkable);
+        m.insert(QStringLiteral("checked"), w.checked);
         // Task 39: アクション / バインディングも QML へ届ける（T40 の編集 UI / T41 の実行が読む）。
         m.insert(QStringLiteral("actions"), actionsToVariant(w.actions));
         m.insert(QStringLiteral("bindings"), bindingsToVariant(w.bindings));

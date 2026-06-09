@@ -71,6 +71,14 @@ Item {
     property string widgetVAlign: ""
     property real widgetOpacity: -1
 
+    // Task 42: 状態別スタイルのメタ。**`widgetEnabled`** に統一する（HmiButton と同じく
+    // `Item.enabled` 組込みと衝突するため。既定 true）。checkable / checked は組込み衝突が
+    // 無いが命名を揃えて `widget*` 接頭辞にする。delegate（Canvas.qml）で HmiButton へ渡し、
+    // snapshotModel が JSON キー enabled / checkable / checked へ書き戻す。
+    property bool widgetEnabled: true
+    property bool widgetCheckable: false
+    property bool widgetChecked: false
+
     // Task 39: アクション / バインディングのメタ。Editor は T40 まで編集 UI を持たないが、
     // **読み込んだ定義を保存で失わない**ため、ここで素通し保持する（delegate が modelData
     // から流し込み、snapshotModel が保存へ書き戻す。Codex PR #78 [P1]）。配列をそのまま持つ。

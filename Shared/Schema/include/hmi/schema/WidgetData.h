@@ -59,6 +59,19 @@ struct WidgetData {
     QString vAlign;
     qreal opacity = -1.0;
 
+    // Task 42: 状態別スタイル（pressed / disabled / checked）。bool 3 つ：
+    //   enabled   : **既定 true**（false で淡色 + クリック無効）。toJson は **false のとき書く**、
+    //               fromJson は欠落時 true。既定 true のフラグを一律 true 書き出しすると false が
+    //               保存されず disabled の round-trip が壊れるため（bool optional の規則）。
+    //   checkable : 既定 false（トグル可能か）。true のとき書く、欠落時 false。
+    //   checked   : 既定 false（初期トグル状態を永続化）。true のとき書く、欠落時 false。
+    //               実行時はアクション（toggleVariable）+ Binding(property:"checked") で変数連動も可能。
+    // pressed は状態を持たず HmiButton が押下中に既存の Qt.darker 導出で表現する（保存対象外）。
+    // 既定外観は描画の唯一の真実である HmiButton 側に集約する。
+    bool enabled = true;
+    bool checkable = false;
+    bool checked = false;
+
     // Task 39: アクション（書き手）/ バインディング（読み手）。いずれも optional 配列で、
     // 空のとき toJson で省略（後方互換）。実行 / 描画への反映は T41 以降で、本タスクでは
     // 型と保存（round-trip）のみ。isValidJson の必須集合には含めない（後方互換）。
