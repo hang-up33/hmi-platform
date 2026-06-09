@@ -253,7 +253,7 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 | 40 | インスペクタでアクション編集（Editor）（B） | ✅ 完了（インスペクタに変数定義パネル + クリック時アクション編集〔操作/対象変数/値〕+ バインディング編集〔property/追従変数〕を追加。設定は保存 JSON に反映） |
 | 41 | Simulator / Runtime でアクション実行 + 状態反映（B） | ✅ 完了（Simulator/Runtime に「実行」を追加：読込時に変数ストアを初期化、Button クリックでアクション〔setVariable / toggleVariable〕実行 → 変数更新 → binding〔visible / text / 背景色 / 文字色〕が追従。読み取り専用アプリが初めて「動く」。Simulator QML テスト追加・unit 10/10 緑） |
 | 42 | 状態別スタイル（pressed / disabled / checked）（B） | ✅ 完了（Schema に enabled / checkable / checked を追加し全レイヤ貫通。disabled は淡色＋クリック実行無効、checked は背景暗転＋太枠のトグル外観。checked は変数バインド連動可。enabled は既定 true で false のときだけ保存。unit + Simulator QML テスト追加・10/10 緑） |
-| 43 | アクション round-trip E2E + 実機動作確認（全環境）（B） | ⬜ 未着手 |
+| 43 | アクション round-trip E2E + 実機動作確認（全環境）（B） | 🟦 E2E 部分完了（実機は未）。新規 cross-app E2E `e2e_action_roundtrip`：Editor で変数/アクション/バインディング付き JSON を round-trip 保存 → Simulator で `HmiButton` を Spix `mouseClick` → `setVariable` 実行 → `text` バインディング追従（"OFF"→"ON"）を観測（**実クリックで状態遷移を見る初の E2E**）。Linux/Web で unit 10 + e2e 6 = 16/16 緑。実機アクション動作撮影はローカルで後日 |
 
 ## 共通データ仕様（Project Format）
 

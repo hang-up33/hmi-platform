@@ -91,3 +91,20 @@ set_tests_properties(e2e_style_roundtrip PROPERTIES
     TIMEOUT 60
     LABELS e2e
 )
+
+# Task 43: アクション / バインディングの「動き」cross-app E2E。
+# Editor で変数 / アクション / バインディング付き JSON を round-trip 保存 → JSON 直接検証 →
+# Simulator を `--open` で起動し HmiButton を mouseClick → setVariable 実行 → text バインディング
+# 追従（"OFF" → "ON"）を getStringProperty で観測する。これまでの静的 round-trip と異なり
+# 実クリックで状態遷移を見る初の E2E。Editor / Simulator の 2 プロセスを順に起動する。
+add_test(
+    NAME e2e_action_roundtrip
+    COMMAND ${Python3_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_action_roundtrip.py
+        --editor-binary $<TARGET_FILE:hmi_editor>
+        --simulator-binary $<TARGET_FILE:hmi_simulator>
+)
+set_tests_properties(e2e_action_roundtrip PROPERTIES
+    TIMEOUT 60
+    LABELS e2e
+)
