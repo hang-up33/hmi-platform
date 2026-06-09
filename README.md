@@ -162,6 +162,31 @@ Explorer からダブルクリックで起動したい（「Qt の DLL が見つ
 
 3 つの exe（hmi_editor / hmi_simulator / hmi_runtime）には **Atlas ブランドアイコン**（`branding/atlas.ico`）が埋め込まれ、Explorer・タスクバー・ウィンドウタイトルバーに表示される（windeployqt とは独立に exe 自身へ焼き込まれる）。アイコンを変えたいときは `scripts\windows\generate-icon.ps1` を編集・再実行して `.ico` を再生成する（外部ツール不要）。
 
+### 実機（i.MX8MP）で描画
+
+Editor で作った画面（JSON）を実機の `hmi_runtime` で描画するまでの流れ（Phase 3-B / Task 24 で確立）。クロス SDK の生成は上記「ビルド > Yocto クロスビルド」節を、IP の引き方・キャプチャ・転送の罠の詳細は [scripts/yocto/README.md](scripts/yocto/README.md) と [.claude/rules/dev-environment.md](.claude/rules/dev-environment.md) を参照。
+
+1. **Editor で画面を作って保存** — `hmi_editor` で Widget を配置・スタイル編集し、ツールバーの `保存` で `project.json` を書き出す。
+2. **`hmi_runtime` を aarch64 にクロスビルド**（WSL2 内）— `./scripts/yocto/cross-build.sh` → `~/build-yocto/Runtime/hmi_runtime`（ARM aarch64 ELF）。
+3. **実機へ転送** — 実機 sshd は socket-activated のため scp は **`-O`** 必須（新しい OpenSSH の SFTP 既定を回避）。実機側で事前に `passwd` 設定が要る。Windows 母艦から link-local 直結で送る（実機 IP は mDNS `imx8mp-lpddr4-evk.local` でも引ける）：
+
+   ```sh
+   scp -O ~/build-yocto/Runtime/hmi_runtime root@<board-ip>:/tmp/hmi_runtime
+   scp -O project.json                      root@<board-ip>:/tmp/project.json
+   ```
+
+4. **実機 weston 上で起動** — boot は microSD（SW4=0011、0010=eMMC）。weston は root（uid 0）で動作するので Wayland 環境変数を通してから起動する：
+
+   ```sh
+   export XDG_RUNTIME_DIR=/run/user/0
+   export WAYLAND_DISPLAY=wayland-1
+   export QT_QPA_PLATFORM=wayland
+   chmod +x /tmp/hmi_runtime
+   /tmp/hmi_runtime --open /tmp/project.json
+   ```
+
+成功すると weston 上に「HMI Simulator」ウィンドウが出て、Editor で付けた色・フォント・ボーダー・角丸・変数バインディングがそのまま描画される（証跡: [Docs/screenshots/task-24-runtime-imx.jpg](Docs/screenshots/task-24-runtime-imx.jpg)）。HDMI 未接続で物理モニタ無しに撮りたい場合は Qt 内蔵 VNC platform（`QT_QPA_PLATFORM='vnc:size=1280x720'`）で起動 → 母艦から `scripts/yocto/vnc-capture.py` で digital capture する（手順・罠は [scripts/yocto/README.md](scripts/yocto/README.md)）。実機 image には日本語フォントが無いため日本語ラベルは □ になる（描画自体は正常）。
+
 ## フェーズ進捗
 
 Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入、**Phase 3-B / Runtime（Task 22〜24）まで全タスク完了**。新 BSP（scarthgap）で Qt6 入り実機 image と Qt6 クロス SDK を生成し、`hmi_runtime` を aarch64 にクロスビルド → **i.MX8MP 実機（weston / Wayland）で Editor 由来の JSON を描画**することを実機で確認済み。**Phase 4 / Button 縦スライス（Task 25〜32）も完了** — Widget 種別を横に増やす前に Button 1 つを全レイヤで深く作り込み「Widget 追加テンプレ」を確立した（選択・インスペクタ・リサイズ・削除・スタイル属性〔色・フォント・ボーダー・角丸〕の Schema 拡張）。`0` が正当値の数値プロパティを `-1` センチネルで optional 化、E2E に style / border / radius round-trip を追加し、macOS `ctest`（unit 8 + e2e 5 = 13/13）緑を確認した（旧 Phase 4〔Task 25〜30〕＋旧 Phase 5〔Task 31〜32〕を 1 本の Button 縦スライスに統合）。続く **Phase 4 拡張（Task 33〜43）を承認済み・進行中（Task 33〜41 完了）** — ①静的スタイルの続き（フォント詳細 / 配置 / opacity）→②編集体験の強化（グリッドスナップ / 複数選択・整列 / コピペ / undo-redo）→③状態 / アクション（変数ストア + クリックアクション + 状態別スタイル）で Button をさらに深く作り込む（**Task 33〜43 の一覧は下記「フェーズ進捗」表を参照**）。横展開（新 Widget 種別 Label / Lamp 等）は Phase 5 候補。
