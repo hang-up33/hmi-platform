@@ -6,7 +6,3 @@ language: "ja-JP"
 # レビューの語調も日本語前提で指示する（language だけでも日本語化されるが、
 # 言い回しを安定させるため明示する）。
 tone_instructions: "日本語で、簡潔かつ丁寧にレビューしてください。指摘は重要度（重大/軽微/nitpick）を添えてください。"
-
-reviews:
-  # 高レベル要約・walkthrough は有効のまま（日本語で出力される）。
-  high_level_summary: true
