@@ -143,6 +143,15 @@ def main():
     write_png(before_path, fb_w, fb_h, frame)
     sys.stderr.write(f"saved {before_path} ({fb_w}x{fb_h}), painted {painted} px\n")
 
+    # クリック座標が framebuffer 範囲内か検証する（画面外だと無効クリックになり、
+    # 状態が変わらず after が before と同じになって原因が分かりづらい）。
+    if not (0 <= click_x < fb_w and 0 <= click_y < fb_h):
+        sys.stderr.write(
+            f"click out of range: ({click_x},{click_y}) not in "
+            f"[0,{fb_w - 1}]x[0,{fb_h - 1}]\n"
+        )
+        return 2
+
     # 2) クリックを 1 回送る（press → release）。Qt がアクション実行 + binding 追従する。
     pointer(s, 1, click_x, click_y)
     time.sleep(0.05)

@@ -41,7 +41,7 @@ Phase 4 拡張の **変数・クリックアクション・バインディング
 - **言語 / フレームワーク**: Qt 6 (Qt Quick / QML), C++17
 - **ビルド**: CMake (≥ 3.21)
 - **ホスト OS（開発）**: macOS / Windows（共に動作確認済み）
-  - **Claude Code on the web は非対応**（コンテナのネットワークポリシーが Qt 公式ミラーを遮断するため Qt 6.5+ を取得できない。詳細は [CLAUDE.md](CLAUDE.md) の「Claude Code on the web は非対応」節）。
+  - **Claude Code on the web は条件付きで対応**（PC ビルド・ユニット + E2E は可。環境ネットワークを `Full` にして Qt を `aqtinstall` で導入する前提。Yocto SDK クロスビルド / i.MX8MP 実機描画は不可。詳細は [CLAUDE.md](CLAUDE.md) の「Claude Code on the web（条件付きで PC ビルド・テスト可。実機は不可）」節 / [Docs/claude-web-dev.md](Docs/claude-web-dev.md)）。
 - **ターゲット OS（最終）**: Yocto on i.MX8MP
 
 ## フォルダ構成
