@@ -12,6 +12,7 @@ qt_add_qml_module(hmi_editor
         qml/Main.qml
         qml/Canvas.qml
         qml/EditableWidget.qml
+        qml/InspectorSection.qml
 )
 
 target_link_libraries(hmi_editor
