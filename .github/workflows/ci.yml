@@ -1,16 +1,20 @@
 name: CI
 
 on:
-  pull_request:
-    branches: [main]
-    # 既定の types は opened/synchronize/reopened のみで、ラベル付与では workflow が
-    # 起動しない。desktop ジョブを PR の `ci-desktop` ラベルで有効化する設計のため、
-    # labeled を明示的に拾う（Codex PR #72 P2 指摘）。
-    types: [opened, synchronize, reopened, labeled]
-  push:
-    branches: [main]
-  # mac/win ジョブを手動で回したいとき（後述の desktop ジョブの実行条件）に使う。
+  # 【CI コスト削減（2026-06-10）】GitHub Actions の課金を抑えるため、PR / push の
+  # 自動トリガを一旦停止し、手動実行（workflow_dispatch）でのみ CI を回す運用に切替。
+  # 検証が要るときは Actions タブ → CI → Run workflow で任意ブランチを手動実行する。
+  # 元に戻すときは下記 pull_request / push のコメントアウトを解除する。
   workflow_dispatch:
+  #
+  # pull_request:
+  #   branches: [main]
+  #   # 既定の types は opened/synchronize/reopened のみで、ラベル付与では workflow が
+  #   # 起動しない。desktop ジョブを PR の `ci-desktop` ラベルで有効化する設計のため、
+  #   # labeled を明示的に拾う（Codex PR #72 P2 指摘）。
+  #   types: [opened, synchronize, reopened, labeled]
+  # push:
+  #   branches: [main]
 
 # 同じブランチで連続 push されたとき、古い CI をキャンセルして最新だけ走らせる。
 concurrency:
