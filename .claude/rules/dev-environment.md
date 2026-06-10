@@ -142,3 +142,4 @@ Task 23（Yocto SDK で `hmi_runtime` をクロスビルド）用の WSL2 環境
   作業ツリーの README / CLAUDE.md が古いと「次タスク」を誤認する。
 - 変更は **`task/<N>-<短い名>`（フェーズタスク）/ `docs/<短い名>`（ドキュメント・設定）** ブランチ + PR で取り込む（main 直 push 禁止）。
   レビューは ChatGPT Codex（GitHub App）。詳細は CLAUDE.md「Codex 連携 / PR ワークフロー」。
+- **【暫定】GitHub Actions CI が 2026-06-07 12:26 UTC 以降、全 run 即時失敗中**（main push 含む全ブランチ。ジョブが runner 未割当のまま約 4 秒で failure・ステップ実行ゼロ・ログ無し＝404。PR #90 で調査）。PR の変更内容とは無関係のインフラ起因で、**Actions の無料枠 / 支出上限切れの疑い**（`main` push 毎に macOS 10x / Windows 2x ジョブが走る設定のため消費が速い）。オーナーの Billing 設定でのみ確認・解消可能。この間の「テスト緑」は Web セッション内 `ctest` の結果で CI 緑ではない。**赤 CI を自分の PR のせいと誤診しないこと**。解消を確認したらこの項を削除する。
