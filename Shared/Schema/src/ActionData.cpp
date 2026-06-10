@@ -66,7 +66,13 @@ QVariantMap ActionData::toVariantMap() const
 ActionData ActionData::fromVariantMap(const QVariantMap &map)
 {
     ActionData a;
+    // fromJson と同一規則：trigger 欠落 / 空文字は "onClick" へ正規化する。これを抜くと
+    // 空 trigger が ActionData::toJson でそのまま書き出され、再読込時に isValidJson が
+    // trigger != "onClick" を無効と判定してプロジェクト全体の load が失敗する（CodeRabbit 指摘）。
     a.trigger = map.value(QStringLiteral("trigger")).toString();
+    if (a.trigger.isEmpty()) {
+        a.trigger = QStringLiteral("onClick");
+    }
     a.op = map.value(QStringLiteral("op")).toString();
     a.target = map.value(QStringLiteral("target")).toString();
     a.value = map.value(QStringLiteral("value")).toString();

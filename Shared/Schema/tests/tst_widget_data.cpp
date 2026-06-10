@@ -51,6 +51,7 @@ private slots:
     // キー欠落時のセンチネル既定（-1 / true）の充足を固定する。
     void variantMapRoundTripFullFields();
     void fromVariantMapFillsSentinelDefaults();
+    void fromVariantMapNormalizesEmptyActionTrigger();
 
     void isValidJsonAcceptsMinimumRequiredFields();
     void isValidJsonRejectsMissingRequired_data();
@@ -550,6 +551,7 @@ void WidgetDataTest::variantMapRoundTripFullFields()
     QCOMPARE(r.checkable, src.checkable);
     QCOMPARE(r.checked, src.checked);
     QCOMPARE(r.actions.size(), 1);
+    QCOMPARE(r.actions.at(0).trigger, QStringLiteral("onClick"));
     QCOMPARE(r.actions.at(0).op, QStringLiteral("setVariable"));
     QCOMPARE(r.actions.at(0).target, QStringLiteral("speed"));
     QCOMPARE(r.actions.at(0).value, QStringLiteral("42"));
@@ -580,6 +582,30 @@ void WidgetDataTest::fromVariantMapFillsSentinelDefaults()
     QCOMPARE(w.checked, false);
     QVERIFY(w.actions.isEmpty());
     QVERIFY(w.bindings.isEmpty());
+}
+
+// C++ ブリッジ集約（CodeRabbit 指摘）：fromVariantMap は fromJson と同じく、空 / 欠落
+// trigger を "onClick" へ正規化する。これを抜くと空 trigger が toJson で書き出され、再読込時に
+// isValidJson（trigger != "onClick" を無効視）でプロジェクト全体の load が失敗する。
+void WidgetDataTest::fromVariantMapNormalizesEmptyActionTrigger()
+{
+    QVariantMap action;  // trigger キーを意図的に欠落させる
+    action.insert(QStringLiteral("op"), QStringLiteral("toggleVariable"));
+    action.insert(QStringLiteral("target"), QStringLiteral("running"));
+
+    QVariantMap m;
+    m.insert(QStringLiteral("id"), QStringLiteral("btn022"));
+    m.insert(QStringLiteral("type"), QStringLiteral("Button"));
+    m.insert(QStringLiteral("width"), 120);
+    m.insert(QStringLiteral("height"), 40);
+    m.insert(QStringLiteral("actions"), QVariantList{action});
+
+    const WidgetData w = WidgetData::fromVariantMap(m);
+    QCOMPARE(w.actions.size(), 1);
+    QCOMPARE(w.actions.at(0).trigger, QStringLiteral("onClick"));
+
+    // 正規化された結果は toJson → isValidJson を通る（load が壊れないことを担保）。
+    QVERIFY(WidgetData::isValidJson(w.toJson()));
 }
 
 void WidgetDataTest::isValidJsonAcceptsMinimumRequiredFields()
