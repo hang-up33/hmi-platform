@@ -3,7 +3,9 @@ name: CI
 on:
   # 【CI コスト削減（2026-06-10）】GitHub Actions の課金を抑えるため、PR / push の
   # 自動トリガを一旦停止し、手動実行（workflow_dispatch）でのみ CI を回す運用に切替。
+  # 検証が要るときは Actions タブ → CI → Run workflow で任意ブランチを手動実行する。
   # 元に戻すときは下記 pull_request / push のコメントアウトを解除する。
+  workflow_dispatch:
   #
   # pull_request:
   #   branches: [main]
@@ -13,8 +15,6 @@ on:
   #   types: [opened, synchronize, reopened, labeled]
   # push:
   #   branches: [main]
-  # 手動実行のみ。Actions タブ → CI → Run workflow で任意ブランチを検証できる。
-  workflow_dispatch:
 
 # 同じブランチで連続 push されたとき、古い CI をキャンセルして最新だけ走らせる。
 concurrency:
