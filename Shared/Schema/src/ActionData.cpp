@@ -53,6 +53,26 @@ ActionData ActionData::fromJson(const QJsonObject &obj)
     return a;
 }
 
+QVariantMap ActionData::toVariantMap() const
+{
+    QVariantMap m;
+    m.insert(QStringLiteral("trigger"), trigger);
+    m.insert(QStringLiteral("op"), op);
+    m.insert(QStringLiteral("target"), target);
+    m.insert(QStringLiteral("value"), value);
+    return m;
+}
+
+ActionData ActionData::fromVariantMap(const QVariantMap &map)
+{
+    ActionData a;
+    a.trigger = map.value(QStringLiteral("trigger")).toString();
+    a.op = map.value(QStringLiteral("op")).toString();
+    a.target = map.value(QStringLiteral("target")).toString();
+    a.value = map.value(QStringLiteral("value")).toString();
+    return a;
+}
+
 bool ActionData::isValidJson(const QJsonObject &obj)
 {
     // Task 39（Codex PR #78 [P2]）：op は定義済みの種別（setVariable / toggleVariable）に

@@ -2,6 +2,7 @@
 
 #include <QJsonObject>
 #include <QString>
+#include <QVariantMap>
 
 namespace hmi::schema {
 
@@ -16,6 +17,10 @@ struct BindingData {
 
     QJsonObject toJson() const;
     static BindingData fromJson(const QJsonObject &obj);
+
+    // QML との往復用に QVariantMap（QtCore）と相互変換する（ActionData と同方針）。
+    QVariantMap toVariantMap() const;
+    static BindingData fromVariantMap(const QVariantMap &map);
 
     // property と variable が非空なら有効。
     static bool isValidJson(const QJsonObject &obj);

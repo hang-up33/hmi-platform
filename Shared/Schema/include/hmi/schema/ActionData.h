@@ -2,6 +2,7 @@
 
 #include <QJsonObject>
 #include <QString>
+#include <QVariantMap>
 
 namespace hmi::schema {
 
@@ -19,6 +20,11 @@ struct ActionData {
 
     QJsonObject toJson() const;
     static ActionData fromJson(const QJsonObject &obj);
+
+    // QML との往復用に QVariantMap（QtCore）と相互変換する。C++ ブリッジ
+    // （ProjectIo / ProjectLoader）はこれを使い、フィールド転写を Schema 1 箇所へ集約する。
+    QVariantMap toVariantMap() const;
+    static ActionData fromVariantMap(const QVariantMap &map);
 
     // op と target が非空なら有効（trigger 既定は "onClick"）。
     static bool isValidJson(const QJsonObject &obj);
