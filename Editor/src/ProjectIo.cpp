@@ -2,108 +2,22 @@
 
 #include "hmi/schema/ProjectData.h"
 #include "hmi/schema/ScreenData.h"
+#include "hmi/schema/VariableData.h"
 #include "hmi/schema/WidgetData.h"
 
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonDocument>
-#include <QJsonParseError>
 #include <QSaveFile>
 #include <QVariantList>
 #include <QVariantMap>
 
-#include "hmi/schema/ActionData.h"
-#include "hmi/schema/BindingData.h"
-#include "hmi/schema/VariableData.h"
+#include <optional>
 
-namespace {
-using namespace hmi::schema;
-
-// Task 39: QVariantMap（QML 由来）↔ Schema 型の相互変換ヘルパー（アクション / バインディング
-// / 変数定義）。配列はそれぞれ QVariantList of QVariantMap で QML へ渡す / から受ける。
-
-QList<ActionData> actionsFromVariant(const QVariantList &list)
-{
-    QList<ActionData> result;
-    for (const QVariant &v : list) {
-        const QVariantMap m = v.toMap();
-        ActionData a;
-        a.trigger = m.value(QStringLiteral("trigger")).toString();
-        a.op = m.value(QStringLiteral("op")).toString();
-        a.target = m.value(QStringLiteral("target")).toString();
-        a.value = m.value(QStringLiteral("value")).toString();
-        result.append(a);
-    }
-    return result;
-}
-
-QVariantList actionsToVariant(const QList<ActionData> &actions)
-{
-    QVariantList result;
-    for (const ActionData &a : actions) {
-        QVariantMap m;
-        m.insert(QStringLiteral("trigger"), a.trigger);
-        m.insert(QStringLiteral("op"), a.op);
-        m.insert(QStringLiteral("target"), a.target);
-        m.insert(QStringLiteral("value"), a.value);
-        result.append(m);
-    }
-    return result;
-}
-
-QList<BindingData> bindingsFromVariant(const QVariantList &list)
-{
-    QList<BindingData> result;
-    for (const QVariant &v : list) {
-        const QVariantMap m = v.toMap();
-        BindingData b;
-        b.property = m.value(QStringLiteral("property")).toString();
-        b.variable = m.value(QStringLiteral("variable")).toString();
-        result.append(b);
-    }
-    return result;
-}
-
-QVariantList bindingsToVariant(const QList<BindingData> &bindings)
-{
-    QVariantList result;
-    for (const BindingData &b : bindings) {
-        QVariantMap m;
-        m.insert(QStringLiteral("property"), b.property);
-        m.insert(QStringLiteral("variable"), b.variable);
-        result.append(m);
-    }
-    return result;
-}
-
-QList<VariableData> variablesFromVariant(const QVariantList &list)
-{
-    QList<VariableData> result;
-    for (const QVariant &v : list) {
-        const QVariantMap m = v.toMap();
-        VariableData var;
-        var.name = m.value(QStringLiteral("name")).toString();
-        var.type = m.value(QStringLiteral("type")).toString();
-        var.initial = m.value(QStringLiteral("initial")).toString();
-        result.append(var);
-    }
-    return result;
-}
-
-QVariantList variablesToVariant(const QList<VariableData> &variables)
-{
-    QVariantList result;
-    for (const VariableData &var : variables) {
-        QVariantMap m;
-        m.insert(QStringLiteral("name"), var.name);
-        m.insert(QStringLiteral("type"), var.type);
-        m.insert(QStringLiteral("initial"), var.initial);
-        result.append(m);
-    }
-    return result;
-}
-
-} // namespace
+// QVariantMap（QML 由来）↔ Schema 型の相互変換は **Schema 側に集約**した（各型の
+// toVariantMap() / fromVariantMap()）。アクション / バインディングは WidgetData の
+// 変換が内部で面倒を見るため、ここでは widget と変数定義を回すだけでよい。
+// 従来は Editor / Simulator の C++ ブリッジに同形ヘルパーを重複保持していた。
 
 ProjectIo::ProjectIo(QObject *parent) : QObject(parent) {}
 
@@ -118,58 +32,19 @@ bool ProjectIo::save(const QUrl &fileUrl,
     ProjectData proj;
     proj.project = projectName;
     // Task 39: Project レベルの変数定義（optional。空可）。
-    proj.variables = variablesFromVariant(variables);
+    proj.variables.reserve(variables.size());
+    for (const QVariant &v : variables) {
+        proj.variables.append(VariableData::fromVariantMap(v.toMap()));
+    }
 
     ScreenData screen;
     screen.name = screenName;
     screen.widgets.reserve(widgets.size());
 
+    // 全フィールドの転写は WidgetData::fromVariantMap（Schema）に集約済み。スタイル属性を
+    // 増やしてもここは変更不要（従来は属性ごとに手書きコピーが必要な「取りこぼしやすい箇所」だった）。
     for (const QVariant &v : widgets) {
-        const QVariantMap m = v.toMap();
-        WidgetData w;
-        w.id = m.value(QStringLiteral("id")).toString();
-        w.type = m.value(QStringLiteral("type")).toString();
-        w.x = m.value(QStringLiteral("x")).toInt();
-        w.y = m.value(QStringLiteral("y")).toInt();
-        w.width = m.value(QStringLiteral("width")).toInt();
-        w.height = m.value(QStringLiteral("height")).toInt();
-        w.text = m.value(QStringLiteral("text")).toString();
-        w.tag = m.value(QStringLiteral("tag")).toString();
-        // Task 28: スタイル属性も QVariantMap → WidgetData へ手動コピーする。
-        // ここを抜かすと Schema / delegate を直しても styled JSON の色・フォントが
-        // 保存に乗らない（縦スライスで一番取りこぼしやすい箇所）。
-        w.backgroundColor = m.value(QStringLiteral("backgroundColor")).toString();
-        w.textColor = m.value(QStringLiteral("textColor")).toString();
-        w.fontSize = m.value(QStringLiteral("fontSize")).toInt();
-        // Task 31: ボーダー＋角丸。数値は **キー欠落時に -1 を既定**にして読む
-        //（`m.value(key, -1).toInt()`）。`.toInt()` だと QVariantMap にキーが無い経路
-        //（Canvas を介さない呼び出し・既存テスト等）で 0 が返り、toJson の `>= 0` 規則で
-        // 「未指定」でなく「明示的なボーダーなし」として誤保存される（Codex PR #62 P2）。
-        w.borderColor = m.value(QStringLiteral("borderColor")).toString();
-        w.borderWidth = m.value(QStringLiteral("borderWidth"), -1).toInt();
-        w.radius = m.value(QStringLiteral("radius"), -1).toInt();
-        // Task 33: フォント詳細も QVariantMap → WidgetData へ手動コピーする。
-        // bool は既定 false なのでキー欠落時も false（QVariant::toBool() の既定）。
-        w.fontBold = m.value(QStringLiteral("fontBold")).toBool();
-        w.fontItalic = m.value(QStringLiteral("fontItalic")).toBool();
-        w.fontFamily = m.value(QStringLiteral("fontFamily")).toString();
-        // Task 34: 配置 + opacity も QVariantMap → WidgetData へ手動コピーする。配置は
-        // 欠落時 空文字（= 未指定）。opacity は **`m.value(key, -1.0).toDouble()`**
-        // （QVariantMap の value 側で既定 -1 を与える。`QVariant::toDouble(-1)` は引数を
-        // 取らないので不可。borderWidth と同じ罠の real 版）。
-        w.hAlign = m.value(QStringLiteral("hAlign")).toString();
-        w.vAlign = m.value(QStringLiteral("vAlign")).toString();
-        w.opacity = m.value(QStringLiteral("opacity"), -1.0).toDouble();
-        // Task 42: 状態別スタイル（bool 3 つ）。**enabled は QVariantMap の既定を true** に
-        // して読む（`m.value(key, true).toBool()`。キーが無い経路で false 扱いにしない）。
-        // checkable / checked は既定 false（素の `.toBool()`）。
-        w.enabled = m.value(QStringLiteral("enabled"), true).toBool();
-        w.checkable = m.value(QStringLiteral("checkable")).toBool();
-        w.checked = m.value(QStringLiteral("checked")).toBool();
-        // Task 39: アクション / バインディング（optional 配列。QVariantList of QVariantMap）。
-        w.actions = actionsFromVariant(m.value(QStringLiteral("actions")).toList());
-        w.bindings = bindingsFromVariant(m.value(QStringLiteral("bindings")).toList());
-        screen.widgets.append(w);
+        screen.widgets.append(WidgetData::fromVariantMap(v.toMap()));
     }
 
     proj.screens.append(screen);
@@ -199,6 +74,9 @@ QVariantMap ProjectIo::load(const QUrl &fileUrl)
     QVariantMap result;
     result.insert(QStringLiteral("ok"), false);
     result.insert(QStringLiteral("widgets"), QVariantList{});
+    // 失敗時も widgets と対称に variables の既定（空配列）を入れておく。これがないと
+    // QML 側が ok を確認する前に result.variables を読んだとき undefined になる（CodeRabbit 指摘）。
+    result.insert(QStringLiteral("variables"), QVariantList{});
 
     // FileDialog から渡される file:/// 形式の QUrl を OS パスへ変換する（Task 6 の save と同方針）。
     const QString localPath = fileUrl.isLocalFile() ? fileUrl.toLocalFile() : fileUrl.toString();
@@ -213,65 +91,32 @@ QVariantMap ProjectIo::load(const QUrl &fileUrl)
     const QByteArray data = file.readAll();
     file.close();
 
-    QJsonParseError parseErr{};
-    const QJsonDocument doc = QJsonDocument::fromJson(data, &parseErr);
-    if (parseErr.error != QJsonParseError::NoError || !doc.isObject()) {
+    // JSON のパースと妥当性検証（再帰的に Screen / Widget まで）は Shared/Schema を
+    // 唯一の真実とする方針に従い、ProjectData::parseValidated に委ねる。fromJson は
+    // キー欠落時に既定値で埋める緩い設計のため、検証を通さないと `{}` や別形式の JSON でも
+    // 成功扱いになる。「検証してから fromJson」は Schema 側 1 箇所に強制済み。
+    const std::optional<ProjectData> parsed = ProjectData::parseValidated(data);
+    if (!parsed) {
         return result;
     }
-
-    // JSON 構造の妥当性検証は Shared/Schema を唯一の真実とする方針に従い、
-    // ProjectData::isValidJson（再帰的に Screen / Widget まで検査）に委ねる。
-    // fromJson はキー欠落時に既定値で埋める緩い設計のため、これを通さないと
-    // `{}` や別形式の JSON でも成功扱いになってしまう。
-    const QJsonObject root = doc.object();
-    if (!ProjectData::isValidJson(root)) {
-        return result;
-    }
-
-    const ProjectData proj = ProjectData::fromJson(root);
+    const ProjectData proj = *parsed;
 
     // isValidJson が screens 配列に最低 1 件含まれていることを保証している。
     // MVP では先頭スクリーンのみを編集対象とする（save 側も "Main" 単一スクリーン構成）。
     const ScreenData screen = proj.screens.first();
 
+    // 全フィールドの転写は WidgetData::toVariantMap（Schema）に集約済み。delegate が読む
+    // QVariantMap を 1 行で得る（従来は属性ごとに手書き insert していた）。
     QVariantList widgetsVar;
     widgetsVar.reserve(screen.widgets.size());
     for (const WidgetData &w : screen.widgets) {
-        QVariantMap m;
-        m.insert(QStringLiteral("id"), w.id);
-        m.insert(QStringLiteral("type"), w.type);
-        m.insert(QStringLiteral("x"), w.x);
-        m.insert(QStringLiteral("y"), w.y);
-        m.insert(QStringLiteral("width"), w.width);
-        m.insert(QStringLiteral("height"), w.height);
-        m.insert(QStringLiteral("text"), w.text);
-        m.insert(QStringLiteral("tag"), w.tag);
-        // Task 28: load 経路でもスタイル属性を QML 側へ届ける（delegate が読む）。
-        m.insert(QStringLiteral("backgroundColor"), w.backgroundColor);
-        m.insert(QStringLiteral("textColor"), w.textColor);
-        m.insert(QStringLiteral("fontSize"), w.fontSize);
-        // Task 31: ボーダー＋角丸も QML delegate へ届ける。未指定（-1 / 空）は
-        // QML 側で HmiButton の既定外観にフォールバックされる（-1 を素通しする）。
-        m.insert(QStringLiteral("borderColor"), w.borderColor);
-        m.insert(QStringLiteral("borderWidth"), w.borderWidth);
-        m.insert(QStringLiteral("radius"), w.radius);
-        // Task 33: フォント詳細も QML delegate へ届ける（delegate が HmiButton へ渡す）。
-        m.insert(QStringLiteral("fontBold"), w.fontBold);
-        m.insert(QStringLiteral("fontItalic"), w.fontItalic);
-        m.insert(QStringLiteral("fontFamily"), w.fontFamily);
-        // Task 34: 配置 + opacity も QML delegate へ届ける。未指定（空 / -1）は QML 側で
-        // HmiButton の既定（中央寄せ・不透明度 1.0）にフォールバックされる（素通しする）。
-        m.insert(QStringLiteral("hAlign"), w.hAlign);
-        m.insert(QStringLiteral("vAlign"), w.vAlign);
-        m.insert(QStringLiteral("opacity"), w.opacity);
-        // Task 42: 状態別スタイルも QML delegate へ届ける（delegate が HmiButton へ渡す）。
-        m.insert(QStringLiteral("enabled"), w.enabled);
-        m.insert(QStringLiteral("checkable"), w.checkable);
-        m.insert(QStringLiteral("checked"), w.checked);
-        // Task 39: アクション / バインディングも QML へ届ける（T40 の編集 UI / T41 の実行が読む）。
-        m.insert(QStringLiteral("actions"), actionsToVariant(w.actions));
-        m.insert(QStringLiteral("bindings"), bindingsToVariant(w.bindings));
-        widgetsVar.append(m);
+        widgetsVar.append(w.toVariantMap());
+    }
+
+    QVariantList variablesVar;
+    variablesVar.reserve(proj.variables.size());
+    for (const VariableData &var : proj.variables) {
+        variablesVar.append(var.toVariantMap());
     }
 
     result.insert(QStringLiteral("ok"), true);
@@ -279,6 +124,6 @@ QVariantMap ProjectIo::load(const QUrl &fileUrl)
     result.insert(QStringLiteral("screen"), screen.name);
     result.insert(QStringLiteral("widgets"), widgetsVar);
     // Task 39: Project レベルの変数定義も QML へ届ける（T40 の編集 / T41 の実行ストア初期化が読む）。
-    result.insert(QStringLiteral("variables"), variablesToVariant(proj.variables));
+    result.insert(QStringLiteral("variables"), variablesVar);
     return result;
 }

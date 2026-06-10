@@ -6,6 +6,7 @@
 #include <QJsonObject>
 #include <QList>
 #include <QString>
+#include <QVariantMap>
 
 namespace hmi::schema {
 
@@ -80,6 +81,17 @@ struct WidgetData {
 
     QJsonObject toJson() const;
     static WidgetData fromJson(const QJsonObject &obj);
+
+    // QML との往復用に QVariantMap（QtCore）と相互変換する。Editor の ProjectIo
+    // （save: fromVariantMap / load: toVariantMap）と Simulator の ProjectLoader
+    // （load: toVariantMap）が共用し、全フィールドの転写を **この Schema 1 箇所**へ
+    // 集約する（従来は両 C++ ブリッジに手書きで重複し「縦スライスで一番取りこぼし
+    // やすい箇所」だった）。fromVariantMap は QML 由来マップのキー欠落時に、各フィールドの
+    // 既定（数値センチネル -1 / enabled は true 等）を fromJson と同じ規則で埋める。
+    // actions / bindings は QVariantList of QVariantMap で往復する。QVariantMap は
+    // QtCore（QtQml 非依存）なので hmi_schema は引き続き QML を一切 import しない。
+    QVariantMap toVariantMap() const;
+    static WidgetData fromVariantMap(const QVariantMap &map);
 
     // JSON が Widget 形式として有効か（id / type / width / height が必要な型で
     // 揃っているか）を判定する。fromJson はキー欠落時に既定値で埋める緩い設計の

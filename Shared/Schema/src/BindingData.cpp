@@ -18,6 +18,22 @@ BindingData BindingData::fromJson(const QJsonObject &obj)
     return b;
 }
 
+QVariantMap BindingData::toVariantMap() const
+{
+    QVariantMap m;
+    m.insert(QStringLiteral("property"), property);
+    m.insert(QStringLiteral("variable"), variable);
+    return m;
+}
+
+BindingData BindingData::fromVariantMap(const QVariantMap &map)
+{
+    BindingData b;
+    b.property = map.value(QStringLiteral("property")).toString();
+    b.variable = map.value(QStringLiteral("variable")).toString();
+    return b;
+}
+
 bool BindingData::isValidJson(const QJsonObject &obj)
 {
     return obj.value("property").isString() && !obj.value("property").toString().isEmpty()

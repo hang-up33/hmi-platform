@@ -4,6 +4,7 @@
 #include "hmi/schema/WidgetData.h"
 
 #include <QJsonArray>
+#include <QJsonDocument>
 #include <QJsonObject>
 #include <QTest>
 
@@ -63,6 +64,12 @@ private slots:
     void isValidJsonRejectsNonArrayScreens();
     void isValidJsonRejectsInvalidScreenElement();
     void isValidJsonRejectsNonObjectScreenElement();
+
+    // parseValidated（refactoring）：検証付きパースが有効 JSON を通し、不正 JSON /
+    // 構造無効 JSON を nullopt で弾くことを固定する。
+    void parseValidatedAcceptsValidJson();
+    void parseValidatedRejectsMalformedJson();
+    void parseValidatedRejectsStructurallyInvalidJson();
 };
 
 void ProjectDataTest::roundTripWithMultipleScreens()
@@ -217,6 +224,33 @@ void ProjectDataTest::isValidJsonRejectsNonObjectScreenElement()
     obj["screens"] = screens;
 
     QVERIFY(!ProjectData::isValidJson(obj));
+}
+
+// parseValidated（refactoring）：有効な Project JSON のバイト列は ProjectData を返す。
+void ProjectDataTest::parseValidatedAcceptsValidJson()
+{
+    const QByteArray bytes = QJsonDocument(validProjectJson()).toJson();
+
+    const std::optional<ProjectData> parsed = ProjectData::parseValidated(bytes);
+    QVERIFY(parsed.has_value());
+    QVERIFY(!parsed->screens.isEmpty());
+}
+
+// parseValidated（refactoring）：JSON として壊れたバイト列は nullopt（読込側が ok=false へ）。
+void ProjectDataTest::parseValidatedRejectsMalformedJson()
+{
+    const QByteArray bytes = QByteArrayLiteral("{ this is not valid json ");
+
+    QVERIFY(!ProjectData::parseValidated(bytes).has_value());
+}
+
+// parseValidated（refactoring）：JSON としては正しいが Project 形式として無効（screens 無し）
+// なら nullopt。「isValidJson を通してから fromJson」を 1 箇所に強制していることを固定する。
+void ProjectDataTest::parseValidatedRejectsStructurallyInvalidJson()
+{
+    const QByteArray bytes = QByteArrayLiteral("{\"project\":\"X\"}");
+
+    QVERIFY(!ProjectData::parseValidated(bytes).has_value());
 }
 
 QTEST_APPLESS_MAIN(ProjectDataTest)

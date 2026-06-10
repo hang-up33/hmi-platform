@@ -1,6 +1,7 @@
 #include "hmi/schema/WidgetData.h"
 
 #include <QJsonArray>
+#include <QVariantList>
 
 namespace hmi::schema {
 
@@ -142,6 +143,92 @@ WidgetData WidgetData::fromJson(const QJsonObject &obj)
     const QJsonArray bindingsArr = obj.value("bindings").toArray();
     for (const QJsonValue &v : bindingsArr) {
         w.bindings.append(BindingData::fromJson(v.toObject()));
+    }
+    return w;
+}
+
+QVariantMap WidgetData::toVariantMap() const
+{
+    // QML（delegate）が読む形へ全フィールドを素通しで詰める。既定外観への
+    // フォールバックは描画側（HmiButton の resolved*）が持つため、ここでは
+    // 未指定値（空文字 / 0 / -1）もそのまま渡す。従来 ProjectIo::load /
+    // ProjectLoader::load が個別に組んでいたマップを Schema 1 箇所へ集約したもの。
+    QVariantMap m;
+    m.insert(QStringLiteral("id"), id);
+    m.insert(QStringLiteral("type"), type);
+    m.insert(QStringLiteral("x"), x);
+    m.insert(QStringLiteral("y"), y);
+    m.insert(QStringLiteral("width"), width);
+    m.insert(QStringLiteral("height"), height);
+    m.insert(QStringLiteral("text"), text);
+    m.insert(QStringLiteral("tag"), tag);
+    m.insert(QStringLiteral("backgroundColor"), backgroundColor);
+    m.insert(QStringLiteral("textColor"), textColor);
+    m.insert(QStringLiteral("fontSize"), fontSize);
+    m.insert(QStringLiteral("borderColor"), borderColor);
+    m.insert(QStringLiteral("borderWidth"), borderWidth);
+    m.insert(QStringLiteral("radius"), radius);
+    m.insert(QStringLiteral("fontBold"), fontBold);
+    m.insert(QStringLiteral("fontItalic"), fontItalic);
+    m.insert(QStringLiteral("fontFamily"), fontFamily);
+    m.insert(QStringLiteral("hAlign"), hAlign);
+    m.insert(QStringLiteral("vAlign"), vAlign);
+    m.insert(QStringLiteral("opacity"), opacity);
+    m.insert(QStringLiteral("enabled"), enabled);
+    m.insert(QStringLiteral("checkable"), checkable);
+    m.insert(QStringLiteral("checked"), checked);
+    QVariantList actionsVar;
+    actionsVar.reserve(actions.size());
+    for (const ActionData &a : actions) {
+        actionsVar.append(a.toVariantMap());
+    }
+    m.insert(QStringLiteral("actions"), actionsVar);
+    QVariantList bindingsVar;
+    bindingsVar.reserve(bindings.size());
+    for (const BindingData &b : bindings) {
+        bindingsVar.append(b.toVariantMap());
+    }
+    m.insert(QStringLiteral("bindings"), bindingsVar);
+    return m;
+}
+
+WidgetData WidgetData::fromVariantMap(const QVariantMap &map)
+{
+    // QML（Canvas の snapshotModel）由来マップから読む。キー欠落時の既定は fromJson と
+    // 同じ規則：**`0` が正当値の数値（borderWidth / radius / opacity）は -1 / -1.0 を
+    // 既定**にして「未指定」を区別し（`.toInt()` 既定 0 を使うと「ボーダーなし」と誤読）、
+    // **enabled は既定 true**（`.toBool()` 既定 false を使うと旧マップが disabled 扱いに）。
+    WidgetData w;
+    w.id = map.value(QStringLiteral("id")).toString();
+    w.type = map.value(QStringLiteral("type")).toString();
+    w.x = map.value(QStringLiteral("x")).toInt();
+    w.y = map.value(QStringLiteral("y")).toInt();
+    w.width = map.value(QStringLiteral("width")).toInt();
+    w.height = map.value(QStringLiteral("height")).toInt();
+    w.text = map.value(QStringLiteral("text")).toString();
+    w.tag = map.value(QStringLiteral("tag")).toString();
+    w.backgroundColor = map.value(QStringLiteral("backgroundColor")).toString();
+    w.textColor = map.value(QStringLiteral("textColor")).toString();
+    w.fontSize = map.value(QStringLiteral("fontSize")).toInt();
+    w.borderColor = map.value(QStringLiteral("borderColor")).toString();
+    w.borderWidth = map.value(QStringLiteral("borderWidth"), -1).toInt();
+    w.radius = map.value(QStringLiteral("radius"), -1).toInt();
+    w.fontBold = map.value(QStringLiteral("fontBold")).toBool();
+    w.fontItalic = map.value(QStringLiteral("fontItalic")).toBool();
+    w.fontFamily = map.value(QStringLiteral("fontFamily")).toString();
+    w.hAlign = map.value(QStringLiteral("hAlign")).toString();
+    w.vAlign = map.value(QStringLiteral("vAlign")).toString();
+    w.opacity = map.value(QStringLiteral("opacity"), -1.0).toDouble();
+    w.enabled = map.value(QStringLiteral("enabled"), true).toBool();
+    w.checkable = map.value(QStringLiteral("checkable")).toBool();
+    w.checked = map.value(QStringLiteral("checked")).toBool();
+    const QVariantList actionsVar = map.value(QStringLiteral("actions")).toList();
+    for (const QVariant &v : actionsVar) {
+        w.actions.append(ActionData::fromVariantMap(v.toMap()));
+    }
+    const QVariantList bindingsVar = map.value(QStringLiteral("bindings")).toList();
+    for (const QVariant &v : bindingsVar) {
+        w.bindings.append(BindingData::fromVariantMap(v.toMap()));
     }
     return w;
 }

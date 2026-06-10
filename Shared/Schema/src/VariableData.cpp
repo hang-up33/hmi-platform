@@ -48,6 +48,24 @@ VariableData VariableData::fromJson(const QJsonObject &obj)
     return v;
 }
 
+QVariantMap VariableData::toVariantMap() const
+{
+    QVariantMap m;
+    m.insert(QStringLiteral("name"), name);
+    m.insert(QStringLiteral("type"), type);
+    m.insert(QStringLiteral("initial"), initial);
+    return m;
+}
+
+VariableData VariableData::fromVariantMap(const QVariantMap &map)
+{
+    VariableData v;
+    v.name = map.value(QStringLiteral("name")).toString();
+    v.type = map.value(QStringLiteral("type")).toString();
+    v.initial = map.value(QStringLiteral("initial")).toString();
+    return v;
+}
+
 bool VariableData::isValidJson(const QJsonObject &obj)
 {
     if (!obj.value("name").isString() || obj.value("name").toString().isEmpty()) {

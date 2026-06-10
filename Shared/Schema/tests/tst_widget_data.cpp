@@ -47,6 +47,12 @@ private slots:
     void isValidJsonRejectsInvalidActionsBindings();
     void fromJsonFillsDefaultsForMissingKeys();
 
+    // C++ ブリッジ集約（refactoring）：QVariantMap 往復の全フィールド round-trip と、
+    // キー欠落時のセンチネル既定（-1 / true）の充足を固定する。
+    void variantMapRoundTripFullFields();
+    void fromVariantMapFillsSentinelDefaults();
+    void fromVariantMapNormalizesEmptyActionTrigger();
+
     void isValidJsonAcceptsMinimumRequiredFields();
     void isValidJsonRejectsMissingRequired_data();
     void isValidJsonRejectsMissingRequired();
@@ -474,6 +480,132 @@ void WidgetDataTest::fromJsonFillsDefaultsForMissingKeys()
     QVERIFY(w.hAlign.isEmpty());
     QVERIFY(w.vAlign.isEmpty());
     QCOMPARE(w.opacity, -1.0);
+}
+
+// C++ ブリッジ集約（refactoring）：全フィールド（actions / bindings 含む）が
+// toVariantMap → fromVariantMap で往復しても保たれることを固定する。従来 ProjectIo /
+// ProjectLoader に重複していた手書き転写を Schema へ集約したため、その正しさをここで担保する。
+void WidgetDataTest::variantMapRoundTripFullFields()
+{
+    WidgetData src;
+    src.id = "btn020";
+    src.type = "Button";
+    src.x = 11;
+    src.y = 22;
+    src.width = 130;
+    src.height = 44;
+    src.text = "Run";
+    src.tag = "PLC.RUN";
+    src.backgroundColor = "#ff0000";
+    src.textColor = "#00ff00";
+    src.fontSize = 18;
+    src.borderColor = "#112233";
+    src.borderWidth = 0;   // 0 は正当値（ボーダーなし）
+    src.radius = 6;
+    src.fontBold = true;
+    src.fontItalic = true;
+    src.fontFamily = "Courier New";
+    src.hAlign = "left";
+    src.vAlign = "bottom";
+    src.opacity = 0.0;     // 0.0 は正当値（完全透明）
+    src.enabled = false;   // 既定 true と異なる値
+    src.checkable = true;
+    src.checked = true;
+
+    ActionData a;
+    a.trigger = "onClick";
+    a.op = "setVariable";
+    a.target = "speed";
+    a.value = "42";
+    src.actions.append(a);
+
+    BindingData b;
+    b.property = "text";
+    b.variable = "label";
+    src.bindings.append(b);
+
+    const QVariantMap m = src.toVariantMap();
+    const WidgetData r = WidgetData::fromVariantMap(m);
+
+    QCOMPARE(r.id, src.id);
+    QCOMPARE(r.type, src.type);
+    QCOMPARE(r.x, src.x);
+    QCOMPARE(r.y, src.y);
+    QCOMPARE(r.width, src.width);
+    QCOMPARE(r.height, src.height);
+    QCOMPARE(r.text, src.text);
+    QCOMPARE(r.tag, src.tag);
+    QCOMPARE(r.backgroundColor, src.backgroundColor);
+    QCOMPARE(r.textColor, src.textColor);
+    QCOMPARE(r.fontSize, src.fontSize);
+    QCOMPARE(r.borderColor, src.borderColor);
+    QCOMPARE(r.borderWidth, src.borderWidth);
+    QCOMPARE(r.radius, src.radius);
+    QCOMPARE(r.fontBold, src.fontBold);
+    QCOMPARE(r.fontItalic, src.fontItalic);
+    QCOMPARE(r.fontFamily, src.fontFamily);
+    QCOMPARE(r.hAlign, src.hAlign);
+    QCOMPARE(r.vAlign, src.vAlign);
+    QCOMPARE(r.opacity, src.opacity);
+    QCOMPARE(r.enabled, src.enabled);
+    QCOMPARE(r.checkable, src.checkable);
+    QCOMPARE(r.checked, src.checked);
+    QCOMPARE(r.actions.size(), 1);
+    QCOMPARE(r.actions.at(0).trigger, QStringLiteral("onClick"));
+    QCOMPARE(r.actions.at(0).op, QStringLiteral("setVariable"));
+    QCOMPARE(r.actions.at(0).target, QStringLiteral("speed"));
+    QCOMPARE(r.actions.at(0).value, QStringLiteral("42"));
+    QCOMPARE(r.bindings.size(), 1);
+    QCOMPARE(r.bindings.at(0).property, QStringLiteral("text"));
+    QCOMPARE(r.bindings.at(0).variable, QStringLiteral("label"));
+}
+
+// C++ ブリッジ集約（refactoring）：キーが欠落した QVariantMap（Canvas を介さない経路）でも、
+// 数値センチネル（borderWidth / radius = -1、opacity = -1.0）と enabled = true を正しく
+// 既定する。`.toInt()`（既定 0）や `.toBool()`（既定 false）へのデグレを検出する。
+void WidgetDataTest::fromVariantMapFillsSentinelDefaults()
+{
+    QVariantMap m;
+    m.insert(QStringLiteral("id"), QStringLiteral("btn021"));
+    m.insert(QStringLiteral("type"), QStringLiteral("Button"));
+    m.insert(QStringLiteral("width"), 120);
+    m.insert(QStringLiteral("height"), 40);
+    // borderWidth / radius / opacity / enabled / checkable / checked / actions / bindings は欠落。
+
+    const WidgetData w = WidgetData::fromVariantMap(m);
+
+    QCOMPARE(w.borderWidth, -1);
+    QCOMPARE(w.radius, -1);
+    QCOMPARE(w.opacity, -1.0);
+    QCOMPARE(w.enabled, true);   // 欠落時 true（disabled へ誤読しない）
+    QCOMPARE(w.checkable, false);
+    QCOMPARE(w.checked, false);
+    QVERIFY(w.actions.isEmpty());
+    QVERIFY(w.bindings.isEmpty());
+}
+
+// C++ ブリッジ集約（CodeRabbit 指摘）：fromVariantMap は fromJson と同じく、空 / 欠落
+// trigger を "onClick" へ正規化する。これを抜くと空 trigger が toJson で書き出され、再読込時に
+// isValidJson（trigger != "onClick" を無効視）でプロジェクト全体の load が失敗する。
+void WidgetDataTest::fromVariantMapNormalizesEmptyActionTrigger()
+{
+    QVariantMap action;  // trigger キーを意図的に欠落させる
+    action.insert(QStringLiteral("op"), QStringLiteral("toggleVariable"));
+    action.insert(QStringLiteral("target"), QStringLiteral("running"));
+
+    QVariantMap m;
+    m.insert(QStringLiteral("id"), QStringLiteral("btn022"));
+    m.insert(QStringLiteral("type"), QStringLiteral("Button"));
+    m.insert(QStringLiteral("width"), 120);
+    m.insert(QStringLiteral("height"), 40);
+    m.insert(QStringLiteral("actions"), QVariantList{action});
+
+    const WidgetData w = WidgetData::fromVariantMap(m);
+    QCOMPARE(w.actions.size(), 1);
+    QCOMPARE(w.actions.at(0).trigger, QStringLiteral("onClick"));
+
+    // 正規化された結果は toJson → isValidJson を通る（load が壊れないことを担保）。
+    QVERIFY(WidgetData::isValidJson(w.toJson()));
 }
 
 void WidgetDataTest::isValidJsonAcceptsMinimumRequiredFields()
