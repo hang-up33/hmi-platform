@@ -1040,12 +1040,17 @@ Window {
                         InspectorSection {
                             title: qsTr("状態")
 
-                            // Task 42: 状態別スタイル（有効 / チェック可能 / チェック状態）。
+                            // Task 42 / 45: 状態別スタイル（有効 / トグルボタンにする / 初期状態をオン）。
                             // フォント CheckBox と同じ 2 本立て + 明示 beginEdit/commitEdit。
+                            // Task 45: 直訳ラベル（チェック可能 / チェック状態）は意味が伝わりにくいため
+                            // 動作ベースの語へ言い換え、ToolTip で 1 行の補足を付ける（hover で表示）。
                             CheckBox {
                                 id: inspectorEnabledCheck
                                 objectName: "inspectorEnabledCheck"
                                 text: qsTr("有効")
+                                ToolTip.text: qsTr("OFF にすると淡色表示になり、実行時（Simulator / Runtime）はクリックを受け付けません")
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
                                 onToggled: {
                                     if (canvas.selectedItem) {
                                         canvas.beginEdit()
@@ -1066,7 +1071,10 @@ Window {
                             CheckBox {
                                 id: inspectorCheckableCheck
                                 objectName: "inspectorCheckableCheck"
-                                text: qsTr("チェック可能")
+                                text: qsTr("トグルボタンにする")
+                                ToolTip.text: qsTr("ON にすると、クリックのたびに押下状態（オン / オフ）が切り替わるトグルボタンになります")
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
                                 onToggled: {
                                     if (canvas.selectedItem) {
                                         canvas.beginEdit()
@@ -1086,8 +1094,11 @@ Window {
                             CheckBox {
                                 id: inspectorCheckedCheck
                                 objectName: "inspectorCheckedCheck"
-                                text: qsTr("チェック状態（初期）")
-                                // checkable が ON のときだけ意味を持つ（外観に反映される）。
+                                text: qsTr("初期状態をオン")
+                                ToolTip.text: qsTr("トグルボタンの初期状態をオン（押下）にします。「トグルボタンにする」が ON のときのみ有効です")
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
+                                // 「トグルボタンにする」が ON のときだけ意味を持つ（外観に反映される）。
                                 enabled: inspectorCheckableCheck.checked
                                 onToggled: {
                                     if (canvas.selectedItem) {
@@ -1120,6 +1131,10 @@ Window {
                                 objectName: "inspectorActionOpCombo"
                                 width: parent.width
                                 model: ["(なし)", "setVariable", "toggleVariable"]
+                                // Task 45: クリック時の動作が分かりにくいため補足を付ける。
+                                ToolTip.text: qsTr("クリック時の動作。setVariable=値を代入 / toggleVariable=オン↔オフを反転")
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
                                 onActivated: rootWindow.applyActionFromInspector()
                             }
                             Label { text: qsTr("対象変数") }
@@ -1154,6 +1169,10 @@ Window {
                                 objectName: "inspectorBindingPropCombo"
                                 width: parent.width
                                 model: ["(なし)", "visible", "backgroundColor", "text", "textColor", "checked"]
+                                // Task 45: 「バインディング」概念の補足（変数の値に表示を追従させる）。
+                                ToolTip.text: qsTr("選んだ表示プロパティを、下の変数の値に自動追従させます（実行時に反映）")
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
                                 onActivated: rootWindow.applyBindingFromInspector()
                             }
                             Label { text: qsTr("追従変数") }
@@ -1175,7 +1194,9 @@ Window {
                             }
                         }
 
-                        // ── 詳細（既定で閉）: ID / Tag ──
+                        // ── 詳細（既定で閉）: ID / 外部タグ ──
+                        // Task 45: 技術的・通常編集しない項目（読み取り専用の ID、機能未配線の
+                        // 外部タグ）をここへまとめ、既定で折りたたんで通常の編集を邪魔しない。
                         InspectorSection {
                             objectName: "inspectorDetailSection"
                             title: qsTr("詳細")
@@ -1188,11 +1209,18 @@ Window {
                                     ? canvas.selectedItem.widgetId : "")
                             }
 
-                            Label { text: qsTr("Tag") }
+                            // Task 45: 旧ラベル「Tag」は何に使うか不明瞭だったため
+                            //「外部タグ（PLC等）」へ明確化。現状は保存（round-trip）のみで
+                            // 描画・動作には未使用＝将来の PLC アドレス連携用フィールド。
+                            Label { text: qsTr("外部タグ（PLC等）") }
                             TextField {
                                 id: inspectorTagField
                                 objectName: "inspectorTagField"
                                 width: parent.width
+                                placeholderText: qsTr("例: PLC.D100（任意）")
+                                ToolTip.text: qsTr("PLC アドレス等の外部識別子。現在は保存されるだけで描画・動作には使われません（将来の連携用）")
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
                                 onTextEdited: {
                                     if (canvas.selectedItem) {
                                         canvas.selectedItem.widgetTag = text
