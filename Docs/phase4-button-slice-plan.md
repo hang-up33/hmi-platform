@@ -328,7 +328,9 @@ flowchart LR
 
 ## Phase 5 候補（Phase 4 拡張完了後に別途承認）
 
-- **Widget 種別の横展開**：Phase 4（コア + 拡張）で固めたテンプレ（プロパティ追加 + 状態 / アクション）で Label / Lamp（表示灯）/ Gauge / Image 等を追加（`type` 分岐 + 各 HmiXxx.qml + Schema フィールド + インスペクタ）。Phase 4 拡張トラック B の変数 / アクションを各 Widget へ展開する。
+> **2026-06-10 着手**：横展開の **最初の Widget = Label** として具体化し、[phase5-widget-expansion-plan.md](phase5-widget-expansion-plan.md) を起票（Task 47〜49）。後続 Widget（Lamp / Gauge / Image）は Label 完了後に別途承認。
+
+- **Widget 種別の横展開**：Phase 4（コア + 拡張）で固めたテンプレ（プロパティ追加 + 状態 / アクション）で Label / Lamp（表示灯）/ Gauge / Image 等を追加（`type` 分岐 + 各 HmiXxx.qml + Schema フィールド + インスペクタ）。Phase 4 拡張トラック B の変数 / アクションを各 Widget へ展開する。**最初の Label は Schema 無改変**（既存フィールドで足り、型分岐の足場の導入に集中）— 詳細は [phase5-widget-expansion-plan.md](phase5-widget-expansion-plan.md)。
 - **アクションの拡充**：画面遷移・外部 I/O（タグ通信）・条件分岐など、Phase 4 拡張トラック B の最小サブシステムを実用レベルへ。
 - **Phase 3-C 系インフラ**：Yocto レシピ焼込・実機 E2E・CI self-hosted runner・Windows キャプチャ（[phase3b-runtime-plan.md](phase3b-runtime-plan.md) §「Phase 3-C 候補」）。
 
