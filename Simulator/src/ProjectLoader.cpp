@@ -26,6 +26,9 @@ QVariantMap ProjectLoader::load(const QUrl &fileUrl)
     QVariantMap result;
     result.insert(QStringLiteral("ok"), false);
     result.insert(QStringLiteral("widgets"), QVariantList{});
+    // 失敗時も widgets と対称に variables の既定（空配列）を入れておく。これがないと
+    // QML 側が ok を確認する前に result.variables を読んだとき undefined になる（CodeRabbit 指摘）。
+    result.insert(QStringLiteral("variables"), QVariantList{});
 
     // QML の FileDialog は file:/// 形式の QUrl を返す。toLocalFile で OS パスへ変換する。
     const QString localPath = fileUrl.isLocalFile() ? fileUrl.toLocalFile() : fileUrl.toString();

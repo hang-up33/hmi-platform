@@ -2,6 +2,7 @@
 
 #include "hmi/schema/ProjectData.h"
 #include "hmi/schema/ScreenData.h"
+#include "hmi/schema/VariableData.h"
 #include "hmi/schema/WidgetData.h"
 
 #include <QFile>
@@ -12,8 +13,6 @@
 #include <QVariantMap>
 
 #include <optional>
-
-#include "hmi/schema/VariableData.h"
 
 // QVariantMap（QML 由来）↔ Schema 型の相互変換は **Schema 側に集約**した（各型の
 // toVariantMap() / fromVariantMap()）。アクション / バインディングは WidgetData の
@@ -75,6 +74,9 @@ QVariantMap ProjectIo::load(const QUrl &fileUrl)
     QVariantMap result;
     result.insert(QStringLiteral("ok"), false);
     result.insert(QStringLiteral("widgets"), QVariantList{});
+    // 失敗時も widgets と対称に variables の既定（空配列）を入れておく。これがないと
+    // QML 側が ok を確認する前に result.variables を読んだとき undefined になる（CodeRabbit 指摘）。
+    result.insert(QStringLiteral("variables"), QVariantList{});
 
     // FileDialog から渡される file:/// 形式の QUrl を OS パスへ変換する（Task 6 の save と同方針）。
     const QString localPath = fileUrl.isLocalFile() ? fileUrl.toLocalFile() : fileUrl.toString();
