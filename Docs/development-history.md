@@ -223,9 +223,27 @@ timeline
 **計画書**：[Docs/phase4-button-slice-plan.md](phase4-button-slice-plan.md)（タスク内容・完了基準・進捗の正本）
 
 - **コア縦スライス（Task 25〜32）**：✅ 完了。選択 / インスペクタ / リサイズ / 削除 / スタイル属性（色・フォント・ボーダー・角丸）の全レイヤ貫通・テスト/E2E 拡充・i.MX8MP 実機 styled 描画まで（Task 31〜32 は PR [#64](https://github.com/hang-up33/hmi-platform/pull/64) / [#66](https://github.com/hang-up33/hmi-platform/pull/66)）。
-- **拡張（Task 33〜43・2026-06-07 承認）**：🟦 ほぼ完了（PR #69〜#87）。A=フォント詳細 / 配置 / opacity、C=グリッドスナップ / 複数選択・整列 / コピペ / undo-redo、B=変数ストア / アクション編集 / Simulator・Runtime 実行 / 状態別スタイル / アクション round-trip E2E。残は Task 43 の実機アクション動作撮影のみ（ローカル実施）。
+- **拡張（Task 33〜43・2026-06-07 承認）**：✅ 完了（PR #69〜#87 + 実機撮影）。A=フォント詳細 / 配置 / opacity、C=グリッドスナップ / 複数選択・整列 / コピペ / undo-redo、B=変数ストア / アクション編集 / Simulator・Runtime 実行 / 状態別スタイル / アクション round-trip E2E + 実機（i.MX8MP）アクション動作撮影（`vnc-click-capture.py`）。
 
 > 各 Task の詳細エントリ（目的 / 成果物 / 学び）は未追記。タスク別の要点は計画書の「進捗」表セル、状態一覧は [README.md](../README.md#フェーズ進捗) を参照。
+
+---
+
+## インスペクタ UX 改善（Task 44〜45）
+
+**目標**：横展開（新 Widget 種別）で同じ散らかりが各 Widget へ波及する前に、テンプレ＝右側インスペクタを綺麗にしてから増やす。
+**計画書**：[Docs/inspector-ux-plan.md](inspector-ux-plan.md)
+
+- **Task 44〜45**：✅ 完了（PR [#94](https://github.com/hang-up33/hmi-platform/pull/94)）。`InspectorSection`（折りたたみヘッダ + Column）を導入し平坦な約 20 項目を 6 セクション（基本 / 文字 / 背景・枠 / 状態 / 動作 / 詳細）＋変数定義へ再編、分かりづらいラベルを言い換え（`チェック可能`→`トグルボタンにする` 等）＋ hover ツールチップ。**スキーマ・round-trip・objectName は不変**で unit 10 + e2e 6 = 16/16 緑。
+
+---
+
+## Phase 5: 横展開（新 Widget 種別・最初は Label）
+
+**目標**：Phase 4 で固めたテンプレで Widget 種別を横に増やす。**最初の Widget = Label（文字表示）**。
+**計画書**：[Docs/phase5-widget-expansion-plan.md](phase5-widget-expansion-plan.md)（Task 47〜49）
+
+- 🟦 着手（計画起票）。Label は既存スキーマで足りるため **Schema / C++ ブリッジ無改変**で、横展開で唯一新しい **delegate の「型分岐の足場」**（`type` で HmiButton / HmiLabel を描き分ける）を導入する。binding は全 Widget・action は対話 Widget のみ＝**Label は表示専用**。次は **Task 47**（型分岐の足場 + HmiLabel 描画）。後続 Widget（Lamp / Gauge 等）は Label 完了後に別途承認。
 
 ---
 
