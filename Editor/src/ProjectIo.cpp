@@ -7,10 +7,11 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonDocument>
-#include <QJsonParseError>
 #include <QSaveFile>
 #include <QVariantList>
 #include <QVariantMap>
+
+#include <optional>
 
 #include "hmi/schema/VariableData.h"
 
@@ -88,22 +89,15 @@ QVariantMap ProjectIo::load(const QUrl &fileUrl)
     const QByteArray data = file.readAll();
     file.close();
 
-    QJsonParseError parseErr{};
-    const QJsonDocument doc = QJsonDocument::fromJson(data, &parseErr);
-    if (parseErr.error != QJsonParseError::NoError || !doc.isObject()) {
+    // JSON のパースと妥当性検証（再帰的に Screen / Widget まで）は Shared/Schema を
+    // 唯一の真実とする方針に従い、ProjectData::parseValidated に委ねる。fromJson は
+    // キー欠落時に既定値で埋める緩い設計のため、検証を通さないと `{}` や別形式の JSON でも
+    // 成功扱いになる。「検証してから fromJson」は Schema 側 1 箇所に強制済み。
+    const std::optional<ProjectData> parsed = ProjectData::parseValidated(data);
+    if (!parsed) {
         return result;
     }
-
-    // JSON 構造の妥当性検証は Shared/Schema を唯一の真実とする方針に従い、
-    // ProjectData::isValidJson（再帰的に Screen / Widget まで検査）に委ねる。
-    // fromJson はキー欠落時に既定値で埋める緩い設計のため、これを通さないと
-    // `{}` や別形式の JSON でも成功扱いになってしまう。
-    const QJsonObject root = doc.object();
-    if (!ProjectData::isValidJson(root)) {
-        return result;
-    }
-
-    const ProjectData proj = ProjectData::fromJson(root);
+    const ProjectData proj = *parsed;
 
     // isValidJson が screens 配列に最低 1 件含まれていることを保証している。
     // MVP では先頭スクリーンのみを編集対象とする（save 側も "Main" 単一スクリーン構成）。

@@ -1,6 +1,8 @@
 #include "hmi/schema/ProjectData.h"
 
 #include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonParseError>
 #include <QJsonValue>
 
 namespace hmi::schema {
@@ -71,6 +73,20 @@ bool ProjectData::isValidJson(const QJsonObject &obj)
         }
     }
     return true;
+}
+
+std::optional<ProjectData> ProjectData::parseValidated(const QByteArray &json)
+{
+    QJsonParseError parseErr{};
+    const QJsonDocument doc = QJsonDocument::fromJson(json, &parseErr);
+    if (parseErr.error != QJsonParseError::NoError || !doc.isObject()) {
+        return std::nullopt;
+    }
+    const QJsonObject root = doc.object();
+    if (!isValidJson(root)) {
+        return std::nullopt;
+    }
+    return fromJson(root);
 }
 
 } // namespace hmi::schema

@@ -5,10 +5,10 @@
 #include "hmi/schema/WidgetData.h"
 
 #include <QFile>
-#include <QJsonDocument>
-#include <QJsonParseError>
 #include <QVariantList>
 #include <QVariantMap>
+
+#include <optional>
 
 #include "hmi/schema/VariableData.h"
 
@@ -40,21 +40,14 @@ QVariantMap ProjectLoader::load(const QUrl &fileUrl)
     const QByteArray data = file.readAll();
     file.close();
 
-    QJsonParseError parseErr{};
-    const QJsonDocument doc = QJsonDocument::fromJson(data, &parseErr);
-    if (parseErr.error != QJsonParseError::NoError || !doc.isObject()) {
+    // JSON のパースと妥当性検証（再帰的に Screen / Widget まで）は Shared/Schema を
+    // 唯一の真実とする方針に従い、ProjectData::parseValidated に委ねる（Editor の
+    // ProjectIo::load と同じ検証パスを共用する。「検証してから fromJson」は Schema 1 箇所に強制）。
+    const std::optional<ProjectData> parsed = ProjectData::parseValidated(data);
+    if (!parsed) {
         return result;
     }
-
-    // JSON 構造の妥当性検証は Shared/Schema を唯一の真実とする方針に従い、
-    // ProjectData::isValidJson に委ねる（Task 7 で導入した検証 API を Simulator
-    // 側でも同じく呼ぶ）。
-    const QJsonObject root = doc.object();
-    if (!ProjectData::isValidJson(root)) {
-        return result;
-    }
-
-    const ProjectData proj = ProjectData::fromJson(root);
+    const ProjectData proj = *parsed;
 
     // isValidJson が screens 配列に最低 1 件含まれていることを保証している。
     // MVP では先頭スクリーンのみを表示対象とする。

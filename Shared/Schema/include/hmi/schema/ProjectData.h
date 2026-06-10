@@ -3,9 +3,12 @@
 #include "ScreenData.h"
 #include "VariableData.h"
 
+#include <QByteArray>
 #include <QJsonObject>
 #include <QList>
 #include <QString>
+
+#include <optional>
 
 namespace hmi::schema {
 
@@ -24,6 +27,14 @@ struct ProjectData {
     // ScreenData として有効）を判定する。Editor / Simulator 側はこれが true の
     // ときだけ fromJson の結果を信頼できる。
     static bool isValidJson(const QJsonObject &obj);
+
+    // JSON バイト列を **検証付きで** パースする。JSON として不正、または Project 形式として
+    // 無効（`isValidJson` が false）なら `std::nullopt` を返す。読込側（ProjectIo /
+    // ProjectLoader）が個別に「parse → isObject → isValidJson → fromJson」を書くのをやめ、
+    // 「検証してから fromJson」を **この 1 箇所に強制**する（検証の取りこぼし防止）。
+    // ファイル / QUrl の読込は OS I/O なので利用側アプリに残し、ここはバイト列のみ受ける
+    //（Schema は QFile を持たず、データ + JSON の責務に閉じる）。
+    static std::optional<ProjectData> parseValidated(const QByteArray &json);
 };
 
 } // namespace hmi::schema
