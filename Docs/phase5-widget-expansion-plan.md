@@ -59,7 +59,7 @@ flowchart LR
 
 ### 型分岐の足場（横展開テンプレの核）
 
-現状の delegate は `type` を無視して常に `HmiButton` を生成する（`Editor/qml/Canvas.qml:746` / `Simulator/qml/SimulatorCanvas.qml:141` に「将来 type で分岐」と明記済み）。ここに分岐を入れる。
+現状の delegate は `type` を無視して常に `HmiButton` を生成する（Editor `Canvas.qml` の `// 現状 MVP は Button のみ。型分岐は将来 Widget 種別が増えた時に拡張。`、Simulator `SimulatorCanvas.qml` の `// MVP は Button のみ。将来 Widget 種別が増えたら type で分岐する。` というコメント直下が該当箇所）。ここに分岐を入れる（**行番号は他 PR の編集でずれるため、上記コメント文字列で箇所を特定する**）。
 
 - **機構**：delegate 内に `Loader { sourceComponent: wrapper.widgetType === "Label" ? labelComp : buttonComp }` を置き、`Component { id: buttonComp; HmiButton{…} }` / `Component { id: labelComp; HmiLabel{…} }` の 2 つの inline Component を用意する。各 Component の中身は従来どおり **`wrapper`（id）経由で `widgetText` 等のメタへバインド**できる（Loader の子は外側スコープの id を参照可）。
   - **clicked relay は Component 内の `onClicked:` ハンドラで結線**する（Connections 不要）。Loader の `item.clicked` を外から繋ぐより、Component 内に `onClicked: wrapper.…` を書くほうが既存パターン（HmiButton をインラインで結線）と同形で素直。
@@ -79,7 +79,7 @@ flowchart LR
 | `widgetEnabled`（淡色表示用・既定 true） | — |
 | **選択用 `signal clicked(int modifiers)` + MouseArea**（Editor 選択の中継に使う。Simulator では action へ繋がない＝表示専用） | — |
 
-- **既定値は HmiLabel に集約**（Button と同じ思想）。Button と違う既定：**背景 = 透明**（`backgroundColor:""` → `"transparent"`）、ボーダー無し、`textColor` 既定は可読性のため濃色（例 `#1d3557`）、`hAlign` 既定は左寄せ（ラベルらしさ。未指定 `""` → `Text.AlignLeft`）。確定値は Task 47 実装時に HmiButton の resolved 既定と並べて決める。
+- **既定値は HmiLabel に集約**（Button と同じ思想）。Button と違う既定：**背景 = 透明**（`backgroundColor:""` → `"transparent"`）、ボーダー無し、`textColor` 既定は可読性のため濃色（例 `#1d3557`）、`hAlign` 既定は左寄せ（ラベルらしさ。未指定 `""` → `Text.AlignLeft`）。確定値は Task 47 実装時に HmiButton の resolved 既定と並べて決める。**実装で確定した既定値が本計画と乖離したら、Task 47 の PR で本計画書の当該記述を同コミットで更新する**（計画と実装の乖離を残さない）。
 - **binding 対応プロパティ**：`text` / `textColor` / `visible`（＋必要なら `backgroundColor`）。Simulator の `boundValue()` 経路をそのまま再利用（delegate 側で結線）。
 
 ### binding ⊂ Label 可・action ⊄ Label（役割分担）
@@ -109,9 +109,9 @@ flowchart LR
 
 | Task | スコープ | 完了基準 |
 |---|---|---|
-| **47** | **型分岐の足場 + HmiLabel 描画**。`HmiLabel.qml`（表示専用・resolved\* フォールバック・選択用 clicked relay）を新設し `Shared/Widgets/CMakeLists.txt` に登録。Editor `Canvas.qml` と Simulator `SimulatorCanvas.qml` の delegate に `type` 分岐（Loader + 2 Component）を導入し、`type:"Label"` の widget を HmiLabel で描く（それ以外＝従来 HmiButton）。Label は binding（text/textColor/visible）追従・click action 非結線。**追加 UI はまだ無し**（手書き JSON / 既存 fixture で検証）。新規 unit：HmiLabel 単体（resolved 既定・clicked シグナル）＋ delegate が `type` で正しい Widget を生成すること（Editor/Simulator）。**Schema/C++ ブリッジは無改変**。 | build 成功。Web `ctest`（unit + e2e）緑。 |
+| **47** | **型分岐の足場 + HmiLabel 描画**。`HmiLabel.qml`（表示専用・resolved\* フォールバック・選択用 clicked relay）を新設し `Shared/Widgets/CMakeLists.txt` に登録。Editor `Canvas.qml` と Simulator `SimulatorCanvas.qml` の delegate に `type` 分岐（Loader + 2 Component）を導入し、`type:"Label"` の widget を HmiLabel で描く（それ以外＝従来 HmiButton）。Label は binding（text/textColor/visible）追従・click action 非結線。**追加 UI はまだ無し**（手書き JSON / 既存 fixture で検証）。新規 unit：HmiLabel 単体（resolved 既定・clicked シグナル）＋ delegate が `type` で正しい Widget を生成すること（Editor/Simulator）。**Schema/C++ ブリッジは無改変**。 | build 成功。Web `ctest`（unit + e2e）緑。**`type:"Label"` でも EditableWidget の選択枠・リサイズハンドルが正常動作すること**（HmiLabel の clicked 中継で選択でき、ハンドルでサイズ変更できる）。 |
 | **48** | **Editor で Label を作成 + インスペクタの型対応**。ツールバーに「ラベル追加」ボタン（or 種別ドロップダウン）を足し、`type:"Label"` の widget を生成（`addWidget(type)` へ一般化、Label の既定文字・透明背景）。インスペクタは選択 widget の `type` に応じて**無関係セクションを隠す**（上表：Label は状態/クリックアクションを非表示、ボーダー/角丸を隠す。binding 編集は残す）。**objectName・スキーマ不変**（`visible` 切替のみ）。 | build + `ctest` 緑。`editor.png` 撮り直し（Label 配置図）+ キャプション更新。 |
-| **49** | **Label の round-trip + binding + E2E + スクショ**。Label JSON（`type:"Label"` + 文字スタイル）の保存/読込 round-trip を確認。`text`/`textColor`/`visible` binding を Simulator で追従確認（既存 `boundValue` 経路再利用）。新規 cross-app E2E `e2e_label_roundtrip`（Editor で Label 入り JSON を `--open`→`saveTo`→JSON 直接 assert → Simulator を `--open` で起動し `HmiLabel`〔objectName `hmiLabel`〕の `text` を `getStringProperty` で観測）。README スクショ（`simulator.png` に Label を含める）。**任意**：実機（i.MX8MP）で Label 描画を VNC キャプチャ（ASCII ラベル）。 | build + `ctest`（unit + e2e、`e2e_label_roundtrip` 追加で計 7 本）緑。スクショ同期。 |
+| **49** | **Label の round-trip + binding + E2E + スクショ**。Label JSON（`type:"Label"` + 文字スタイル）の保存/読込 round-trip を確認。`text`/`textColor`/`visible` binding を Simulator で追従確認（既存 `boundValue` 経路再利用）。新規 cross-app E2E `e2e_label_roundtrip`（Editor で Label 入り JSON を `--open`→`saveTo`→JSON 直接 assert → Simulator を `--open` で起動し `HmiLabel`〔objectName `hmiLabel`〕の `text` を `getStringProperty` で観測）。README スクショ（`simulator.png` に Label を含める）。**任意**：実機（i.MX8MP）で Label 描画を VNC キャプチャ（ASCII ラベル）。 | build + `ctest` 緑（`e2e_label_roundtrip` 追加で **E2E が 6→7 本**、unit は別途）。スクショ同期。 |
 
 ### 制約・非スコープ（Codex 向け補足）
 
