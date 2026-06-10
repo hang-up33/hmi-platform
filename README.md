@@ -22,6 +22,10 @@ Simulator（読み取り専用）で同じ JSON を描画した様子。Editor �
 
 Phase 4 の styled JSON（背景色 / 文字色 / 文字サイズ）を **i.MX8MP 実機**の `hmi_runtime` で描画した様子（Task 30）。HDMI 未接続のため Qt 内蔵 VNC platform に描画し digital capture した（右の黒帯は VNC framebuffer とウィンドウサイズ差、日本語ラベルが □ なのは実機 image にフォント無しのため）。スタイル属性が実機まで貫通していることの証跡。
 
+![runtime action demo on i.MX8MP](Docs/screenshots/task-43-runtime-action.png)
+
+Phase 4 拡張の **変数・クリックアクション・バインディング**を **i.MX8MP 実機**で動かした様子（Task 43）。`TOGGLE POWER` ボタンに VNC ポインタクリックを送ると `toggleVariable("power")` が実行され、バインディング（`visible` ← `power`）に追従して `LAMP` が消える（左=クリック前 / 右=クリック後）。静的描画だけでなく **実機上で「動く HMI」** になっていることの証跡（撮影は新ヘルパー `scripts/yocto/vnc-click-capture.py`）。
+
 ## 成果物
 
 | モジュール | 役割 |
@@ -189,7 +193,7 @@ Editor で作った画面（JSON）を実機の `hmi_runtime` で描画するま
 
 ## フェーズ進捗
 
-Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入、**Phase 3-B / Runtime（Task 22〜24）まで全タスク完了**。新 BSP（scarthgap）で Qt6 入り実機 image と Qt6 クロス SDK を生成し、`hmi_runtime` を aarch64 にクロスビルド → **i.MX8MP 実機（weston / Wayland）で Editor 由来の JSON を描画**することを実機で確認済み。**Phase 4 / Button 縦スライス（Task 25〜32）も完了** — Widget 種別を横に増やす前に Button 1 つを全レイヤで深く作り込み「Widget 追加テンプレ」を確立した（選択・インスペクタ・リサイズ・削除・スタイル属性〔色・フォント・ボーダー・角丸〕の Schema 拡張）。`0` が正当値の数値プロパティを `-1` センチネルで optional 化、E2E に style / border / radius round-trip を追加し、macOS `ctest`（unit 8 + e2e 5 = 13/13）緑を確認した（旧 Phase 4〔Task 25〜30〕＋旧 Phase 5〔Task 31〜32〕を 1 本の Button 縦スライスに統合）。続く **Phase 4 拡張（Task 33〜43）を承認済み・ほぼ完了（Task 33〜42 完了、Task 43 は E2E まで完了・実機アクション動作撮影のみ残）** — ①静的スタイルの続き（フォント詳細 / 配置 / opacity）→②編集体験の強化（グリッドスナップ / 複数選択・整列 / コピペ / undo-redo）→③状態 / アクション（変数ストア + クリックアクション + 状態別スタイル）で Button をさらに深く作り込む（**Task 33〜43 の一覧は下記「フェーズ進捗」表を参照**）。横展開（新 Widget 種別 Label / Lamp 等）は Phase 5 候補。
+Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入、**Phase 3-B / Runtime（Task 22〜24）まで全タスク完了**。新 BSP（scarthgap）で Qt6 入り実機 image と Qt6 クロス SDK を生成し、`hmi_runtime` を aarch64 にクロスビルド → **i.MX8MP 実機（weston / Wayland）で Editor 由来の JSON を描画**することを実機で確認済み。**Phase 4 / Button 縦スライス（Task 25〜32）も完了** — Widget 種別を横に増やす前に Button 1 つを全レイヤで深く作り込み「Widget 追加テンプレ」を確立した（選択・インスペクタ・リサイズ・削除・スタイル属性〔色・フォント・ボーダー・角丸〕の Schema 拡張）。`0` が正当値の数値プロパティを `-1` センチネルで optional 化、E2E に style / border / radius round-trip を追加し、macOS `ctest`（unit 8 + e2e 5 = 13/13）緑を確認した（旧 Phase 4〔Task 25〜30〕＋旧 Phase 5〔Task 31〜32〕を 1 本の Button 縦スライスに統合）。続く **Phase 4 拡張（Task 33〜43）も完了** — ①静的スタイルの続き（フォント詳細 / 配置 / opacity）→②編集体験の強化（グリッドスナップ / 複数選択・整列 / コピペ / undo-redo）→③状態 / アクション（変数ストア + クリックアクション + 状態別スタイル）で Button をさらに深く作り込み、**Task 43 で変数・アクション・バインディング付き JSON を i.MX8MP 実機の `hmi_runtime` で動かし、VNC クリックでの状態遷移を撮影**するところまで到達した（**Task 33〜43 の一覧は下記「フェーズ進捗」表を参照**）。横展開（新 Widget 種別 Label / Lamp 等）は Phase 5 候補（未承認）。
 
 > 各タスクで何をしたか・どの PR で入ったか・何を学んだかの **時系列まとめ** は [Docs/development-history.md](Docs/development-history.md) を参照。第三者への説明用。
 >
@@ -264,7 +268,7 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 | 31 | ボーダー＋角丸を全レイヤ貫通（Schema + HmiButton + Simulator/Runtime + インスペクタ）★ | ✅ 完了（PR #64。`0`=ボーダーなし／`-1`=未指定／キー欠落時省略の境界 unit テスト + インスペクタ ScrollView 化 + Editor/Simulator スクショ） |
 | 32 | E2E 拡充（border/radius）+ 実機 styled 描画更新（全環境） | ✅ 完了（PR #66。`e2e_style_roundtrip` を border/radius まで拡張〔数値は `int(float())`、border 色は既定 `#1d3557` と別値〕。**macOS `ctest` で unit 8 + e2e 5 = 13/13 緑**。README スクショを border 入りに更新。実機 border 再撮影は任意のため省略） |
 
-**Phase 4 拡張（Task 33〜43・2026-06-07 承認 / ほぼ完了：Task 33〜42 完了、Task 43 は実機アクション動作撮影のみ残）** — Button をさらに深く作り込む 3 トラック。詳細は [Docs/phase4-button-slice-plan.md](Docs/phase4-button-slice-plan.md)「Phase 4 拡張」。
+**Phase 4 拡張（Task 33〜43・2026-06-07 承認 / 完了）** — Button をさらに深く作り込む 3 トラック。詳細は [Docs/phase4-button-slice-plan.md](Docs/phase4-button-slice-plan.md)「Phase 4 拡張」。
 
 | # | タスク | 状態 |
 |---|---|---|
@@ -278,7 +282,7 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 | 40 | インスペクタでアクション編集（Editor）（B） | ✅ 完了（インスペクタに変数定義パネル + クリック時アクション編集〔操作/対象変数/値〕+ バインディング編集〔property/追従変数〕を追加。設定は保存 JSON に反映） |
 | 41 | Simulator / Runtime でアクション実行 + 状態反映（B） | ✅ 完了（Simulator/Runtime に「実行」を追加：読込時に変数ストアを初期化、Button クリックでアクション〔setVariable / toggleVariable〕実行 → 変数更新 → binding〔visible / text / 背景色 / 文字色〕が追従。読み取り専用アプリが初めて「動く」。Simulator QML テスト追加・unit 10/10 緑） |
 | 42 | 状態別スタイル（pressed / disabled / checked）（B） | ✅ 完了（Schema に enabled / checkable / checked を追加し全レイヤ貫通。disabled は淡色＋クリック実行無効、checked は背景暗転＋太枠のトグル外観。checked は変数バインド連動可。enabled は既定 true で false のときだけ保存。unit + Simulator QML テスト追加・10/10 緑） |
-| 43 | アクション round-trip E2E + 実機動作確認（全環境）（B） | 🟦 E2E 部分完了（実機は未）。新規 cross-app E2E `e2e_action_roundtrip`：Editor で変数/アクション/バインディング付き JSON を round-trip 保存 → Simulator で `HmiButton` を Spix `mouseClick` → `setVariable` 実行 → `text` バインディング追従（"OFF"→"ON"）を観測（**実クリックで状態遷移を見る初の E2E**）。Linux/Web で unit 10 + e2e 6 = 16/16 緑。実機アクション動作撮影はローカルで後日 |
+| 43 | アクション round-trip E2E + 実機動作確認（全環境）（B） | ✅ 完了。新規 cross-app E2E `e2e_action_roundtrip`：Editor で変数/アクション/バインディング付き JSON を round-trip 保存 → Simulator で `HmiButton` を Spix `mouseClick` → `setVariable` 実行 → `text` バインディング追従（"OFF"→"ON"）を観測（**実クリックで状態遷移を見る初の E2E**）。Linux/Web で unit 10 + e2e 6 = 16/16 緑。**実機（i.MX8MP）でも `vnc-click-capture.py` で VNC クリックを送り `toggleVariable`→binding の状態遷移を撮影**（`Docs/screenshots/task-43-runtime-action.png`）。Phase 4 全クローズ |
 
 ## 共通データ仕様（Project Format）
 

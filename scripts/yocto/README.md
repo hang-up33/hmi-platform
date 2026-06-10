@@ -106,3 +106,39 @@ python scripts/yocto/vnc-capture.py <board-ip> 5900 out.png <source-ip>
 - **scp は `-O`**（実機 sshd は socket-activated・sftp-server 無し）。鍵認証なら非対話で回せる
   （母艦で `ssh-keygen` → 公開鍵を実機 `/root/.ssh/authorized_keys` にシリアル経由で 1 行追記）。
 - 実機 image に**日本語フォントが無い**ため、ツールバー等の日本語ラベルは □ になる（描画自体は正常）。
+  動作証跡用の JSON はラベルを **ASCII** にすると豆腐を避けられる（例 `Docs/samples/task-43-runtime-action-demo.json`）。
+
+## アクション（クリック→状態変化）を実機で撮る（Task 43 で確立）
+
+`vnc-capture.py` は framebuffer を 1 枚読むだけ（読み取り専用）。**変数・クリックアクション・
+バインディング**（Phase 4 拡張トラック B）の「クリック→変数更新→プロパティ追従」を実機で
+動作証跡化するには、実際にクリックを送って**前後**を撮る必要がある。Qt 内蔵 VNC（QVncServer）は
+RFB の **PointerEvent** をマウス入力として QML シーンへ配送するので、`vnc-click-capture.py` で
+クリックを 1 回送って before / after を保存できる（stdlib のみ・依存なし）。
+
+```sh
+# 実機側（vnc platform で起動。ウィンドウ実寸 1024x768 に合わせる）
+QT_QPA_PLATFORM='vnc:size=1024x768' nohup /tmp/hmi_runtime --open /tmp/action.json >/tmp/vnc.log 2>&1 </dev/null &
+
+# 母艦側（Windows）: TOGGLE ボタン中心へクリックを送り前後を撮る
+#   <before.png> <after.png> <click_x> <click_y> [<source-ip>]
+python scripts/yocto/vnc-click-capture.py <board-ip> 5900 before.png after.png 512 209 <source-ip>
+```
+
+- **クリック座標はウィンドウ（VNC framebuffer）左上原点の画面ピクセル**。Simulator/Runtime は
+  1024x768 ウィンドウに 800x600 キャンバスを `centerIn` するので、キャンバス座標 `(cx, cy)` は
+  画面 `(112 + cx, 84 + cy)`（例：キャンバス `(400,125)` の Button 中心 → 画面 `(512,209)`）。
+- **after は incremental でなく non-incremental（全面）で撮る**：QVnc は変化が無いと incremental
+  要求に応答を保留するため、`recv` がブロックして socket timeout になる。`vnc-click-capture.py` は
+  before / after とも全面取得にして確実化している。
+- before/after を 1 枚に合成するのは任意（README 掲載は PIL で横並びにした `task-43-runtime-action.png`）。
+
+### mDNS / 接続の追加の罠（Task 43 で踏んだ）
+
+- **mDNS が IPv6（AAAA）しか返さないことがある**：`Resolve-DnsName imx8mp-lpddr4-evk.local` が
+  `fe80::...`（IPv6 link-local）だけを返し IPv4（A）が出ない場合がある。IPv4 を引くには
+  **`Resolve-DnsName imx8mp-lpddr4-evk.local -Type A`** で A レコードを明示照会する
+  （例 `169.254.124.33`）。IPv6 link-local で直接 ping するなら zone id 付き（`fe80::...%<ifIndex>`）。
+- **SSH 鍵認証は非対話で回る**（`-o BatchMode=yes` で確認可）。PowerShell 越しに ssh/scp を呼ぶと
+  known_hosts 追加の警告が stderr に出て `$LASTEXITCODE`/`$?` が偽陰性になることがあるが、
+  標準出力の内容で成否を判断する（`2>&1` 由来の NativeCommandError は無視してよい）。

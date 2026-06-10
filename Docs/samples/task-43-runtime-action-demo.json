@@ -1,0 +1,43 @@
+{
+  "project": "Task 43 Action Demo (ASCII for device)",
+  "variables": [
+    { "name": "power",      "type": "bool",   "initial": true },
+    { "name": "statusText", "type": "string", "initial": "BOUND TEXT (from variable)" },
+    { "name": "lampColor",  "type": "string", "initial": "#2a9d8f" }
+  ],
+  "screens": [
+    {
+      "name": "Main",
+      "widgets": [
+        {
+          "id": "btnToggle", "type": "Button",
+          "x": 80, "y": 80, "width": 640, "height": 90,
+          "text": "TOGGLE POWER (click to flip 'power')",
+          "backgroundColor": "#4cc9f0", "textColor": "#ffffff", "fontSize": 22, "radius": 10,
+          "actions": [
+            { "trigger": "onClick", "op": "toggleVariable", "target": "power" }
+          ]
+        },
+        {
+          "id": "btnStatus", "type": "Button",
+          "x": 80, "y": 210, "width": 640, "height": 90,
+          "text": "(static text - overridden by binding)",
+          "textColor": "#ffffff", "fontSize": 22, "radius": 10,
+          "bindings": [
+            { "property": "text",            "variable": "statusText" },
+            { "property": "backgroundColor", "variable": "lampColor" }
+          ]
+        },
+        {
+          "id": "btnLamp", "type": "Button",
+          "x": 80, "y": 340, "width": 640, "height": 90,
+          "text": "LAMP: visible only when power = true",
+          "backgroundColor": "#e9c46a", "textColor": "#1d3557", "fontSize": 22, "radius": 10,
+          "bindings": [
+            { "property": "visible", "variable": "power" }
+          ]
+        }
+      ]
+    }
+  ]
+}
