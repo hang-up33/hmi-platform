@@ -191,7 +191,7 @@ timeline
 
 ---
 
-## Phase 3-B: Runtime / i.MX8MP 対応（進行中 — Task 22 完了）
+## Phase 3-B: Runtime / i.MX8MP 対応
 
 **目標**：Simulator と同じ JSON 描画機能を i.MX8MP 実機（Yocto / Wayland or EGLFS）で動かす Runtime を導入する。
 **計画書**：[Docs/phase3b-runtime-plan.md](phase3b-runtime-plan.md)（v2、PR [#37](https://github.com/hang-up33/hmi-platform/pull/37) で策定）
@@ -217,6 +217,18 @@ timeline
 
 ---
 
+## Phase 4: Button 縦スライス（Task 25〜32）+ 拡張（Task 33〜43）
+
+**目標**：Widget 種別を横に増やす前に、Button 1 つを全レイヤ（Schema→Widgets→Editor→Simulator→Runtime→実機）で深く作り込み「Widget 追加テンプレ」を確立する。
+**計画書**：[Docs/phase4-button-slice-plan.md](phase4-button-slice-plan.md)（タスク内容・完了基準・進捗の正本）
+
+- **コア縦スライス（Task 25〜32）**：✅ 完了。選択 / インスペクタ / リサイズ / 削除 / スタイル属性（色・フォント・ボーダー・角丸）の全レイヤ貫通・テスト/E2E 拡充・i.MX8MP 実機 styled 描画まで（Task 31〜32 は PR [#64](https://github.com/hang-up33/hmi-platform/pull/64) / [#66](https://github.com/hang-up33/hmi-platform/pull/66)）。
+- **拡張（Task 33〜43・2026-06-07 承認）**：🟦 ほぼ完了（PR #69〜#87）。A=フォント詳細 / 配置 / opacity、C=グリッドスナップ / 複数選択・整列 / コピペ / undo-redo、B=変数ストア / アクション編集 / Simulator・Runtime 実行 / 状態別スタイル / アクション round-trip E2E。残は Task 43 の実機アクション動作撮影のみ（ローカル実施）。
+
+> 各 Task の詳細エントリ（目的 / 成果物 / 学び）は未追記。タスク別の要点は計画書の「進捗」表セル、状態一覧は [README.md](../README.md#フェーズ進捗) を参照。
+
+---
+
 ## 番外: 開発コードネーム「Atlas」決定（2026-05-30）
 
 フェーズタスクとは別に、プロジェクト全体の**開発時の通称（ブランド別名）**を決めた経緯。
@@ -238,5 +250,6 @@ timeline
 - [Docs/phase2-testing-plan.md](phase2-testing-plan.md) — Phase 2 計画書
 - [Docs/phase3-e2e-plan.md](phase3-e2e-plan.md) — Phase 3-A 計画書
 - [Docs/phase3b-runtime-plan.md](phase3b-runtime-plan.md) — Phase 3-B 計画書 v2
+- [Docs/phase4-button-slice-plan.md](phase4-button-slice-plan.md) — Phase 4 計画書（コア縦スライス + 拡張）
 - [Docs/phase3b-runtime-journey.md](phase3b-runtime-journey.md) — Phase 3-B 奮闘記（Task 23/24 をどう乗り越えたか・心境の記録）
 - [Docs/qml-canvas-structure.md](qml-canvas-structure.md) — Canvas.qml の構造解説
