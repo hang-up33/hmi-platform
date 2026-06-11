@@ -187,6 +187,12 @@ Window {
         }
     }
 
+    // Task 46: 色スウォッチの一辺と、色 TextField がスウォッチ用に空ける幅
+    //（スウォッチ + Row spacing 6）。3 つの色フィールドで共有する
+    //（CodeRabbit PR #99 nitpick: マジックナンバー 34 の重複を定数化）。
+    readonly property int colorSwatchSize: 28
+    readonly property int colorSwatchReserve: colorSwatchSize + 6
+
     // Task 46: QML の color 値を Schema の "#RRGGBB" 形式へ変換する。
     // ColorDialog の selectedColor（color 型）を hex TextField / live Item に
     // 書き戻すときに使う（alpha は使わない。ColorDialog の alpha オプションも無効のまま）。
@@ -365,8 +371,8 @@ Window {
         // 未指定（空文字）のとき見せる既定色。HmiButton の resolved* と揃える。
         property color fallback: "white"
 
-        width: 28
-        height: 28
+        width: rootWindow.colorSwatchSize
+        height: rootWindow.colorSwatchSize
         radius: 4
         border.color: "#999999"
         border.width: 1
@@ -889,7 +895,7 @@ Window {
                                 TextField {
                                     id: inspectorTextColorField
                                     objectName: "inspectorTextColorField"
-                                    width: parent.width - 34
+                                    width: parent.width - rootWindow.colorSwatchReserve
                                     placeholderText: qsTr("white")
                                     // Codex PR #58 P2: 空 または 完全な #RRGGBB の時だけ反映する
                                     //（途中入力・不正値を live Item に書き戻さない）。
@@ -992,7 +998,7 @@ Window {
                                 TextField {
                                     id: inspectorBgColorField
                                     objectName: "inspectorBgColorField"
-                                    width: parent.width - 34
+                                    width: parent.width - rootWindow.colorSwatchReserve
                                     placeholderText: qsTr("#4cc9f0")
                                     // Codex PR #58 P2: 空 または 完全な #RRGGBB の時だけ live Item へ
                                     // 反映する。途中入力（"#ff"）や不正値（"redx"）が
@@ -1044,7 +1050,7 @@ Window {
                                 TextField {
                                     id: inspectorBorderColorField
                                     objectName: "inspectorBorderColorField"
-                                    width: parent.width - 34
+                                    width: parent.width - rootWindow.colorSwatchReserve
                                     placeholderText: qsTr("#1d3557")
                                     // 背景色・文字色と同じく、空 または 完全な #RRGGBB の時だけ反映する
                                     //（途中入力・不正値を live Item に書き戻さない。Codex PR #58 P2）。
