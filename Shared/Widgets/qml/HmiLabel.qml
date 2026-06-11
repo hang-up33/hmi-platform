@@ -92,6 +92,8 @@ Rectangle {
     Text {
         // 配置を効かせるため `anchors.fill` にして Text の領域を Label 全体へ広げ、
         // horizontalAlignment / verticalAlignment で寄せる（HmiButton と同じ）。
+        // clip: false（既定）＝幅を超えた文字列は Label 矩形の外へはみ出す
+        //（HmiButton と同じ挙動。CLAUDE.md「HmiButton の Text は clip しない」参照）。
         anchors.fill: parent
         anchors.margins: 4
         text: root.text
