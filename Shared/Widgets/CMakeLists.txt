@@ -11,6 +11,7 @@ qt_add_qml_module(hmi_widgets STATIC
     OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/HmiWidgets
     QML_FILES
         qml/HmiButton.qml
+        qml/HmiLabel.qml
         qml/VariableStore.qml
 )
 

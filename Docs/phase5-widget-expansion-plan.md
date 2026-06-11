@@ -150,8 +150,8 @@ flowchart TD
 
 | Task | 状態 | PR |
 |---|---|---|
-| 47 型分岐の足場 + HmiLabel 描画 | 未着手 | — |
+| 47 型分岐の足場 + HmiLabel 描画 | ✅ 完了 | #TBD |
 | 48 Editor で Label 作成 + インスペクタ型対応 | 未着手 | — |
 | 49 Label round-trip + binding + E2E + スクショ | 未着手 | — |
 
-> **本計画は計画書の起票**（コード変更なし）。承認後に Task 47 から 1 タスクずつ着手する（[mvp-next-task](../.claude/skills/mvp-next-task/SKILL.md)）。
+> Task 47 完了（2026-06-11）：`HmiLabel.qml`（表示専用・resolved\* フォールバック・選択用 `clicked(int modifiers)` relay）を新設し `Shared/Widgets/CMakeLists.txt` に登録。Editor `Canvas.qml` と Simulator `SimulatorCanvas.qml` の delegate に `type` 分岐（Loader + inline Component の 2 分岐。`type:"Label"`→HmiLabel、それ以外→HmiButton）を導入。Label は binding（text / textColor / backgroundColor / visible）追従のみで click action は非結線（表示専用）。新規 unit：HmiLabel 単体（resolved 既定〔背景=透明 / 文字色 #1d3557 / hAlign=左〕・clicked シグナル）＋ delegate が `type` で正しい Widget を生成・切替すること（Editor / Simulator）。**Schema / C++ ブリッジは無改変**。Web `ctest` unit 10 + e2e 6 = 16/16 緑。次は Task 48。

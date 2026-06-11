@@ -792,4 +792,78 @@ TestCase {
         compare(itemById("c").x, 200);  // 右端は固定
         compare(itemById("b").x, 105);  // 中間が等間隔
     }
+
+    // Task 47: objectName で子孫を再帰探索する（delegate の Loader が描いた
+    // HmiButton / HmiLabel を型ごとに辿るため）。
+    function findByObjectName(node, name) {
+        if (!node) {
+            return null;
+        }
+        if (node.objectName === name) {
+            return node;
+        }
+        const kids = node.children;
+        if (kids) {
+            for (let i = 0; i < kids.length; ++i) {
+                const found = findByObjectName(kids[i], name);
+                if (found) {
+                    return found;
+                }
+            }
+        }
+        return null;
+    }
+
+    // Task 47: 型分岐の足場。type:"Button"（既定）の delegate は HmiButton を描き、
+    // HmiLabel は生成しないこと（init() の btn001 は type=Button）。
+    function test_delegate_renders_button_for_button_type() {
+        const wrapper = editableChildren()[0];
+        verify(wrapper !== null, "btn001 の EditableWidget が無い");
+        tryVerify(function() { return findByObjectName(wrapper, "hmiButton") !== null; },
+                  1000, "Button type で HmiButton が描かれない");
+        verify(findByObjectName(wrapper, "hmiLabel") === null,
+               "Button type なのに HmiLabel も生成された");
+    }
+
+    // Task 47: type:"Label" の delegate は HmiLabel を描き、HmiButton は生成しないこと。
+    // EditableWidget でラップされるため、Label でも選択枠・リサイズハンドルは効く
+    //（wrapper 側の機構で、描く中身に依らない）。
+    function test_delegate_renders_label_for_label_type() {
+        canvas.widgetModel = [
+            { id: "lbl1", type: "Label", x: 0, y: 0, width: 120, height: 40, text: "Hello" }
+        ];
+        tryVerify(function() { return editableChildren().length === 1; }, 1000,
+                  "Label モデルが反映されない");
+        const wrapper = editableChildren()[0];
+        compare(wrapper.widgetType, "Label");
+        tryVerify(function() { return findByObjectName(wrapper, "hmiLabel") !== null; },
+                  1000, "Label type で HmiLabel が描かれない");
+        verify(findByObjectName(wrapper, "hmiButton") === null,
+               "Label type なのに HmiButton も生成された");
+        // 描かれた HmiLabel に text が伝播する（wrapper メタ経由のバインド）。
+        const lbl = findByObjectName(wrapper, "hmiLabel");
+        compare(lbl.text, "Hello");
+    }
+
+    // Task 47: type を Button↔Label に切り替えると Loader が描く Widget も切り替わる
+    //（同一 id を別 type に差し替えた時の型分岐の追従を固定する）。
+    function test_delegate_switches_widget_on_type_change() {
+        canvas.widgetModel = [
+            { id: "w1", type: "Button", x: 0, y: 0, width: 120, height: 40, text: "B" }
+        ];
+        tryVerify(function() {
+            const ch = editableChildren();
+            return ch.length === 1 && findByObjectName(ch[0], "hmiButton") !== null;
+        }, 1000, "初期 Button が描かれない");
+
+        canvas.widgetModel = [
+            { id: "w1", type: "Label", x: 0, y: 0, width: 120, height: 40, text: "L" }
+        ];
+        tryVerify(function() {
+            const ch = editableChildren();
+            return ch.length === 1
+                && findByObjectName(ch[0], "hmiLabel") !== null
+                && findByObjectName(ch[0], "hmiButton") === null;
+        }, 1000, "Label へ切替後も HmiButton が残る / HmiLabel が出ない");
+    }
 }
