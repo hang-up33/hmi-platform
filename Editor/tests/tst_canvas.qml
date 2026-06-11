@@ -903,6 +903,20 @@ TestCase {
                   "追加 Label が HmiLabel で描かれない");
     }
 
+    // Task 48（CodeRabbit PR #98 nitpick）：未知 / 空の type はホワイトリスト正規化で
+    // "Button" にフォールバックする（保存される widgetModel[].type が常に既知種別になる）。
+    function test_add_widget_unknown_type_falls_back_to_button() {
+        canvas.addWidget("Unknown");
+        tryVerify(function() { return editableChildren().length === 2; }, 1000, "追加されない");
+        compare(addedWidget().widgetType, "Button");
+        canvas.undo();
+        tryVerify(function() { return editableChildren().length === 1; }, 1000, "undo されない");
+
+        canvas.addWidget("");  // 空文字も Button へ
+        tryVerify(function() { return editableChildren().length === 2; }, 1000, "追加されない");
+        compare(addedWidget().widgetType, "Button");
+    }
+
     // Task 48: addWidget("Label") も undo で元に戻せる（構造変更 = pushUndo 経路）。
     function test_add_label_is_undoable() {
         compare(canvas.canUndo, false);
