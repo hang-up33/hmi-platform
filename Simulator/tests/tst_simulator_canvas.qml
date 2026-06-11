@@ -201,4 +201,52 @@ TestCase {
         compare(VariableStore.get("on"), true);
         compare(button.checked, true);
     }
+
+    // Task 47: 型分岐の足場。type:"Button"（既定）の delegate は HmiButton を描く。
+    function test_delegate_renders_button_for_button_type() {
+        canvas.variableModel = [];
+        canvas.widgetModel = [{
+            id: "b1", type: "Button", x: 0, y: 0, width: 120, height: 40, text: "B"
+        }];
+        var wrapper = null;
+        tryVerify(function() {
+            wrapper = findByObjectName(canvas, "widget_b1");
+            return wrapper !== null;
+        }, 1000, "delegate widget_b1 が生成されない");
+
+        tryVerify(function() { return findByObjectName(wrapper, "hmiButton") !== null; },
+                  1000, "Button type で HmiButton が描かれない");
+        verify(findByObjectName(wrapper, "hmiLabel") === null,
+               "Button type なのに HmiLabel も生成された");
+    }
+
+    // Task 47: type:"Label" の delegate は HmiLabel を描き、text binding を追従させる
+    //（Label は表示専用＝binding 追従はあるが click action は無い）。
+    function test_delegate_renders_label_and_follows_text_binding() {
+        canvas.variableModel = [{ name: "label", type: "string", initial: "hi" }];
+        canvas.widgetModel = [{
+            id: "b1", type: "Label", x: 0, y: 0, width: 120, height: 40, text: "static",
+            bindings: [{ property: "text", variable: "label" }]
+        }];
+        var wrapper = null;
+        tryVerify(function() {
+            wrapper = findByObjectName(canvas, "widget_b1");
+            return wrapper !== null;
+        }, 1000, "delegate widget_b1 が生成されない");
+
+        var labelItem = null;
+        tryVerify(function() {
+            labelItem = findByObjectName(wrapper, "hmiLabel");
+            return labelItem !== null;
+        }, 1000, "Label type で HmiLabel が描かれない");
+        verify(findByObjectName(wrapper, "hmiButton") === null,
+               "Label type なのに HmiButton も生成された");
+
+        // 初期は変数 label の値 "hi" に追従（静的 text "static" ではない）。
+        compare(labelItem.text, "hi");
+
+        // 変数を更新すると Label の text も追従する（binding は全 Widget 共通）。
+        VariableStore.setValue("label", "bye");
+        compare(labelItem.text, "bye");
+    }
 }

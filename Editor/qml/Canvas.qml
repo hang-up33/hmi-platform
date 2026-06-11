@@ -742,47 +742,95 @@ Item {
                         }
                     }
 
-                    // 現状 MVP は Button のみ。型分岐は将来 Widget 種別が増えた時に拡張。
-                    HmiButton {
+                    // Task 47: 型分岐の足場（Phase 5 横展開の核）。delegate は widgetType に
+                    // 応じて HmiButton / HmiLabel を描き分ける。機構は Loader + inline Component
+                    // の 2 分岐で最小化する（3 種別以上になったら DelegateChooser 等へ昇格する
+                    // 余地を残すが、本タスクでは hypothetical future を作り込まない）。
+                    // 各 Component の中身は従来どおり外側スコープの wrapper(id) 経由でメタへ
+                    // バインドし、clicked を選択要求へ中継する（HmiButton をインライン結線して
+                    // いた従来パターンと同形）。Loader の loaded item は anchors.fill: parent で
+                    // Loader（= container 全面）に追従する。
+                    Loader {
                         anchors.fill: parent
-                        // EditableWidget の content alias は内部 container を指すため、
-                        // parent 経由ではなく wrapper の id 経由でメタを参照する
-                        // （CLAUDE.md の "default property alias の parent 罠" 参照）。
-                        text: wrapper.widgetText
-                        tag: wrapper.widgetTag
-                        // Task 28: スタイル属性を HmiButton（唯一の真実）へ渡す。
-                        // 空 / 0 は HmiButton 側で既定外観にフォールバックされる。
-                        backgroundColor: wrapper.widgetBackgroundColor
-                        textColor: wrapper.widgetTextColor
-                        fontSize: wrapper.widgetFontSize
-                        // Task 31: ボーダー＋角丸を渡す。角丸は widgetRadius → cornerRadius に
-                        // マップする（HmiButton の公開入力名は radius 衝突回避で cornerRadius）。
-                        // 空 / -1 は HmiButton 側で既定外観にフォールバックされる。
-                        borderColor: wrapper.widgetBorderColor
-                        borderWidth: wrapper.widgetBorderWidth
-                        cornerRadius: wrapper.widgetRadius
-                        // Task 33: フォント詳細を HmiButton へ渡す（空 / false は既定にフォールバック）。
-                        fontBold: wrapper.widgetFontBold
-                        fontItalic: wrapper.widgetFontItalic
-                        fontFamily: wrapper.widgetFontFamily
-                        // Task 34: 配置 + 不透明度を HmiButton へ渡す。不透明度は widgetOpacity
-                        // → HmiButton.widgetOpacity（両者とも組込み opacity 衝突回避でリネーム）。
-                        // 空 / -1 は HmiButton 側で既定（中央寄せ・不透明度 1.0）にフォールバック。
-                        hAlign: wrapper.widgetHAlign
-                        vAlign: wrapper.widgetVAlign
-                        widgetOpacity: wrapper.widgetOpacity
-                        // Task 42: 状態別スタイルを HmiButton へ渡す。enabled → widgetEnabled
-                        // （組込み衝突回避）。Editor では淡色プレビューになるだけで、選択用の
-                        // clicked は MouseArea を止めないため disabled でも選択・編集できる。
-                        widgetEnabled: wrapper.widgetEnabled
-                        checkable: wrapper.widgetCheckable
-                        checked: wrapper.widgetChecked
-                        // Task 25: ドラッグ用の親 MouseArea は drag.filterChildren 下で
-                        // クリックを発火しない（子が消費する）。よってクリック検出は
-                        // HmiButton 側の clicked を中継して選択要求に使う。
-                        // Task 36: modifiers（Shift / Ctrl）を渡して複数選択の加除を可能にする。
-                        onClicked: function(modifiers) {
-                            wrapper.selectRequested(wrapper.widgetId, modifiers)
+                        sourceComponent: wrapper.widgetType === "Label" ? labelComponent
+                                                                        : buttonComponent
+                    }
+
+                    Component {
+                        id: buttonComponent
+                        HmiButton {
+                            // Task 47: E2E / unit から型分岐を観察できるよう objectName を付与
+                            //（Simulator 側と同名。HmiLabel は新規 "hmiLabel"）。
+                            objectName: "hmiButton"
+                            anchors.fill: parent
+                            // EditableWidget の content alias は内部 container を指すため、
+                            // parent 経由ではなく wrapper の id 経由でメタを参照する
+                            // （CLAUDE.md の "default property alias の parent 罠" 参照）。
+                            text: wrapper.widgetText
+                            tag: wrapper.widgetTag
+                            // Task 28: スタイル属性を HmiButton（唯一の真実）へ渡す。
+                            // 空 / 0 は HmiButton 側で既定外観にフォールバックされる。
+                            backgroundColor: wrapper.widgetBackgroundColor
+                            textColor: wrapper.widgetTextColor
+                            fontSize: wrapper.widgetFontSize
+                            // Task 31: ボーダー＋角丸を渡す。角丸は widgetRadius → cornerRadius に
+                            // マップする（HmiButton の公開入力名は radius 衝突回避で cornerRadius）。
+                            // 空 / -1 は HmiButton 側で既定外観にフォールバックされる。
+                            borderColor: wrapper.widgetBorderColor
+                            borderWidth: wrapper.widgetBorderWidth
+                            cornerRadius: wrapper.widgetRadius
+                            // Task 33: フォント詳細を HmiButton へ渡す（空 / false は既定にフォールバック）。
+                            fontBold: wrapper.widgetFontBold
+                            fontItalic: wrapper.widgetFontItalic
+                            fontFamily: wrapper.widgetFontFamily
+                            // Task 34: 配置 + 不透明度を HmiButton へ渡す。不透明度は widgetOpacity
+                            // → HmiButton.widgetOpacity（両者とも組込み opacity 衝突回避でリネーム）。
+                            // 空 / -1 は HmiButton 側で既定（中央寄せ・不透明度 1.0）にフォールバック。
+                            hAlign: wrapper.widgetHAlign
+                            vAlign: wrapper.widgetVAlign
+                            widgetOpacity: wrapper.widgetOpacity
+                            // Task 42: 状態別スタイルを HmiButton へ渡す。enabled → widgetEnabled
+                            // （組込み衝突回避）。Editor では淡色プレビューになるだけで、選択用の
+                            // clicked は MouseArea を止めないため disabled でも選択・編集できる。
+                            widgetEnabled: wrapper.widgetEnabled
+                            checkable: wrapper.widgetCheckable
+                            checked: wrapper.widgetChecked
+                            // Task 25: ドラッグ用の親 MouseArea は drag.filterChildren 下で
+                            // クリックを発火しない（子が消費する）。よってクリック検出は
+                            // HmiButton 側の clicked を中継して選択要求に使う。
+                            // Task 36: modifiers（Shift / Ctrl）を渡して複数選択の加除を可能にする。
+                            onClicked: function(modifiers) {
+                                wrapper.selectRequested(wrapper.widgetId, modifiers)
+                            }
+                        }
+                    }
+
+                    Component {
+                        id: labelComponent
+                        HmiLabel {
+                            // Task 47: 型分岐の観察用 objectName（HmiButton と対）。
+                            objectName: "hmiLabel"
+                            anchors.fill: parent
+                            // Label は表示専用。HmiButton と同じく wrapper 経由でメタへバインド
+                            // するが、ボーダー / 角丸 / トグル状態 / アクションは持たない
+                            // （Label が使わないメタは渡さない）。
+                            text: wrapper.widgetText
+                            backgroundColor: wrapper.widgetBackgroundColor
+                            textColor: wrapper.widgetTextColor
+                            fontSize: wrapper.widgetFontSize
+                            fontBold: wrapper.widgetFontBold
+                            fontItalic: wrapper.widgetFontItalic
+                            fontFamily: wrapper.widgetFontFamily
+                            hAlign: wrapper.widgetHAlign
+                            vAlign: wrapper.widgetVAlign
+                            widgetOpacity: wrapper.widgetOpacity
+                            widgetEnabled: wrapper.widgetEnabled
+                            // Task 47: 選択中継は Button と同形。クリックで selectRequested を
+                            // 発火して Canvas の選択集合へ加除する（Label も EditableWidget の
+                            // 選択枠・リサイズハンドルが効く）。Label に action 実行は無い。
+                            onClicked: function(modifiers) {
+                                wrapper.selectRequested(wrapper.widgetId, modifiers)
+                            }
                         }
                     }
                 }

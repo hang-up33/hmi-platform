@@ -193,7 +193,7 @@ Editor で作った画面（JSON）を実機の `hmi_runtime` で描画するま
 
 ## フェーズ進捗
 
-Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入、**Phase 3-B / Runtime（Task 22〜24）まで全タスク完了**。新 BSP（scarthgap）で Qt6 入り実機 image と Qt6 クロス SDK を生成し、`hmi_runtime` を aarch64 にクロスビルド → **i.MX8MP 実機（weston / Wayland）で Editor 由来の JSON を描画**することを実機で確認済み。**Phase 4 / Button 縦スライス（Task 25〜32）も完了** — Widget 種別を横に増やす前に Button 1 つを全レイヤで深く作り込み「Widget 追加テンプレ」を確立した（選択・インスペクタ・リサイズ・削除・スタイル属性〔色・フォント・ボーダー・角丸〕の Schema 拡張）。`0` が正当値の数値プロパティを `-1` センチネルで optional 化、E2E に style / border / radius round-trip を追加し、macOS `ctest`（unit 8 + e2e 5 = 13/13）緑を確認した（旧 Phase 4〔Task 25〜30〕＋旧 Phase 5〔Task 31〜32〕を 1 本の Button 縦スライスに統合）。続く **Phase 4 拡張（Task 33〜43）も完了** — ①静的スタイルの続き（フォント詳細 / 配置 / opacity）→②編集体験の強化（グリッドスナップ / 複数選択・整列 / コピペ / undo-redo）→③状態 / アクション（変数ストア + クリックアクション + 状態別スタイル）で Button をさらに深く作り込み、**Task 43 の実機（i.MX8MP）アクション動作撮影も完了**するところまで到達した（**Task 33〜43 の一覧は下記「フェーズ進捗」表を参照**）。続いて **インスペクタ UX 改善（Task 44〜45）完了** — 横展開で同じ散らかりが各 Widget へ波及する前に、テンプレ＝右側インスペクタを折りたたみセクションに整理し分かりづらいラベルを言い換えた（PR #94）。**ここから Phase 5 / 横展開（新 Widget 種別）に着手** — 最初の Widget を **Label（文字表示）** と定めて計画を起票し（[Docs/phase5-widget-expansion-plan.md](Docs/phase5-widget-expansion-plan.md)、Task 47〜49）、Button の縦スライス資産を再利用しつつ **delegate の「型分岐の足場」** を導入する（Label は既存スキーマで足りるため **Schema / C++ ブリッジは無改変**、表示専用で binding のみ・action は持たない）。
+Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導入、**Phase 3-B / Runtime（Task 22〜24）まで全タスク完了**。新 BSP（scarthgap）で Qt6 入り実機 image と Qt6 クロス SDK を生成し、`hmi_runtime` を aarch64 にクロスビルド → **i.MX8MP 実機（weston / Wayland）で Editor 由来の JSON を描画**することを実機で確認済み。**Phase 4 / Button 縦スライス（Task 25〜32）も完了** — Widget 種別を横に増やす前に Button 1 つを全レイヤで深く作り込み「Widget 追加テンプレ」を確立した（選択・インスペクタ・リサイズ・削除・スタイル属性〔色・フォント・ボーダー・角丸〕の Schema 拡張）。`0` が正当値の数値プロパティを `-1` センチネルで optional 化、E2E に style / border / radius round-trip を追加し、macOS `ctest`（unit 8 + e2e 5 = 13/13）緑を確認した（旧 Phase 4〔Task 25〜30〕＋旧 Phase 5〔Task 31〜32〕を 1 本の Button 縦スライスに統合）。続く **Phase 4 拡張（Task 33〜43）も完了** — ①静的スタイルの続き（フォント詳細 / 配置 / opacity）→②編集体験の強化（グリッドスナップ / 複数選択・整列 / コピペ / undo-redo）→③状態 / アクション（変数ストア + クリックアクション + 状態別スタイル）で Button をさらに深く作り込み、**Task 43 の実機（i.MX8MP）アクション動作撮影も完了**するところまで到達した（**Task 33〜43 の一覧は下記「フェーズ進捗」表を参照**）。続いて **インスペクタ UX 改善（Task 44〜45）完了** — 横展開で同じ散らかりが各 Widget へ波及する前に、テンプレ＝右側インスペクタを折りたたみセクションに整理し分かりづらいラベルを言い換えた（PR #94）。**ここから Phase 5 / 横展開（新 Widget 種別）に着手** — 最初の Widget を **Label（文字表示）** と定めて計画を起票し（[Docs/phase5-widget-expansion-plan.md](Docs/phase5-widget-expansion-plan.md)、Task 47〜49）、Button の縦スライス資産を再利用しつつ **delegate の「型分岐の足場」** を導入する（Label は既存スキーマで足りるため **Schema / C++ ブリッジは無改変**、表示専用で binding のみ・action は持たない）。**Task 47（型分岐の足場 + HmiLabel 描画）完了** — `HmiLabel.qml`（表示専用・resolved\* フォールバック・選択用 clicked relay）を新設し、Editor / Simulator の delegate に `type` 分岐（Loader + inline Component の 2 分岐）を入れて `type:"Label"` を HmiLabel で描けるようにした（Web `ctest` unit 10 + e2e 6 = 16/16 緑）。次は Task 48（Editor の Label 追加 UI + インスペクタ型対応）。
 
 > 各タスクで何をしたか・どの PR で入ったか・何を学んだかの **時系列まとめ** は [Docs/development-history.md](Docs/development-history.md) を参照。第三者への説明用。
 >
@@ -299,7 +299,7 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 
 | # | タスク | 状態 |
 |---|---|---|
-| 47 | 型分岐の足場 + HmiLabel 描画（Shared/Widgets + Editor/Simulator delegate） | ⬜ 未着手 |
+| 47 | 型分岐の足場 + HmiLabel 描画（Shared/Widgets + Editor/Simulator delegate） | ✅ 完了 |
 | 48 | Editor で Label 作成 + インスペクタの型対応（Editor） | ⬜ 未着手 |
 | 49 | Label round-trip + binding + E2E + スクショ（全環境） | ⬜ 未着手 |
 

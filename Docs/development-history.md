@@ -243,7 +243,12 @@ timeline
 **目標**：Phase 4 で固めたテンプレで Widget 種別を横に増やす。**最初の Widget = Label（文字表示）**。
 **計画書**：[Docs/phase5-widget-expansion-plan.md](phase5-widget-expansion-plan.md)（Task 47〜49）
 
-- 🟦 着手（計画起票）。Label は既存スキーマで足りるため **Schema / C++ ブリッジ無改変**で、横展開で唯一新しい **delegate の「型分岐の足場」**（`type` で HmiButton / HmiLabel を描き分ける）を導入する。binding は全 Widget・action は対話 Widget のみ＝**Label は表示専用**。次は **Task 47**（型分岐の足場 + HmiLabel 描画）。後続 Widget（Lamp / Gauge 等）は Label 完了後に別途承認。
+- 🟦 着手（計画起票）。Label は既存スキーマで足りるため **Schema / C++ ブリッジ無改変**で、横展開で唯一新しい **delegate の「型分岐の足場」**（`type` で HmiButton / HmiLabel を描き分ける）を導入する。binding は全 Widget・action は対話 Widget のみ＝**Label は表示専用**。後続 Widget（Lamp / Gauge 等）は Label 完了後に別途承認。
+- **Task 47（型分岐の足場 + HmiLabel 描画）完了**（2026-06-11）。
+  - **目的**：横展開で唯一新しい「型分岐機構」を最小コストで導入し、後続 Widget の雛形にする。
+  - **成果物**：①`Shared/Widgets/qml/HmiLabel.qml`（表示専用 Widget。HmiButton と同じ resolved\* フォールバック方式。**Button と違う既定＝背景透明 / 文字色 #1d3557 / hAlign 左寄せ / ボーダーなし**。選択中継用 `signal clicked(int modifiers)` + MouseArea を持ち、checkable/checked・ボーダー・runClickActions は持たない）②`Shared/Widgets/CMakeLists.txt` の `QML_FILES` に登録 ③Editor `Canvas.qml` / Simulator `SimulatorCanvas.qml` の delegate に **`type` 分岐（`Loader` + inline `Component` の 2 分岐。`type:"Label"`→HmiLabel、それ以外→HmiButton）** を導入。各 Component は外側スコープの `wrapper`(id) 経由でメタへバインドし、clicked を選択要求 / アクションへ中継。Label は binding（text / textColor / backgroundColor / visible）追従のみで click action は非結線（表示専用）④新規 unit：HmiLabel 単体 5 件（resolved 既定・明示値・text 反映・clicked）＋ delegate 型分岐（Editor 3 件＝Button/Label を描き分け・type 切替で追従、Simulator 2 件＝Button/Label を描き分け・Label の text binding 追従）。
+  - **完了基準**：`cmake --build` 成功 + Web `ctest`（unit 10 + e2e 6 = 16/16）緑。`type:"Label"` でも EditableWidget の選択枠・リサイズハンドルは効く（wrapper 側の機構で、描く中身に依らない）。**Schema / C++ ブリッジは無改変**（`type` 値域が "Button"/"Label" に増えるだけで JSON 構造・`isValidJson`・round-trip は不変＝旧 JSON 後方互換）。
+  - **学び**：Loader が loaded item の `parent` を Loader 自身に設定するため、Component 内 root の `anchors.fill: parent` がそのまま container 全面へ追従する。inline Component は定義位置の外側 id（`wrapper`）を捕捉できるため、従来 HmiButton をインライン結線していたパターンと同形のまま型分岐へ移行できた。次は **Task 48**（Editor の Label 追加 UI + インスペクタ型対応）。
 
 ---
 
