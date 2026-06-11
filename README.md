@@ -8,7 +8,7 @@ Yocto / i.MX8M Plus 向け Qt6 HMI ランタイムを対象に、HMI 作画ツ�
 
 ![HMI Editor](Docs/screenshots/editor.png)
 
-Editor の現状画面（Phase 4 拡張 + インスペクタ UX 改善 / Task 25〜45）。上部ツールバーは Widget 追加・JSON 入出力（`追加` / `開く` / `保存`）に加え、**グリッドスナップ（`スナップ`）・コピー / ペースト / 複製・元に戻す / やり直す（undo-redo）** を備える。右側インスペクタは **Task 44〜45 で折りたたみ可能なセクション**（**変数定義** / 基本 / 文字 / 背景・枠 / 状態 / 動作 / 詳細）に整理し、分かりづらいラベルを言い換え（`チェック可能`→`トグルボタンにする`・`チェック状態`→`初期状態をオン`・`Tag`→`外部タグ`）＋主要項目に hover ツールチップを付けた。Widget 選択時に **text・座標・サイズ（基本）/ フォント〔名・サイズ・太字・斜体〕・文字色・テキスト配置（文字）/ 背景色・ボーダー色 / 幅・角丸・不透明度（背景・枠）/ 有効・トグル設定（状態）/ クリックアクション・バインディング（動作）/ ID・外部タグ（詳細・既定で折りたたみ）** を編集・削除できる（複数選択時は整列・分布・一括削除）。キャンバスの `Start` / `Stop` / `設定` は色・角丸・ボーダーが効いた描画例。
+Editor の現状画面（Phase 4 拡張 + インスペクタ UX 改善 / Task 25〜46。`Stop` を選択した状態）。上部ツールバーは Widget 追加・JSON 入出力（`追加` / `開く` / `保存`）に加え、**グリッドスナップ（`スナップ`）・コピー / ペースト / 複製・元に戻す / やり直す（undo-redo）** を備える。右側インスペクタは **Task 44〜45 で折りたたみ可能なセクション**（**変数定義** / 基本 / 文字 / 背景・枠 / 状態 / 動作 / 詳細）に整理し、分かりづらいラベルを言い換え（`チェック可能`→`トグルボタンにする`・`チェック状態`→`初期状態をオン`・`Tag`→`外部タグ`）＋主要項目に hover ツールチップを付けた。**Task 46 で色入力（背景色 / 文字色 / ボーダー色）の隣に現在色スウォッチを追加**し、クリックでカラーダイアログから色を選べる（hex 手入力も併用可。スクショ右側の文字色 = 白・背景色 = 赤の小矩形がスウォッチ）。Widget 選択時に **text・座標・サイズ（基本）/ フォント〔名・サイズ・太字・斜体〕・文字色・テキスト配置（文字）/ 背景色・ボーダー色 / 幅・角丸・不透明度（背景・枠）/ 有効・トグル設定（状態）/ クリックアクション・バインディング（動作）/ ID・外部タグ（詳細・既定で折りたたみ）** を編集・削除できる（複数選択時は整列・分布・一括削除）。キャンバスの `Start` / `Stop` / `設定` は色・角丸・ボーダーが効いた描画例。
 
 ![HMI Simulator](Docs/screenshots/simulator.png)
 
@@ -284,7 +284,7 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 | 42 | 状態別スタイル（pressed / disabled / checked）（B） | ✅ 完了（Schema に enabled / checkable / checked を追加し全レイヤ貫通。disabled は淡色＋クリック実行無効、checked は背景暗転＋太枠のトグル外観。checked は変数バインド連動可。enabled は既定 true で false のときだけ保存。unit + Simulator QML テスト追加・10/10 緑） |
 | 43 | アクション round-trip E2E + 実機動作確認（全環境）（B） | ✅ 完了。新規 cross-app E2E `e2e_action_roundtrip`：Editor で変数/アクション/バインディング付き JSON を round-trip 保存 → Simulator で `HmiButton` を Spix `mouseClick` → `setVariable` 実行 → `text` バインディング追従（"OFF"→"ON"）を観測（**実クリックで状態遷移を見る初の E2E**）。Linux/Web で unit 10 + e2e 6 = 16/16 緑。**実機（i.MX8MP）でも `vnc-click-capture.py` で VNC クリックを送り `toggleVariable`→binding の状態遷移を撮影**（`Docs/screenshots/task-43-runtime-action.png`）。Phase 4 全クローズ |
 
-### インスペクタ UX 改善（Task 44〜45・完了）
+### インスペクタ UX 改善（Task 44〜46・完了）
 
 詳細は [Docs/inspector-ux-plan.md](Docs/inspector-ux-plan.md)。横展開（新 Widget 種別）で同じ散らかりが各 Widget へ波及する前に、**テンプレ＝右側インスペクタを綺麗にしてから増やす**。スキーマ・round-trip・objectName は不変（表示・配置・ラベルのみ変更）。
 
@@ -292,6 +292,7 @@ Phase 1 / MVP、Phase 2 / テスト基盤導入、Phase 3-A / E2E テスト導�
 |---|---|---|
 | 44 | インスペクタをセクション化 + 論理的に再配置（Editor） | ✅ 完了（PR #94。`InspectorSection`〔折りたたみヘッダ + Column〕を導入し平坦な約 20 項目を 6 セクション〔基本 / 文字 / 背景・枠 / 状態 / 動作 / 詳細〕＋変数定義へ再編。詳細〔ID / 外部タグ〕は既定で折りたたみ。objectName / Schema 不変で unit 10 + e2e 6 = 16/16 緑） |
 | 45 | 分かりづらいプロパティのリネーム + ツールチップ（Editor） | ✅ 完了（PR #94。`チェック可能`→`トグルボタンにする`・`チェック状態`→`初期状態をオン`・`Tag`→`外部タグ（PLC 等）`へ言い換え + 主要項目に hover ToolTip。objectName / Schema 不変で 16/16 緑） |
+| 46 | 色入力の改善＝色スウォッチ + ColorDialog（Editor・任意） | ✅ 完了（背景色 / 文字色 / ボーダー色の hex 入力欄の隣に現在色スウォッチを表示〔未指定は既定色をプレビュー〕、クリックで ColorDialog → `#RRGGBB` を書き戻し。手入力欄・objectName は不変。併せて undo / redo が色等の復元を取りこぼす Repeater delegate 再利用の潜在バグを修正） |
 
 ### Phase 5: 横展開（新 Widget 種別・最初は Label）
 

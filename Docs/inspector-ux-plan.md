@@ -108,7 +108,7 @@ flowchart TD
 |---|---|---|
 | 44 セクション化 + 再配置 | ✅ 完了 | PR #94（`InspectorSection.qml` 導入・6 セクションへ再編・変数定義も折りたたみ化。objectName/Schema 不変で unit 10 + e2e 6 = 16/16 緑・editor.png 更新） |
 | 45 分かりづらいプロパティ整理 | ✅ 完了 | PR #94（`チェック可能`→`トグルボタンにする`・`チェック状態`→`初期状態をオン`・`Tag`→`外部タグ（PLC等）`へリネーム + 主要項目に hover ToolTip。objectName/Schema 不変で 16/16 緑） |
-| 46 色スウォッチ（任意） | 未着手 | — |
+| 46 色スウォッチ（任意） | ✅ 完了 | PR #98（背景色 / 文字色 / ボーダー色の hex TextField 隣に `ColorSwatch`〔現在色プレビュー・未指定は resolved 既定色をフォールバック表示〕を追加。クリックで共有 `ColorDialog` → `#RRGGBB` を live Item + TextField へ書き戻し（明示 beginEdit/commitEdit で 1 件 undo）。手入力欄・objectName は不変。**併せて undo/redo の潜在バグを修正**：同数配列の再代入では Repeater が delegate を再利用し、インスペクタの命令的書き込みでバインディングが切れたプロパティに復元値が届かないことがある → undo/redo で空配列を挟み delegate を確実に全再生成。Windows GUI 自動操作で色変更→undo→redo の round-trip を実証） |
 
 > **本計画完了後に Phase 5（横展開＝新 Widget 種別）へ進む**。Phase 5 は **最初の Widget = Label** として
 > [phase5-widget-expansion-plan.md](phase5-widget-expansion-plan.md) に具体化済み（Task 47〜49）。後続 Widget は Label 完了後に別途承認。

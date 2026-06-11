@@ -384,6 +384,11 @@ Item {
         undoStack = undoStack.slice(0, undoStack.length - 1)
         redoStack = redoStack.concat([snapshotModel()])
         selectedWidgetIds = []  // 復元で消える Item の stale 選択を避ける
+        // Task 46 で発覚：同数の配列を再代入しても Repeater が既存 delegate を再利用
+        // することがあり、インスペクタの命令的書き込みでバインディングが切れた
+        // プロパティ（色等）に復元値が届かない（live Item が新値のまま残る）。
+        // 一度空配列を挟んで delegate を確実に全破棄 → 復元状態から再生成する。
+        widgetModel = []
         widgetModel = prev
     }
 
@@ -395,6 +400,8 @@ Item {
         redoStack = redoStack.slice(0, redoStack.length - 1)
         undoStack = undoStack.concat([snapshotModel()])
         selectedWidgetIds = []
+        // undo() と同じ理由で delegate を確実に全破棄してから復元する。
+        widgetModel = []
         widgetModel = next
     }
 
