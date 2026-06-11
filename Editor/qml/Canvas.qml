@@ -180,7 +180,12 @@ Item {
         return "btn" + String(widgetIdCounter).padStart(3, "0")
     }
 
-    function addWidget() {
+    // Task 48: 既定サイズ/位置で Widget を 1 個追加する。引数 type で種別を選ぶ
+    // （省略時は後方互換で "Button"）。Phase 5 横展開でツールバーの「ボタン追加」/
+    // 「ラベル追加」が同じ経路を type 違いで呼ぶ。Label は既定文字 "Label"・背景は
+    // 未指定（空文字）＝HmiLabel 側で透明にフォールバックする（plan「Label の既定文字・
+    // 透明背景」）。Button は従来どおり既定文字 "New"・背景未指定（#4cc9f0 へフォールバック）。
+    function addWidget(type) {
         // Task 26: 古い widgetModel を直接 concat せず、現在の live Item 群を
         // スナップショットしてから追加する。これによりインスペクタでの未保存
         // 編集（text/tag）やドラッグ後の位置が、追加に伴う Repeater 再生成で
@@ -188,11 +193,14 @@ Item {
         pushUndo()  // Task 38: 追加の直前状態を undo へ
         const snapshot = snapshotModel()
         const id = nextWidgetId(snapshot)
+        const widgetType = (type !== undefined && type !== "") ? type : "Button"
         const newWidget = {
             id: id,
-            type: "Button",
+            type: widgetType,
             x: 50, y: 200, width: 120, height: 40,
-            text: "New", tag: ""
+            // Label は既定文字 "Label"・透明背景（背景は未指定のままで HmiLabel が
+            // transparent にフォールバック）。Button は従来どおり "New"。
+            text: widgetType === "Label" ? "Label" : "New", tag: ""
         }
         snapshot.push(newWidget)
         // 新しい配列を代入することで Repeater に確実にモデル変更を通知する。

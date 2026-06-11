@@ -271,6 +271,14 @@ Window {
         widgetEditFieldFocused
         || rootWindow.variableFieldFocusCount > 0
 
+    // Task 48: 選択中 Widget が Label 型か。型に応じてインスペクタの無関係セクション /
+    // 項目を隠す（Label は状態・クリックアクション・ボーダー/角丸を非表示。背景色・
+    // 不透明度・バインディング・基本・文字・詳細は表示）。canvas.selectedItem は単一選択時
+    // のみ非 null なので、複数 / 未選択では false（単一編集フォーム自体が出ない）。
+    // **objectName・編集ロジック・Schema は不変で、表示（visible）切替のみ**（plan Task 48）。
+    readonly property bool selectedIsLabel:
+        canvas.selectedItem !== null && canvas.selectedItem.widgetType === "Label"
+
     // Task 38: インスペクタの Widget 編集を undo の 1 操作境界にする。どれかの入力欄が
     // フォーカスを得た時に前状態を保留（beginEdit）し、全フィールドからフォーカスが
     // 外れた時に確定（commitEdit、状態が変わっていれば 1 件積む）。これで「フィールドを
@@ -342,11 +350,20 @@ Window {
             anchors.margins: 8
             spacing: 8
 
-            // Task 18: Widget 追加。E2E からは objectName で参照する。
+            // Task 18 / 48: Widget 追加。E2E からは objectName で参照する。
+            // Task 48: 横展開で種別が増えたため「ボタン追加」と明示し、隣に「ラベル追加」を足す。
+            // objectName（addWidgetButton）と挙動（Button を追加）は据え置き＝既存 E2E 互換。
             Button {
                 objectName: "addWidgetButton"
-                text: qsTr("追加")
-                onClicked: canvas.addWidget()
+                text: qsTr("ボタン追加")
+                onClicked: canvas.addWidget("Button")
+            }
+
+            // Task 48: ラベル（表示専用 Widget）追加。同じ addWidget を type 違いで呼ぶ。
+            Button {
+                objectName: "addLabelButton"
+                text: qsTr("ラベル追加")
+                onClicked: canvas.addWidget("Label")
             }
 
             Button {
@@ -933,11 +950,17 @@ Window {
                             // Connections.onSelectedItemChanged で表示同期）。数値は **0 が正当値**
                             //（borderWidth=0=ボーダーなし、radius=0=角丸なし）なので、SpinBox の
                             // from を 0 にし、未指定（-1）は HmiButton の既定（太さ 1 / 角丸 4）を表示する。
-                            Label { text: qsTr("ボーダー色 (#RRGGBB)") }
+                            // Task 48: Label はフラット（ボーダー/角丸を持たない）ため、これら 3 項目
+                            // （ボーダー色 / 太さ / 角丸）を Label 選択時は隠す。背景色・不透明度は残す。
+                            Label {
+                                text: qsTr("ボーダー色 (#RRGGBB)")
+                                visible: !rootWindow.selectedIsLabel
+                            }
                             TextField {
                                 id: inspectorBorderColorField
                                 objectName: "inspectorBorderColorField"
                                 width: parent.width
+                                visible: !rootWindow.selectedIsLabel
                                 placeholderText: qsTr("#1d3557")
                                 // 背景色・文字色と同じく、空 または 完全な #RRGGBB の時だけ反映する
                                 //（途中入力・不正値を live Item に書き戻さない。Codex PR #58 P2）。
@@ -960,10 +983,14 @@ Window {
 
                             // ボーダー太さ / 角丸は SpinBox（from: 0 で 0 を選べる）。editable は付けない
                             //（Task 27: editable な SpinBox は value プログラム設定で表示が更新されない不具合）。
-                            Label { text: qsTr("ボーダー太さ") }
+                            Label {
+                                text: qsTr("ボーダー太さ")
+                                visible: !rootWindow.selectedIsLabel
+                            }
                             SpinBox {
                                 id: inspectorBorderWidthSpin
                                 objectName: "inspectorBorderWidthSpin"
+                                visible: !rootWindow.selectedIsLabel
                                 from: 0
                                 to: 32
                                 value: 1
@@ -984,10 +1011,14 @@ Window {
                                 }
                             }
 
-                            Label { text: qsTr("角丸") }
+                            Label {
+                                text: qsTr("角丸")
+                                visible: !rootWindow.selectedIsLabel
+                            }
                             SpinBox {
                                 id: inspectorRadiusSpin
                                 objectName: "inspectorRadiusSpin"
+                                visible: !rootWindow.selectedIsLabel
                                 from: 0
                                 to: 200
                                 value: 4
@@ -1037,8 +1068,11 @@ Window {
                         }
 
                         // ── 状態 : 有効 / チェック可能 / チェック状態 ──
+                        // Task 48: Label は表示専用＝状態（有効 / トグル / 初期オン）を持たないため
+                        // セクションごと隠す（visible のみ。objectName・中身は不変）。
                         InspectorSection {
                             title: qsTr("状態")
+                            visible: !rootWindow.selectedIsLabel
 
                             // Task 42 / 45: 状態別スタイル（有効 / トグルボタンにする / 初期状態をオン）。
                             // フォント CheckBox と同じ 2 本立て + 明示 beginEdit/commitEdit。
@@ -1123,13 +1157,20 @@ Window {
 
                             // Task 40: クリック時アクション（onClick 1 件）。op / target / value を選び
                             // 選択 Item の widgetActions へ書き戻す。target は変数定義 ComboBox 由来。
-                            Label { text: qsTr("クリック時アクション"); font.bold: true; color: "#555555" }
+                            // Task 48: Label は表示専用＝クリックアクションを持たないため、この
+                            // アクション編集 UI（見出し / 操作 / 対象変数 / 値 / 区切り線）を Label 選択時は
+                            // 隠す。**バインディング編集（読み）は Label でも残す**（役割分担：読み⊂全 Widget）。
+                            Label {
+                                text: qsTr("クリック時アクション"); font.bold: true; color: "#555555"
+                                visible: !rootWindow.selectedIsLabel
+                            }
 
-                            Label { text: qsTr("操作") }
+                            Label { text: qsTr("操作"); visible: !rootWindow.selectedIsLabel }
                             ComboBox {
                                 id: inspectorActionOpCombo
                                 objectName: "inspectorActionOpCombo"
                                 width: parent.width
+                                visible: !rootWindow.selectedIsLabel
                                 model: ["(なし)", "setVariable", "toggleVariable"]
                                 // Task 45: クリック時の動作が分かりにくいため補足を付ける。
                                 ToolTip.text: qsTr("クリック時の動作。setVariable=値を代入 / toggleVariable=オン↔オフを反転")
@@ -1137,30 +1178,39 @@ Window {
                                 ToolTip.delay: 600
                                 onActivated: rootWindow.applyActionFromInspector()
                             }
-                            Label { text: qsTr("対象変数") }
+                            Label { text: qsTr("対象変数"); visible: !rootWindow.selectedIsLabel }
                             ComboBox {
                                 id: inspectorActionTargetCombo
                                 objectName: "inspectorActionTargetCombo"
                                 width: parent.width
+                                visible: !rootWindow.selectedIsLabel
                                 model: rootWindow.variableNameModel()
                                 onActivated: rootWindow.applyActionFromInspector()
                             }
                             // 値は setVariable のときだけ意味を持つ（toggleVariable では無視）。
+                            // Task 48: Label 選択時はアクション部ごと隠す（!selectedIsLabel と AND）。
                             Label {
                                 text: qsTr("値")
-                                visible: inspectorActionOpCombo.currentText === "setVariable"
+                                visible: !rootWindow.selectedIsLabel
+                                       && inspectorActionOpCombo.currentText === "setVariable"
                             }
                             TextField {
                                 id: inspectorActionValueField
                                 objectName: "inspectorActionValueField"
                                 width: parent.width
-                                visible: inspectorActionOpCombo.currentText === "setVariable"
+                                visible: !rootWindow.selectedIsLabel
+                                       && inspectorActionOpCombo.currentText === "setVariable"
                                 placeholderText: qsTr("例: true / 10 / hello")
                                 onEditingFinished: rootWindow.applyActionFromInspector()
                             }
 
                             // Task 40: データバインディング（1 件）。property を変数に追従させる。
-                            Rectangle { width: parent.width; height: 1; color: "#dddddd" }
+                            // Task 48: 区切り線はアクション部とバインディング部の境界なので、
+                            // アクション部が隠れる Label 選択時は一緒に隠す。
+                            Rectangle {
+                                width: parent.width; height: 1; color: "#dddddd"
+                                visible: !rootWindow.selectedIsLabel
+                            }
                             Label { text: qsTr("バインディング"); font.bold: true; color: "#555555" }
 
                             Label { text: qsTr("プロパティ") }
