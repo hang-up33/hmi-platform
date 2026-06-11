@@ -193,7 +193,11 @@ Item {
         pushUndo()  // Task 38: 追加の直前状態を undo へ
         const snapshot = snapshotModel()
         const id = nextWidgetId(snapshot)
-        const widgetType = (type !== undefined && type !== "") ? type : "Button"
+        // Task 48: 既知の種別（"Button" / "Label"）だけを採用し、未知値 / 空 / undefined は
+        // "Button" にフォールバックする（ホワイトリスト正規化）。描画フォールバックと保存値が
+        // 乖離して JSON の型契約が壊れるのを防ぐ（CodeRabbit PR #98 指摘）。新種別を足す時は
+        // ここの許可リストに追加する。
+        const widgetType = (type === "Label" || type === "Button") ? type : "Button"
         const newWidget = {
             id: id,
             type: widgetType,
