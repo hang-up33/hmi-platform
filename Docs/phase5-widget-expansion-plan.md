@@ -150,7 +150,7 @@ flowchart TD
 
 | Task | 状態 | PR |
 |---|---|---|
-| 47 型分岐の足場 + HmiLabel 描画 | ✅ 完了 | #TBD |
+| 47 型分岐の足場 + HmiLabel 描画 | ✅ 完了 | #97 |
 | 48 Editor で Label 作成 + インスペクタ型対応 | 未着手 | — |
 | 49 Label round-trip + binding + E2E + スクショ | 未着手 | — |
 
