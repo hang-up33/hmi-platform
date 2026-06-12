@@ -259,12 +259,14 @@ Item {
                         // E2E / unit は hmiNumericField で参照）。
                         objectName: "hmiNumericField"
                         anchors.fill: parent
-                        // Simulator は live 編集可（Editor キャンバスは editable:false で読取専用）。
-                        editable: true
+                        // Task 50 は**読み取り表示のみ**なので Simulator も editable:false に
+                        // 寄せる（write 未実装で editable:true にすると「編集できるが反映されない」
+                        // 半端状態になるため。CodeRabbit PR #104 指摘）。**Task 51 で write
+                        // （valueCommitted 結線）と同時に editable:true へ切替える**。
+                        editable: false
                         // Task 50: 読み取り表示。binding {property:"value"} があれば変数の
                         // 現在値を表示し、無ければ modelData の静的 text を使う（Label の text
-                        // 追従と同じ boundValue 経路）。**write（変数への書き戻し）は Task 51** で
-                        // valueCommitted を結線する。Task 50 は読み取り表示のみ。
+                        // 追従と同じ boundValue 経路）。
                         text: {
                             const v = wrapper.boundValue("value")
                             return v !== undefined ? String(v)

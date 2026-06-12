@@ -99,10 +99,13 @@ Rectangle {
     // E2E（Spix）は実テキスト入力を発火できないため commitValue() を invokeMethod で叩く。
     signal valueCommitted(string text)
 
-    // 現在の TextField のテキストを確定して valueCommitted を emit する。
+    // 現在の TextField のテキストで valueCommitted(text) を通知するだけに留める。
+    // **root.text は命令的に書き換えない**：Simulator の delegate は text を
+    // boundValue("value") にバインドしており、ここで root.text へ代入すると外部 binding が
+    // 切れて以後変数に追従しなくなる（CodeRabbit PR #104 指摘）。表示への反映は delegate の
+    // write-back（変数更新 → boundValue 再評価）に一本化する（write 結線は Task 51）。
     // TextField.onEditingFinished からも呼ぶ。公開メソッドなので invokeMethod でも叩ける。
     function commitValue() {
-        root.text = field.text;
         root.valueCommitted(field.text);
     }
 

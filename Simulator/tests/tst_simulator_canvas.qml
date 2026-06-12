@@ -252,7 +252,7 @@ TestCase {
 
     // Task 50: type:"NumericField" の delegate は HmiNumericField を描き、
     // boundValue("value") で変数値を表示に追従させる（読み取り表示。write は Task 51）。
-    // Simulator は editable:true で入力を受ける。
+    // Task 50: Simulator も読み取り表示（editable:false）。値は boundValue で変数追従。
     function test_delegate_renders_numeric_and_follows_value_binding() {
         canvas.variableModel = [{ name: "setpoint", type: "int", initial: 10 }];
         canvas.widgetModel = [{
@@ -275,8 +275,9 @@ TestCase {
         verify(findByObjectName(wrapper, "hmiLabel") === null,
                "NumericField type なのに HmiLabel も生成された");
 
-        // Simulator は live 編集可（editable:true）。
-        compare(fld.editable, true);
+        // Task 50 は読み取り表示のみ＝Simulator も editable:false（write 結線と
+        // editable:true への切替は Task 51）。
+        compare(fld.editable, false);
 
         // 初期は変数 setpoint の値 10 に追従（静的 text "0" ではない）。
         compare(fld.text, "10");
