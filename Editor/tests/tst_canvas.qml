@@ -866,4 +866,65 @@ TestCase {
                 && findByObjectName(ch[0], "hmiButton") === null;
         }, 1000, "Label へ切替後も HmiButton が残る / HmiLabel が出ない");
     }
+
+    // Task 48: 追加した Widget の id だけが btn001 と異なるものを返すヘルパ。
+    function addedWidget() {
+        const ch = editableChildren();
+        for (let i = 0; i < ch.length; ++i) {
+            if (ch[i].widgetId !== "btn001") {
+                return ch[i];
+            }
+        }
+        return null;
+    }
+
+    // Task 48: addWidget() は引数省略時、後方互換で Button を追加する（HmiButton で描画）。
+    function test_add_widget_button_by_default() {
+        canvas.addWidget();  // 既定 = Button
+        tryVerify(function() { return editableChildren().length === 2; }, 1000, "追加されない");
+        const added = addedWidget();
+        verify(added !== null, "新規 widget が見つからない");
+        compare(added.widgetType, "Button");
+        tryVerify(function() { return findByObjectName(added, "hmiButton") !== null; }, 1000,
+                  "追加 Button が HmiButton で描かれない");
+    }
+
+    // Task 48: addWidget("Label") は Label 型 Widget を追加し HmiLabel で描かれる。
+    // 既定文字は "Label"、背景は未指定（HmiLabel 側で透明にフォールバック）。
+    function test_add_widget_label_type() {
+        canvas.addWidget("Label");
+        tryVerify(function() { return editableChildren().length === 2; }, 1000, "Label が追加されない");
+        const added = addedWidget();
+        verify(added !== null, "新規 Label widget が見つからない");
+        compare(added.widgetType, "Label");
+        compare(added.widgetText, "Label");
+        compare(added.widgetBackgroundColor, "");  // 未指定＝HmiLabel が透明にフォールバック
+        tryVerify(function() { return findByObjectName(added, "hmiLabel") !== null; }, 1000,
+                  "追加 Label が HmiLabel で描かれない");
+    }
+
+    // Task 48（CodeRabbit PR #98 nitpick）：未知 / 空の type はホワイトリスト正規化で
+    // "Button" にフォールバックする（保存される widgetModel[].type が常に既知種別になる）。
+    function test_add_widget_unknown_type_falls_back_to_button() {
+        canvas.addWidget("Unknown");
+        tryVerify(function() { return editableChildren().length === 2; }, 1000, "追加されない");
+        compare(addedWidget().widgetType, "Button");
+        canvas.undo();
+        tryVerify(function() { return editableChildren().length === 1; }, 1000, "undo されない");
+
+        canvas.addWidget("");  // 空文字も Button へ
+        tryVerify(function() { return editableChildren().length === 2; }, 1000, "追加されない");
+        compare(addedWidget().widgetType, "Button");
+    }
+
+    // Task 48: addWidget("Label") も undo で元に戻せる（構造変更 = pushUndo 経路）。
+    function test_add_label_is_undoable() {
+        compare(canvas.canUndo, false);
+        canvas.addWidget("Label");
+        tryVerify(function() { return editableChildren().length === 2; }, 1000, "Label が追加されない");
+        compare(canvas.canUndo, true);
+        canvas.undo();
+        tryVerify(function() { return editableChildren().length === 1; }, 1000,
+                  "undo で Label 追加が取り消されない");
+    }
 }

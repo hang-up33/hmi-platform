@@ -151,7 +151,9 @@ flowchart TD
 | Task | 状態 | PR |
 |---|---|---|
 | 47 型分岐の足場 + HmiLabel 描画 | ✅ 完了 | #97 |
-| 48 Editor で Label 作成 + インスペクタ型対応 | 未着手 | — |
+| 48 Editor で Label 作成 + インスペクタ型対応 | ✅ 完了 | #98 |
 | 49 Label round-trip + binding + E2E + スクショ | 未着手 | — |
+
+> Task 48 完了（2026-06-11）：Editor `Canvas.qml` の `addWidget()` を `addWidget(type)` へ一般化（省略時は後方互換で Button。Label は既定文字 "Label"・背景未指定＝透明フォールバック）。ツールバーに「ラベル追加」ボタン（objectName `addLabelButton`）を追加し、既存「追加」を「ボタン追加」に明確化（objectName `addWidgetButton`・挙動は据え置き＝E2E 互換）。インスペクタは選択 Widget が Label のとき**無関係セクション / 項目を `visible` で隠す**（状態セクション全体・クリックアクション編集・ボーダー色/太さ/角丸を非表示。背景色・不透明度・**バインディング編集**・基本・文字・詳細は表示）。判定は `rootWindow.selectedIsLabel`（= `selectedItem.widgetType === "Label"`）。**objectName・編集ロジック・Schema は不変＝表示切替のみ**。新規 unit（Canvas）：`addWidget()` 既定 Button / `addWidget("Label")` で Label 型 + HmiLabel 描画 + 既定文字 "Label" / Label 追加の undo。README `editor.png` を Label 配置シーン（`Docs/samples/task-48-label-demo.json`）で撮り直し + キャプション更新。Web `ctest` unit 10 + e2e 6 = 16/16 緑。次は Task 49。
 
 > Task 47 完了（2026-06-11）：`HmiLabel.qml`（表示専用・resolved\* フォールバック・選択用 `clicked(int modifiers)` relay）を新設し `Shared/Widgets/CMakeLists.txt` に登録。Editor `Canvas.qml` と Simulator `SimulatorCanvas.qml` の delegate に `type` 分岐（Loader + inline Component の 2 分岐。`type:"Label"`→HmiLabel、それ以外→HmiButton）を導入。Label は binding（text / textColor / backgroundColor / visible）追従のみで click action は非結線（表示専用）。新規 unit：HmiLabel 単体（resolved 既定〔背景=透明 / 文字色 #1d3557 / hAlign=左〕・clicked シグナル）＋ delegate が `type` で正しい Widget を生成・切替すること（Editor / Simulator）。**Schema / C++ ブリッジは無改変**。Web `ctest` unit 10 + e2e 6 = 16/16 緑。次は Task 48。
