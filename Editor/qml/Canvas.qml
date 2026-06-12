@@ -196,7 +196,8 @@ Item {
         // Task 48: 既知の種別（"Button" / "Label"）だけを採用し、未知値 / 空 / undefined は
         // "Button" にフォールバックする（ホワイトリスト正規化）。描画フォールバックと保存値が
         // 乖離して JSON の型契約が壊れるのを防ぐ（CodeRabbit PR #98 指摘）。新種別を足す時は
-        // ここの許可リストに追加する。
+        // ここの許可リストに追加する（**NumericField は Editor 追加 UI を入れる Task 51 で
+        // 本リストに追加予定**。Task 50 は delegate 型分岐＝描画のみでツールバー追加はしない）。
         const widgetType = (type === "Label" || type === "Button") ? type : "Button"
         const newWidget = {
             id: id,
@@ -769,9 +770,12 @@ Item {
                     // バインドし、clicked を選択要求へ中継する（HmiButton をインライン結線して
                     // いた従来パターンと同形）。Loader の loaded item は anchors.fill: parent で
                     // Loader（= container 全面）に追従する。
+                    // Task 50: Phase 6 で 3 分岐目（NumericField）を追加。Label に続く
+                    // 入力 Widget。Editor キャンバスは設計面なので editable:false で読取専用表示。
                     Loader {
                         anchors.fill: parent
                         sourceComponent: wrapper.widgetType === "Label" ? labelComponent
+                                       : wrapper.widgetType === "NumericField" ? numericComponent
                                                                         : buttonComponent
                     }
 
@@ -847,6 +851,40 @@ Item {
                             // Task 47: 選択中継は Button と同形。クリックで selectRequested を
                             // 発火して Canvas の選択集合へ加除する（Label も EditableWidget の
                             // 選択枠・リサイズハンドルが効く）。Label に action 実行は無い。
+                            onClicked: function(modifiers) {
+                                wrapper.selectRequested(wrapper.widgetId, modifiers)
+                            }
+                        }
+                    }
+
+                    Component {
+                        id: numericComponent
+                        HmiNumericField {
+                            // Task 50: 型分岐の観察用 objectName（HmiButton / HmiLabel と対。
+                            // E2E / unit は hmiNumericField で参照）。
+                            objectName: "hmiNumericField"
+                            anchors.fill: parent
+                            // Editor キャンバスは設計面＝読取専用表示。selectArea（MouseArea）が
+                            // 有効になり clicked を中継、TextField は入力を奪わない。
+                            editable: false
+                            // HmiButton と同じく wrapper 経由でメタへバインドする。NumericField は
+                            // 全スタイル（背景・枠・フォント・配置・不透明度・有効）を持つ。
+                            text: wrapper.widgetText
+                            backgroundColor: wrapper.widgetBackgroundColor
+                            textColor: wrapper.widgetTextColor
+                            fontSize: wrapper.widgetFontSize
+                            borderColor: wrapper.widgetBorderColor
+                            borderWidth: wrapper.widgetBorderWidth
+                            cornerRadius: wrapper.widgetRadius
+                            fontBold: wrapper.widgetFontBold
+                            fontItalic: wrapper.widgetFontItalic
+                            fontFamily: wrapper.widgetFontFamily
+                            hAlign: wrapper.widgetHAlign
+                            vAlign: wrapper.widgetVAlign
+                            widgetOpacity: wrapper.widgetOpacity
+                            widgetEnabled: wrapper.widgetEnabled
+                            // Task 50: 選択中継は Button / Label と同形。write 結線（valueCommitted）は
+                            // Task 51 で SimulatorCanvas 側に足す（Editor は読取専用なので結線しない）。
                             onClicked: function(modifiers) {
                                 wrapper.selectRequested(wrapper.widgetId, modifiers)
                             }
