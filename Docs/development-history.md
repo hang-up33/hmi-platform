@@ -260,7 +260,20 @@ timeline
   - **目的**：Label が Editor の保存経路を通って Simulator まで届き `HmiLabel` として描画される（静的 + binding 追従）ことを cross-app E2E で固定し、見た目を `simulator.png` に同期する。
   - **成果物**：①新規 cross-app E2E `tests/e2e/test_label_roundtrip.py`（`e2e_label_roundtrip`、CMake 登録で E2E 6→7 本）。Label 2 件（静的 `lbl_title` + binding `lbl_status`）＋変数を持つ JSON を Editor に `--open`→`saveTo` で round-trip → 保存 JSON を直接 assert（`type:"Label"` / `text` / `textColor` / bindings / variables）→ Simulator を `--open` で起動し `HmiLabel`（objectName `hmiLabel`）の静的描画（text/textColor）と **text バインディングの変数追従**（"BOUND"）を `getStringProperty` で確認。Button 用 test_style_roundtrip / test_action_roundtrip の Label 版。②README `simulator.png` を Label 含むシーン（`Docs/samples/task-48-label-demo.json`）で撮り直し + キャプション更新（Label が Button と並んで描画 / Label も text・textColor・visible を変数バインド可）。
   - **完了基準**：`cmake --build` 成功 + Web `ctest` unit 10 + e2e 7 = 17/17 緑。**Schema / C++ ブリッジは無改変**（Label round-trip は既存 `WidgetData` の往復で成立）。
-  - **学び**：Task 47 で delegate に Loader を挟んだが、Spix の objectName パス解決（`widget_<id>/hmiLabel`）は Loader を跨いで子孫に届く（既存 `hmiButton` E2E が Loader 化後も緑だったことで裏付け済み）。Label は表示専用＝クリックアクションを持たないため、E2E は test_action_roundtrip のような実クリック遷移は見ず、**binding の「読み」（変数 → text 追従）だけ**を検証する。これで横展開テンプレ（HmiXxx 新設 → delegate 型分岐 → 追加 UI → インスペクタ型対応 → unit + E2E + スクショ）が 1 周し、後続 Widget は同手順で足せる。**次の Widget（Lamp / Gauge / Image 等）は未承認＝別途スコープ確定**。
+  - **学び**：Task 47 で delegate に Loader を挟んだが、Spix の objectName パス解決（`widget_<id>/hmiLabel`）は Loader を跨いで子孫に届く（既存 `hmiButton` E2E が Loader 化後も緑だったことで裏付け済み）。Label は表示専用＝クリックアクションを持たないため、E2E は test_action_roundtrip のような実クリック遷移は見ず、**binding の「読み」（変数 → text 追従）だけ**を検証する。これで横展開テンプレ（HmiXxx 新設 → delegate 型分岐 → 追加 UI → インスペクタ型対応 → unit + E2E + スクショ）が 1 周し、後続 Widget は同手順で足せる。
+
+---
+
+## Phase 6: 入力 Widget（最初は NumericField / 数値入力）
+
+**目標**：Phase 5 で確立した横展開テンプレ（型分岐の足場）に乗りつつ、**初めて「ユーザー入力 → 変数へ書き込む（write）」相互作用を持つ入力 Widget** を導入する。**最初の入力 Widget = NumericField（数値入力）**。
+**計画書**：[Docs/phase6-input-widget-plan.md](phase6-input-widget-plan.md)（Task 50〜52）
+
+- 🟦 着手（計画起票）。Label が binding の「読み」（変数 → 表示の追従）だけだったのに対し、NumericField は **読み（表示）+ 書き（入力確定で変数更新）の両用 binding** を担う初の入力 Widget。
+  - **設計の核**：write は **既存 `bindings` を読み書き両用に使う**（表示=`boundValue("value")` の読み、入力確定=同じ変数へ `setValue(coerce(...))` の書き）ことで実現し、**Schema / C++ ブリッジは無改変**（新キー・新トリガを足さない。後方互換）。`HmiNumericField` は Shared/Widgets が初めて QtQuick.Controls（TextField + IntValidator）に依存する（import のみ。i.MX8MP rootfs の plugin 同梱は要確認 TODO）。MVP は **int 変数のみ**（real 型・min/max は Schema 連鎖するため別承認）。
+  - **タスク**：Task 50（型分岐の足場 + HmiNumericField 描画。`editable` で Editor=読取専用 / Simulator=live 編集を出し分け）/ 51（write 経路〔Simulator delegate に `writeBoundValue`〕+ Editor 追加 UI + インスペクタ型対応〔`selectedIsNumericField`〕）/ 52（cross-app E2E `e2e_numeric_input` + スクショ）。
+  - **罠（計画段階で織り込み）**：Spix は実テキスト入力（editingFinished）を発火できないため、確定は公開メソッド `commitValue()` を `invokeMethod` で模す。TextField が Editor 選択のフォーカス/入力を奪う問題は `editable:false` + 選択用 MouseArea を上に重ねて回避。binding 表示とユーザー編集の競合（カーソル飛び）は `activeFocus` 中の表示抑止で回避。
+  - **次は Task 50**。**後続の入力 Widget（Gauge スライダ / Toggle 等）・real 型・数値範囲は未承認＝別途スコープ確定**。
 
 ---
 
