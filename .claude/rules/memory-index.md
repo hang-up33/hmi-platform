@@ -19,6 +19,7 @@
 ### user / feedback（作業の進め方・好み）
 
 - [User language (Japanese)](user-language-japanese.md) — ユーザーは日本人、書き物は日本語優先
+- [User response style](user-response-style.md) — チャット応答は敬語なし・3 行以内が基本（やむを得ない場合のみ超過可）
 - [Continuous improvement](feedback-continuous-improvement.md) — タスク完了前に知見を CLAUDE.md / README / メモリに反映する
 - [Docs style](feedback-docs-style.md) — ドキュメントは Mermaid 図 + 最小説明から始める。冗長な ASCII 図 + 詳細散文は嫌われる
 - [Codex review comment](feedback-codex-review-comment.md) — PR 作成後・修正 push 後は毎回 `@codex review` を明示投稿する
