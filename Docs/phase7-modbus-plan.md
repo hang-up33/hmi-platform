@@ -134,7 +134,6 @@ flowchart TD
 |---|---|
 | **SDK/image の qtserialbus（着手前ゲート）** | 現行 image（scarthgap / Qt6 6.8.1）と `meta-toolchain-qt6` SDK の **`qtserialbus` 含有を最優先で確認**（ローカルで `find <SDK-sysroot> -iname '*SerialBus*'` / image の `qtserialbus` 有無）。結果（含有/不含）を本書に記録し、**不含なら MB-6 の Yocto レシピ追加（`IMAGE_INSTALL += "qtserialbus"` + SDK）を前倒しで着手**（image/SDK 再ビルドは数時間かかるため）。**PC 側（MB-1〜5）の Qt（aqtinstall）には SerialBus が同梱されるので先行可**だが、実機展開の手戻りを避けるため確認は早期に。 |
 | **float 変数型 / スケーリング** | 16bit レジスタ → 物理量（温度・圧力）には float 型 + gain/offset が要る（[requirements.md](requirements.md) FR-VAR / バックログ C）。**MB-1〜2 は int/bool/coil で開始でき**、アナログ表示が要る段で float を最小導入（Phase 6 の数値 Widget と連携）。32bit/float レジスタの word/byte order は要調査。 |
-| **接続スキーマ形** | 接続をプロジェクト共通リスト参照にする案（上記）。実装着手時に確定。 |
 | **Simulator の自動検証相手** | 実 PLC は CI/Web から不達 → E2E は **pymodbus ソフトスレーブ**で固定（PC 単体で `ctest` 緑）。pymodbus 導入は dev 依存に閉じ、製品コードには持ち込まない。 |
 | **Editor の非リンク維持** | Editor が誤って `Qt6::SerialBus` をリンクしないこと（変更時 `git diff` で確認）。通信は Simulator/Runtime のみ。 |
 

@@ -164,10 +164,10 @@ flowchart LR
 | ID | 機能要求 | 受け入れ基準 |
 |---|---|---|
 | FR-MB-01 | 変数にデータソース（Modbus マッピング）を定義できる：レジスタ種別 / アドレス / 接続先 / ポーリング周期 | Schema にソース定義を追加し round-trip。Editor の変数定義パネルで編集可 |
-| FR-MB-02 | Runtime が Modbus TCP マスタとしてスレーブのレジスタを周期読込し、変数ストアへ反映する | 実デバイス or Modbus シミュレータ相手に、レジスタ変化が Widget 表示に追従することを確認 |
+| FR-MB-02 | Runtime が Modbus TCP マスタとしてスレーブのレジスタを周期読込し、変数ストアへ反映する | pymodbus ソフトスレーブ or 実 PLC 相手に、レジスタ変化が Widget 表示に追従することを確認 |
 | FR-MB-03 | アクション / 数値入力による変数書込を、書込可能レジスタ（coil / holding）へ反映する | HMI 上の操作でスレーブのレジスタ値が変わることを確認 |
 | FR-MB-04 | 接続状態（接続中 / 切断 / エラー）を取得でき、UI へ反映できる | 切断時に再接続を試行し、状態を変数 or 専用 API で観測可能 |
-| FR-MB-05 | Editor / Simulator は実通信を必須としない（Editor は定義のみ、Simulator は実機なしでも動く） | Editor はビルドに QtSerialBus を要求しない設計、Simulator は pymodbus ソフトスレーブ or 実機接続（下記「要調査」で統一） |
+| FR-MB-05 | Editor / Simulator は実通信を必須としない（Editor は定義のみ、Simulator は実機なしでも動く） | Editor はビルドに QtSerialBus を要求しない設計、Simulator は pymodbus ソフトスレーブ or 実機接続 |
 
 #### 非機能要求
 
@@ -185,14 +185,7 @@ flowchart LR
 - **Simulator の自動検証相手（統一）**：Simulator の E2E 検証は **pymodbus ソフトスレーブ（疑似 Modbus TCP PLC）** を相手にする（PC 単独で `ctest` 緑にできる）。実 PLC は手動確認（ローカル）。用語は「モック」を使わず「pymodbus ソフトスレーブ」に統一する。
 - **値変換**：生レジスタ（16bit int 等）→ 物理量（float / スケーリング）。FR-VAR の float 型と「スケーリング(gain/offset)」（バックログ C）に接続。32bit / float レジスタの byte order は要調査。
 
-#### 想定フェーズ分割（Modbus は複数タスクになる見込み）
-
-| 段階 | 内容 |
-|---|---|
-| MB-1 | 変数ソース定義のスキーマ追加 + Editor 変数定義 UI（実通信なし・round-trip のみ） |
-| MB-2 | Runtime に QtSerialBus 組込み + TCP 読込ポーリング → 変数反映（実機 or シミュレータで確認） |
-| MB-3 | 書込（coil / holding）+ 接続状態 + 再接続 |
-| MB-4 | Simulator モック + E2E + 実機デモ撮影 |
+#### タスク分割（正本は phase7 plan）
 
 > タスク粒度・実行環境（PC / 実機）・要調査は **[phase7-modbus-plan.md](phase7-modbus-plan.md)（起票済み）** に展開した。本書はあくまで要求の倉庫。
 > 確定済みの前提（2026-06-12）：Modbus **TCP 一本** / **QtSerialBus** / **実 PLC あり** / 初手は **PC の Simulator → 実機 Runtime** の順。
