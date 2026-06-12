@@ -229,12 +229,14 @@ timeline
 
 ---
 
-## インスペクタ UX 改善（Task 44〜45）
+## インスペクタ UX 改善（Task 44〜46）
 
 **目標**：横展開（新 Widget 種別）で同じ散らかりが各 Widget へ波及する前に、テンプレ＝右側インスペクタを綺麗にしてから増やす。
 **計画書**：[Docs/inspector-ux-plan.md](inspector-ux-plan.md)
 
 - **Task 44〜45**：✅ 完了（PR [#94](https://github.com/hang-up33/hmi-platform/pull/94)）。`InspectorSection`（折りたたみヘッダ + Column）を導入し平坦な約 20 項目を 6 セクション（基本 / 文字 / 背景・枠 / 状態 / 動作 / 詳細）＋変数定義へ再編、分かりづらいラベルを言い換え（`チェック可能`→`トグルボタンにする` 等）＋ hover ツールチップ。**スキーマ・round-trip・objectName は不変**で unit 10 + e2e 6 = 16/16 緑。
+- **Task 46（任意）**：✅ 完了。背景色 / 文字色 / ボーダー色の hex TextField の隣に **色スウォッチ**（現在色プレビュー。未指定は Widget 種別の resolved 既定色を表示）を追加し、クリックで共有 `ColorDialog` → `#RRGGBB` を live Item + TextField へ書き戻す（明示 beginEdit/commitEdit で 1 件 undo）。手入力欄・objectName は不変。
+  - **学び（undo/redo の潜在バグ修正）**：検証中に「色変更 → undo で巻き戻らない」を発見。原因は **同数の配列を `widgetModel` に再代入しても Repeater が既存 delegate を再利用することがあり**、インスペクタの命令的書き込み（`selectedItem.widget* = value`）でバインディングが切れたプロパティへ復元値が届かないこと。undo/redo で **一度空配列を挟んで delegate を確実に全再生成**して修正（Windows の Win32 クリック注入で色変更→undo→redo の round-trip を実証）。tst_canvas の既存 undo テストは JS 配列リテラル由来のモデルで再現せず素通りしていた。
 
 ---
 

@@ -187,6 +187,35 @@ Window {
         }
     }
 
+    // Task 46: 色スウォッチの一辺と、色 TextField がスウォッチ用に空ける幅
+    //（スウォッチ + Row spacing 6）。3 つの色フィールドで共有する
+    //（CodeRabbit PR #99 nitpick: マジックナンバー 34 の重複を定数化）。
+    readonly property int colorSwatchSize: 28
+    readonly property int colorSwatchReserve: colorSwatchSize + 6
+
+    // Task 46: QML の color 値を Schema の "#RRGGBB" 形式へ変換する。
+    // ColorDialog の selectedColor（color 型）を hex TextField / live Item に
+    // 書き戻すときに使う（alpha は使わない。ColorDialog の alpha オプションも無効のまま）。
+    function colorToHex(c) {
+        function h(v) { return ("0" + Math.round(v * 255).toString(16)).slice(-2) }
+        return "#" + h(c.r) + h(c.g) + h(c.b)
+    }
+
+    // Task 46: 色スウォッチクリックで共有 ColorDialog を開く。field = 書き戻し先の
+    // hex TextField、targetProperty = 選択中 live Item のプロパティ名
+    //（"widgetBackgroundColor" 等）、fallback = 未指定時の既定色（HmiButton の
+    // resolved* と同じ値。ダイアログの初期色として使う）。
+    function openColorDialog(field, targetProperty, fallback) {
+        if (!canvas.selectedItem) {
+            return
+        }
+        inspectorColorDialog.targetField = field
+        inspectorColorDialog.targetProperty = targetProperty
+        inspectorColorDialog.selectedColor =
+            (field.text !== "" && field.acceptableInput) ? field.text : fallback
+        inspectorColorDialog.open()
+    }
+
     // Task 19: E2E（Spix の invokeMethod）から呼ぶ JSON 保存ラッパー。
     // FileDialog は AppleScript / Spix から自動操作できないため、Canvas 上の
     // EditableWidget 群を Shared/Schema 互換のリストへ変換 → ProjectIo.save に
@@ -335,6 +364,41 @@ Window {
         sequences: [StandardKey.Redo, "Ctrl+Shift+Z"]
         enabled: canvas.canRedo && !rootWindow.inspectorFieldFocused
         onActivated: canvas.redo()
+    }
+
+    // Task 46: hex TextField の隣に置く色スウォッチ（現在色のプレビュー兼
+    // ColorDialog の起動ボタン）。3 つの色フィールド（背景 / 文字 / ボーダー）で
+    // 使い回すインラインコンポーネント。field の hex が妥当ならその色、
+    // 空・編集途中は fallback（HmiButton の resolved* 既定色 = 実際の描画色）を見せる。
+    component ColorSwatch: Rectangle {
+        id: swatch
+        // 連動する hex TextField（現在色の参照元・ColorDialog の書き戻し先）。
+        property var field: null
+        // 選択中 live Item へ書き戻すプロパティ名（"widgetBackgroundColor" 等）。
+        property string targetProperty: ""
+        // 未指定（空文字）のとき見せる既定色。HmiButton の resolved* と揃える。
+        property color fallback: "white"
+
+        width: rootWindow.colorSwatchSize
+        height: rootWindow.colorSwatchSize
+        radius: 4
+        border.color: "#999999"
+        border.width: 1
+        color: (field && field.text !== "" && field.acceptableInput)
+            ? field.text : fallback
+
+        ToolTip.text: qsTr("クリックで色を選択")
+        ToolTip.visible: swatchArea.containsMouse
+        ToolTip.delay: 600
+
+        MouseArea {
+            id: swatchArea
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: rootWindow.openColorDialog(
+                swatch.field, swatch.targetProperty, swatch.fallback)
+        }
     }
 
     // 薄いグレーの余白背景
@@ -836,27 +900,49 @@ Window {
                             // 既定外観にフォールバックされる。編集は 2 本立て（onTextEdited で live
                             // Item へ書き戻し、Connections.onSelectedItemChanged で表示同期）。
                             Label { text: qsTr("文字色 (#RRGGBB)") }
-                            TextField {
-                                id: inspectorTextColorField
-                                objectName: "inspectorTextColorField"
-                                width: parent.width
-                                placeholderText: qsTr("white")
-                                // Codex PR #58 P2: 空 または 完全な #RRGGBB の時だけ反映する
-                                //（途中入力・不正値を live Item に書き戻さない）。
-                                validator: RegularExpressionValidator {
-                                    regularExpression: /^(#[0-9A-Fa-f]{6})?$/
-                                }
-                                onTextEdited: {
-                                    if (canvas.selectedItem && acceptableInput) {
-                                        canvas.selectedItem.widgetTextColor = text
+                            // Task 46: hex TextField + 色スウォッチ（プレビュー / クリックで
+                            // ColorDialog）。手入力欄はそのまま残す（E2E / 既存導線を維持）。
+                            // 幅は leftPadding（InspectorSection の content インデント）ぶん
+                            // 詰める：parent.width のままだと右端のスウォッチがインデント分
+                            // はみ出して ScrollView の clip に切られる。
+                            Row {
+                                width: parent.width - parent.leftPadding
+                                spacing: 6
+
+                                TextField {
+                                    id: inspectorTextColorField
+                                    objectName: "inspectorTextColorField"
+                                    width: parent.width - rootWindow.colorSwatchReserve
+                                    placeholderText: qsTr("white")
+                                    // Codex PR #58 P2: 空 または 完全な #RRGGBB の時だけ反映する
+                                    //（途中入力・不正値を live Item に書き戻さない）。
+                                    validator: RegularExpressionValidator {
+                                        regularExpression: /^(#[0-9A-Fa-f]{6})?$/
+                                    }
+                                    onTextEdited: {
+                                        if (canvas.selectedItem && acceptableInput) {
+                                            canvas.selectedItem.widgetTextColor = text
+                                        }
+                                    }
+                                    Connections {
+                                        target: canvas
+                                        function onSelectedItemChanged() {
+                                            inspectorTextColorField.text = canvas.selectedItem
+                                                ? canvas.selectedItem.widgetTextColor : ""
+                                        }
                                     }
                                 }
-                                Connections {
-                                    target: canvas
-                                    function onSelectedItemChanged() {
-                                        inspectorTextColorField.text = canvas.selectedItem
-                                            ? canvas.selectedItem.widgetTextColor : ""
-                                    }
+                                ColorSwatch {
+                                    objectName: "inspectorTextColorSwatch"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    field: inspectorTextColorField
+                                    targetProperty: "widgetTextColor"
+                                    // 未指定時の既定色は Widget 種別の resolved* と揃える
+                                    //（HmiButton=white / HmiLabel=#1d3557。種別ごとの
+                                    // インスペクタ本対応は Task 48 で行う）。
+                                    fallback: (canvas.selectedItem
+                                               && canvas.selectedItem.widgetType === "Label")
+                                        ? "#1d3557" : "white"
                                 }
                             }
 
@@ -919,29 +1005,49 @@ Window {
                             // Task 29: 背景色（"#RRGGBB" hex の TextField）。空文字は HmiButton 側で
                             // 既定外観にフォールバックされる（widgetBackgroundColor は空 = 未指定）。
                             Label { text: qsTr("背景色 (#RRGGBB)") }
-                            TextField {
-                                id: inspectorBgColorField
-                                objectName: "inspectorBgColorField"
-                                width: parent.width
-                                placeholderText: qsTr("#4cc9f0")
-                                // Codex PR #58 P2: 空 または 完全な #RRGGBB の時だけ live Item へ
-                                // 反映する。途中入力（"#ff"）や不正値（"redx"）が
-                                // widgetBackgroundColor に残ると JSON に無効色が保存され、
-                                // Simulator/Runtime の描画で無効色になるため。
-                                validator: RegularExpressionValidator {
-                                    regularExpression: /^(#[0-9A-Fa-f]{6})?$/
-                                }
-                                onTextEdited: {
-                                    if (canvas.selectedItem && acceptableInput) {
-                                        canvas.selectedItem.widgetBackgroundColor = text
+                            // Task 46: hex TextField + 色スウォッチ（プレビュー / クリックで
+                            // ColorDialog）。手入力欄はそのまま残す（E2E / 既存導線を維持）。
+                            // 幅補正は文字色の Row と同じ（leftPadding ぶん詰める）。
+                            Row {
+                                width: parent.width - parent.leftPadding
+                                spacing: 6
+
+                                TextField {
+                                    id: inspectorBgColorField
+                                    objectName: "inspectorBgColorField"
+                                    width: parent.width - rootWindow.colorSwatchReserve
+                                    placeholderText: qsTr("#4cc9f0")
+                                    // Codex PR #58 P2: 空 または 完全な #RRGGBB の時だけ live Item へ
+                                    // 反映する。途中入力（"#ff"）や不正値（"redx"）が
+                                    // widgetBackgroundColor に残ると JSON に無効色が保存され、
+                                    // Simulator/Runtime の描画で無効色になるため。
+                                    validator: RegularExpressionValidator {
+                                        regularExpression: /^(#[0-9A-Fa-f]{6})?$/
+                                    }
+                                    onTextEdited: {
+                                        if (canvas.selectedItem && acceptableInput) {
+                                            canvas.selectedItem.widgetBackgroundColor = text
+                                        }
+                                    }
+                                    Connections {
+                                        target: canvas
+                                        function onSelectedItemChanged() {
+                                            inspectorBgColorField.text = canvas.selectedItem
+                                                ? canvas.selectedItem.widgetBackgroundColor : ""
+                                        }
                                     }
                                 }
-                                Connections {
-                                    target: canvas
-                                    function onSelectedItemChanged() {
-                                        inspectorBgColorField.text = canvas.selectedItem
-                                            ? canvas.selectedItem.widgetBackgroundColor : ""
-                                    }
+                                ColorSwatch {
+                                    objectName: "inspectorBgColorSwatch"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    field: inspectorBgColorField
+                                    targetProperty: "widgetBackgroundColor"
+                                    // 未指定時の既定色は Widget 種別の resolved* と揃える
+                                    //（HmiButton=#4cc9f0 / HmiLabel=transparent。種別ごとの
+                                    // インスペクタ本対応は Task 48 で行う）。
+                                    fallback: (canvas.selectedItem
+                                               && canvas.selectedItem.widgetType === "Label")
+                                        ? "transparent" : "#4cc9f0"
                                 }
                             }
 
@@ -950,34 +1056,50 @@ Window {
                             // Connections.onSelectedItemChanged で表示同期）。数値は **0 が正当値**
                             //（borderWidth=0=ボーダーなし、radius=0=角丸なし）なので、SpinBox の
                             // from を 0 にし、未指定（-1）は HmiButton の既定（太さ 1 / 角丸 4）を表示する。
-                            // Task 48: Label はフラット（ボーダー/角丸を持たない）ため、これら 3 項目
-                            // （ボーダー色 / 太さ / 角丸）を Label 選択時は隠す。背景色・不透明度は残す。
                             Label {
                                 text: qsTr("ボーダー色 (#RRGGBB)")
                                 visible: !rootWindow.selectedIsLabel
                             }
-                            TextField {
-                                id: inspectorBorderColorField
-                                objectName: "inspectorBorderColorField"
-                                width: parent.width
+                            // Task 46: hex TextField + 色スウォッチ（プレビュー / クリックで
+                            // ColorDialog）。手入力欄はそのまま残す（E2E / 既存導線を維持）。
+                            // 幅補正は文字色の Row と同じ（leftPadding ぶん詰める）。
+                            // Task 48: Label はフラット（ボーダー/角丸を持たない）ため、これら 3 項目
+                            // （ボーダー色 / 太さ / 角丸）を Label 選択時は隠す（背景色・不透明度は残す）。
+                            Row {
+                                width: parent.width - parent.leftPadding
+                                spacing: 6
                                 visible: !rootWindow.selectedIsLabel
-                                placeholderText: qsTr("#1d3557")
-                                // 背景色・文字色と同じく、空 または 完全な #RRGGBB の時だけ反映する
-                                //（途中入力・不正値を live Item に書き戻さない。Codex PR #58 P2）。
-                                validator: RegularExpressionValidator {
-                                    regularExpression: /^(#[0-9A-Fa-f]{6})?$/
-                                }
-                                onTextEdited: {
-                                    if (canvas.selectedItem && acceptableInput) {
-                                        canvas.selectedItem.widgetBorderColor = text
+
+                                TextField {
+                                    id: inspectorBorderColorField
+                                    objectName: "inspectorBorderColorField"
+                                    width: parent.width - rootWindow.colorSwatchReserve
+                                    placeholderText: qsTr("#1d3557")
+                                    // 背景色・文字色と同じく、空 または 完全な #RRGGBB の時だけ反映する
+                                    //（途中入力・不正値を live Item に書き戻さない。Codex PR #58 P2）。
+                                    validator: RegularExpressionValidator {
+                                        regularExpression: /^(#[0-9A-Fa-f]{6})?$/
+                                    }
+                                    onTextEdited: {
+                                        if (canvas.selectedItem && acceptableInput) {
+                                            canvas.selectedItem.widgetBorderColor = text
+                                        }
+                                    }
+                                    Connections {
+                                        target: canvas
+                                        function onSelectedItemChanged() {
+                                            inspectorBorderColorField.text = canvas.selectedItem
+                                                ? canvas.selectedItem.widgetBorderColor : ""
+                                        }
                                     }
                                 }
-                                Connections {
-                                    target: canvas
-                                    function onSelectedItemChanged() {
-                                        inspectorBorderColorField.text = canvas.selectedItem
-                                            ? canvas.selectedItem.widgetBorderColor : ""
-                                    }
+                                ColorSwatch {
+                                    objectName: "inspectorBorderColorSwatch"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    field: inspectorBorderColorField
+                                    targetProperty: "widgetBorderColor"
+                                    // HmiButton.resolvedBorderColor の既定と揃える。
+                                    fallback: "#1d3557"
                                 }
                             }
 
@@ -1315,6 +1437,30 @@ Window {
             canvasHeight: 600
             anchors.verticalCenter: parent.verticalCenter
             x: (parent.width - inspector.width - width) / 2
+        }
+    }
+
+    // Task 46: 色スウォッチクリックで開く共有 ColorDialog。targetField /
+    // targetProperty を差し替えて 3 つの色（背景 / 文字 / ボーダー）で使い回す。
+    // 確定は CheckBox と同じ離散操作なので、明示 beginEdit/commitEdit で
+    // 1 操作 = 1 件を undo へ積む（フォーカス境界を通らないため。Task 38 と同型）。
+    ColorDialog {
+        id: inspectorColorDialog
+        title: qsTr("色を選択")
+        property var targetField: null
+        property string targetProperty: ""
+        onAccepted: {
+            if (!canvas.selectedItem || !targetField) {
+                return
+            }
+            // Schema は "#RRGGBB" 文字列を期待するため hex 化して書き戻す。
+            // TextField の表示も更新する（プログラム代入は textEdited を発火
+            // しないため二重書き戻しは起きない）。
+            const hex = rootWindow.colorToHex(selectedColor)
+            canvas.beginEdit()
+            canvas.selectedItem[targetProperty] = hex
+            canvas.commitEdit()
+            targetField.text = hex
         }
     }
 
