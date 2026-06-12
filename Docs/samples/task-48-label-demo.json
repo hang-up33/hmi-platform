@@ -1,0 +1,15 @@
+{
+  "project": "Atlas Label Demo",
+  "screens": [
+    {
+      "name": "Main",
+      "widgets": [
+        { "id": "title", "type": "Label", "x": 80, "y": 48, "width": 460, "height": 60, "text": "Atlas HMI パネル", "textColor": "#1d3557", "fontSize": 32, "fontBold": true },
+        { "id": "lblStatus", "type": "Label", "x": 80, "y": 140, "width": 380, "height": 40, "text": "ステータス: 稼働中", "textColor": "#2a9d8f", "fontSize": 22 },
+        { "id": "btnStart", "type": "Button", "x": 80,  "y": 220, "width": 200, "height": 90, "text": "Start", "backgroundColor": "#4cc9f0", "textColor": "#ffffff", "fontSize": 28, "radius": 12 },
+        { "id": "btnStop",  "type": "Button", "x": 320, "y": 220, "width": 200, "height": 90, "text": "Stop",  "backgroundColor": "#e63946", "textColor": "#ffffff", "fontSize": 28, "radius": 12 },
+        { "id": "lblHint", "type": "Label", "x": 80, "y": 340, "width": 440, "height": 32, "text": "Label = 表示専用 / Button = 対話", "textColor": "#888888", "fontSize": 16 }
+      ]
+    }
+  ]
+}
