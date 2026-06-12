@@ -114,7 +114,7 @@ P0 の 3 領域（Lamp / 数値入力・表示 / Modbus）を機能要求(FR)・
 | FR-LMP-03 | 表示専用（クリックで変数を書き換えない） | Lamp の delegate は `onClicked` を action 実行へ結線しない（Editor 選択中継のみ） |
 | FR-LMP-04 | Editor のツールバーから Lamp を追加でき、インスペクタは Lamp に無関係なセクション（クリックアクション等）を隠す | `addWidget("Lamp")` で生成。インスペクタ型対応（`visible` 切替のみ・objectName 不変） |
 
-- **設計判断（要調査・実装時確定）**：点灯状態の持ち方は **(a) `lit` 専用 bool プロパティを binding する** か、**(b) Phase 4 で入れた `checked` 状態スタイルを流用する** か。`litColor` を 1 つ足し、消灯時は既存 `backgroundColor`（既定は暗色）にフォールバックする方針を第一候補とする。丸ランプは既存 `radius`（幅の半分）で表現できる（新 Widget でも resolved\* フォールバックを踏襲）。
+- **設計判断（採用方針・最終確定は Phase 6 plan 起票時）**：点灯状態は **`lit` 専用 bool プロパティを binding** で受け、点灯色 `litColor` / 消灯色は既存 `backgroundColor` にフォールバックする方式を採用する（`checked` 流用案は不採用＝表示専用 Widget に状態トグルの含意を持たせないため）。既定色の例：`litColor` = `#2a9d8f`（点灯＝緑）/ `backgroundColor` = `#264653`（消灯＝暗）。丸ランプは既存 `radius`（幅の半分）で表現（新 Widget でも resolved\* フォールバックを踏襲）。`HmiLamp.qml` の delegate 追加・既定色の確定は Phase 6 plan で行う。
 - **非スコープ**：多状態ランプ（3 色以上）・点滅アニメーションは P2（要望が出てから）。
 
 ### 2.2 数値表示 / 数値入力 Widget
@@ -138,7 +138,7 @@ P0 の 3 領域（Lamp / 数値入力・表示 / Modbus）を機能要求(FR)・
 | FR-NUM-06 | Editor で追加でき、インスペクタに数値固有項目（min/max/step/decimals/unit）を出す | インスペクタ型対応（数値セクション表示・他 Widget では非表示） |
 
 - **Schema 影響**：`WidgetData` に `minValue` / `maxValue` / `step`（数値入力用）を追加（センチネル規約 = `0` が正当値なら `-1` 等。[schema-conventions](../.claude/rules/schema-conventions.md)）。`decimals` / `unit` は 2.0 と共用。
-- **設計判断（要調査）**：数値入力の UI は **(a) TextField + IntValidator/DoubleValidator**（[qml-module-conventions](../.claude/rules/qml-module-conventions.md) の「editable SpinBox 不具合」回避）を第一候補。テンキーポップアップは P2。
+- **設計判断（要調査）**：数値入力の UI は **TextField + IntValidator/DoubleValidator**（[qml-module-conventions](../.claude/rules/qml-module-conventions.md) の「editable SpinBox 不具合」回避）を第一候補。テンキーポップアップは P2。**詳細 UI 仕様**（フィールド幅・フォント・バリデーション UX〔リアルタイム/確定時〕・範囲外フィードバック・focus/blur・タッチ操作）は **Phase 6 plan 起票時に定義**する（本書＝要求倉庫では過度に作り込まない＝CLAUDE.md「hypothetical future を設計しない」）。
 - **役割分担**：数値入力は **action（書き）を持つ対話 Widget**。Label / Lamp / 数値表示は binding（読み）のみ。Simulator / Runtime は「実行（変数書込）は可・編集 UI は不可」の原則を維持（[phase4-button-slice-plan.md](phase4-button-slice-plan.md) 設計原則）。
 
 ### 2.3 Modbus 通信対応（本命）
@@ -167,7 +167,7 @@ flowchart LR
 | FR-MB-02 | Runtime が Modbus TCP マスタとしてスレーブのレジスタを周期読込し、変数ストアへ反映する | 実デバイス or Modbus シミュレータ相手に、レジスタ変化が Widget 表示に追従することを確認 |
 | FR-MB-03 | アクション / 数値入力による変数書込を、書込可能レジスタ（coil / holding）へ反映する | HMI 上の操作でスレーブのレジスタ値が変わることを確認 |
 | FR-MB-04 | 接続状態（接続中 / 切断 / エラー）を取得でき、UI へ反映できる | 切断時に再接続を試行し、状態を変数 or 専用 API で観測可能 |
-| FR-MB-05 | Editor / Simulator は実通信を必須としない（Editor は定義のみ、Simulator は実機なしでも動く） | Editor はビルドに QtSerialBus を要求しない設計、Simulator はモック or 任意接続（要設計） |
+| FR-MB-05 | Editor / Simulator は実通信を必須としない（Editor は定義のみ、Simulator は実機なしでも動く） | Editor はビルドに QtSerialBus を要求しない設計、Simulator は pymodbus ソフトスレーブ or 実機接続（下記「要調査」で統一） |
 
 #### 非機能要求
 
@@ -181,8 +181,8 @@ flowchart LR
 
 - **QtSerialBus の可用性**：実機 image（scarthgap / Qt6 6.8.1）と Qt6 クロス SDK に **`QtSerialBus` モジュールが含まれるか**を確認する。無ければ Yocto レシピへ追加が必要（[dev-environment.md](../.claude/rules/dev-environment.md) の SDK 生成手順に追記）。
 - **Modbus TCP / RTU の優先**：まず **TCP（Ethernet）** を対象とする（実機は Ethernet 接続実績あり）。RTU（シリアル）は P1〜P2。
-- **変数ソースのスキーマ形**：`VariableData` に optional `source` オブジェクト（`{ proto:"modbus", reg:"holding", address:N, poll:ms, ... }`）を足す案。後方互換（ソース無し = 内部変数）を保つ。**要設計**：接続先（host/port/unitId）は変数ごとか、プロジェクト共通の接続定義を参照するか。
-- **Simulator の扱い**：実機なしでの試験のため、Modbus を **モック**（疑似値生成）するか、任意で実デバイス / Modbus シミュレータ（pymodbus 等）に TCP 接続するか。**第一候補はモック**（PC 単独で動作確認できる）＋ E2E はモックで検証。
+- **変数ソースのスキーマ形（確定）**：接続先は **プロジェクト共通の `connections[]` リスト参照**を採用する（各変数の `source.connection: "plc1"` で接続定義を参照し、host/port/unitId を変数ごとに重複させない）。`VariableData.source` は optional で後方互換（ソース無し = 内部変数）。**正準の JSON スキーマ例は [phase7-modbus-plan.md](phase7-modbus-plan.md) のスキーマ拡張節**に置き、本書はそれを参照する。
+- **Simulator の自動検証相手（統一）**：Simulator の E2E 検証は **pymodbus ソフトスレーブ（疑似 Modbus TCP PLC）** を相手にする（PC 単独で `ctest` 緑にできる）。実 PLC は手動確認（ローカル）。用語は「モック」を使わず「pymodbus ソフトスレーブ」に統一する。
 - **値変換**：生レジスタ（16bit int 等）→ 物理量（float / スケーリング）。FR-VAR の float 型と「スケーリング(gain/offset)」（バックログ C）に接続。32bit / float レジスタの byte order は要調査。
 
 #### 想定フェーズ分割（Modbus は複数タスクになる見込み）
