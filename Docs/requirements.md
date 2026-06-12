@@ -194,7 +194,8 @@ flowchart LR
 | MB-3 | 書込（coil / holding）+ 接続状態 + 再接続 |
 | MB-4 | Simulator モック + E2E + 実機デモ撮影 |
 
-> 実際のタスク粒度は Phase 7 着手時に `Docs/phase7-modbus-plan.md` として起票する（本書はあくまで要求の倉庫）。
+> タスク粒度・実行環境（PC / 実機）・要調査は **[phase7-modbus-plan.md](phase7-modbus-plan.md)（起票済み）** に展開した。本書はあくまで要求の倉庫。
+> 確定済みの前提（2026-06-12）：Modbus **TCP 一本** / **QtSerialBus** / **実 PLC あり** / 初手は **PC の Simulator → 実機 Runtime** の順。
 
 ---
 
