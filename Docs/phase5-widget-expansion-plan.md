@@ -152,7 +152,7 @@ flowchart TD
 |---|---|---|
 | 47 型分岐の足場 + HmiLabel 描画 | ✅ 完了 | #97 |
 | 48 Editor で Label 作成 + インスペクタ型対応 | ✅ 完了 | #98 |
-| 49 Label round-trip + binding + E2E + スクショ | ✅ 完了 | #TBD |
+| 49 Label round-trip + binding + E2E + スクショ | ✅ 完了 | #102 |
 
 > **Phase 5（Label 横展開）完了**（Task 47〜49）。後続 Widget（Lamp / Gauge / Image 等）は別途承認。
 
