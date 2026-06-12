@@ -108,3 +108,21 @@ set_tests_properties(e2e_action_roundtrip PROPERTIES
     TIMEOUT 60
     LABELS e2e
 )
+
+# Task 49: Label の round-trip + binding cross-app E2E。
+# Editor で Label 2 件（静的 + binding）+ 変数を持つ JSON を `--open` → saveTo で round-trip →
+# 保存 JSON を直接検証 → Simulator を `--open` で起動し HmiLabel（objectName "hmiLabel"）の
+# text / textColor 描画と、text バインディングの変数追従（"BOUND"）を getStringProperty で確認。
+# Button 用 test_style_roundtrip / test_action_roundtrip の Label 版。2 プロセス起動のため
+# TIMEOUT は他の cross-app と同等。
+add_test(
+    NAME e2e_label_roundtrip
+    COMMAND ${Python3_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_label_roundtrip.py
+        --editor-binary $<TARGET_FILE:hmi_editor>
+        --simulator-binary $<TARGET_FILE:hmi_simulator>
+)
+set_tests_properties(e2e_label_roundtrip PROPERTIES
+    TIMEOUT 60
+    LABELS e2e
+)

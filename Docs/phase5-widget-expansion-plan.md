@@ -152,7 +152,11 @@ flowchart TD
 |---|---|---|
 | 47 型分岐の足場 + HmiLabel 描画 | ✅ 完了 | #97 |
 | 48 Editor で Label 作成 + インスペクタ型対応 | ✅ 完了 | #98 |
-| 49 Label round-trip + binding + E2E + スクショ | 未着手 | — |
+| 49 Label round-trip + binding + E2E + スクショ | ✅ 完了 | #102 |
+
+> **Phase 5（Label 横展開）完了**（Task 47〜49）。後続 Widget（Lamp / Gauge / Image 等）は別途承認。
+
+> Task 49 完了（2026-06-12）：新規 cross-app E2E `e2e_label_roundtrip`（`tests/e2e/test_label_roundtrip.py`）を追加。Label 2 件（静的 + binding）＋変数を持つ JSON を Editor に `--open`→`saveTo` で round-trip → 保存 JSON を直接 assert（`type:"Label"` / `text` / `textColor` / bindings / variables）→ Simulator を `--open` で起動し `HmiLabel`（objectName `hmiLabel`）の静的描画（text/textColor）と **text バインディングの変数追従**（"BOUND"）を `getStringProperty` で確認。E2E 6→7 本、Web `ctest` unit 10 + e2e 7 = 17/17 緑。README `simulator.png` を Label 含むシーン（`Docs/samples/task-48-label-demo.json`）で撮り直し + キャプション更新。Label は表示専用のため click action は検証せず binding の「読み」のみ。
 
 > Task 48 完了（2026-06-11）：Editor `Canvas.qml` の `addWidget()` を `addWidget(type)` へ一般化（省略時は後方互換で Button。Label は既定文字 "Label"・背景未指定＝透明フォールバック）。ツールバーに「ラベル追加」ボタン（objectName `addLabelButton`）を追加し、既存「追加」を「ボタン追加」に明確化（objectName `addWidgetButton`・挙動は据え置き＝E2E 互換）。インスペクタは選択 Widget が Label のとき**無関係セクション / 項目を `visible` で隠す**（状態セクション全体・クリックアクション編集・ボーダー色/太さ/角丸を非表示。背景色・不透明度・**バインディング編集**・基本・文字・詳細は表示）。判定は `rootWindow.selectedIsLabel`（= `selectedItem.widgetType === "Label"`）。**objectName・編集ロジック・Schema は不変＝表示切替のみ**。新規 unit（Canvas）：`addWidget()` 既定 Button / `addWidget("Label")` で Label 型 + HmiLabel 描画 + 既定文字 "Label" / Label 追加の undo。README `editor.png` を Label 配置シーン（`Docs/samples/task-48-label-demo.json`）で撮り直し + キャプション更新。Web `ctest` unit 10 + e2e 6 = 16/16 緑。次は Task 49。
 
