@@ -145,6 +145,7 @@ Item {
                 Loader {
                     anchors.fill: parent
                     sourceComponent: wrapper.modelData.type === "Label" ? labelComponent
+                                   : wrapper.modelData.type === "NumericField" ? numericComponent
                                                                         : buttonComponent
                 }
 
@@ -248,6 +249,41 @@ Item {
                         widgetOpacity: wrapper.modelData.opacity !== undefined ? wrapper.modelData.opacity : -1
                         widgetEnabled: wrapper.modelData.enabled !== undefined ? wrapper.modelData.enabled : true
                         // Label は表示専用＝onClicked を action 実行へ結線しない（クリックは無反応）。
+                    }
+                }
+
+                Component {
+                    id: numericComponent
+                    HmiNumericField {
+                        // Task 50: 型分岐の観察用 objectName（HmiButton / HmiLabel と対。
+                        // E2E / unit は hmiNumericField で参照）。
+                        objectName: "hmiNumericField"
+                        anchors.fill: parent
+                        // Simulator は live 編集可（Editor キャンバスは editable:false で読取専用）。
+                        editable: true
+                        // Task 50: 読み取り表示。binding {property:"value"} があれば変数の
+                        // 現在値を表示し、無ければ modelData の静的 text を使う（Label の text
+                        // 追従と同じ boundValue 経路）。**write（変数への書き戻し）は Task 51** で
+                        // valueCommitted を結線する。Task 50 は読み取り表示のみ。
+                        text: {
+                            const v = wrapper.boundValue("value")
+                            return v !== undefined ? String(v)
+                                : (wrapper.modelData.text !== undefined ? wrapper.modelData.text : "")
+                        }
+                        backgroundColor: wrapper.modelData.backgroundColor !== undefined ? wrapper.modelData.backgroundColor : ""
+                        textColor: wrapper.modelData.textColor !== undefined ? wrapper.modelData.textColor : ""
+                        fontSize: wrapper.modelData.fontSize !== undefined ? wrapper.modelData.fontSize : 0
+                        borderColor: wrapper.modelData.borderColor !== undefined ? wrapper.modelData.borderColor : ""
+                        borderWidth: wrapper.modelData.borderWidth !== undefined ? wrapper.modelData.borderWidth : -1
+                        cornerRadius: wrapper.modelData.radius !== undefined ? wrapper.modelData.radius : -1
+                        fontBold: wrapper.modelData.fontBold !== undefined ? wrapper.modelData.fontBold : false
+                        fontItalic: wrapper.modelData.fontItalic !== undefined ? wrapper.modelData.fontItalic : false
+                        fontFamily: wrapper.modelData.fontFamily !== undefined ? wrapper.modelData.fontFamily : ""
+                        hAlign: wrapper.modelData.hAlign !== undefined ? wrapper.modelData.hAlign : ""
+                        vAlign: wrapper.modelData.vAlign !== undefined ? wrapper.modelData.vAlign : ""
+                        widgetOpacity: wrapper.modelData.opacity !== undefined ? wrapper.modelData.opacity : -1
+                        widgetEnabled: wrapper.modelData.enabled !== undefined ? wrapper.modelData.enabled : true
+                        // Task 50 では valueCommitted を結線しない（write は Task 51）。
                     }
                 }
             }

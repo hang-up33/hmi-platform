@@ -101,7 +101,7 @@ sequenceDiagram
 | 選択用 `signal clicked(int modifiers)` + 選択用 MouseArea（Editor 選択の中継） | — |
 | `commitValue()`（現在 text を確定）/ `signal valueCommitted(string text)`（delegate が write へ結線。E2E でも `invokeMethod` で確定を模す） | — |
 
-- **既定値は HmiNumericField に集約**（Button / Label と同思想）。背景は入力欄らしい淡背景 + 細枠を既定にする。確定値は Task 50 実装時に HmiButton/HmiLabel の resolved 既定と並べて決め、**乖離したら同コミットで本計画書を更新**する。
+- **既定値は HmiNumericField に集約**（Button / Label と同思想）。背景は入力欄らしい淡背景 + 細枠を既定にする。**Task 50 で確定した resolved 既定**：背景 `#ffffff`（白）/ 文字色 `#1d3557`（Label と同じ濃色）/ ボーダー色 `#9aa5b1`・幅 `1` / 角丸 `4` / 配置は数値慣習で **hAlign=右・vAlign=中央**（Button=中央/中央・Label=左/中央 との差分）/ opacity `1.0`。Button の鮮やか塗り・Label の透明とは別の「入力欄らしい」既定。
 - **QtQuick.Controls 依存**：import のみで動く（CMake 明示リンク不要、[qml-module-conventions](../.claude/rules/qml-module-conventions.md)）。**SpinBox ではなく TextField + IntValidator** を使う（editable SpinBox の表示更新バグ回避＝Task 27 の教訓）。
 - **保留（要検証）**：i.MX8MP の rootfs に QtQuick.Controls plugin（Basic スタイル）が含まれるかは本リポジトリのコードからは判断不能。**Task 50 の完了基準に「windeployqt / Yocto recipe で Controls plugin 同梱を確認」を TODO として明記**し、デプロイ検証は別途行う（MVP の build/ctest 緑とは切り離す）。
 
@@ -171,7 +171,7 @@ Label で確立した 5 ステップに、**入力 Widget 固有の 4 点**を�
 
 | Task | 状態 | PR |
 |---|---|---|
-| 50 型分岐の足場 + HmiNumericField 描画 | ⬜ 未着手 | — |
+| 50 型分岐の足場 + HmiNumericField 描画 | 🟦 実装済み（PR レビュー待ち） | — |
 | 51 write 経路 + Editor 追加 UI + インスペクタ型対応 | ⬜ 未着手 | — |
 | 52 cross-app E2E（typed-write）+ スクショ | ⬜ 未着手 | — |
 

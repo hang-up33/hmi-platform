@@ -867,6 +867,32 @@ TestCase {
         }, 1000, "Label へ切替後も HmiButton が残る / HmiLabel が出ない");
     }
 
+    // Task 50: type:"NumericField" の delegate は HmiNumericField を描き、
+    // HmiButton / HmiLabel は生成しないこと。EditableWidget でラップされるため、
+    // NumericField でも選択枠・リサイズハンドルは効く（wrapper 側の機構で中身に依らない）。
+    // Editor キャンバスは設計面なので editable:false で読取専用表示。
+    function test_delegate_renders_numeric_for_numericfield_type() {
+        canvas.widgetModel = [
+            { id: "num1", type: "NumericField", x: 0, y: 0, width: 120, height: 40, text: "42" }
+        ];
+        tryVerify(function() { return editableChildren().length === 1; }, 1000,
+                  "NumericField モデルが反映されない");
+        const wrapper = editableChildren()[0];
+        compare(wrapper.widgetType, "NumericField");
+        var fld = null;
+        tryVerify(function() {
+            fld = findByObjectName(wrapper, "hmiNumericField");
+            return fld !== null;
+        }, 1000, "NumericField type で HmiNumericField が描かれない");
+        verify(findByObjectName(wrapper, "hmiButton") === null,
+               "NumericField type なのに HmiButton も生成された");
+        verify(findByObjectName(wrapper, "hmiLabel") === null,
+               "NumericField type なのに HmiLabel も生成された");
+        // 描かれた HmiNumericField に text が伝播し、Editor では読取専用（editable:false）。
+        compare(fld.text, "42");
+        compare(fld.editable, false);
+    }
+
     // Task 48: 追加した Widget の id だけが btn001 と異なるものを返すヘルパ。
     function addedWidget() {
         const ch = editableChildren();
