@@ -172,7 +172,7 @@ Label で確立した 5 ステップに、**入力 Widget 固有の 4 点**を�
 | Task | 状態 | PR |
 |---|---|---|
 | 50 型分岐の足場 + HmiNumericField 描画 | ✅ 完了 | #104 |
-| 51 write 経路 + Editor 追加 UI + インスペクタ型対応 | ✅ 完了 | （本 PR） |
-| 52 cross-app E2E（typed-write）+ スクショ | ⬜ 未着手 | — |
+| 51 write 経路 + Editor 追加 UI + インスペクタ型対応 | ✅ 完了 | #105 |
+| 52 cross-app E2E（typed-write）+ スクショ | ✅ 完了 | （本 PR） |
 
-> 実装は Task 50 から 1 タスクずつ。Task 51 で Simulator の NumericField を `editable:true` にし、`writeBoundValue("value", text)` で入力確定値を binding の指す変数へ書き戻す経路を結線（読み書き両用 binding）。Editor にツールバー「数値入力追加」（`addNumericButton`）と `addWidget` ホワイトリストへの `"NumericField"` 追加、インスペクタの型対応（`selectedIsNumericField` / 派生 `selectedSupportsClickAction` で状態・クリックアクションを非表示、binding プロパティ ComboBox に `"value"` 追加）まで完了。残るは Task 52（cross-app E2E + スクショ最終同期）。
+> **Phase 6（入力 Widget・NumericField）完了**。Task 51 で Simulator の NumericField を `editable:true` にし `writeBoundValue("value", text)` で入力確定値を binding の指す変数へ書き戻す経路を結線（読み書き両用 binding）。Task 52 で cross-app E2E `e2e_numeric_input` を新設：Editor で fixture（`setpoint` 変数 + NumericField〔value binding〕 + 観測用 Label〔text binding〕）を `--open` → `saveTo` round-trip → 保存 JSON 直接検証 → Simulator で読み（`setpoint=10` 追従）確認 → `setStringProperty` + `commitValue()` の `invokeMethod` で確定を模し、`setpoint=42` への書き戻しと観測用 Label の追従を `getStringProperty` で観測（Web `ctest` unit 10 + e2e 8 = 18/18 緑）。スクショは Task 51 で NumericField シーンに同期済みで Task 52 は UI 不変（テスト + CMake のみ）のため再撮影不要。**後続の入力 Widget（Gauge スライダ / Toggle 等）・real 型・数値範囲は未承認＝別途スコープ確定**。
