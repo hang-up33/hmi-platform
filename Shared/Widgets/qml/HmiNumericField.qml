@@ -99,6 +99,12 @@ Rectangle {
     // E2E（Spix）は実テキスト入力を発火できないため commitValue() を invokeMethod で叩く。
     signal valueCommitted(string text)
 
+    // 直近 commit した正規化済み値。Enter→blur のように `onEditingFinished` が短時間に
+    // 二度発火しても、同じ値の再確定（重複 valueCommitted / 余分な setValue）を抑止する
+    // （CodeRabbit PR #105）。フォーカス取得（新しい編集セッション開始）でクリアし、
+    // 同じ値を入れ直した場合は改めて確定できるようにする。
+    property string _lastCommittedText: ""
+
     // 現在の TextField のテキストで valueCommitted(text) を通知するだけに留める。
     // **root.text は命令的に書き換えない**：Simulator の delegate は text を
     // boundValue("value") にバインドしており、ここで root.text へ代入すると外部 binding が
@@ -122,6 +128,10 @@ Rectangle {
         } catch (e) {
             // パース不能（空 / 不正）は raw のまま
         }
+        // 同一値の二重確定（Enter→blur で onEditingFinished が二度走る等）はスキップする。
+        if (cleaned === root._lastCommittedText)
+            return;
+        root._lastCommittedText = cleaned;
         root.valueCommitted(cleaned);
     }
 
@@ -153,10 +163,13 @@ Rectangle {
         // （Codex PR #105 P1 の「再バインドを editingFinished 後へ deferred」推奨に沿う）。
         onActiveFocusChanged: {
             if (activeFocus) {
-                field.text = field.text  // 現在値を保持したまま `text: root.text` バインドを外す
+                field.text = field.text       // 現在値を保持したまま `text: root.text` バインドを外す
+                root._lastCommittedText = ""  // 新しい編集セッション＝同じ値でも改めて確定可にする
             }
         }
-        // 数値のみ許可（int）。MVP は int 変数のみ（real / min-max は別承認）。
+        // 数値のみ許可（int）。MVP は int 変数のみ（real / min-max・範囲指定は別承認）。
+        // TODO（Task 52+）: 数値範囲を Widget に持たせる際は IntValidator の bottom/top を設定する。
+        // 現状は未指定＝C++ int の全域（約 ±21 億）を許容（MVP スコープでは暫定で問題なし）。
         validator: IntValidator {}
         inputMethodHints: Qt.ImhFormattedNumbersOnly
         color: root.resolvedTextColor

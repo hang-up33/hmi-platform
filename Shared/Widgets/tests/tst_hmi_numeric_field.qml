@@ -82,6 +82,8 @@ TestCase {
         if (tf) {
             tf.text = Qt.binding(function() { return field.text });
         }
+        // commit の重複排除キャッシュも初期化（前テストの確定値を持ち越さない）。
+        field._lastCommittedText = "";
         // スパイは最後にクリア（上のフォーカス操作由来の stray シグナルを残さない）。
         clickedSpy.clear();
         committedSpy.clear();
@@ -201,6 +203,28 @@ TestCase {
         // 以降も変数追従が復活する（バインドが効く）。
         field.text = "123";
         compare(tf.text, "123");
+    }
+
+    // Task 51（CodeRabbit PR #105）：同一値の二重確定（Enter→blur で onEditingFinished が
+    // 二度発火する等）は valueCommitted を一度だけにする（重複 setValue / 余分なシグナル抑止）。
+    // フォーカス取得で重複排除キャッシュがクリアされ、別セッションでは同値でも再確定できる。
+    function test_duplicate_commit_same_value_is_suppressed() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        tf.forceActiveFocus();   // 編集セッション開始（_lastCommittedText クリア）
+        tf.text = "42";
+        committedSpy.clear();
+        field.commitValue();     // 1 回目：emit
+        field.commitValue();     // 2 回目：同値 → スキップ
+        compare(committedSpy.count, 1);
+        compare(committedSpy.signalArguments[0][0], "42");
+
+        // 別の編集セッション（再フォーカス）では同じ値でも改めて確定できる。
+        focusSink.forceActiveFocus();
+        tf.forceActiveFocus();
+        committedSpy.clear();
+        field.commitValue();
+        compare(committedSpy.count, 1);
     }
 
     // Task 51（Codex PR #105）：IntValidator は既定 locale で桁区切り・locale 固有数字を
