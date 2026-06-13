@@ -280,6 +280,7 @@ timeline
   - **Editor UI**：`addWidget` ホワイトリストに `"NumericField"`（既定文字 "0"）、ツールバーに「数値入力追加」（`addNumericButton`）。
   - **インスペクタ**：`selectedIsNumericField` + 派生 `selectedSupportsClickAction`（= Button のみ）で状態・クリックアクションを非表示（背景・枠は表示）、binding プロパティ ComboBox に `"value"` 追加、色スウォッチの fallback を NumericField 既定（背景 #ffffff / 文字 #1d3557）に対応。
   - **テスト**：Simulator に write 追従 + 無 binding no-op の 2 件、Editor に addWidget("NumericField") + undo の 2 件を追加。Web `ctest` unit 10 + e2e 7 = 17/17 緑。`editor.png`/`simulator.png` を NumericField 含むシーン（`Docs/samples/task-51-numeric-demo.json`）へ同期。
+  - **Codex レビュー（PR #105）対応 — P2 ×2**：①`HmiNumericField` のフォーカス取得時に `text: root.text` 宣言バインドを**外す**よう修正（編集中に外部 action / 別入力が同変数を更新しても入力中の値が上書きされない。フォーカス喪失で `Qt.binding` 貼り直し＝確定値へ再同期）。②NumericField で「状態」セクションを丸ごと隠すと `enabled:false` を含む JSON を Editor で有効へ戻せず詰むため、**「有効」チェックだけは表示**（トグル/初期オンは Button 専用のまま）。CodeRabbit はクリーン（🎉 No actionable comments）。
   - **次は Task 52**（cross-app E2E `e2e_numeric_input` + スクショ最終同期）。**後続の入力 Widget（Gauge スライダ / Toggle 等）・real 型・数値範囲は未承認＝別途スコープ確定**。
 
 ---

@@ -1215,12 +1215,15 @@ Window {
                         }
 
                         // ── 状態 : 有効 / チェック可能 / チェック状態 ──
-                        // Task 48 / 51: Label（表示専用）・NumericField（入力 Widget）はいずれも
-                        // 状態（有効 / トグル / 初期オン）を持たないためセクションごと隠す
-                        // （visible のみ。objectName・中身は不変）。
+                        // Task 48 / 51: Label（表示専用）はセクションごと隠す。**NumericField は
+                        // 「有効」だけ出す**（トグル / 初期オンは Button 専用）。NumericField も
+                        // `widgetEnabled` を内部 TextField.enabled に流すため、`enabled:false` を含む
+                        // JSON を開いたとき Editor で有効に戻せるよう「有効」チェックを残す
+                        // （Codex PR #105 P2）。トグル / 初期オンは `selectedSupportsClickAction`
+                        // ＝ Button のみで出し分ける（objectName・中身は不変、visible のみ）。
                         InspectorSection {
                             title: qsTr("状態")
-                            visible: !rootWindow.selectedIsLabel && !rootWindow.selectedIsNumericField
+                            visible: !rootWindow.selectedIsLabel
 
                             // Task 42 / 45: 状態別スタイル（有効 / トグルボタンにする / 初期状態をオン）。
                             // フォント CheckBox と同じ 2 本立て + 明示 beginEdit/commitEdit。
@@ -1254,6 +1257,8 @@ Window {
                                 id: inspectorCheckableCheck
                                 objectName: "inspectorCheckableCheck"
                                 text: qsTr("トグルボタンにする")
+                                // Task 51: トグル / 初期オンは Button 専用（NumericField は「有効」のみ）。
+                                visible: rootWindow.selectedSupportsClickAction
                                 ToolTip.text: qsTr("ON にすると、クリックのたびに押下状態（オン / オフ）が切り替わるトグルボタンになります")
                                 ToolTip.visible: hovered
                                 ToolTip.delay: 600
@@ -1277,6 +1282,8 @@ Window {
                                 id: inspectorCheckedCheck
                                 objectName: "inspectorCheckedCheck"
                                 text: qsTr("初期状態をオン")
+                                // Task 51: トグル / 初期オンは Button 専用（NumericField は「有効」のみ）。
+                                visible: rootWindow.selectedSupportsClickAction
                                 ToolTip.text: qsTr("トグルボタンの初期状態をオン（押下）にします。「トグルボタンにする」が ON のときのみ有効です")
                                 ToolTip.visible: hovered
                                 ToolTip.delay: 600

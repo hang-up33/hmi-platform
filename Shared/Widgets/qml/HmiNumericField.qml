@@ -128,14 +128,18 @@ Rectangle {
         enabled: root.widgetEnabled
         // delegate が流す表示テキスト。読み（変数追従）はこの宣言バインドで効く。
         text: root.text
-        // Task 51: ユーザーがキー入力すると上の `text: root.text` バインドは切れる
-        // （TextField の text へユーザー入力が直接入るため）。確定（Enter / フォーカス喪失）で
-        // delegate が変数へ write → boundValue 再評価で root.text が更新されるので、
-        // **フォーカス喪失時にバインドを貼り直して**表示を変数の確定値（coerce 後）へ復帰させる。
-        // 編集中（activeFocus）は貼り直さない＝表示同期を抑止しカーソル飛びを防ぐ
-        // （インスペクタ two-way 編集の Task 26 パターンを activeFocus ガードで踏襲）。
+        // Task 51: 編集中（activeFocus）と非編集で表示の振る舞いを分ける。
+        //   - フォーカス取得時：宣言バインド `text: root.text` を**外す**（現在値を保ったまま
+        //     imperative 代入で binding を切る）。これをしないと編集中に外部から同変数が
+        //     更新されると入力中の値が上書きされ、確定時に意図しない値を書き戻す（Codex PR #105 P2）。
+        //   - フォーカス喪失時：`Qt.binding` でバインドを**貼り直し**、delegate の write-back
+        //     （変数 → boundValue 再評価）で更新された変数の確定値（coerce 後）へ表示を復帰させる。
+        // ＝編集中は変数 → 表示の同期を完全に抑止し、確定後だけ変数値へ再同期する
+        // （インスペクタ two-way 編集の Task 26 パターンと同型）。
         onActiveFocusChanged: {
-            if (!activeFocus) {
+            if (activeFocus) {
+                field.text = field.text  // 現在値を保持したまま `text: root.text` バインドを外す
+            } else {
                 field.text = Qt.binding(function() { return root.text })
             }
         }

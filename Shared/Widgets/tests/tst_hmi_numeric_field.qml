@@ -43,6 +43,16 @@ TestCase {
         signalName: "valueCommitted"
     }
 
+    // フォーカスを field から奪って「編集確定（blur）」を模すための受け皿。
+    TextInput {
+        id: focusSink
+        objectName: "focusSink"
+        x: 0
+        y: 60
+        width: 50
+        height: 20
+    }
+
     function init() {
         // 各 test_* 実行前にプロパティをリセット
         field.text = "0";
@@ -151,6 +161,32 @@ TestCase {
         field.commitValue();
         compare(committedSpy.count, 1);
         compare(committedSpy.signalArguments[0][0], "7");
+    }
+
+    // Task 51（Codex PR #105 P2）：編集中（フォーカス取得）は外部 text 更新を抑止し、
+    // フォーカス喪失（確定）で変数の確定値へ再同期する。フォーカス取得時に `text: root.text`
+    // 宣言バインドを外すため、編集中に root.text（変数追従）が変わっても内部 TextField は
+    // 上書きされない。blur すると Qt.binding を貼り直して root.text へ復帰する。
+    function test_edit_focus_suppresses_external_sync_then_resyncs_on_blur() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.text = "10";
+        compare(tf.text, "10");
+
+        // フォーカス取得＝編集中：宣言バインドが外れる。
+        tf.forceActiveFocus();
+        verify(tf.activeFocus, "TextField がフォーカスを取得できない");
+        // 外部から root.text（変数追従の表示値）が変わっても入力中は上書きしない。
+        field.text = "99";
+        compare(tf.text, "10");
+
+        // フォーカス喪失＝確定：root.text の現在値（"99"）へ再同期（バインド貼り直し）。
+        focusSink.forceActiveFocus();
+        verify(!tf.activeFocus, "TextField のフォーカスが外れない");
+        compare(tf.text, "99");
+        // 以降も変数追従が復活する（バインドが効く）。
+        field.text = "123";
+        compare(tf.text, "123");
     }
 
     // QQuickItem ツリーから指定された objectName の子を再帰的に探す
