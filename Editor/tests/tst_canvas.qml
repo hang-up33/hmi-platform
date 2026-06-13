@@ -929,6 +929,38 @@ TestCase {
                   "追加 Label が HmiLabel で描かれない");
     }
 
+    // Task 51: addWidget("NumericField") は NumericField 型 Widget を追加し HmiNumericField で
+    // 描かれる。既定文字は数値慣習で "0"。Editor キャンバスは読取専用（editable:false）。
+    function test_add_widget_numericfield_type() {
+        canvas.addWidget("NumericField");
+        tryVerify(function() { return editableChildren().length === 2; }, 1000,
+                  "NumericField が追加されない");
+        const added = addedWidget();
+        verify(added !== null, "新規 NumericField widget が見つからない");
+        compare(added.widgetType, "NumericField");
+        compare(added.widgetText, "0");
+        var fld = null;
+        tryVerify(function() {
+            fld = findByObjectName(added, "hmiNumericField");
+            return fld !== null;
+        }, 1000, "追加 NumericField が HmiNumericField で描かれない");
+        compare(fld.editable, false);
+        verify(findByObjectName(added, "hmiButton") === null,
+               "NumericField なのに HmiButton も生成された");
+    }
+
+    // Task 51: addWidget("NumericField") も undo で元に戻せる（構造変更 = pushUndo 経路）。
+    function test_add_numericfield_is_undoable() {
+        compare(canvas.canUndo, false);
+        canvas.addWidget("NumericField");
+        tryVerify(function() { return editableChildren().length === 2; }, 1000,
+                  "NumericField が追加されない");
+        compare(canvas.canUndo, true);
+        canvas.undo();
+        tryVerify(function() { return editableChildren().length === 1; }, 1000,
+                  "undo で NumericField 追加が取り消されない");
+    }
+
     // Task 48（CodeRabbit PR #98 nitpick）：未知 / 空の type はホワイトリスト正規化で
     // "Button" にフォールバックする（保存される widgetModel[].type が常に既知種別になる）。
     function test_add_widget_unknown_type_falls_back_to_button() {

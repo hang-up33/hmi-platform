@@ -1,0 +1,19 @@
+{
+  "project": "Atlas NumericField Demo",
+  "variables": [
+    { "name": "setpoint", "type": "int", "initial": 25 }
+  ],
+  "screens": [
+    {
+      "name": "Main",
+      "widgets": [
+        { "id": "title", "type": "Label", "x": 80, "y": 48, "width": 540, "height": 60, "text": "Atlas HMI / NumericField", "textColor": "#1d3557", "fontSize": 32, "fontBold": true },
+        { "id": "lblField", "type": "Label", "x": 80, "y": 150, "width": 220, "height": 48, "text": "設定値 (Setpoint):", "textColor": "#1d3557", "fontSize": 22 },
+        { "id": "numSetpoint", "type": "NumericField", "x": 320, "y": 150, "width": 160, "height": 48, "fontSize": 24, "bindings": [ { "property": "value", "variable": "setpoint" } ] },
+        { "id": "lblEcho", "type": "Label", "x": 80, "y": 230, "width": 220, "height": 40, "text": "追従表示 (Label):", "textColor": "#2a9d8f", "fontSize": 20 },
+        { "id": "valEcho", "type": "Label", "x": 320, "y": 230, "width": 160, "height": 40, "text": "?", "textColor": "#2a9d8f", "fontSize": 24, "fontBold": true, "bindings": [ { "property": "text", "variable": "setpoint" } ] },
+        { "id": "lblHint", "type": "Label", "x": 80, "y": 320, "width": 520, "height": 32, "text": "NumericField = 数値入力 (read + write) / 入力確定で変数を更新", "textColor": "#888888", "fontSize": 16 }
+      ]
+    }
+  ]
+}

@@ -308,6 +308,19 @@ Window {
     readonly property bool selectedIsLabel:
         canvas.selectedItem !== null && canvas.selectedItem.widgetType === "Label"
 
+    // Task 51: 選択中 Widget が NumericField 型か。NumericField は入力 Widget で、状態
+    // （有効/トグル/初期オン）とクリックアクションを持たない（書きは入力確定＝binding で行う）。
+    // 背景・枠・文字・配置・不透明度・バインディングは持つ（背景・枠は Label と違い全部表示）。
+    readonly property bool selectedIsNumericField:
+        canvas.selectedItem !== null && canvas.selectedItem.widgetType === "NumericField"
+
+    // Task 51: クリックアクション（onClick）を扱える Widget か（= Button のみ）。Label /
+    // NumericField はクリックアクションを持たないため、`!selectedIsLabel && !selectedIsNumericField`
+    // を毎回連結せず派生プロパティへまとめる（今後の入力 / 表示 Widget 追加で破綻しにくい。
+    // 新たに「クリックアクション非対応」種別が増えたらここだけ直せばよい）。
+    readonly property bool selectedSupportsClickAction:
+        !selectedIsLabel && !selectedIsNumericField
+
     // Task 38: インスペクタの Widget 編集を undo の 1 操作境界にする。どれかの入力欄が
     // フォーカスを得た時に前状態を保留（beginEdit）し、全フィールドからフォーカスが
     // 外れた時に確定（commitEdit、状態が変わっていれば 1 件積む）。これで「フィールドを
@@ -428,6 +441,14 @@ Window {
                 objectName: "addLabelButton"
                 text: qsTr("ラベル追加")
                 onClicked: canvas.addWidget("Label")
+            }
+
+            // Task 51: 数値入力（NumericField）追加。Phase 6 の最初の入力 Widget。
+            // 同じ addWidget を type 違いで呼ぶ（ホワイトリストに "NumericField" を追加済み）。
+            Button {
+                objectName: "addNumericButton"
+                text: qsTr("数値入力追加")
+                onClicked: canvas.addWidget("NumericField")
             }
 
             Button {
@@ -938,10 +959,11 @@ Window {
                                     field: inspectorTextColorField
                                     targetProperty: "widgetTextColor"
                                     // 未指定時の既定色は Widget 種別の resolved* と揃える
-                                    //（HmiButton=white / HmiLabel=#1d3557。種別ごとの
-                                    // インスペクタ本対応は Task 48 で行う）。
+                                    //（HmiButton=white / HmiLabel=#1d3557 / HmiNumericField=#1d3557）。
+                                    // Task 51: NumericField も Label と同じ濃文字（#1d3557）が既定。
                                     fallback: (canvas.selectedItem
-                                               && canvas.selectedItem.widgetType === "Label")
+                                               && (canvas.selectedItem.widgetType === "Label"
+                                                   || canvas.selectedItem.widgetType === "NumericField"))
                                         ? "#1d3557" : "white"
                                 }
                             }
@@ -1043,11 +1065,14 @@ Window {
                                     field: inspectorBgColorField
                                     targetProperty: "widgetBackgroundColor"
                                     // 未指定時の既定色は Widget 種別の resolved* と揃える
-                                    //（HmiButton=#4cc9f0 / HmiLabel=transparent。種別ごとの
-                                    // インスペクタ本対応は Task 48 で行う）。
+                                    //（HmiButton=#4cc9f0 / HmiLabel=transparent / HmiNumericField=#ffffff）。
+                                    // Task 51: NumericField は入力欄らしい白背景（#ffffff）が既定。
                                     fallback: (canvas.selectedItem
                                                && canvas.selectedItem.widgetType === "Label")
-                                        ? "transparent" : "#4cc9f0"
+                                        ? "transparent"
+                                        : (canvas.selectedItem
+                                           && canvas.selectedItem.widgetType === "NumericField")
+                                            ? "#ffffff" : "#4cc9f0"
                                 }
                             }
 
@@ -1190,11 +1215,12 @@ Window {
                         }
 
                         // ── 状態 : 有効 / チェック可能 / チェック状態 ──
-                        // Task 48: Label は表示専用＝状態（有効 / トグル / 初期オン）を持たないため
-                        // セクションごと隠す（visible のみ。objectName・中身は不変）。
+                        // Task 48 / 51: Label（表示専用）・NumericField（入力 Widget）はいずれも
+                        // 状態（有効 / トグル / 初期オン）を持たないためセクションごと隠す
+                        // （visible のみ。objectName・中身は不変）。
                         InspectorSection {
                             title: qsTr("状態")
-                            visible: !rootWindow.selectedIsLabel
+                            visible: !rootWindow.selectedIsLabel && !rootWindow.selectedIsNumericField
 
                             // Task 42 / 45: 状態別スタイル（有効 / トグルボタンにする / 初期状態をオン）。
                             // フォント CheckBox と同じ 2 本立て + 明示 beginEdit/commitEdit。
@@ -1279,20 +1305,22 @@ Window {
 
                             // Task 40: クリック時アクション（onClick 1 件）。op / target / value を選び
                             // 選択 Item の widgetActions へ書き戻す。target は変数定義 ComboBox 由来。
-                            // Task 48: Label は表示専用＝クリックアクションを持たないため、この
-                            // アクション編集 UI（見出し / 操作 / 対象変数 / 値 / 区切り線）を Label 選択時は
-                            // 隠す。**バインディング編集（読み）は Label でも残す**（役割分担：読み⊂全 Widget）。
+                            // Task 48 / 51: Label / NumericField はクリックアクションを持たないため、
+                            // このアクション編集 UI（見出し / 操作 / 対象変数 / 値 / 区切り線）を両型の
+                            // 選択時は隠す（派生 selectedSupportsClickAction = Button のみ true）。
+                            // **バインディング編集（読み）は全 Widget で残す**（役割分担：読み⊂全 Widget。
+                            // NumericField は binding を読み書き両用に使うため特に必須）。
                             Label {
                                 text: qsTr("クリック時アクション"); font.bold: true; color: "#555555"
-                                visible: !rootWindow.selectedIsLabel
+                                visible: rootWindow.selectedSupportsClickAction
                             }
 
-                            Label { text: qsTr("操作"); visible: !rootWindow.selectedIsLabel }
+                            Label { text: qsTr("操作"); visible: rootWindow.selectedSupportsClickAction }
                             ComboBox {
                                 id: inspectorActionOpCombo
                                 objectName: "inspectorActionOpCombo"
                                 width: parent.width
-                                visible: !rootWindow.selectedIsLabel
+                                visible: rootWindow.selectedSupportsClickAction
                                 model: ["(なし)", "setVariable", "toggleVariable"]
                                 // Task 45: クリック時の動作が分かりにくいため補足を付ける。
                                 ToolTip.text: qsTr("クリック時の動作。setVariable=値を代入 / toggleVariable=オン↔オフを反転")
@@ -1300,38 +1328,39 @@ Window {
                                 ToolTip.delay: 600
                                 onActivated: rootWindow.applyActionFromInspector()
                             }
-                            Label { text: qsTr("対象変数"); visible: !rootWindow.selectedIsLabel }
+                            Label { text: qsTr("対象変数"); visible: rootWindow.selectedSupportsClickAction }
                             ComboBox {
                                 id: inspectorActionTargetCombo
                                 objectName: "inspectorActionTargetCombo"
                                 width: parent.width
-                                visible: !rootWindow.selectedIsLabel
+                                visible: rootWindow.selectedSupportsClickAction
                                 model: rootWindow.variableNameModel()
                                 onActivated: rootWindow.applyActionFromInspector()
                             }
                             // 値は setVariable のときだけ意味を持つ（toggleVariable では無視）。
-                            // Task 48: Label 選択時はアクション部ごと隠す（!selectedIsLabel と AND）。
+                            // Task 48 / 51: Label / NumericField 選択時はアクション部ごと隠す
+                            // （selectedSupportsClickAction と AND）。
                             Label {
                                 text: qsTr("値")
-                                visible: !rootWindow.selectedIsLabel
+                                visible: rootWindow.selectedSupportsClickAction
                                        && inspectorActionOpCombo.currentText === "setVariable"
                             }
                             TextField {
                                 id: inspectorActionValueField
                                 objectName: "inspectorActionValueField"
                                 width: parent.width
-                                visible: !rootWindow.selectedIsLabel
+                                visible: rootWindow.selectedSupportsClickAction
                                        && inspectorActionOpCombo.currentText === "setVariable"
                                 placeholderText: qsTr("例: true / 10 / hello")
                                 onEditingFinished: rootWindow.applyActionFromInspector()
                             }
 
                             // Task 40: データバインディング（1 件）。property を変数に追従させる。
-                            // Task 48: 区切り線はアクション部とバインディング部の境界なので、
-                            // アクション部が隠れる Label 選択時は一緒に隠す。
+                            // Task 48 / 51: 区切り線はアクション部とバインディング部の境界なので、
+                            // アクション部が隠れる Label / NumericField 選択時は一緒に隠す。
                             Rectangle {
                                 width: parent.width; height: 1; color: "#dddddd"
-                                visible: !rootWindow.selectedIsLabel
+                                visible: rootWindow.selectedSupportsClickAction
                             }
                             Label { text: qsTr("バインディング"); font.bold: true; color: "#555555" }
 
@@ -1340,7 +1369,10 @@ Window {
                                 id: inspectorBindingPropCombo
                                 objectName: "inspectorBindingPropCombo"
                                 width: parent.width
-                                model: ["(なし)", "visible", "backgroundColor", "text", "textColor", "checked"]
+                                // Task 51: NumericField の「入力対象変数」を表す "value" を追加。
+                                // NumericField では binding {property:"value"} が読み（表示）と
+                                // 書き（入力確定）の両方の対象になる（読み書き両用 binding）。
+                                model: ["(なし)", "visible", "backgroundColor", "text", "textColor", "checked", "value"]
                                 // Task 45: 「バインディング」概念の補足（変数の値に表示を追従させる）。
                                 ToolTip.text: qsTr("選んだ表示プロパティを、下の変数の値に自動追従させます（実行時に反映）")
                                 ToolTip.visible: hovered

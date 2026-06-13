@@ -193,19 +193,21 @@ Item {
         pushUndo()  // Task 38: 追加の直前状態を undo へ
         const snapshot = snapshotModel()
         const id = nextWidgetId(snapshot)
-        // Task 48: 既知の種別（"Button" / "Label"）だけを採用し、未知値 / 空 / undefined は
-        // "Button" にフォールバックする（ホワイトリスト正規化）。描画フォールバックと保存値が
-        // 乖離して JSON の型契約が壊れるのを防ぐ（CodeRabbit PR #98 指摘）。新種別を足す時は
-        // ここの許可リストに追加する（**NumericField は Editor 追加 UI を入れる Task 51 で
-        // 本リストに追加予定**。Task 50 は delegate 型分岐＝描画のみでツールバー追加はしない）。
-        const widgetType = (type === "Label" || type === "Button") ? type : "Button"
+        // Task 48 / 51: 既知の種別（"Button" / "Label" / "NumericField"）だけを採用し、
+        // 未知値 / 空 / undefined は "Button" にフォールバックする（ホワイトリスト正規化）。
+        // 描画フォールバックと保存値が乖離して JSON の型契約が壊れるのを防ぐ（CodeRabbit PR #98
+        // 指摘）。新種別を足す時はここの許可リストに追加する（Task 51 で "NumericField" を追加）。
+        const widgetType = (type === "Label" || type === "Button" || type === "NumericField")
+            ? type : "Button"
         const newWidget = {
             id: id,
             type: widgetType,
             x: 50, y: 200, width: 120, height: 40,
             // Label は既定文字 "Label"・透明背景（背景は未指定のままで HmiLabel が
-            // transparent にフォールバック）。Button は従来どおり "New"。
-            text: widgetType === "Label" ? "Label" : "New", tag: ""
+            // transparent にフォールバック）。NumericField は数値慣習で初期値 "0"。
+            // Button は従来どおり "New"。
+            text: widgetType === "Label" ? "Label"
+                : widgetType === "NumericField" ? "0" : "New", tag: ""
         }
         snapshot.push(newWidget)
         // 新しい配列を代入することで Repeater に確実にモデル変更を通知する。

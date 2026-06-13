@@ -126,9 +126,19 @@ Rectangle {
         readOnly: !root.editable
         activeFocusOnPress: root.editable
         enabled: root.widgetEnabled
-        // delegate が流す表示テキスト。activeFocus 中の同期抑止（カーソル飛び対策）は
-        // Task 51（write 経路）で扱う。Task 50 は読み取り表示のみ。
+        // delegate が流す表示テキスト。読み（変数追従）はこの宣言バインドで効く。
         text: root.text
+        // Task 51: ユーザーがキー入力すると上の `text: root.text` バインドは切れる
+        // （TextField の text へユーザー入力が直接入るため）。確定（Enter / フォーカス喪失）で
+        // delegate が変数へ write → boundValue 再評価で root.text が更新されるので、
+        // **フォーカス喪失時にバインドを貼り直して**表示を変数の確定値（coerce 後）へ復帰させる。
+        // 編集中（activeFocus）は貼り直さない＝表示同期を抑止しカーソル飛びを防ぐ
+        // （インスペクタ two-way 編集の Task 26 パターンを activeFocus ガードで踏襲）。
+        onActiveFocusChanged: {
+            if (!activeFocus) {
+                field.text = Qt.binding(function() { return root.text })
+            }
+        }
         // 数値のみ許可（int）。MVP は int 変数のみ（real / min-max は別承認）。
         validator: IntValidator {}
         inputMethodHints: Qt.ImhFormattedNumbersOnly
@@ -152,8 +162,8 @@ Rectangle {
             border.width: root.resolvedBorderWidth
         }
 
-        // 入力確定（Enter / フォーカス喪失）で commitValue() を呼ぶ。delegate が
-        // valueCommitted を受けて変数へ書く（結線は Task 51）。
+        // 入力確定（Enter / フォーカス喪失）で commitValue() を呼ぶ。delegate（Simulator）が
+        // valueCommitted を受けて binding の指す変数へ write する（Task 51 で結線）。
         onEditingFinished: root.commitValue()
     }
 

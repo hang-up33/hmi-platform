@@ -273,7 +273,14 @@ timeline
   - **設計の核**：write は **既存 `bindings` を読み書き両用に使う**（表示=`boundValue("value")` の読み、入力確定=同じ変数へ `setValue(coerce(...))` の書き）ことで実現し、**Schema / C++ ブリッジは無改変**（新キー・新トリガを足さない。後方互換）。`HmiNumericField` は Shared/Widgets が初めて QtQuick.Controls（TextField + IntValidator）に依存する（import のみ。i.MX8MP rootfs の plugin 同梱は要確認 TODO）。MVP は **int 変数のみ**（real 型・min/max は Schema 連鎖するため別承認）。
   - **タスク**：Task 50（型分岐の足場 + HmiNumericField 描画。`editable` で Editor=読取専用 / Simulator=live 編集を出し分け）/ 51（write 経路〔Simulator delegate に `writeBoundValue`〕+ Editor 追加 UI + インスペクタ型対応〔`selectedIsNumericField`〕）/ 52（cross-app E2E `e2e_numeric_input` + スクショ）。
   - **罠（計画段階で織り込み）**：Spix は実テキスト入力（editingFinished）を発火できないため、確定は公開メソッド `commitValue()` を `invokeMethod` で模す。TextField が Editor 選択のフォーカス/入力を奪う問題は `editable:false` + 選択用 MouseArea を上に重ねて回避。binding 表示とユーザー編集の競合（カーソル飛び）は `activeFocus` 中の表示抑止で回避。
-  - **次は Task 50**。**後続の入力 Widget（Gauge スライダ / Toggle 等）・real 型・数値範囲は未承認＝別途スコープ確定**。
+- **Task 50（型分岐の足場 + HmiNumericField 描画）完了**（PR #104）：`HmiNumericField.qml`（Controls TextField + IntValidator + resolved\* + `editable` + `commitValue()`/`valueCommitted`）新設、Editor/Simulator delegate に 3 分岐目（`numericComponent`）追加。Task 50 は read-only 表示（両アプリ `editable:false`）で write は未結線。
+- **Task 51（write 経路 + Editor 追加 UI + インスペクタ型対応）完了**（本タスク）：
+  - **write 経路**：Simulator delegate の wrapper に `boundValue` の書き版 `writeBoundValue(prop, raw)` を追加し、NumericField を `editable:true` に切替え `onValueCommitted` を結線。入力確定で binding `{property:"value"}` の指す変数へ `setValue(coerce(type, text))` 書き戻し → 同変数を読む他 binding（例：追従 Label の `text`）も追従（読み書き両用 binding。Schema/C++ ブリッジ無改変）。binding 無しは no-op。
+  - **HmiNumericField**：入力中はユーザー入力で `text: root.text` バインドが切れる → フォーカス喪失時に `Qt.binding` で貼り直して変数の確定値へ表示復帰（編集中は抑止＝カーソル飛び対策、Task 26 パターン）。
+  - **Editor UI**：`addWidget` ホワイトリストに `"NumericField"`（既定文字 "0"）、ツールバーに「数値入力追加」（`addNumericButton`）。
+  - **インスペクタ**：`selectedIsNumericField` + 派生 `selectedSupportsClickAction`（= Button のみ）で状態・クリックアクションを非表示（背景・枠は表示）、binding プロパティ ComboBox に `"value"` 追加、色スウォッチの fallback を NumericField 既定（背景 #ffffff / 文字 #1d3557）に対応。
+  - **テスト**：Simulator に write 追従 + 無 binding no-op の 2 件、Editor に addWidget("NumericField") + undo の 2 件を追加。Web `ctest` unit 10 + e2e 7 = 17/17 緑。`editor.png`/`simulator.png` を NumericField 含むシーン（`Docs/samples/task-51-numeric-demo.json`）へ同期。
+  - **次は Task 52**（cross-app E2E `e2e_numeric_input` + スクショ最終同期）。**後続の入力 Widget（Gauge スライダ / Toggle 等）・real 型・数値範囲は未承認＝別途スコープ確定**。
 
 ---
 

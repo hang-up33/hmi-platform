@@ -93,6 +93,28 @@ Item {
                     return undefined
                 }
 
+                // Task 51: boundValue の **書き**版（入力 Widget 用）。propertyName に対応する
+                // binding（{property, variable}）があれば、その変数へ raw を変数の型に coerce して
+                // 書き戻す。NumericField の入力確定（valueCommitted）から呼ぶ。これで binding が
+                // 「読み書き両用」になる（表示=boundValue の読み / 入力=writeBoundValue の書き）。
+                // Schema 無改変＝既存 bindings を双方向に使うだけ（plan Phase 6 設計指針）。
+                // 対応 binding が無ければ何もしない（書き戻し先が無い＝no-op）。runClickActions と
+                // 同じく VariableStore.setValue を呼ぶので、他 binding の追従も同経路で効く。
+                function writeBoundValue(propertyName, raw) {
+                    const bindings = modelData.bindings
+                    if (bindings) {
+                        for (let i = 0; i < bindings.length; ++i) {
+                            const b = bindings[i]
+                            if (b && b.property === propertyName) {
+                                VariableStore.setValue(
+                                    b.variable,
+                                    VariableStore.coerce(root.variableType(b.variable), raw))
+                                return
+                            }
+                        }
+                    }
+                }
+
                 // Task 41: onClick アクションを実行する（setVariable / toggleVariable）。
                 // trigger は "onClick"（既定）のみ反応する。**trigger 省略 / 空も onClick
                 // とみなす**：Schema の ActionData.trigger 既定が "onClick" で、Editor の
@@ -259,12 +281,11 @@ Item {
                         // E2E / unit は hmiNumericField で参照）。
                         objectName: "hmiNumericField"
                         anchors.fill: parent
-                        // Task 50 は**読み取り表示のみ**なので Simulator も editable:false に
-                        // 寄せる（write 未実装で editable:true にすると「編集できるが反映されない」
-                        // 半端状態になるため。CodeRabbit PR #104 指摘）。**Task 51 で write
-                        // （valueCommitted 結線）と同時に editable:true へ切替える**。
-                        editable: false
-                        // Task 50: 読み取り表示。binding {property:"value"} があれば変数の
+                        // Task 51: Simulator/Runtime は live 編集＝editable:true。ユーザーが数値を
+                        // 入力し確定すると下の onValueCommitted で binding の指す変数へ write する。
+                        // Editor キャンバス（読取専用＝editable:false）との出し分けは delegate で行う。
+                        editable: true
+                        // Task 50: 読み（表示）。binding {property:"value"} があれば変数の
                         // 現在値を表示し、無ければ modelData の静的 text を使う（Label の text
                         // 追従と同じ boundValue 経路）。
                         text: {
@@ -285,7 +306,14 @@ Item {
                         vAlign: wrapper.modelData.vAlign !== undefined ? wrapper.modelData.vAlign : ""
                         widgetOpacity: wrapper.modelData.opacity !== undefined ? wrapper.modelData.opacity : -1
                         widgetEnabled: wrapper.modelData.enabled !== undefined ? wrapper.modelData.enabled : true
-                        // Task 50 では valueCommitted を結線しない（write は Task 51）。
+                        // Task 51: 入力確定（valueCommitted）で binding {property:"value"} の指す
+                        // 変数へ書き戻す（読み書き両用 binding の **書き**）。binding が無ければ no-op。
+                        // 書き込み後は VariableStore.values が更新され、表示（boundValue("value")）も
+                        // 他の同変数 binding も追従する。読み取り専用アプリの「実行（書き戻し）」は
+                        // ここに閉じ、選択 / 編集 UI は持ち込まない原則を維持する。
+                        onValueCommitted: function(text) {
+                            wrapper.writeBoundValue("value", text)
+                        }
                     }
                 }
             }
