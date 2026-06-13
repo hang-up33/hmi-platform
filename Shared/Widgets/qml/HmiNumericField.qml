@@ -105,8 +105,16 @@ Rectangle {
     // 切れて以後変数に追従しなくなる（CodeRabbit PR #104 指摘）。表示への反映は delegate の
     // write-back（変数更新 → boundValue 再評価）に一本化する（write 結線は Task 51）。
     // TextField.onEditingFinished からも呼ぶ。公開メソッドなので invokeMethod でも叩ける。
+    //
+    // 確定値からは **桁区切りを除去**して「区切り無しの整数文字列」を emit する：
+    // `IntValidator` は Qt の仕様上 locale 既定で桁区切り（例 "1,234"）も受理するが、
+    // 消費側（VariableStore.coerce → parseInt(raw, 10)）は "1,234" を 1 と誤読し、変数に
+    // 1 が保存されてしまう（Codex PR #105）。IntValidator が受理した区切り = 現在 locale の
+    // groupSeparator なので、それを取り除いて parseInt と整合させる（Qt/QLocale と同じ規則）。
     function commitValue() {
-        root.valueCommitted(field.text);
+        const sep = Qt.locale().groupSeparator;
+        const cleaned = sep ? field.text.split(sep).join("") : field.text;
+        root.valueCommitted(cleaned);
     }
 
     width: 120

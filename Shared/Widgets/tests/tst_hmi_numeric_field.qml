@@ -74,6 +74,14 @@ TestCase {
         // テスト間の独立性確保：focusSink の状態とフォーカス持ち越しをリセット（CodeRabbit PR #105）。
         focusSink.text = "";
         focusSink.focus = false;
+        // 一部テストは内部 TextField.text を直接代入して `text: root.text` 宣言バインドを
+        // 切る（実機の編集を模すため）。次テストへ持ち越さないよう、毎 init で内部 TextField の
+        // バインドを貼り直してから field.text を初期化する（貼り直さないと前テストの
+        // 直接代入値が内部に残る）。
+        const tf = findByObjectName(field, "numericTextField");
+        if (tf) {
+            tf.text = Qt.binding(function() { return field.text });
+        }
     }
 
     function test_default_properties() {
@@ -190,6 +198,23 @@ TestCase {
         // 以降も変数追従が復活する（バインドが効く）。
         field.text = "123";
         compare(tf.text, "123");
+    }
+
+    // Task 51（Codex PR #105）：IntValidator は locale 既定で桁区切りを受理するため、
+    // 確定値からは現在 locale の groupSeparator を除去して emit する（消費側 parseInt が
+    // "1,234" を 1 と誤読するのを防ぐ）。groupSeparator を含む文字列が除去されることを検証。
+    function test_commit_strips_group_separator() {
+        const sep = Qt.locale().groupSeparator;
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        // 桁区切り入りの文字列を内部 TextField に直接入れて確定する。
+        tf.text = "1" + sep + "234";
+        committedSpy.clear();
+        field.commitValue();
+        compare(committedSpy.count, 1);
+        // 区切りが除去され "1234" になっている（parseInt("1234") = 1234 と整合）。
+        compare(committedSpy.signalArguments[0][0], "1234");
+        compare(parseInt(committedSpy.signalArguments[0][0], 10), 1234);
     }
 
     // Task 51（Codex PR #105 P1）：フォーカス喪失（Tab / 別所クリック）で再バインドより**先に**
