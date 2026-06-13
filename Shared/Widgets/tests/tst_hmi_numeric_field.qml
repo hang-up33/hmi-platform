@@ -71,6 +71,9 @@ TestCase {
         field.widgetEnabled = true;
         clickedSpy.clear();
         committedSpy.clear();
+        // テスト間の独立性確保：focusSink の状態とフォーカス持ち越しをリセット（CodeRabbit PR #105）。
+        focusSink.text = "";
+        focusSink.focus = false;
     }
 
     function test_default_properties() {
@@ -187,6 +190,30 @@ TestCase {
         // 以降も変数追従が復活する（バインドが効く）。
         field.text = "123";
         compare(tf.text, "123");
+    }
+
+    // Task 51（Codex PR #105 P1）：フォーカス喪失（Tab / 別所クリック）で再バインドより**先に**
+    // 入力値を確定する。再バインドが先に走ると確定前に表示が旧 root.text へ戻り、古い値を
+    // 書き戻して入力が失われる。ここでは内部 TextField に typed 値を入れて blur し、
+    // valueCommitted が typed 値（旧 root.text ではない）で発火することを検証する。
+    function test_blur_commits_typed_value_before_rebind() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.text = "10";  // root.text = "10"
+        compare(tf.text, "10");
+
+        tf.forceActiveFocus();
+        verify(tf.activeFocus, "TextField がフォーカスを取得できない");
+        committedSpy.clear();
+        // ユーザー入力を模す：内部 TextField に直接 "42"（root.text は "10" のまま＝
+        // 書き戻しは delegate の責務で、standalone では root.text は動かない）。
+        tf.text = "42";
+        compare(field.text, "10");
+
+        // blur：commitValue が typed "42" で発火する（再バインドで "10" へ戻る前に確定）。
+        focusSink.forceActiveFocus();
+        verify(committedSpy.count >= 1, "blur で valueCommitted が発火しない");
+        compare(committedSpy.signalArguments[0][0], "42");
     }
 
     // QQuickItem ツリーから指定された objectName の子を再帰的に探す

@@ -132,14 +132,18 @@ Rectangle {
         //   - フォーカス取得時：宣言バインド `text: root.text` を**外す**（現在値を保ったまま
         //     imperative 代入で binding を切る）。これをしないと編集中に外部から同変数が
         //     更新されると入力中の値が上書きされ、確定時に意図しない値を書き戻す（Codex PR #105 P2）。
-        //   - フォーカス喪失時：`Qt.binding` でバインドを**貼り直し**、delegate の write-back
-        //     （変数 → boundValue 再評価）で更新された変数の確定値（coerce 後）へ表示を復帰させる。
+        //   - フォーカス喪失時：**まず `commitValue()` で typed 値を確定**（delegate が変数へ
+        //     write → boundValue 再評価で root.text 更新）してから `Qt.binding` で貼り直す。
+        //     **順序が重要**：先に貼り直すと確定前に表示が古い root.text（旧変数値）へ戻り、
+        //     その後の確定処理が古い値を書き戻してユーザー入力が失われる（Codex PR #105 P1。
+        //     Tab / 別所クリックでのフォーカス喪失でも入力が保存されるようにする）。
         // ＝編集中は変数 → 表示の同期を完全に抑止し、確定後だけ変数値へ再同期する
         // （インスペクタ two-way 編集の Task 26 パターンと同型）。
         onActiveFocusChanged: {
             if (activeFocus) {
                 field.text = field.text  // 現在値を保持したまま `text: root.text` バインドを外す
             } else {
+                root.commitValue()       // 再バインド前に typed 値を確定（変数 write → root.text 更新）
                 field.text = Qt.binding(function() { return root.text })
             }
         }
