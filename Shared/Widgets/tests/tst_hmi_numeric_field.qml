@@ -203,10 +203,11 @@ TestCase {
         compare(tf.text, "123");
     }
 
-    // Task 51（Codex PR #105）：IntValidator は locale 既定で桁区切りを受理するため、
-    // 確定値からは現在 locale の groupSeparator を除去して emit する（消費側 parseInt が
-    // "1,234" を 1 と誤読するのを防ぐ）。groupSeparator を含む文字列が除去されることを検証。
-    function test_commit_strips_group_separator() {
+    // Task 51（Codex PR #105）：IntValidator は既定 locale で桁区切り・locale 固有数字を
+    // 受理するため、確定値を IntValidator と同じ Qt.locale() で数値化し ASCII 整数へ正規化して
+    // emit する（消費側 parseInt が "1,234" を 1、locale 数字を NaN→0 と誤読するのを防ぐ）。
+    // 桁区切り入りの locale 文字列が ASCII 整数 "1234" に正規化されることを検証。
+    function test_commit_normalizes_locale_number() {
         const sep = Qt.locale().groupSeparator;
         const tf = findByObjectName(field, "numericTextField");
         verify(tf !== null, "内部 TextField が見つからない");
@@ -215,7 +216,7 @@ TestCase {
         committedSpy.clear();
         field.commitValue();
         compare(committedSpy.count, 1);
-        // 区切りが除去され "1234" になっている（parseInt("1234") = 1234 と整合）。
+        // ASCII 整数 "1234" に正規化されている（parseInt("1234") = 1234 と整合）。
         compare(committedSpy.signalArguments[0][0], "1234");
         compare(parseInt(committedSpy.signalArguments[0][0], 10), 1234);
     }

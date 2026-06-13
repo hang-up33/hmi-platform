@@ -106,14 +106,22 @@ Rectangle {
     // write-back（変数更新 → boundValue 再評価）に一本化する（write 結線は Task 51）。
     // TextField.onEditingFinished からも呼ぶ。公開メソッドなので invokeMethod でも叩ける。
     //
-    // 確定値からは **桁区切りを除去**して「区切り無しの整数文字列」を emit する：
-    // `IntValidator` は Qt の仕様上 locale 既定で桁区切り（例 "1,234"）も受理するが、
-    // 消費側（VariableStore.coerce → parseInt(raw, 10)）は "1,234" を 1 と誤読し、変数に
-    // 1 が保存されてしまう（Codex PR #105）。IntValidator が受理した区切り = 現在 locale の
-    // groupSeparator なので、それを取り除いて parseInt と整合させる（Qt/QLocale と同じ規則）。
+    // 確定値は **ASCII の整数文字列へ正規化**してから emit する：
+    // `IntValidator` は Qt の仕様上、既定 locale で **locale 固有の数字・桁区切り**（例 "1,234"、
+    // Arabic の "١٢٣"）も受理する。消費側（VariableStore.coerce → parseInt(raw, 10)）はこれらを
+    // 誤読する（"1,234"→1 / "١٢٣"→NaN→0）。そこで IntValidator と**同じ `Qt.locale()`** で確定値を
+    // 数値化し、ASCII の整数文字列へ直してから emit する（Codex PR #105。validator と同一 locale で
+    // 解釈するので、どの locale でも入力と整合する）。パースできない（空 / 不正）ときは raw のまま
+    // 下流の coerce に委ねる（`Number.fromLocaleString` は不正入力で例外を投げるため try で囲う）。
     function commitValue() {
-        const sep = Qt.locale().groupSeparator;
-        const cleaned = sep ? field.text.split(sep).join("") : field.text;
+        var cleaned = field.text;
+        try {
+            var n = Number.fromLocaleString(Qt.locale(), field.text);
+            if (!isNaN(n))
+                cleaned = String(Math.trunc(n));
+        } catch (e) {
+            // パース不能（空 / 不正）は raw のまま
+        }
         root.valueCommitted(cleaned);
     }
 
