@@ -126,3 +126,23 @@ set_tests_properties(e2e_label_roundtrip PROPERTIES
     TIMEOUT 60
     LABELS e2e
 )
+
+# Task 52: NumericField の typed-write cross-app E2E。
+# Editor で setpoint(int) 変数 + NumericField(value binding) + 観測用 Label(text binding) を
+# `--open` → saveTo で round-trip → 保存 JSON を直接検証（type:"NumericField" / binding
+# {property:"value"}）→ Simulator を `--open` で起動し、読み（NumericField/Label が setpoint=10 に
+# 追従）を確認 → setStringProperty で入力テキストを設定し commitValue() を invokeMethod で叩いて
+# 確定を模す（Spix は editingFinished を発火不可）→ writeBoundValue で setpoint=42 に更新され
+# 観測用 Label が "42" へ追従するのを getStringProperty で観測する。読み書き両用 binding を
+# E2E で見る初のテスト。2 プロセス起動のため TIMEOUT は他の cross-app と同等。
+add_test(
+    NAME e2e_numeric_input
+    COMMAND ${Python3_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_numeric_input.py
+        --editor-binary $<TARGET_FILE:hmi_editor>
+        --simulator-binary $<TARGET_FILE:hmi_simulator>
+)
+set_tests_properties(e2e_numeric_input PROPERTIES
+    TIMEOUT 60
+    LABELS e2e
+)
