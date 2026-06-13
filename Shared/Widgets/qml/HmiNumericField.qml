@@ -136,23 +136,16 @@ Rectangle {
         enabled: root.widgetEnabled
         // delegate が流す表示テキスト。読み（変数追従）はこの宣言バインドで効く。
         text: root.text
-        // Task 51: 編集中（activeFocus）と非編集で表示の振る舞いを分ける。
-        //   - フォーカス取得時：宣言バインド `text: root.text` を**外す**（現在値を保ったまま
-        //     imperative 代入で binding を切る）。これをしないと編集中に外部から同変数が
-        //     更新されると入力中の値が上書きされ、確定時に意図しない値を書き戻す（Codex PR #105 P2）。
-        //   - フォーカス喪失時：**まず `commitValue()` で typed 値を確定**（delegate が変数へ
-        //     write → boundValue 再評価で root.text 更新）してから `Qt.binding` で貼り直す。
-        //     **順序が重要**：先に貼り直すと確定前に表示が古い root.text（旧変数値）へ戻り、
-        //     その後の確定処理が古い値を書き戻してユーザー入力が失われる（Codex PR #105 P1。
-        //     Tab / 別所クリックでのフォーカス喪失でも入力が保存されるようにする）。
-        // ＝編集中は変数 → 表示の同期を完全に抑止し、確定後だけ変数値へ再同期する
-        // （インスペクタ two-way 編集の Task 26 パターンと同型）。
+        // Task 51: フォーカス取得時のみ宣言バインド `text: root.text` を**外す**（現在値を
+        // 保ったまま imperative 代入で binding を切る）。これをしないと編集中に外部から同変数が
+        // 更新されると入力中の値が上書きされ、確定時に意図しない値を書き戻す（Codex PR #105 P2）。
+        // **確定 + 再バインドは `onEditingFinished` に集約**する（Enter / フォーカス喪失の双方で
+        // 発火する単一の確定点）。フォーカス喪失でここで再バインドしてしまうと、確定処理より
+        // 先に表示が旧 root.text へ戻り入力が失われるため、loss 側では再バインドしない
+        // （Codex PR #105 P1 の「再バインドを editingFinished 後へ deferred」推奨に沿う）。
         onActiveFocusChanged: {
             if (activeFocus) {
                 field.text = field.text  // 現在値を保持したまま `text: root.text` バインドを外す
-            } else {
-                root.commitValue()       // 再バインド前に typed 値を確定（変数 write → root.text 更新）
-                field.text = Qt.binding(function() { return root.text })
             }
         }
         // 数値のみ許可（int）。MVP は int 変数のみ（real / min-max は別承認）。
@@ -178,9 +171,14 @@ Rectangle {
             border.width: root.resolvedBorderWidth
         }
 
-        // 入力確定（Enter / フォーカス喪失）で commitValue() を呼ぶ。delegate（Simulator）が
-        // valueCommitted を受けて binding の指す変数へ write する（Task 51 で結線）。
-        onEditingFinished: root.commitValue()
+        // 入力確定（Enter / フォーカス喪失の単一の確定点）：**先に commitValue() で typed 値を
+        // 確定**（delegate が変数へ write → boundValue 再評価で root.text 更新）し、**その後に**
+        // `Qt.binding` で `text: root.text` を貼り直して確定値（coerce 後）へ表示を復帰させる。
+        // 順序が重要：先に貼り直すと確定前に表示が旧 root.text へ戻り入力が失われる（Codex PR #105 P1）。
+        onEditingFinished: {
+            root.commitValue()
+            field.text = Qt.binding(function() { return root.text })
+        }
     }
 
     // 選択用 MouseArea。TextField の **上** に重ね、editable:false（Editor）のときだけ

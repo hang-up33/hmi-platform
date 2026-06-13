@@ -54,6 +54,11 @@ TestCase {
     }
 
     function init() {
+        // テスト間の独立性確保（CodeRabbit PR #105）：まず前テストのフォーカスを確実に剥がす。
+        // `focus = false` より確実に active focus を移すため testCase 自身へ forceActiveFocus する
+        // （これで TextField に残ったフォーカス／確定シグナルを出し切ってから下でスパイをクリアする）。
+        testCase.forceActiveFocus();
+        focusSink.text = "";
         // 各 test_* 実行前にプロパティをリセット
         field.text = "0";
         field.editable = true;
@@ -69,11 +74,6 @@ TestCase {
         field.vAlign = "";
         field.widgetOpacity = -1;
         field.widgetEnabled = true;
-        clickedSpy.clear();
-        committedSpy.clear();
-        // テスト間の独立性確保：focusSink の状態とフォーカス持ち越しをリセット（CodeRabbit PR #105）。
-        focusSink.text = "";
-        focusSink.focus = false;
         // 一部テストは内部 TextField.text を直接代入して `text: root.text` 宣言バインドを
         // 切る（実機の編集を模すため）。次テストへ持ち越さないよう、毎 init で内部 TextField の
         // バインドを貼り直してから field.text を初期化する（貼り直さないと前テストの
@@ -82,6 +82,9 @@ TestCase {
         if (tf) {
             tf.text = Qt.binding(function() { return field.text });
         }
+        // スパイは最後にクリア（上のフォーカス操作由来の stray シグナルを残さない）。
+        clickedSpy.clear();
+        committedSpy.clear();
     }
 
     function test_default_properties() {
@@ -235,9 +238,10 @@ TestCase {
         tf.text = "42";
         compare(field.text, "10");
 
-        // blur：commitValue が typed "42" で発火する（再バインドで "10" へ戻る前に確定）。
+        // blur：commitValue が typed "42" で**ちょうど 1 回**発火する（確定は editingFinished に
+        // 集約済み。再バインドで "10" へ戻る前に確定）。
         focusSink.forceActiveFocus();
-        verify(committedSpy.count >= 1, "blur で valueCommitted が発火しない");
+        compare(committedSpy.count, 1);
         compare(committedSpy.signalArguments[0][0], "42");
     }
 
