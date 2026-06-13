@@ -51,7 +51,7 @@ Qt Online Installer で **Qt 6.11.0 MinGW 64-bit** kit（付属 MinGW / Ninja / 
 .\build-mingw\hmi_simulator.exe
 ```
 
-新しいシェルからは `. .\scripts\windows\setup-env.ps1` で PATH を通す。Explorer から起動したい場合は `.\scripts\windows\deploy.ps1`（windeployqt で DLL 同梱）。詳細・既知の罠は [.claude/skills/qt6-build/SKILL.md](.claude/skills/qt6-build/SKILL.md)。
+新しいシェルからは `. .\scripts\windows\setup-env.ps1` で PATH を通す。Explorer から起動したい場合は `.\scripts\windows\deploy.ps1`（windeployqt で DLL 同梱）。ビルドの詳細・既知の罠は開発ノート [.claude/skills/qt6-build/SKILL.md](.claude/skills/qt6-build/SKILL.md) を参照。
 
 ### Simulator / Runtime に JSON を渡す
 
@@ -86,7 +86,7 @@ hmi_runtime   --open path/to/project.json
 
 ## フォルダ構成
 
-```
+```text
 hmi-platform/
 ├─ Editor/        作画アプリ（Qt6 + QML）
 ├─ Simulator/     試験アプリ（読み取り専用）
