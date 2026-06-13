@@ -43,7 +43,22 @@ TestCase {
         signalName: "valueCommitted"
     }
 
+    // フォーカスを field から奪って「編集確定（blur）」を模すための受け皿。
+    TextInput {
+        id: focusSink
+        objectName: "focusSink"
+        x: 0
+        y: 60
+        width: 50
+        height: 20
+    }
+
     function init() {
+        // テスト間の独立性確保（CodeRabbit PR #105）：まず前テストのフォーカスを確実に剥がす。
+        // `focus = false` より確実に active focus を移すため testCase 自身へ forceActiveFocus する
+        // （これで TextField に残ったフォーカス／確定シグナルを出し切ってから下でスパイをクリアする）。
+        testCase.forceActiveFocus();
+        focusSink.text = "";
         // 各 test_* 実行前にプロパティをリセット
         field.text = "0";
         field.editable = true;
@@ -59,6 +74,17 @@ TestCase {
         field.vAlign = "";
         field.widgetOpacity = -1;
         field.widgetEnabled = true;
+        // 一部テストは内部 TextField.text を直接代入して `text: root.text` 宣言バインドを
+        // 切る（実機の編集を模すため）。次テストへ持ち越さないよう、毎 init で内部 TextField の
+        // バインドを貼り直してから field.text を初期化する（貼り直さないと前テストの
+        // 直接代入値が内部に残る）。
+        const tf = findByObjectName(field, "numericTextField");
+        if (tf) {
+            tf.text = Qt.binding(function() { return field.text });
+        }
+        // commit の重複排除キャッシュも初期化（前テストの確定値を持ち越さない）。
+        field._lastCommittedText = "";
+        // スパイは最後にクリア（上のフォーカス操作由来の stray シグナルを残さない）。
         clickedSpy.clear();
         committedSpy.clear();
     }
@@ -151,6 +177,97 @@ TestCase {
         field.commitValue();
         compare(committedSpy.count, 1);
         compare(committedSpy.signalArguments[0][0], "7");
+    }
+
+    // Task 51（Codex PR #105 P2）：編集中（フォーカス取得）は外部 text 更新を抑止し、
+    // フォーカス喪失（確定）で変数の確定値へ再同期する。フォーカス取得時に `text: root.text`
+    // 宣言バインドを外すため、編集中に root.text（変数追従）が変わっても内部 TextField は
+    // 上書きされない。blur すると Qt.binding を貼り直して root.text へ復帰する。
+    function test_edit_focus_suppresses_external_sync_then_resyncs_on_blur() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.text = "10";
+        compare(tf.text, "10");
+
+        // フォーカス取得＝編集中：宣言バインドが外れる。
+        tf.forceActiveFocus();
+        verify(tf.activeFocus, "TextField がフォーカスを取得できない");
+        // 外部から root.text（変数追従の表示値）が変わっても入力中は上書きしない。
+        field.text = "99";
+        compare(tf.text, "10");
+
+        // フォーカス喪失＝確定：root.text の現在値（"99"）へ再同期（バインド貼り直し）。
+        focusSink.forceActiveFocus();
+        verify(!tf.activeFocus, "TextField のフォーカスが外れない");
+        compare(tf.text, "99");
+        // 以降も変数追従が復活する（バインドが効く）。
+        field.text = "123";
+        compare(tf.text, "123");
+    }
+
+    // Task 51（CodeRabbit PR #105）：同一値の二重確定（Enter→blur で onEditingFinished が
+    // 二度発火する等）は valueCommitted を一度だけにする（重複 setValue / 余分なシグナル抑止）。
+    // フォーカス取得で重複排除キャッシュがクリアされ、別セッションでは同値でも再確定できる。
+    function test_duplicate_commit_same_value_is_suppressed() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        tf.forceActiveFocus();   // 編集セッション開始（_lastCommittedText クリア）
+        tf.text = "42";
+        committedSpy.clear();
+        field.commitValue();     // 1 回目：emit
+        field.commitValue();     // 2 回目：同値 → スキップ
+        compare(committedSpy.count, 1);
+        compare(committedSpy.signalArguments[0][0], "42");
+
+        // 別の編集セッション（再フォーカス）では同じ値でも改めて確定できる。
+        focusSink.forceActiveFocus();
+        tf.forceActiveFocus();
+        committedSpy.clear();
+        field.commitValue();
+        compare(committedSpy.count, 1);
+    }
+
+    // Task 51（Codex PR #105）：IntValidator は既定 locale で桁区切り・locale 固有数字を
+    // 受理するため、確定値を IntValidator と同じ Qt.locale() で数値化し ASCII 整数へ正規化して
+    // emit する（消費側 parseInt が "1,234" を 1、locale 数字を NaN→0 と誤読するのを防ぐ）。
+    // 桁区切り入りの locale 文字列が ASCII 整数 "1234" に正規化されることを検証。
+    function test_commit_normalizes_locale_number() {
+        const sep = Qt.locale().groupSeparator;
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        // 桁区切り入りの文字列を内部 TextField に直接入れて確定する。
+        tf.text = "1" + sep + "234";
+        committedSpy.clear();
+        field.commitValue();
+        compare(committedSpy.count, 1);
+        // ASCII 整数 "1234" に正規化されている（parseInt("1234") = 1234 と整合）。
+        compare(committedSpy.signalArguments[0][0], "1234");
+        compare(parseInt(committedSpy.signalArguments[0][0], 10), 1234);
+    }
+
+    // Task 51（Codex PR #105 P1）：フォーカス喪失（Tab / 別所クリック）で再バインドより**先に**
+    // 入力値を確定する。再バインドが先に走ると確定前に表示が旧 root.text へ戻り、古い値を
+    // 書き戻して入力が失われる。ここでは内部 TextField に typed 値を入れて blur し、
+    // valueCommitted が typed 値（旧 root.text ではない）で発火することを検証する。
+    function test_blur_commits_typed_value_before_rebind() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.text = "10";  // root.text = "10"
+        compare(tf.text, "10");
+
+        tf.forceActiveFocus();
+        verify(tf.activeFocus, "TextField がフォーカスを取得できない");
+        committedSpy.clear();
+        // ユーザー入力を模す：内部 TextField に直接 "42"（root.text は "10" のまま＝
+        // 書き戻しは delegate の責務で、standalone では root.text は動かない）。
+        tf.text = "42";
+        compare(field.text, "10");
+
+        // blur：commitValue が typed "42" で**ちょうど 1 回**発火する（確定は editingFinished に
+        // 集約済み。再バインドで "10" へ戻る前に確定）。
+        focusSink.forceActiveFocus();
+        compare(committedSpy.count, 1);
+        compare(committedSpy.signalArguments[0][0], "42");
     }
 
     // QQuickItem ツリーから指定された objectName の子を再帰的に探す

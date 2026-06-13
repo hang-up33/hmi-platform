@@ -99,14 +99,40 @@ Rectangle {
     // E2E（Spix）は実テキスト入力を発火できないため commitValue() を invokeMethod で叩く。
     signal valueCommitted(string text)
 
+    // 直近 commit した正規化済み値。Enter→blur のように `onEditingFinished` が短時間に
+    // 二度発火しても、同じ値の再確定（重複 valueCommitted / 余分な setValue）を抑止する
+    // （CodeRabbit PR #105）。フォーカス取得（新しい編集セッション開始）でクリアし、
+    // 同じ値を入れ直した場合は改めて確定できるようにする。
+    property string _lastCommittedText: ""
+
     // 現在の TextField のテキストで valueCommitted(text) を通知するだけに留める。
     // **root.text は命令的に書き換えない**：Simulator の delegate は text を
     // boundValue("value") にバインドしており、ここで root.text へ代入すると外部 binding が
     // 切れて以後変数に追従しなくなる（CodeRabbit PR #104 指摘）。表示への反映は delegate の
     // write-back（変数更新 → boundValue 再評価）に一本化する（write 結線は Task 51）。
     // TextField.onEditingFinished からも呼ぶ。公開メソッドなので invokeMethod でも叩ける。
+    //
+    // 確定値は **ASCII の整数文字列へ正規化**してから emit する：
+    // `IntValidator` は Qt の仕様上、既定 locale で **locale 固有の数字・桁区切り**（例 "1,234"、
+    // Arabic の "١٢٣"）も受理する。消費側（VariableStore.coerce → parseInt(raw, 10)）はこれらを
+    // 誤読する（"1,234"→1 / "١٢٣"→NaN→0）。そこで IntValidator と**同じ `Qt.locale()`** で確定値を
+    // 数値化し、ASCII の整数文字列へ直してから emit する（Codex PR #105。validator と同一 locale で
+    // 解釈するので、どの locale でも入力と整合する）。パースできない（空 / 不正）ときは raw のまま
+    // 下流の coerce に委ねる（`Number.fromLocaleString` は不正入力で例外を投げるため try で囲う）。
     function commitValue() {
-        root.valueCommitted(field.text);
+        var cleaned = field.text;
+        try {
+            var n = Number.fromLocaleString(Qt.locale(), field.text);
+            if (!isNaN(n))
+                cleaned = String(Math.trunc(n));
+        } catch (e) {
+            // パース不能（空 / 不正）は raw のまま
+        }
+        // 同一値の二重確定（Enter→blur で onEditingFinished が二度走る等）はスキップする。
+        if (cleaned === root._lastCommittedText)
+            return;
+        root._lastCommittedText = cleaned;
+        root.valueCommitted(cleaned);
     }
 
     width: 120
@@ -126,10 +152,24 @@ Rectangle {
         readOnly: !root.editable
         activeFocusOnPress: root.editable
         enabled: root.widgetEnabled
-        // delegate が流す表示テキスト。activeFocus 中の同期抑止（カーソル飛び対策）は
-        // Task 51（write 経路）で扱う。Task 50 は読み取り表示のみ。
+        // delegate が流す表示テキスト。読み（変数追従）はこの宣言バインドで効く。
         text: root.text
-        // 数値のみ許可（int）。MVP は int 変数のみ（real / min-max は別承認）。
+        // Task 51: フォーカス取得時のみ宣言バインド `text: root.text` を**外す**（現在値を
+        // 保ったまま imperative 代入で binding を切る）。これをしないと編集中に外部から同変数が
+        // 更新されると入力中の値が上書きされ、確定時に意図しない値を書き戻す（Codex PR #105 P2）。
+        // **確定 + 再バインドは `onEditingFinished` に集約**する（Enter / フォーカス喪失の双方で
+        // 発火する単一の確定点）。フォーカス喪失でここで再バインドしてしまうと、確定処理より
+        // 先に表示が旧 root.text へ戻り入力が失われるため、loss 側では再バインドしない
+        // （Codex PR #105 P1 の「再バインドを editingFinished 後へ deferred」推奨に沿う）。
+        onActiveFocusChanged: {
+            if (activeFocus) {
+                field.text = field.text       // 現在値を保持したまま `text: root.text` バインドを外す
+                root._lastCommittedText = ""  // 新しい編集セッション＝同じ値でも改めて確定可にする
+            }
+        }
+        // 数値のみ許可（int）。MVP は int 変数のみ（real / min-max・範囲指定は別承認）。
+        // TODO（Task 52+）: 数値範囲を Widget に持たせる際は IntValidator の bottom/top を設定する。
+        // 現状は未指定＝C++ int の全域（約 ±21 億）を許容（MVP スコープでは暫定で問題なし）。
         validator: IntValidator {}
         inputMethodHints: Qt.ImhFormattedNumbersOnly
         color: root.resolvedTextColor
@@ -152,9 +192,14 @@ Rectangle {
             border.width: root.resolvedBorderWidth
         }
 
-        // 入力確定（Enter / フォーカス喪失）で commitValue() を呼ぶ。delegate が
-        // valueCommitted を受けて変数へ書く（結線は Task 51）。
-        onEditingFinished: root.commitValue()
+        // 入力確定（Enter / フォーカス喪失の単一の確定点）：**先に commitValue() で typed 値を
+        // 確定**（delegate が変数へ write → boundValue 再評価で root.text 更新）し、**その後に**
+        // `Qt.binding` で `text: root.text` を貼り直して確定値（coerce 後）へ表示を復帰させる。
+        // 順序が重要：先に貼り直すと確定前に表示が旧 root.text へ戻り入力が失われる（Codex PR #105 P1）。
+        onEditingFinished: {
+            root.commitValue()
+            field.text = Qt.binding(function() { return root.text })
+        }
     }
 
     // 選択用 MouseArea。TextField の **上** に重ね、editable:false（Editor）のときだけ

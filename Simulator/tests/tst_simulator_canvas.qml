@@ -250,9 +250,9 @@ TestCase {
         compare(labelItem.text, "bye");
     }
 
-    // Task 50: type:"NumericField" の delegate は HmiNumericField を描き、
-    // boundValue("value") で変数値を表示に追従させる（読み取り表示。write は Task 51）。
-    // Task 50: Simulator も読み取り表示（editable:false）。値は boundValue で変数追従。
+    // Task 50 / 51: type:"NumericField" の delegate は HmiNumericField を描き、
+    // boundValue("value") で変数値を表示に追従させる（読み）。Task 51 で Simulator は
+    // editable:true（live 編集）へ切替わった。
     function test_delegate_renders_numeric_and_follows_value_binding() {
         canvas.variableModel = [{ name: "setpoint", type: "int", initial: 10 }];
         canvas.widgetModel = [{
@@ -275,15 +275,89 @@ TestCase {
         verify(findByObjectName(wrapper, "hmiLabel") === null,
                "NumericField type なのに HmiLabel も生成された");
 
-        // Task 50 は読み取り表示のみ＝Simulator も editable:false（write 結線と
-        // editable:true への切替は Task 51）。
-        compare(fld.editable, false);
+        // Task 51: Simulator は live 編集＝editable:true（write 経路を結線済み）。
+        compare(fld.editable, true);
 
         // 初期は変数 setpoint の値 10 に追従（静的 text "0" ではない）。
         compare(fld.text, "10");
 
-        // 変数を更新すると表示も追従する（読み取り。write 結線は Task 51）。
+        // 変数を更新すると表示も追従する（読み）。
         VariableStore.setValue("setpoint", 25);
         compare(fld.text, "25");
+    }
+
+    // Task 51: 入力確定（commitValue → valueCommitted）で binding {property:"value"} の指す
+    // 変数へ書き戻され（書き）、同じ変数を読む他 binding も追従する（読み書き両用 binding）。
+    // Spix は実テキスト入力を発火できないため、E2E と同様に text を直接セットして
+    // commitValue() を呼ぶことで「ユーザーが入力して確定」を模す。
+    function test_numeric_commit_writes_variable_and_other_binding_follows() {
+        canvas.variableModel = [{ name: "setpoint", type: "int", initial: 10 }];
+        canvas.widgetModel = [
+            {
+                id: "in1", type: "NumericField", x: 0, y: 0, width: 120, height: 40, text: "0",
+                bindings: [{ property: "value", variable: "setpoint" }]
+            },
+            // 同じ変数 setpoint を text で読む Label（書き戻しの追従を観測する相手）。
+            {
+                id: "out1", type: "Label", x: 0, y: 60, width: 120, height: 40, text: "?",
+                bindings: [{ property: "text", variable: "setpoint" }]
+            }
+        ];
+
+        var inWrap = null;
+        tryVerify(function() {
+            inWrap = findByObjectName(canvas, "widget_in1");
+            return inWrap !== null;
+        }, 1000, "NumericField delegate widget_in1 が生成されない");
+        var outWrap = null;
+        tryVerify(function() {
+            outWrap = findByObjectName(canvas, "widget_out1");
+            return outWrap !== null;
+        }, 1000, "Label delegate widget_out1 が生成されない");
+
+        var fld = null;
+        tryVerify(function() {
+            fld = findByObjectName(inWrap, "hmiNumericField");
+            return fld !== null;
+        }, 1000, "HmiNumericField が描かれない");
+        const lbl = findByObjectName(outWrap, "hmiLabel");
+        verify(lbl !== null, "観測用 HmiLabel が見つからない");
+
+        // 初期：両 Widget とも setpoint=10 を表示。
+        compare(fld.text, "10");
+        compare(lbl.text, "10");
+
+        // ユーザー入力を模す：内部 TextField に "42" を入れて commitValue() で確定。
+        const tf = findByObjectName(fld, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        tf.text = "42";
+        fld.commitValue();
+
+        // 確定で setpoint=42（int に coerce）へ書き戻され、Label も追従する。
+        compare(VariableStore.get("setpoint"), 42);
+        compare(lbl.text, "42");
+        // NumericField 自身の表示も boundValue 再評価で 42 に揃う（読み書き両用）。
+        compare(fld.text, "42");
+    }
+
+    // Task 51: binding が無い NumericField の確定は no-op（書き戻し先が無い）。
+    // 例外を投げず、変数ストアも変化しないこと。
+    function test_numeric_commit_without_binding_is_noop() {
+        canvas.variableModel = [{ name: "setpoint", type: "int", initial: 5 }];
+        canvas.widgetModel = [{
+            id: "in1", type: "NumericField", x: 0, y: 0, width: 120, height: 40, text: "0"
+        }];
+        var inWrap = null;
+        tryVerify(function() {
+            inWrap = findByObjectName(canvas, "widget_in1");
+            return inWrap !== null;
+        }, 1000, "NumericField delegate widget_in1 が生成されない");
+        const fld = findByObjectName(inWrap, "hmiNumericField");
+        verify(fld !== null, "HmiNumericField が描かれない");
+
+        const tf = findByObjectName(fld, "numericTextField");
+        tf.text = "99";
+        fld.commitValue();  // binding 無し＝書き戻し先が無い＝no-op
+        compare(VariableStore.get("setpoint"), 5);  // 変化なし
     }
 }

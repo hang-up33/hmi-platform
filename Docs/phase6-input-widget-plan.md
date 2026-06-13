@@ -171,8 +171,8 @@ Label で確立した 5 ステップに、**入力 Widget 固有の 4 点**を�
 
 | Task | 状態 | PR |
 |---|---|---|
-| 50 型分岐の足場 + HmiNumericField 描画 | 🟦 実装済み（PR レビュー待ち） | — |
-| 51 write 経路 + Editor 追加 UI + インスペクタ型対応 | ⬜ 未着手 | — |
+| 50 型分岐の足場 + HmiNumericField 描画 | ✅ 完了 | #104 |
+| 51 write 経路 + Editor 追加 UI + インスペクタ型対応 | ✅ 完了 | （本 PR） |
 | 52 cross-app E2E（typed-write）+ スクショ | ⬜ 未着手 | — |
 
-> **本 PR は計画書（+ 進捗ステータス同期）のみ**。Phase 6 の着手＝フェーズ進行のため、常駐文書（README / CLAUDE.md / AGENTS.md / `.claude/agents/mvp-task-runner.md` / development-history）を本 PR で同期する（[feedback-phase-status-sync](../.claude/rules/feedback-phase-status-sync.md)。計画 PR でもステータスが動くなら同コミットで同期する）。実装は Task 50 から 1 タスクずつ。
+> 実装は Task 50 から 1 タスクずつ。Task 51 で Simulator の NumericField を `editable:true` にし、`writeBoundValue("value", text)` で入力確定値を binding の指す変数へ書き戻す経路を結線（読み書き両用 binding）。Editor にツールバー「数値入力追加」（`addNumericButton`）と `addWidget` ホワイトリストへの `"NumericField"` 追加、インスペクタの型対応（`selectedIsNumericField` / 派生 `selectedSupportsClickAction` で状態・クリックアクションを非表示、binding プロパティ ComboBox に `"value"` 追加）まで完了。残るは Task 52（cross-app E2E + スクショ最終同期）。
