@@ -65,8 +65,13 @@ Rectangle {
     // `widgetEnabled`**（widgetOpacity と同型の回避）。false で淡色表示にする。
     // クリック自体は MouseArea を止めず（Editor の選択が clicked 経由のため）、実行（アクション）
     // 側で無効化する＝SimulatorCanvas.runClickActions が enabled を見る。
-    // checkable / checked は `Item` に同名組込みが無いためそのまま公開できる。checked かつ
-    // checkable のとき「押下中」風のトグル外観（背景を暗く + ボーダーを太く）にする。
+    // checkable / checked は `Item` に同名組込みが無いためそのまま公開できる。
+    // **見た目（押下風に暗く + ボーダー太く）は `checked` 単独で出す**（Task 42 当初は
+    // `checkable && checked` でゲートしていたが、`checked` を変数バインドして状態表示
+    // （ランプ／インジケータ）に使うとき `checkable:false` だと変数が true でも見た目が
+    // 変わらず「効いていないように見える」不具合になったため、checkable 非依存に修正。
+    // PR #109）。`checkable` は「トグル用途」を表すメタとして JSON / インスペクタに残すが
+    // 描画ゲートには使わない（クリックでの toggle は action〔toggleVariable〕側が担う）。
     property bool widgetEnabled: true
     property bool checkable: false
     property bool checked: false
@@ -108,15 +113,17 @@ Rectangle {
     // Task 31: 角丸・ボーダーは resolved*（HmiButton 1 箇所に集約した既定値）を参照する。
     radius: root.resolvedCornerRadius
     // press フィードバックは背景色から Qt.darker で導出する（個別の press 色を持たない）。
-    // Task 42: ①disabled のときは press 暗転しない ②checked（トグル ON）のとき押下風に暗く。
+    // Task 42: ①disabled のときは press 暗転しない ②checked（ON）のとき押下風に暗く
+    // （PR #109: `checkable` 非依存。`checked` 単独で ON 表示する）。
     color: (mouseArea.pressed && root.widgetEnabled)
                 ? Qt.darker(root.resolvedBackgroundColor, 1.2)
-         : (root.checkable && root.checked)
+         : root.checked
                 ? Qt.darker(root.resolvedBackgroundColor, 1.15)
          : root.resolvedBackgroundColor
     border.color: root.resolvedBorderColor
-    // Task 42: checked（トグル ON）のときボーダーを太くして「押し込まれている」感を出す。
-    border.width: root.resolvedBorderWidth + ((root.checkable && root.checked) ? 2 : 0)
+    // Task 42: checked（ON）のときボーダーを太くして「押し込まれている」感を出す
+    // （PR #109: `checkable` 非依存）。
+    border.width: root.resolvedBorderWidth + (root.checked ? 2 : 0)
 
     Text {
         // Task 34: 配置を効かせるため `anchors.centerIn` をやめ `anchors.fill` にして
