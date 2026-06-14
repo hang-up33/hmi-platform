@@ -91,6 +91,17 @@ Window {
             border.width: 1
             radius: 4
 
+            // 既定 1024px 幅では中央 800px キャンバスと右 260px パネルが重なるため、
+            // パネル上のクリック / ホイールが背後の HmiButton・入力 Widget の MouseArea へ
+            // 抜けてアクションや入力を誤発火させ得る（Codex PR #109 P2）。パネル全面で
+            // 全ボタン + ホイールを消費して下層へのイベント貫通を止める。
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.AllButtons
+                hoverEnabled: true
+                onWheel: function(wheel) { wheel.accepted = true }
+            }
+
             Column {
                 anchors.fill: parent
                 anchors.margins: 10
@@ -104,6 +115,7 @@ Window {
 
                 // 定義が無い（変数未設定の JSON）ときの案内。
                 Label {
+                    objectName: "varPanelEmptyHint"
                     width: parent.width
                     visible: !canvas.variableModel || canvas.variableModel.length === 0
                     text: qsTr("変数が定義されていません")

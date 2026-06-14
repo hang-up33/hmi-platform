@@ -79,11 +79,11 @@ Item {
             ]
             VariableStore.initFrom(defs)
             setCanvasVariableModel(w, defs)
-            wait(50)
 
+            // 行が生成されるまで条件待ち（固定 wait は環境差で不安定。CodeRabbit PR #109）。
+            tryVerify(function() { return findVarValue(w, "flag") !== null }, 1000)
             const flagValue = findVarValue(w, "flag")
             const levelValue = findVarValue(w, "level")
-            verify(flagValue, "flag 行が見つからない")
             verify(levelValue, "level 行が見つからない")
             compare(flagValue.text, "false")
             compare(levelValue.text, "3")
@@ -91,18 +91,24 @@ Item {
             // 変数を更新するとパネルの値表示がライブ追従する。
             VariableStore.setValue("flag", true)
             VariableStore.setValue("level", 42)
-            wait(50)
-            compare(flagValue.text, "true")
-            compare(levelValue.text, "42")
+            tryCompare(flagValue, "text", "true", 1000)
+            tryCompare(levelValue, "text", "42", 1000)
         }
 
-        // 変数が無い JSON では案内文が出る（行は 0 件）。
+        // 変数が無い JSON では案内文（プレースホルダー）が表示され、行は 0 件。
         function test_panel_shows_placeholder_when_no_variables() {
             const w = createWindow()
             w.showVarPanel = true
             setCanvasVariableModel(w, [])
-            wait(50)
-            verify(!findVarValue(w, "flag"), "変数 0 件なのに行がある")
+
+            // 行が無いこと（条件待ち）。
+            tryVerify(function() { return findVarValue(w, "flag") === null }, 1000)
+
+            // 案内ラベルが表示され、文言も期待どおりであること（CodeRabbit PR #109）。
+            const hint = findByObjectName(w, "varPanelEmptyHint")
+            verify(hint, "案内ラベルが見つからない")
+            compare(hint.visible, true)
+            compare(hint.text, "変数が定義されていません")
         }
 
         // ── ヘルパ ─────────────────────────────────────────────
