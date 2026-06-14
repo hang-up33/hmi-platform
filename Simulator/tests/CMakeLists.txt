@@ -20,6 +20,8 @@ add_test(NAME tst_project_loader COMMAND tst_project_loader)
 # toggleVariable）と binding 追従（visible / text）を検証する。SimulatorCanvas は
 # 本体 QML が HmiWidgets を import するため hmi_widgetsplugin をリンクする
 # （Editor 側 tst_hmi_editor_qml と同じ運用）。
+# 変数デバッグパネルのテスト（tst_simulator_var_panel.qml）は本体 Main.qml を生成し、
+# Main.qml が `import HmiSimulator` するため hmi_simulator_qmlplugin もリンクする。
 add_executable(tst_hmi_simulator_qml main.cpp)
 
 target_compile_definitions(tst_hmi_simulator_qml
@@ -33,6 +35,7 @@ target_link_libraries(tst_hmi_simulator_qml
         Qt6::Qml
         Qt6::Quick
         hmi_widgetsplugin
+        hmi_simulator_qmlplugin
 )
 
 # CI / headless 環境でも実行できるよう -platform offscreen を明示する。

@@ -3,8 +3,11 @@ import QtQuick.Window
 import QtQuick.Controls
 import QtQuick.Dialogs
 import HmiSimulator
+// 変数デバッグパネル（下記）が VariableStore（実行時の変数現在値ストア）を直接読むため。
+import HmiWidgets
 
 Window {
+    id: rootWindow
     width: 1024
     height: 768
     visible: true
@@ -12,6 +15,9 @@ Window {
     // Task 20: Spix からの参照パス解決のため Window に objectName を付与する。
     // Editor 側（hmiEditorWindow）と同じ命名規則。
     objectName: "hmiSimulatorWindow"
+
+    // 変数デバッグパネルの表示状態（既定は非表示）。ツールバーの「変数」トグルで切替える。
+    property bool showVarPanel: false
 
     // 薄いグレーの余白背景
     Rectangle {
@@ -32,6 +38,19 @@ Window {
                 onClicked: openDialog.open()
             }
 
+            // 変数（タグ）デバッグパネルの表示トグル。checkable:false のボタンに checked を
+            // バインドした時のように「見た目は変わらないが内部の変数値は変化している」ケースを、
+            // 実行時の現在値を一覧表示して確認できるようにする（Simulator は読み取り専用の
+            // 試験環境なのでデバッグ表示があると挙動確認が速い）。
+            Button {
+                id: varPanelToggle
+                objectName: "varPanelToggle"
+                text: qsTr("変数")
+                checkable: true
+                checked: rootWindow.showVarPanel
+                onClicked: rootWindow.showVarPanel = !rootWindow.showVarPanel
+            }
+
             Label {
                 anchors.verticalCenter: parent.verticalCenter
                 // `loaded` フラグで「未読込」と「読込成功（空含む）」を区別する。
@@ -49,6 +68,85 @@ Window {
             anchors.centerIn: parent
             canvasWidth: 800
             canvasHeight: 600
+        }
+
+        // ── 変数（タグ）デバッグパネル ──────────────────────────────
+        // 実行時の変数現在値（VariableStore.values）と定義（canvas.variableModel）を
+        // ライブ表示する。VariableStore.values は再代入で変更通知されるため、各行の値
+        // バインディング（VariableStore.values[name]）は setVariable / toggleVariable /
+        // 入力確定で変数が変わるたび自動更新される（Task 41 の boundValue と同じ依存追跡）。
+        // 用途：checkable:false のボタンに checked をバインドした等「見た目は不変でも内部値は
+        // 変化している」ケースを、画面で直接確認できるようにする。
+        Rectangle {
+            id: varPanel
+            objectName: "varPanel"
+            visible: rootWindow.showVarPanel
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            anchors.margins: 8
+            width: 260
+            color: "#fbfbfb"
+            border.color: "#bbbbbb"
+            border.width: 1
+            radius: 4
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: 10
+                spacing: 6
+
+                Label {
+                    text: qsTr("変数（タグ）")
+                    font.bold: true
+                    color: "#333333"
+                }
+
+                // 定義が無い（変数未設定の JSON）ときの案内。
+                Label {
+                    width: parent.width
+                    visible: !canvas.variableModel || canvas.variableModel.length === 0
+                    text: qsTr("変数が定義されていません")
+                    color: "#888888"
+                    wrapMode: Text.WordWrap
+                }
+
+                // 各変数を 1 行（name : value）で表示。type も添える。
+                Repeater {
+                    model: canvas.variableModel
+                    delegate: Row {
+                        required property var modelData
+                        objectName: "varRow_" + (modelData && modelData.name !== undefined
+                                                 ? modelData.name : "")
+                        width: varPanel.width - 20
+                        spacing: 6
+
+                        Label {
+                            width: parent.width * 0.5
+                            elide: Text.ElideRight
+                            color: "#444444"
+                            text: (modelData ? modelData.name : "")
+                                  + " (" + (modelData && modelData.type !== undefined
+                                            ? modelData.type : "string") + ")"
+                        }
+                        Label {
+                            objectName: "varValue"
+                            width: parent.width * 0.5 - parent.spacing
+                            elide: Text.ElideRight
+                            font.bold: true
+                            color: "#1d3557"
+                            // 現在値（VariableStore.values）をライブ表示。未初期化は "—"。
+                            text: {
+                                if (!modelData || modelData.name === undefined) {
+                                    return "—"
+                                }
+                                const v = VariableStore.values[modelData.name]
+                                return v === undefined ? "—" : String(v)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
