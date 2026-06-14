@@ -113,7 +113,7 @@ SDK 生成・実機 scp・起動（weston）・キャプチャの全手順と罠
 
 ## ステータスとドキュメント
 
-- **現在地**: Phase 6 / 入力 Widget（NumericField）まで完了。後続入力 Widget（Gauge / Toggle）・real 型 / 数値範囲（Phase 6-B 計画中）・Modbus 連携は計画段階。
+- **現在地**: Phase 6 / 入力 Widget（NumericField・int 変数）まで完了。次は **Phase 6-B / NumericField 拡張（real 型 + 数値範囲 min/max・承認済み、Task 53 から着手）**。後続入力 Widget（Gauge / Toggle）・Modbus 連携は未承認のバックログ。
 - 開発の時系列（各タスクの目的 / PR / 学び）: [Docs/development-history.md](Docs/development-history.md)
 - 各フェーズの計画と進捗表（正本）: [Docs/](Docs/) の `phase*-plan.md`
 - 開発ガイド・ビルドの罠・ルール: [CLAUDE.md](CLAUDE.md)
