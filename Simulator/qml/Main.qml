@@ -106,58 +106,77 @@ Window {
                 onWheel: function(wheel) { wheel.accepted = true }
             }
 
-            Column {
-                anchors.fill: parent
+            // ヘッダ（固定）。変数行は下の ScrollView 内でスクロールする。
+            Label {
+                id: varPanelHeader
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
                 anchors.margins: 10
-                spacing: 6
+                text: qsTr("変数（タグ）")
+                font.bold: true
+                color: "#333333"
+            }
 
-                Label {
-                    text: qsTr("変数（タグ）")
-                    font.bold: true
-                    color: "#333333"
-                }
+            // 変数行のスクロール領域（Codex PR #109 P3）。変数定義がパネル高さを超える
+            // 件数でも全行を閲覧できるよう、Repeater を高さ制約付き ScrollView + clip に入れる。
+            ScrollView {
+                id: varScroll
+                anchors.top: varPanelHeader.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.margins: 10
+                anchors.topMargin: 6
+                clip: true
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
-                // 定義が無い（変数未設定の JSON）ときの案内。
-                Label {
-                    objectName: "varPanelEmptyHint"
-                    width: parent.width
-                    visible: !canvas.variableModel || canvas.variableModel.length === 0
-                    text: qsTr("変数が定義されていません")
-                    color: "#888888"
-                    wrapMode: Text.WordWrap
-                }
+                Column {
+                    width: varScroll.availableWidth
+                    spacing: 6
 
-                // 各変数を 1 行（name : value）で表示。type も添える。
-                Repeater {
-                    model: canvas.variableModel
-                    delegate: Row {
-                        required property var modelData
-                        objectName: "varRow_" + (modelData && modelData.name !== undefined
-                                                 ? modelData.name : "")
-                        width: varPanel.width - 20
-                        spacing: 6
+                    // 定義が無い（変数未設定の JSON）ときの案内。
+                    Label {
+                        objectName: "varPanelEmptyHint"
+                        width: parent.width
+                        visible: !canvas.variableModel || canvas.variableModel.length === 0
+                        text: qsTr("変数が定義されていません")
+                        color: "#888888"
+                        wrapMode: Text.WordWrap
+                    }
 
-                        Label {
-                            width: parent.width * 0.5
-                            elide: Text.ElideRight
-                            color: "#444444"
-                            text: (modelData ? modelData.name : "")
-                                  + " (" + (modelData && modelData.type !== undefined
-                                            ? modelData.type : "string") + ")"
-                        }
-                        Label {
-                            objectName: "varValue"
-                            width: parent.width * 0.5 - parent.spacing
-                            elide: Text.ElideRight
-                            font.bold: true
-                            color: "#1d3557"
-                            // 現在値（VariableStore.values）をライブ表示。未初期化は "—"。
-                            text: {
-                                if (!modelData || modelData.name === undefined) {
-                                    return "—"
+                    // 各変数を 1 行（name : value）で表示。type も添える。
+                    Repeater {
+                        model: canvas.variableModel
+                        delegate: Row {
+                            required property var modelData
+                            objectName: "varRow_" + (modelData && modelData.name !== undefined
+                                                     ? modelData.name : "")
+                            width: parent.width
+                            spacing: 6
+
+                            Label {
+                                width: parent.width * 0.5
+                                elide: Text.ElideRight
+                                color: "#444444"
+                                text: (modelData ? modelData.name : "")
+                                      + " (" + (modelData && modelData.type !== undefined
+                                                ? modelData.type : "string") + ")"
+                            }
+                            Label {
+                                objectName: "varValue"
+                                width: parent.width * 0.5 - parent.spacing
+                                elide: Text.ElideRight
+                                font.bold: true
+                                color: "#1d3557"
+                                // 現在値（VariableStore.values）をライブ表示。未初期化は "—"。
+                                text: {
+                                    if (!modelData || modelData.name === undefined) {
+                                        return "—"
+                                    }
+                                    const v = VariableStore.values[modelData.name]
+                                    return v === undefined ? "—" : String(v)
                                 }
-                                const v = VariableStore.values[modelData.name]
-                                return v === undefined ? "—" : String(v)
                             }
                         }
                     }
