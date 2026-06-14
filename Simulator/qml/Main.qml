@@ -95,6 +95,10 @@ Window {
             // パネル上のクリック / ホイールが背後の HmiButton・入力 Widget の MouseArea へ
             // 抜けてアクションや入力を誤発火させ得る（Codex PR #109 P2）。パネル全面で
             // 全ボタン + ホイールを消費して下層へのイベント貫通を止める。
+            // **下の Column より前に宣言する**（＝低 z-order）のは意図的：表示専用の Label は
+            // イベントを消費しないので空白部のクリックはこの MouseArea が拾い、かつ将来
+            // Column 内に操作可能な子を足してもそちらが上位で先にイベントを受けられる
+            // （このキャッチャーが Column の子を塞がない）。(CodeRabbit PR #109 nit)
             MouseArea {
                 anchors.fill: parent
                 acceptedButtons: Qt.AllButtons

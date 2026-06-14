@@ -81,6 +81,8 @@ Item {
             setCanvasVariableModel(w, defs)
 
             // 行が生成されるまで条件待ち（固定 wait は環境差で不安定。CodeRabbit PR #109）。
+            // flag / level は同一 Repeater が同フレームで生成するため、flag の出現を待てば
+            // level も揃っている（片方だけ待てば十分。CodeRabbit PR #109 nit）。
             tryVerify(function() { return findVarValue(w, "flag") !== null }, 1000)
             const flagValue = findVarValue(w, "flag")
             const levelValue = findVarValue(w, "level")
