@@ -65,6 +65,21 @@ void VariableDataTest::variableRealRoundTrip()
         const VariableData v = VariableData::fromJson(obj);
         QCOMPARE(v.initial, QStringLiteral("36.5"));
     }
+    {
+        // Codex PR #112 [P2]：高精度の real 初期値が既定 6 桁で丸められず保たれる。
+        // `0.123456789`（9 有効桁）は `QString::number(d)` 既定だと "0.123457" に丸まり
+        // round-trip が壊れるが、最短 round-trip 桁探索で元値に戻る表現を保持する。
+        const double precise = 0.123456789;
+        QJsonObject obj;
+        obj["name"] = "ratio";
+        obj["type"] = "real";
+        obj["initial"] = precise;  // JSON number（高精度小数）
+        const VariableData v = VariableData::fromJson(obj);
+        // 文字列が元の double へ正確に戻る（丸め損失なし）。
+        QCOMPARE(v.initial.toDouble(), precise);
+        // 冗長表現でなく入力どおりの最短表現になっている。
+        QCOMPARE(v.initial, QStringLiteral("0.123456789"));
+    }
 }
 
 // Task 39（Codex PR #78 [P2]）：非文字列の initial（bool/int）も文字列へ正規化され、

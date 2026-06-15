@@ -127,9 +127,17 @@ Rectangle {
     function commitValue() {
         var cleaned = field.text;
         try {
-            var n = Number.fromLocaleString(Qt.locale(), field.text);
+            // 確定値のパース locale は型で分ける（Codex PR #112 [P2]）：
+            // - real：表示値は変数ストアの JS 数値由来で **常に ASCII の小数点**（"36.5"）。
+            //   よって validator・表示・commit をすべて **C locale（ASCII）** に揃える。
+            //   system locale（例：小数点カンマ）で再パースすると、編集せず focus/blur しただけの
+            //   "36.5" が桁区切り誤読され 365 等を書き戻すため、real は必ず C locale で解釈する。
+            // - int：従来どおり system `Qt.locale()`。IntValidator が locale 桁区切り / locale 固有
+            //   数字も受理する契約（PR #105）を維持し、それらを ASCII 整数へ正規化する。
+            var loc = root.isReal ? Qt.locale("C") : Qt.locale();
+            var n = Number.fromLocaleString(loc, field.text);
             if (!isNaN(n))
-                // Task 53: real は整数丸めせず（小数を保つ）、int は従来どおり Math.trunc。
+                // real は整数丸めせず（小数を保つ）、int は従来どおり Math.trunc。
                 // どちらも ASCII 数値文字列へ正規化（String(...) ＝ロケール非依存の表記）。
                 cleaned = String(root.isReal ? n : Math.trunc(n));
         } catch (e) {
@@ -216,8 +224,11 @@ Rectangle {
 
     // Task 53: validator は isReal で切替える。inline 三項では Component を 2 つ持てないため
     // id 付きで定義し、TextField.validator で参照する。非ビジュアルなので配置位置は任意。
+    // DoubleValidator は **C locale**（ASCII 小数点）に固定する（Codex PR #112 [P2]）：
+    // 表示・commit と同じ locale に揃え、ASCII の表示値 "36.5" が自身の validator で
+    // Invalid 扱いにならないようにする（system locale 既定だと小数点カンマ環境で破綻）。
     IntValidator { id: intValidator }
-    DoubleValidator { id: doubleValidator; notation: DoubleValidator.StandardNotation }
+    DoubleValidator { id: doubleValidator; locale: "C"; notation: DoubleValidator.StandardNotation }
 
     // 選択用 MouseArea。TextField の **上** に重ね、editable:false（Editor）のときだけ
     // enabled にして clicked を中継する（TextField がフォーカス / 入力を奪う罠への対処）。

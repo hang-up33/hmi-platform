@@ -23,7 +23,18 @@ QString jsonValueToString(const QJsonValue &v)
         if (static_cast<double>(asInt) == d) {
             return QString::number(asInt);  // 整数は整数表現に
         }
-        return QString::number(d);
+        // 小数（real 初期値）。`QString::number(d)` の既定は有効 6 桁で、
+        // `0.123456789` のような real 初期値が読込時に丸められ round-trip が壊れる
+        // （Codex PR #112 [P2]）。**round-trip する最短桁数**を探して返す：精度を 1→17 と
+        // 上げ、`toDouble()` で元値に戻る最小桁を採用する（`'g',17` 固定だと 0.1 が
+        // "0.10000000000000001" のように冗長化するのを避けつつ、高精度小数も保つ）。
+        for (int prec = 1; prec < 17; ++prec) {
+            const QString s = QString::number(d, 'g', prec);
+            if (s.toDouble() == d) {
+                return s;
+            }
+        }
+        return QString::number(d, 'g', 17);
     }
     return QString();
 }

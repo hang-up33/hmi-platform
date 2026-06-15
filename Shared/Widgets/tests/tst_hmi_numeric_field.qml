@@ -287,19 +287,37 @@ TestCase {
 
     // Task 53: isReal:true（real）では commitValue が小数を保ったまま正規化する
     //（int の Math.trunc と違い丸めない）。"36.5" → "36.5"。
+    // Codex PR #112 [P2]：real は表示・validator・commit をすべて **C locale（ASCII 小数点）** に
+    // 揃える。よって入力は locale 依存の `decimalPoint` ではなく **ASCII の "." 固定**で確定する
+    //（変数ストア由来の表示値が常に ASCII なのと整合）。
     function test_real_commit_preserves_decimal() {
         const tf = findByObjectName(field, "numericTextField");
         verify(tf !== null, "内部 TextField が見つからない");
         field.isReal = true;
         tf.forceActiveFocus();           // 編集セッション開始（_lastCommittedText クリア）
-        const dp = Qt.locale().decimalPoint;
-        tf.text = "36" + dp + "5";       // locale の小数点で入力
+        tf.text = "36.5";                // ASCII 小数点（C locale）で入力
         committedSpy.clear();
         field.commitValue();
         compare(committedSpy.count, 1);
         // ASCII の小数文字列に正規化される（Number("36.5") = 36.5 と整合）。
         compare(committedSpy.signalArguments[0][0], "36.5");
         compare(Number(committedSpy.signalArguments[0][0]), 36.5);
+    }
+
+    // Codex PR #112 [P2]：変数ストア由来の **ASCII 表示値**（"100.25"）を、編集せず focus → blur
+    // しただけで確定しても値が壊れない（C locale 統一なので小数点カンマ環境でも 10025 等へ
+    // 化けない）。real の commit が C locale で再パースされることを locale 非依存に固定する。
+    function test_real_commit_roundtrips_ascii_display_value() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.isReal = true;
+        tf.forceActiveFocus();
+        tf.text = "100.25";              // 変数の表示値（ASCII）をそのまま確定
+        committedSpy.clear();
+        field.commitValue();
+        compare(committedSpy.count, 1);
+        compare(committedSpy.signalArguments[0][0], "100.25");
+        compare(Number(committedSpy.signalArguments[0][0]), 100.25);
     }
 
     // Task 53: isReal:false（int）では従来どおり小数入力が整数へ丸められる（Math.trunc）。
