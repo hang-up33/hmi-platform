@@ -134,6 +134,21 @@ Rectangle {
     // 数値化し、ASCII の整数文字列へ直してから emit する（Codex PR #105。validator と同一 locale で
     // 解釈するので、どの locale でも入力と整合する）。パースできない（空 / 不正）ときは raw のまま
     // 下流の coerce に委ねる（`Number.fromLocaleString` は不正入力で例外を投げるため try で囲う）。
+    // Task 54: 実効境界（clamp / validator 共通）。型に合わせて丸め、**境界逆転（min > max）は
+    // 入れ替えて正規化**する（CodeRabbit PR #113）。未指定側は null。
+    // - int は IntValidator の bottom=ceil / top=floor と揃えるため ceil(min)/floor(max)。
+    // - real は境界そのまま。
+    // - hasMin && hasMax で lo > hi になったら swap し、clamp が max 側へ押し込む・validator が
+    //   bottom > top になる破綻を防ぐ。
+    function _effectiveBounds() {
+        var lo = root.hasMin ? (root.isReal ? root.minValue : Math.ceil(root.minValue)) : null;
+        var hi = root.hasMax ? (root.isReal ? root.maxValue : Math.floor(root.maxValue)) : null;
+        if (lo !== null && hi !== null && lo > hi) {
+            var t = lo; lo = hi; hi = t;
+        }
+        return { lo: lo, hi: hi };
+    }
+
     function commitValue() {
         var cleaned = field.text;
         try {
@@ -149,22 +164,14 @@ Rectangle {
             if (!isNaN(n)) {
                 // real は整数丸めせず（小数を保つ）、int は従来どおり Math.trunc。
                 n = root.isReal ? n : Math.trunc(n);
-                // Task 54: 範囲外は **拒否でなく clamp**（確定時に境界へ丸める）。
-                // hasMin / hasMax のときだけ片側ずつ clamp する（未指定側は無制限）。
-                // **境界は validator と同じ「型に合わせた実効境界」で clamp する**：int は
-                // 小数境界（例 min=2.5）を IntValidator の bottom=ceil/top=floor と揃えて
-                // ceil(min)/floor(max) に丸める（生の 2.5 へ clamp すると後段で整数化されて
-                // min 未満の 2 に落ちる不整合を防ぐ）。real は境界そのまま。
-                if (root.hasMin) {
-                    var lo = root.isReal ? root.minValue : Math.ceil(root.minValue);
-                    if (n < lo)
-                        n = lo;
-                }
-                if (root.hasMax) {
-                    var hi = root.isReal ? root.maxValue : Math.floor(root.maxValue);
-                    if (n > hi)
-                        n = hi;
-                }
+                // Task 54: 範囲外は **拒否でなく clamp**（確定時に境界へ丸める）。実効境界
+                // （`_effectiveBounds`）は validator と共通＝型に合わせた丸め + 境界逆転の正規化済み。
+                // 未指定側（null）は無制限。
+                var b = _effectiveBounds();
+                if (b.lo !== null && n < b.lo)
+                    n = b.lo;
+                if (b.hi !== null && n > b.hi)
+                    n = b.hi;
                 // real は **固定小数表記**へ整形する（Codex PR #112 [P2]）：素の `String(1e-7)` は
                 // `"1e-7"` のような指数表記になり、StandardNotation 固定の DoubleValidator が
                 // それを Invalid 扱いにして次回編集で矛盾する。`_toFixedNotation` で指数を展開し
@@ -302,22 +309,21 @@ Rectangle {
     // Invalid 扱いにならないようにする（system locale 既定だと小数点カンマ環境で破綻）。
     //
     // Task 54: 数値範囲を validator の bottom / top にも反映する（入力時の拒否。確定時 clamp と
-    // 二段で担保）。**hasMin / hasMax が未指定の側は型のデフォルト全域**へ戻す（IntValidator は
-    // INT_MIN〜INT_MAX、DoubleValidator は -inf〜+inf が既定）。int validator は int 境界しか
-    // 取れないので、minValue/maxValue（real）を **範囲が広がらない向き**へ丸める：bottom は
-    // Math.ceil（下限を上げる）、top は Math.floor（上限を下げる）。これにより clamp（確定時）と
-    // 矛盾せず、int 変数で min=2.5 のとき "2" を入力拒否・確定 clamp で 3 に揃う。
+    // 二段で担保）。境界は **`_effectiveBounds` で clamp と共通化**（型に合わせた丸め〔int は
+    // ceil/floor〕+ 境界逆転 min>max の swap 正規化、CodeRabbit PR #113）。未指定側（null）は
+    // 型のデフォルト全域へ戻す（IntValidator は INT_MIN〜INT_MAX、DoubleValidator は ±inf）。
+    // これにより int 変数で min=2.5 のとき "2" を入力拒否・確定 clamp で 3 に揃う。
     IntValidator {
         id: intValidator
-        bottom: root.hasMin ? Math.ceil(root.minValue) : -2147483648
-        top: root.hasMax ? Math.floor(root.maxValue) : 2147483647
+        bottom: { var b = root._effectiveBounds(); return b.lo !== null ? b.lo : -2147483648 }
+        top: { var b = root._effectiveBounds(); return b.hi !== null ? b.hi : 2147483647 }
     }
     DoubleValidator {
         id: doubleValidator
         locale: "C"
         notation: DoubleValidator.StandardNotation
-        bottom: root.hasMin ? root.minValue : -Infinity
-        top: root.hasMax ? root.maxValue : Infinity
+        bottom: { var b = root._effectiveBounds(); return b.lo !== null ? b.lo : -Infinity }
+        top: { var b = root._effectiveBounds(); return b.hi !== null ? b.hi : Infinity }
     }
 
     // 選択用 MouseArea。TextField の **上** に重ね、editable:false（Editor）のときだけ

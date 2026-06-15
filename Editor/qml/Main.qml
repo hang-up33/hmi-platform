@@ -286,6 +286,8 @@ Window {
         || inspectorActionValueField.activeFocus
         || inspectorBindingPropCombo.activeFocus
         || inspectorBindingVarCombo.activeFocus
+        || inspectorMinValueField.activeFocus
+        || inspectorMaxValueField.activeFocus
         || fieldX.activeFocus || fieldY.activeFocus
         || fieldW.activeFocus || fieldH.activeFocus
 

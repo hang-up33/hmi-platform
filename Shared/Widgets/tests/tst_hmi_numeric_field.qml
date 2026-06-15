@@ -433,6 +433,24 @@ TestCase {
         compare(committedSpy.signalArguments[0][0], "100"); // 上限へ clamp
     }
 
+    // Task 54（CodeRabbit PR #113）：境界逆転（min > max）でも破綻しない。実効境界を swap して
+    // 正規化するので、min=100 / max=10 は実効 [10, 100] として clamp される（max 側へ押し込まない）。
+    function test_inverted_bounds_are_normalized() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.isReal = false;
+        field.minValue = 100;
+        field.maxValue = 10;     // 逆転（min > max）
+        field.hasMin = true;
+        field.hasMax = true;
+        tf.forceActiveFocus();
+        tf.text = "50";          // 正規化後の実効 [10,100] の範囲内なのでそのまま
+        committedSpy.clear();
+        field.commitValue();
+        compare(committedSpy.count, 1);
+        compare(committedSpy.signalArguments[0][0], "50");
+    }
+
     // Task 54: 範囲内の値はそのまま（clamp されない）。
     function test_commit_within_range_unchanged() {
         const tf = findByObjectName(field, "numericTextField");
