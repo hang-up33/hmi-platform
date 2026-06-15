@@ -146,3 +146,23 @@ set_tests_properties(e2e_numeric_input PROPERTIES
     TIMEOUT 60
     LABELS e2e
 )
+
+# Task 55: NumericField 拡張（real 型 + 数値範囲 clamp）の cross-app E2E。
+# Phase 6 の e2e_numeric_input（int のみ）を補完し、Phase 6-B の 2 軸を観測する：
+# Editor で real 変数 + max=100 を持つ NumericField を含む JSON を `--open` → saveTo で
+# round-trip → 保存 JSON を直接検証（type:"real" 変数 / maxValue キー / value binding）→
+# Simulator を `--open` で起動し、setStringProperty で入力テキストを設定 → commitValue() を
+# invokeMethod で叩いて確定を模す → real は小数 "36.5" が保たれ、clamp は範囲外 "150" が
+# max=100 へ丸められて変数 write → 観測用 Label が追従するのを getStringProperty で観測する。
+# 2 プロセス起動のため TIMEOUT は他の cross-app と同等。
+add_test(
+    NAME e2e_numeric_extend
+    COMMAND ${Python3_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_numeric_extend.py
+        --editor-binary $<TARGET_FILE:hmi_editor>
+        --simulator-binary $<TARGET_FILE:hmi_simulator>
+)
+set_tests_properties(e2e_numeric_extend PROPERTIES
+    TIMEOUT 60
+    LABELS e2e
+)

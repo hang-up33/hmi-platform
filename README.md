@@ -10,7 +10,7 @@ GUI で HMI 画面を作図 → JSON で保存 → PC でも組込み実機で�
 
 ![HMI Editor](Docs/screenshots/editor.png)
 
-Editor。ツールバーで Widget 追加（ボタン / ラベル / 数値入力）・JSON 開く / 保存・編集補助（スナップ・コピペ・undo / redo）、右のインスペクタでスタイル・配置・アクション・バインディングを編集できる。
+Editor。ツールバーで Widget 追加（ボタン / ラベル / 数値入力）・JSON 開く / 保存・編集補助（スナップ・コピペ・undo / redo）、右のインスペクタでスタイル・配置・アクション・バインディングを編集できる。数値入力（NumericField）は変数の型（int / real）を引き継ぎ、インスペクタ「詳細」の範囲（最小値 / 最大値）で入力 clamp の境界を指定できる（図は real 変数 temperature を bind した選択中の例）。
 
 ![HMI Simulator](Docs/screenshots/simulator.png)
 
@@ -113,7 +113,7 @@ SDK 生成・実機 scp・起動（weston）・キャプチャの全手順と罠
 
 ## ステータスとドキュメント
 
-- **現在地**: Phase 6-B / NumericField 拡張を進行中。**Task 53（real 変数型・PR #112）/ 54（数値範囲 min/max・PR #113）完了**。次は **Task 55（cross-app E2E + スクショ・Phase 6-B クローズ）**。後続入力 Widget（Gauge / Toggle）・Modbus 連携は未承認のバックログ。
+- **現在地**: **Phase 6-B / NumericField 拡張（real 型 + 数値範囲 min/max）完了**（Task 53〜55・PR #112〜#114）。次フェーズは未承認（バックログ：step / decimals / unit、後続入力 Widget〔Gauge / Toggle〕、Phase 7 Modbus 連携）。
 - 開発の時系列（各タスクの目的 / PR / 学び）: [Docs/development-history.md](Docs/development-history.md)
 - 各フェーズの計画と進捗表（正本）: [Docs/](Docs/) の `phase*-plan.md`
 - 開発ガイド・ビルドの罠・ルール: [CLAUDE.md](CLAUDE.md)

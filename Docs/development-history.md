@@ -290,7 +290,7 @@ timeline
 **目標**：Phase 6（int 変数のみ）で保留した **real（浮動小数）型**と **数値範囲 min/max** を実装する。
 **計画書**：[Docs/phase6b-numeric-extend-plan.md](phase6b-numeric-extend-plan.md)（Task 53〜55。2026-06-13 ユーザー承認）
 
-- 🟦 進行中。スコープは 2 軸：**real は変数スコープ**（`VariableData.type="real"` + `VariableStore.coerce("real")`。NumericField は real/int を持たず、**bound 変数の型から `isReal` を導出**して `DoubleValidator` に切替える）／**min/max は Widget スコープ**（`WidgetData.minValue/maxValue`。同じ変数を別 NumericField が別レンジで編集しうるため Widget 固有）。
+- ✅ 完了（Task 53〜55）。スコープは 2 軸：**real は変数スコープ**（`VariableData.type="real"` + `VariableStore.coerce("real")`。NumericField は real/int を持たず、**bound 変数の型から `isReal` を導出**して `DoubleValidator` に切替える）／**min/max は Widget スコープ**（`WidgetData.minValue/maxValue`。同じ変数を別 NumericField が別レンジで編集しうるため Widget 固有）。
   - **設計の核（計画段階で確定）**：**min/max は負値が正当なので `-1`/`0` をセンチネルに使えない**（borderWidth/radius との差）→ **presence フラグ方式**（`hasMinValue`/`hasMaxValue` bool ＋ `minValue`/`maxValue` double。JSON はキーの有無で未指定を表す）。範囲外入力は**確定時に clamp**（拒否でなく境界へ丸め）。
   - **タスク**：Task 53（real end-to-end）/ 54（min/max〔Schema presence フラグ + validator/clamp + インスペクタ範囲項目 + delegate〕）/ 55（cross-app E2E〔real typed-write + clamp〕+ スクショ）。
   - **step / decimals / unit / 後続入力 Widget（Gauge / Toggle）は非スコープ＝別承認**。
@@ -313,6 +313,12 @@ timeline
   - **境界逆転（min > max）は実効境界で swap 正規化する**（CodeRabbit Major）。さもないと clamp が max 側へ押し込み、validator が `bottom > top` になる。
   - **新しいインスペクタ入力欄は `widgetEditFieldFocused` に必ず登録する**（CodeRabbit Major）。漏らすと編集中に Delete ショートカットが誤発火し undo 境界も欠落する。
   - **CodeRabbit の偽陽性 2 件を理由付きで不採用にできた**：①「snapshotModel が JSON I/O＝Schema 集約違反」→ snapshotModel は live QML Item → QVariantMap の**収集**のみで実シリアライズは Schema（既存全フィールド同パターン）。②「`Canvas.qml` 命名衝突」→ Task 2 以来の既存ファイルで `import HmiEditor` 明示で回避済み・全面改名は別タスク。返信で根拠を示し CodeRabbit も了承（Codex 利用上限のため本 PR は CodeRabbit フォールバックでレビュー）。
+
+### Task 55: cross-app E2E（real typed-write + clamp）+ スクショ ([PR #114](https://github.com/hang-up33/hmi-platform/pull/114)) ＝ Phase 6-B クローズ
+
+- ✅ 完了。Phase 6-B の締めとして Task 53（real）/ 54（min/max）の 2 軸を初めて cross-app E2E で観測。`tests/e2e/test_numeric_extend.py` 新設（Phase 6 Task 52 テンプレ踏襲）：Editor で real 変数 + `maxValue` 付き NumericField の fixture を `--open` → `saveTo` round-trip し保存 JSON を直接 assert（`type:"real"` / presence フラグ＝`maxValue` キー有・`minValue` キー無 / value binding）。Simulator で root〔`hmiNumericField`〕に `setStringProperty(text)` + `commitValue()` invoke で確定を模し、**real は "36.5" の小数保持**、max=100 の NumericField は **"150"→clamp で 100** が `writeBoundValue` 経由で変数へ書かれ観測用 Label が追従するのを観測。`e2e_numeric_extend` 登録。Web `ctest` **19/19 緑**（unit 10 + e2e 9）。
+- **スクショ**：`editor.png` を範囲項目（インスペクタ「詳細」最小値/最大値）が見える状態へ更新（+ `task-55` 証跡）。`--screenshot` 単体では Widget 未選択でインスペクタが空になるため、**E2E と同じ Spix を流用した使い捨てスクリプト**（「詳細」展開 + NumericField 選択 + ウィンドウ高拡大 → `takeScreenshotAsBase64`、Editor 本体は無改変）で撮影。
+- **学び**：①E2E の `commitValue()` は **root（`hmiNumericField`）のメソッド**＝内部 `numericTextField` を指すと確定が走らない（Phase 6 と同じ参照粒度に揃える）。②インスペクタ範囲項目は ScrollView 最下部にあり `contentY` 直接設定が効かない（内部 Flickable に objectName 無し）→ **ウィンドウ高を広げて viewport 拡大**する方が確実。
 
 ---
 
