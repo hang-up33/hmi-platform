@@ -85,6 +85,7 @@ flowchart LR
 | JSON バリデーション強化 / マイグレーション | P1 | スキーマ版数管理と旧 JSON の自動移行 |
 | 大量 Widget のパフォーマンス | P2 | `var` 配列モデルの限界が見えたら `QAbstractListModel` 化（[project-widgetmodel-refactor-deferred](../.claude/rules/project-widgetmodel-refactor-deferred.md)） |
 | アクセシビリティ | P2 | フォーカス順・スクリーンリーダ対応 |
+| ブート画面 → HMI シームレス遷移 | P2 | 起動時のブートスプラッシュから `hmi_runtime` へ黒フレームゼロで切替え、起動体感を製品品質にする。参考：[組み込み Linux のブート画面を黒フレームゼロで Qt アプリに繋ぐ](https://zenn.dev/tasuku/articles/7bdcb880495a91)（同じ i.MX8MP + Qt6。ただし記事は eglfs_kms / Torizon 前提で、本リポの weston/Wayland 構成にはそのまま適用不可＝要再設計） |
 
 ---
 
