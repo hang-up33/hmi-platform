@@ -339,6 +339,39 @@ TestCase {
         compare(entry.opacity, 0.0);
     }
 
+    // Task 54: 選択中 live Item の数値範囲メタ（widgetMinValue / widgetMaxValue +
+    // presence widgetHasMin / widgetHasMax）を直接更新でき、snapshotModel（保存経路）に
+    // JSON キー minValue / maxValue / hasMinValue / hasMaxValue として乗ること。
+    // 負値も presence フラグ方式なので正当値として保存される。
+    function test_min_max_props_are_writable_on_live_item() {
+        canvas.selectedWidgetIds = ["btn001"];
+        tryVerify(function() {
+            return canvas.selectedItem !== null
+                && canvas.selectedItem.widgetId === "btn001";
+        }, 1000, "btn001 が選択 Item にならない");
+
+        canvas.selectedItem.widgetMinValue = -10;
+        canvas.selectedItem.widgetMaxValue = 100;
+        canvas.selectedItem.widgetHasMin = true;
+        canvas.selectedItem.widgetHasMax = true;
+
+        compare(canvas.selectedItem.widgetMinValue, -10);
+        compare(canvas.selectedItem.widgetMaxValue, 100);
+        compare(canvas.selectedItem.widgetHasMin, true);
+        compare(canvas.selectedItem.widgetHasMax, true);
+
+        const snap = canvas.snapshotModel();
+        let entry = null;
+        for (let i = 0; i < snap.length; ++i) {
+            if (snap[i].id === "btn001") { entry = snap[i]; break; }
+        }
+        verify(entry !== null, "snapshotModel に btn001 が無い");
+        compare(entry.minValue, -10);
+        compare(entry.maxValue, 100);
+        compare(entry.hasMinValue, true);
+        compare(entry.hasMaxValue, true);
+    }
+
     // Task 35: グリッドスナップの既定値（OFF / 8px）と、Canvas → delegate への伝播、
     // および吸着ロジック（snappedValue）を回帰固定する。実際の吸着は移動 / リサイズの
     // 確定ハンドラで起きる（マウス操作が必要）が、その中核は純関数 snappedValue なので

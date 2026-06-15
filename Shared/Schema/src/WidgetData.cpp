@@ -80,6 +80,15 @@ QJsonObject WidgetData::toJson() const
     if (checked) {
         obj["checked"] = checked;
     }
+    // Task 54: 数値範囲（NumericField の clamp 用）。**負値が正当**なのでセンチネル不可、
+    // presence フラグ方式で表す：hasMinValue / hasMaxValue が true のときだけ minValue /
+    // maxValue を書く（未指定はキー省略＝後方互換。旧 JSON は min/max キーを持たない）。
+    if (hasMinValue) {
+        obj["minValue"] = minValue;
+    }
+    if (hasMaxValue) {
+        obj["maxValue"] = maxValue;
+    }
     // Task 39: アクション / バインディングは optional 配列。空のとき省略（後方互換）。
     if (!actions.isEmpty()) {
         QJsonArray actionsArr;
@@ -135,6 +144,12 @@ WidgetData WidgetData::fromJson(const QJsonObject &obj)
     w.enabled = obj.value("enabled").toBool(true);
     w.checkable = obj.value("checkable").toBool();
     w.checked = obj.value("checked").toBool();
+    // Task 54: 数値範囲。**presence は `obj.contains()` で判定**（数値センチネル不可：負値が
+    // 正当なので「キーの有無」が唯一の未指定判定）。値はキーがある時のみ toDouble() で読む。
+    w.hasMinValue = obj.contains("minValue");
+    w.minValue = obj.value("minValue").toDouble();
+    w.hasMaxValue = obj.contains("maxValue");
+    w.maxValue = obj.value("maxValue").toDouble();
     // Task 39: アクション / バインディング配列（欠落時は空配列）。
     const QJsonArray actionsArr = obj.value("actions").toArray();
     for (const QJsonValue &v : actionsArr) {
@@ -177,6 +192,12 @@ QVariantMap WidgetData::toVariantMap() const
     m.insert(QStringLiteral("enabled"), enabled);
     m.insert(QStringLiteral("checkable"), checkable);
     m.insert(QStringLiteral("checked"), checked);
+    // Task 54: 数値範囲は値（minValue/maxValue）と presence（hasMinValue/hasMaxValue）を
+    // 対で転写する。QML 側は hasMinValue を見て未指定（has*=false）を判定する。
+    m.insert(QStringLiteral("minValue"), minValue);
+    m.insert(QStringLiteral("maxValue"), maxValue);
+    m.insert(QStringLiteral("hasMinValue"), hasMinValue);
+    m.insert(QStringLiteral("hasMaxValue"), hasMaxValue);
     QVariantList actionsVar;
     actionsVar.reserve(actions.size());
     for (const ActionData &a : actions) {
@@ -222,6 +243,12 @@ WidgetData WidgetData::fromVariantMap(const QVariantMap &map)
     w.enabled = map.value(QStringLiteral("enabled"), true).toBool();
     w.checkable = map.value(QStringLiteral("checkable")).toBool();
     w.checked = map.value(QStringLiteral("checked")).toBool();
+    // Task 54: 数値範囲は presence（hasMinValue/hasMaxValue）と値（minValue/maxValue）を
+    // 対で読む。presence はキー欠落時 false。値は対応 presence のとき意味を持つ。
+    w.hasMinValue = map.value(QStringLiteral("hasMinValue")).toBool();
+    w.minValue = map.value(QStringLiteral("minValue")).toDouble();
+    w.hasMaxValue = map.value(QStringLiteral("hasMaxValue")).toBool();
+    w.maxValue = map.value(QStringLiteral("maxValue")).toDouble();
     const QVariantList actionsVar = map.value(QStringLiteral("actions")).toList();
     for (const QVariant &v : actionsVar) {
         w.actions.append(ActionData::fromVariantMap(v.toMap()));

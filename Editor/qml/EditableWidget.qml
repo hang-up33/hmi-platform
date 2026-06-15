@@ -79,6 +79,15 @@ Item {
     property bool widgetCheckable: false
     property bool widgetChecked: false
 
+    // Task 54: 数値範囲（NumericField の clamp 用）のメタ。**負値が正当なのでセンチネル不可**＝
+    // presence フラグ（widgetHasMin / widgetHasMax）で未指定を表す。値（double）と presence を
+    // 対で持つ。delegate（Canvas.qml）で HmiNumericField の minValue/maxValue/hasMin/hasMax へ
+    // 渡し、snapshotModel が JSON キー minValue/maxValue/hasMinValue/hasMaxValue へ書き戻す。
+    property real widgetMinValue: 0
+    property real widgetMaxValue: 0
+    property bool widgetHasMin: false
+    property bool widgetHasMax: false
+
     // Task 39: アクション / バインディングのメタ。Editor は T40 まで編集 UI を持たないが、
     // **読み込んだ定義を保存で失わない**ため、ここで素通し保持する（delegate が modelData
     // から流し込み、snapshotModel が保存へ書き戻す。Codex PR #78 [P1]）。配列をそのまま持つ。

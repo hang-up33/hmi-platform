@@ -305,6 +305,15 @@ timeline
   - real のテスト入力は `Qt.locale().decimalPoint` でなく **ASCII "36.5" 固定**（C locale 実装と整合させ locale 依存の test failure を防ぐ）。
   - 詳細は [.claude/rules/numeric-field-real-locale.md](../.claude/rules/numeric-field-real-locale.md)。
 
+### Task 54: 数値範囲 min/max ([PR #113](https://github.com/hang-up33/hmi-platform/pull/113))
+
+- ✅ 完了。NumericField に入力範囲を Widget スコープで追加。**負値が正当なので数値センチネル不可** → **presence フラグ方式**（`WidgetData.minValue/maxValue`(double) + `hasMinValue/hasMaxValue`(bool)。`toJson` は presence のときだけキーを書く＝後方互換、`fromJson` は `obj.contains()` で presence 判定）。`HmiNumericField` は validator の `bottom`/`top` + 確定時 clamp の二段で範囲を担保（範囲外は拒否でなく境界へ丸め）。Editor インスペクタ「詳細」に範囲 最小値/最大値（NumericField のみ可視、2 本立て、負値・小数可）。Web `ctest` **18/18 緑**。
+- **学び**：
+  - **clamp の境界は validator と「型に合わせた実効境界」で共通化する**：int は小数境界（min=2.5）を `Math.ceil`/`Math.floor` で整数境界へ丸めてから clamp（生の 2.5 へ clamp 後に整数化すると min 未満の 2 へ落ちる不整合）。`_effectiveBounds()` に集約し commitValue と両 validator で共用。
+  - **境界逆転（min > max）は実効境界で swap 正規化する**（CodeRabbit Major）。さもないと clamp が max 側へ押し込み、validator が `bottom > top` になる。
+  - **新しいインスペクタ入力欄は `widgetEditFieldFocused` に必ず登録する**（CodeRabbit Major）。漏らすと編集中に Delete ショートカットが誤発火し undo 境界も欠落する。
+  - **CodeRabbit の偽陽性 2 件を理由付きで不採用にできた**：①「snapshotModel が JSON I/O＝Schema 集約違反」→ snapshotModel は live QML Item → QVariantMap の**収集**のみで実シリアライズは Schema（既存全フィールド同パターン）。②「`Canvas.qml` 命名衝突」→ Task 2 以来の既存ファイルで `import HmiEditor` 明示で回避済み・全面改名は別タスク。返信で根拠を示し CodeRabbit も了承（Codex 利用上限のため本 PR は CodeRabbit フォールバックでレビュー）。
+
 ---
 
 ## 番外: 開発コードネーム「Atlas」決定（2026-05-30）

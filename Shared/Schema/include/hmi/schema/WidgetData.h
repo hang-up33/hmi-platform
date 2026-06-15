@@ -73,6 +73,20 @@ struct WidgetData {
     bool checkable = false;
     bool checked = false;
 
+    // Task 54: 数値範囲（NumericField の入力 clamp 用）。**負値が正当**（例 min=-100）なので
+    // borderWidth の `-1` センチネルや opacity の `-1.0` センチネルが使えない。そこで
+    // **presence フラグ方式**を採る：値（double）と「指定されているか」（bool）を対で持つ。
+    //   toJson    : hasMinValue のときだけ minValue を書く（未指定はキー省略＝後方互換）。
+    //   fromJson  : hasMinValue = obj.contains("minValue")、値は toDouble()。
+    //   toVariantMap/fromVariantMap も同じ presence 規則で対転写する。
+    // 型は double（int レンジを内包し real レンジ〔0.5 等〕も表せる）。NumericField 側で
+    // int 変数なら IntValidator の bottom/top へ丸めて渡す。isValidJson の必須集合には
+    // 含めない（optional ＝後方互換）。
+    double minValue = 0.0;
+    double maxValue = 0.0;
+    bool hasMinValue = false;
+    bool hasMaxValue = false;
+
     // Task 39: アクション（書き手）/ バインディング（読み手）。いずれも optional 配列で、
     // 空のとき toJson で省略（後方互換）。実行 / 描画への反映は T41 以降で、本タスクでは
     // 型と保存（round-trip）のみ。isValidJson の必須集合には含めない（後方互換）。

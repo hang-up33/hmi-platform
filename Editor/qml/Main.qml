@@ -286,6 +286,8 @@ Window {
         || inspectorActionValueField.activeFocus
         || inspectorBindingPropCombo.activeFocus
         || inspectorBindingVarCombo.activeFocus
+        || inspectorMinValueField.activeFocus
+        || inspectorMaxValueField.activeFocus
         || fieldX.activeFocus || fieldY.activeFocus
         || fieldW.activeFocus || fieldH.activeFocus
 
@@ -1413,6 +1415,91 @@ Window {
                             objectName: "inspectorDetailSection"
                             title: qsTr("詳細")
                             expanded: false
+
+                            // Task 54: 数値範囲（min / max）。NumericField のときだけ可視
+                            //（他種別では visible:false。型出し分けは visible のみ＝objectName・
+                            // 編集ロジック・Schema 不変）。空欄 = 未指定（has*=false）、値を入れると
+                            // has*=true。**負値・小数も許す**ため validator は「空 または 数値」を許可する
+                            // RegularExpressionValidator にする（DoubleValidator は空文字を弾くため不可）。
+                            // 2 本立て：onTextEdited で live Item へ書き戻し（widgetMin/MaxValue + has*）、
+                            // Connections.onSelectedItemChanged で表示同期。
+                            Label {
+                                text: qsTr("範囲 最小値")
+                                visible: rootWindow.selectedIsNumericField
+                            }
+                            TextField {
+                                id: inspectorMinValueField
+                                objectName: "inspectorMinValueField"
+                                width: parent.width
+                                visible: rootWindow.selectedIsNumericField
+                                placeholderText: qsTr("(未指定)")
+                                // 空 または 任意符号付き整数 / 小数（先頭 `-`・小数点・指数なし）。
+                                validator: RegularExpressionValidator {
+                                    regularExpression: /^(-?\d*\.?\d*)$/
+                                }
+                                ToolTip.text: qsTr("入力可能な最小値。空欄で未指定（下限なし）。確定時に範囲外は境界へ丸めます")
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
+                                onTextEdited: {
+                                    if (canvas.selectedItem && acceptableInput) {
+                                        // 空 / 符号のみ / 小数点のみは「未指定」（has=false）扱い。
+                                        var t = text.trim()
+                                        var n = Number(t)
+                                        if (t === "" || t === "-" || t === "." || isNaN(n)) {
+                                            canvas.selectedItem.widgetHasMin = false
+                                        } else {
+                                            canvas.selectedItem.widgetMinValue = n
+                                            canvas.selectedItem.widgetHasMin = true
+                                        }
+                                    }
+                                }
+                                Connections {
+                                    target: canvas
+                                    function onSelectedItemChanged() {
+                                        inspectorMinValueField.text =
+                                            (canvas.selectedItem && canvas.selectedItem.widgetHasMin)
+                                                ? String(canvas.selectedItem.widgetMinValue) : ""
+                                    }
+                                }
+                            }
+
+                            Label {
+                                text: qsTr("範囲 最大値")
+                                visible: rootWindow.selectedIsNumericField
+                            }
+                            TextField {
+                                id: inspectorMaxValueField
+                                objectName: "inspectorMaxValueField"
+                                width: parent.width
+                                visible: rootWindow.selectedIsNumericField
+                                placeholderText: qsTr("(未指定)")
+                                validator: RegularExpressionValidator {
+                                    regularExpression: /^(-?\d*\.?\d*)$/
+                                }
+                                ToolTip.text: qsTr("入力可能な最大値。空欄で未指定（上限なし）。確定時に範囲外は境界へ丸めます")
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
+                                onTextEdited: {
+                                    if (canvas.selectedItem && acceptableInput) {
+                                        var t = text.trim()
+                                        var n = Number(t)
+                                        if (t === "" || t === "-" || t === "." || isNaN(n)) {
+                                            canvas.selectedItem.widgetHasMax = false
+                                        } else {
+                                            canvas.selectedItem.widgetMaxValue = n
+                                            canvas.selectedItem.widgetHasMax = true
+                                        }
+                                    }
+                                }
+                                Connections {
+                                    target: canvas
+                                    function onSelectedItemChanged() {
+                                        inspectorMaxValueField.text =
+                                            (canvas.selectedItem && canvas.selectedItem.widgetHasMax)
+                                                ? String(canvas.selectedItem.widgetMaxValue) : ""
+                                    }
+                                }
+                            }
 
                             Label {
                                 objectName: "inspectorIdLabel"

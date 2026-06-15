@@ -144,6 +144,12 @@ Item {
                 enabled: item.widgetEnabled,
                 checkable: item.widgetCheckable,
                 checked: item.widgetChecked,
+                // Task 54: 数値範囲 + presence も live Item から取り込む。Schema 側で
+                // hasMinValue / hasMaxValue が true のときだけ minValue / maxValue が書き出される。
+                minValue: item.widgetMinValue,
+                maxValue: item.widgetMaxValue,
+                hasMinValue: item.widgetHasMin,
+                hasMaxValue: item.widgetHasMax,
                 // Task 39: アクション / バインディングも保存スナップショットへ含める
                 //（読み込んだ定義を Editor の保存で失わないため。Codex PR #78 [P1]）。
                 actions: item.widgetActions,
@@ -709,6 +715,11 @@ Item {
                     widgetEnabled: modelData.enabled !== undefined ? modelData.enabled : true
                     widgetCheckable: modelData.checkable !== undefined ? modelData.checkable : false
                     widgetChecked: modelData.checked !== undefined ? modelData.checked : false
+                    // Task 54: 数値範囲 + presence を流す（presence は未指定時 false）。
+                    widgetMinValue: modelData.minValue !== undefined ? modelData.minValue : 0
+                    widgetMaxValue: modelData.maxValue !== undefined ? modelData.maxValue : 0
+                    widgetHasMin: modelData.hasMinValue !== undefined ? modelData.hasMinValue : false
+                    widgetHasMax: modelData.hasMaxValue !== undefined ? modelData.hasMaxValue : false
                     // Task 39: アクション / バインディングを素通し保持（保存で失わないため）。
                     widgetActions: modelData.actions !== undefined ? modelData.actions : []
                     widgetBindings: modelData.bindings !== undefined ? modelData.bindings : []
@@ -885,6 +896,12 @@ Item {
                             vAlign: wrapper.widgetVAlign
                             widgetOpacity: wrapper.widgetOpacity
                             widgetEnabled: wrapper.widgetEnabled
+                            // Task 54: 数値範囲 + presence を渡す（Editor キャンバスは editable:false で
+                            // validator 非適用だが、一貫のため流す。clamp は Simulator の commit で効く）。
+                            minValue: wrapper.widgetMinValue
+                            maxValue: wrapper.widgetMaxValue
+                            hasMin: wrapper.widgetHasMin
+                            hasMax: wrapper.widgetHasMax
                             // Task 50: 選択中継は Button / Label と同形。write 結線（valueCommitted）は
                             // Task 51 で SimulatorCanvas 側に足す（Editor は読取専用なので結線しない）。
                             onClicked: function(modifiers) {

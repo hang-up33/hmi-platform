@@ -42,6 +42,11 @@ private slots:
     void zeroOpacityIsWrittenNotOmitted();
     void roundTripOmitsDefaultStates();
     void nonDefaultStatesAreWrittenAndRestored();
+    // Task 54: 数値範囲 min/max（presence フラグ方式）の round-trip と、キー欠落時の
+    // has*=false（後方互換）を固定する。負値が正当なので数値センチネル不可＝presence フラグ。
+    void minMaxRoundTrip();
+    void minMaxOmittedWhenUnspecified();
+    void negativeMinMaxRoundTrip();
     void actionsAndBindingsRoundTrip();
     void omitsEmptyActionsAndBindings();
     void isValidJsonRejectsInvalidActionsBindings();
@@ -302,6 +307,76 @@ void WidgetDataTest::nonDefaultStatesAreWrittenAndRestored()
     QCOMPARE(restored.checked, true);
 }
 
+// Task 54: 数値範囲（min/max）の round-trip。presence フラグ（hasMinValue/hasMaxValue）が
+// true のとき minValue/maxValue が JSON に書かれ、fromJson でキーの有無から presence を復元する。
+void WidgetDataTest::minMaxRoundTrip()
+{
+    WidgetData src;
+    src.id = "num001";
+    src.type = "NumericField";
+    src.width = 120;
+    src.height = 40;
+    src.minValue = 0.0;     // 0 も正当値（has* で指定済みなので書かれる）
+    src.maxValue = 100.5;   // real 境界も表せる
+    src.hasMinValue = true;
+    src.hasMaxValue = true;
+
+    const QJsonObject obj = src.toJson();
+    QVERIFY(obj.contains("minValue"));
+    QVERIFY(obj.contains("maxValue"));
+    QCOMPARE(obj.value("minValue").toDouble(), 0.0);
+    QCOMPARE(obj.value("maxValue").toDouble(), 100.5);
+
+    const WidgetData restored = WidgetData::fromJson(obj);
+    QCOMPARE(restored.hasMinValue, true);
+    QCOMPARE(restored.hasMaxValue, true);
+    QCOMPARE(restored.minValue, 0.0);
+    QCOMPARE(restored.maxValue, 100.5);
+}
+
+// Task 54: 未指定（has*=false）のとき min/max キーは省略され、旧 JSON（min/max キー無し）を
+// 読むと has*=false に復元される（後方互換）。数値センチネルが使えない＝キーの有無が唯一の真実。
+void WidgetDataTest::minMaxOmittedWhenUnspecified()
+{
+    WidgetData src;
+    src.id = "num002";
+    src.type = "NumericField";
+    src.width = 120;
+    src.height = 40;
+    // hasMinValue / hasMaxValue は既定 false（未指定）。
+
+    const QJsonObject obj = src.toJson();
+    QVERIFY(!obj.contains("minValue"));
+    QVERIFY(!obj.contains("maxValue"));
+
+    // 旧 JSON（min/max キー無し）を読んでも has*=false で復元される。
+    const WidgetData restored = WidgetData::fromJson(obj);
+    QCOMPARE(restored.hasMinValue, false);
+    QCOMPARE(restored.hasMaxValue, false);
+}
+
+// Task 54: 負値の min/max が round-trip する（センチネル方式では `-1` 等が未指定と衝突して
+// 表せないが、presence フラグ方式なら負値も正当値として保存・復元できる）。
+void WidgetDataTest::negativeMinMaxRoundTrip()
+{
+    WidgetData src;
+    src.id = "num003";
+    src.type = "NumericField";
+    src.width = 120;
+    src.height = 40;
+    src.minValue = -100.0;  // 負の下限（センチネルでは表せない）
+    src.maxValue = -1.0;    // -1 も正当値（presence フラグなので未指定と区別される）
+    src.hasMinValue = true;
+    src.hasMaxValue = true;
+
+    const QJsonObject obj = src.toJson();
+    const WidgetData restored = WidgetData::fromJson(obj);
+    QCOMPARE(restored.hasMinValue, true);
+    QCOMPARE(restored.hasMaxValue, true);
+    QCOMPARE(restored.minValue, -100.0);
+    QCOMPARE(restored.maxValue, -1.0);
+}
+
 // Task 39: アクション / バインディング配列が round-trip で要素ごと再現される。
 void WidgetDataTest::actionsAndBindingsRoundTrip()
 {
@@ -511,6 +586,10 @@ void WidgetDataTest::variantMapRoundTripFullFields()
     src.enabled = false;   // 既定 true と異なる値
     src.checkable = true;
     src.checked = true;
+    src.minValue = -5.0;   // 負値も presence フラグ方式なら往復する
+    src.maxValue = 250.0;
+    src.hasMinValue = true;
+    src.hasMaxValue = true;
 
     ActionData a;
     a.trigger = "onClick";
@@ -550,6 +629,10 @@ void WidgetDataTest::variantMapRoundTripFullFields()
     QCOMPARE(r.enabled, src.enabled);
     QCOMPARE(r.checkable, src.checkable);
     QCOMPARE(r.checked, src.checked);
+    QCOMPARE(r.hasMinValue, src.hasMinValue);
+    QCOMPARE(r.hasMaxValue, src.hasMaxValue);
+    QCOMPARE(r.minValue, src.minValue);
+    QCOMPARE(r.maxValue, src.maxValue);
     QCOMPARE(r.actions.size(), 1);
     QCOMPARE(r.actions.at(0).trigger, QStringLiteral("onClick"));
     QCOMPARE(r.actions.at(0).op, QStringLiteral("setVariable"));
@@ -580,6 +663,8 @@ void WidgetDataTest::fromVariantMapFillsSentinelDefaults()
     QCOMPARE(w.enabled, true);   // 欠落時 true（disabled へ誤読しない）
     QCOMPARE(w.checkable, false);
     QCOMPARE(w.checked, false);
+    QCOMPARE(w.hasMinValue, false);  // Task 54: presence は欠落時 false（未指定）
+    QCOMPARE(w.hasMaxValue, false);
     QVERIFY(w.actions.isEmpty());
     QVERIFY(w.bindings.isEmpty());
 }
