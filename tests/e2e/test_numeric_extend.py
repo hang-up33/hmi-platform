@@ -48,13 +48,17 @@ _SIM_WIN = "hmiSimulatorWindow"
 _REAL_VAR = "temperature"
 _REAL_INITIAL = 20.0
 _REAL_TYPED = "36.5"
+# 観測 Label の初期表示：QML は real 変数を _toFixedNotation(20.0) → "20"（整数部のみ）で表示する。
+# 定数 _REAL_INITIAL から導出し、初期値を変えても期待文字列が追従するようにする（CodeRabbit Minor）。
+_REAL_INITIAL_STR = str(int(_REAL_INITIAL))
 
 # clamp 軸：level(int, 初期 0)。max=100 の NumericField に "150" を入れて clamp → 100。
 _CLAMP_VAR = "level"
 _CLAMP_INITIAL = 0
 _CLAMP_MAX = 100.0
 _CLAMP_TYPED = "150"
-_CLAMP_RESULT = "100"
+# clamp 後の期待値は境界 _CLAMP_MAX から導出（int 変数なので整数文字列。CodeRabbit Nitpick）。
+_CLAMP_RESULT = str(int(_CLAMP_MAX))
 
 
 def _fixture_json() -> dict:
@@ -268,9 +272,9 @@ def _phase2_simulator(simulator_binary: str, port: int, save_path: str) -> None:
         # 読み：real 初期値が小数固定表記で追従（"20" ＝ _toFixedNotation(20.0)）。
         # 観測用 Label は変数を String(v) で表示するため初期 20.0 → "20"。
         initial_real_echo = _get_str_property(url, real_echo, "text")
-        if initial_real_echo != "20":
+        if initial_real_echo != _REAL_INITIAL_STR:
             raise RuntimeError(
-                f"initial real echo text={initial_real_echo!r} != '20' "
+                f"initial real echo text={initial_real_echo!r} != {_REAL_INITIAL_STR!r} "
                 "(text binding did not follow real variable initial)"
             )
 
