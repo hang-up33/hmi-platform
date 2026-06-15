@@ -387,8 +387,10 @@ TestCase {
         const tf = findByObjectName(fld, "numericTextField");
         verify(tf !== null, "内部 TextField が見つからない");
         tf.forceActiveFocus();  // 編集セッション開始
-        const dp = Qt.locale().decimalPoint;
-        tf.text = "36" + dp + "5";  // locale の小数点で "36.5"
+        // real 経路は commitValue / DoubleValidator を C locale（ASCII の "."）固定で解釈するため、
+        // 入力も ASCII 小数点で固定する（Codex PR #112 [P2]：locale.decimalPoint 由来だと
+        // 小数点カンマ環境で "36,5" が 36.5 として扱われずテストが locale 依存で落ちる）。
+        tf.text = "36.5";
         fld.commitValue();
 
         // real に coerce され小数が保たれる（int だと 36 に丸まる）。
