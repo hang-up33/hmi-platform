@@ -51,6 +51,9 @@ TestCase {
         btn.borderColor = "";
         btn.borderWidth = -1;
         btn.cornerRadius = -1;
+        // PR #109: 状態（checkable / checked）も既定へ戻す。
+        btn.checkable = false;
+        btn.checked = false;
         clickedSpy.clear();
     }
 
@@ -120,6 +123,36 @@ TestCase {
         compare(btn.resolvedCornerRadius, 0);
         compare(btn.border.width, 0);
         compare(btn.radius, 0);
+    }
+
+    // PR #109: checked（ON）の見た目（背景を暗く + ボーダー +2）は **checkable に依存せず
+    // checked 単独で出る**こと。`checked` を変数バインドして状態表示に使うとき、対象が
+    // checkable:false（トグルOFF）でも見た目が変わらない不具合を防ぐ回帰固定。
+    function test_checked_visual_is_independent_of_checkable() {
+        const base = btn.resolvedBackgroundColor;
+        const onColor = Qt.darker(base, 1.15);
+        const baseWidth = btn.resolvedBorderWidth;
+
+        // 既定（checked=false）：素の背景・素のボーダー幅。
+        compare(btn.checked, false);
+        compare(btn.color, base);
+        compare(btn.border.width, baseWidth);
+
+        // checkable:false のまま checked のみ true → ON 見た目になる（暗転 + ボーダー +2）。
+        btn.checkable = false;
+        btn.checked = true;
+        compare(btn.color, onColor);
+        compare(btn.border.width, baseWidth + 2);
+
+        // checkable:true でも同じ ON 見た目（checkable に依存しない）。
+        btn.checkable = true;
+        compare(btn.color, onColor);
+        compare(btn.border.width, baseWidth + 2);
+
+        // checked を戻すと素の見た目へ。
+        btn.checked = false;
+        compare(btn.color, base);
+        compare(btn.border.width, baseWidth);
     }
 
     // QQuickItem ツリーから指定された型名（"QQuickText" 等）の最初の子を再帰的に探す。

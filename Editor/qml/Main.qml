@@ -1281,14 +1281,15 @@ Window {
                             CheckBox {
                                 id: inspectorCheckedCheck
                                 objectName: "inspectorCheckedCheck"
-                                text: qsTr("初期状態をオン")
-                                // Task 51: トグル / 初期オンは Button 専用（NumericField は「有効」のみ）。
+                                text: qsTr("状態をオン")
+                                // Task 51: トグル / 状態オンは Button 専用（NumericField は「有効」のみ）。
                                 visible: rootWindow.selectedSupportsClickAction
-                                ToolTip.text: qsTr("トグルボタンの初期状態をオン（押下）にします。「トグルボタンにする」が ON のときのみ有効です")
+                                // PR #110: checked の ON 外観は checkable 非依存になった（PR #109 修正）。
+                                // よって checked 編集も checkable でゲートしない（checkable:false の
+                                // 状態表示〔ランプ/インジケータ〕用 JSON でも直接 ON/OFF を編集できる）。
+                                ToolTip.text: qsTr("ボタンを押下状態（オン）の外観にします。変数にバインドすればランプ／インジケータの状態表示にも使えます")
                                 ToolTip.visible: hovered
                                 ToolTip.delay: 600
-                                // 「トグルボタンにする」が ON のときだけ意味を持つ（外観に反映される）。
-                                enabled: inspectorCheckableCheck.checked
                                 onToggled: {
                                     if (canvas.selectedItem) {
                                         canvas.beginEdit()
