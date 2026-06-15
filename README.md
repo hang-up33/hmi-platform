@@ -10,7 +10,7 @@ GUI で HMI 画面を作図 → JSON で保存 → PC でも組込み実機で�
 
 ![HMI Editor](Docs/screenshots/editor.png)
 
-Editor。ツールバーで Widget 追加（ボタン / ラベル / 数値入力）・JSON 開く / 保存・編集補助（スナップ・コピペ・undo / redo）、右のインスペクタでスタイル・配置・アクション・バインディングを編集できる。
+Editor。ツールバーで Widget 追加（ボタン / ラベル / 数値入力）・JSON 開く / 保存・編集補助（スナップ・コピペ・undo / redo）、右のインスペクタでスタイル・配置・アクション・バインディングを編集できる。数値入力（NumericField）は変数の型（int / real）を引き継ぎ、インスペクタ「詳細」の範囲（最小値 / 最大値）で入力 clamp の境界を指定できる（図は real 変数 temperature を bind した選択中の例）。
 
 ![HMI Simulator](Docs/screenshots/simulator.png)
 
