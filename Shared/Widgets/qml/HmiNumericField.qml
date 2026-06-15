@@ -138,8 +138,11 @@ Rectangle {
             var n = Number.fromLocaleString(loc, field.text);
             if (!isNaN(n))
                 // real は整数丸めせず（小数を保つ）、int は従来どおり Math.trunc。
-                // どちらも ASCII 数値文字列へ正規化（String(...) ＝ロケール非依存の表記）。
-                cleaned = String(root.isReal ? n : Math.trunc(n));
+                // real は **固定小数表記**へ整形する（Codex PR #112 [P2]）：素の `String(1e-7)` は
+                // `"1e-7"` のような指数表記になり、StandardNotation 固定の DoubleValidator が
+                // それを Invalid 扱いにして次回編集で矛盾する。`_toFixedNotation` で指数を展開し
+                // ASCII 固定小数へ直す。int は指数化しないので従来どおり String で十分。
+                cleaned = root.isReal ? _toFixedNotation(n) : String(Math.trunc(n));
         } catch (e) {
             // パース不能（空 / 不正）は raw のまま
         }
@@ -148,6 +151,33 @@ Rectangle {
             return;
         root._lastCommittedText = cleaned;
         root.valueCommitted(cleaned);
+    }
+
+    // real の確定値を **指数表記にしない ASCII 固定小数文字列**へ整形する（Codex PR #112 [P2]）。
+    // JS の `String(n)` は `1e-7` / `1e+21` のような指数表記を生むが、DoubleValidator は
+    // StandardNotation（指数非対応）なので、書き戻した表示が自身の validator と矛盾する。
+    // 指数表記を**文字列操作で**固定小数へ展開する（toFixed は >= 1e21 で指数を返すため使わない。
+    // 桁ずらしは精度損失なし）。指数を含まない通常値（"36.5" 等）はそのまま返す。
+    function _toFixedNotation(n) {
+        var s = String(n);
+        if (s.indexOf("e") === -1 && s.indexOf("E") === -1)
+            return s;  // 既に固定小数表記
+        var m = s.match(/^(-?)(\d+)(?:\.(\d+))?[eE]([+-]?\d+)$/);
+        if (!m)
+            return s;  // 想定外の形式はそのまま
+        var sign = m[1];
+        var digits = m[2] + (m[3] || "");       // 仮数の全有効桁（小数点除去）
+        var pointPos = m[2].length + parseInt(m[4], 10);  // 展開後の小数点位置
+        var result;
+        if (pointPos <= 0)
+            result = "0." + "0".repeat(-pointPos) + digits;            // 0.000…digits
+        else if (pointPos >= digits.length)
+            result = digits + "0".repeat(pointPos - digits.length);    // digits000…
+        else
+            result = digits.slice(0, pointPos) + "." + digits.slice(pointPos);
+        if (result.indexOf(".") !== -1)
+            result = result.replace(/\.?0+$/, "");  // 余分な末尾ゼロ / 小数点を除去
+        return sign + result;
     }
 
     width: 120

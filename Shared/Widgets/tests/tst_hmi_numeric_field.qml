@@ -320,6 +320,24 @@ TestCase {
         compare(Number(committedSpy.signalArguments[0][0]), 100.25);
     }
 
+    // Codex PR #112 [P2]：real の確定値を指数表記にしない。`0.0000001` は素の String() だと
+    // "1e-7" になり StandardNotation の DoubleValidator と矛盾するため、固定小数 "0.0000001" へ
+    // 整形する。値自体は round-trip する（Number("0.0000001") === 1e-7）。
+    function test_real_commit_avoids_exponential_notation() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.isReal = true;
+        tf.forceActiveFocus();
+        tf.text = "0.0000001";           // 素の String(Number(...)) は "1e-7" になる値
+        committedSpy.clear();
+        field.commitValue();
+        compare(committedSpy.count, 1);
+        // 指数表記でなく固定小数で確定される（validator の StandardNotation と整合）。
+        compare(committedSpy.signalArguments[0][0], "0.0000001");
+        verify(committedSpy.signalArguments[0][0].indexOf("e") === -1, "指数表記になってはいけない");
+        compare(Number(committedSpy.signalArguments[0][0]), 1e-7);
+    }
+
     // Task 53: isReal:false（int）では従来どおり小数入力が整数へ丸められる（Math.trunc）。
     function test_int_commit_truncates_decimal() {
         const tf = findByObjectName(field, "numericTextField");
