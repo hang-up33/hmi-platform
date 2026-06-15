@@ -5,7 +5,7 @@
 > **本書は計画のみ**（実装は別 PR でタスク 1 つずつ）。要求の倉庫は [requirements.md](requirements.md) の §2.3、結線規約は [.claude/rules/qml-module-conventions.md](../.claude/rules/qml-module-conventions.md)、Schema 規約は [.claude/rules/schema-conventions.md](../.claude/rules/schema-conventions.md)、実機/SDK 事情は [.claude/rules/dev-environment.md](../.claude/rules/dev-environment.md)。
 > **進捗の正本は本ファイル「進捗」表**。
 >
-> **承認状態**：起票（未着手）。現フェーズは Phase 5（Label / Task 49 残）。本フェーズの着手順（Phase 6 との前後）はユーザー承認で確定する。
+> **承認状態**：起票（未着手・未承認）。直近完了は Phase 6-B（NumericField 拡張・Task 53〜55）。本フェーズの着手はユーザー承認で確定する（step / decimals / unit や後続入力 Widget〔Gauge / Toggle〕も同列の未承認候補）。
 
 ---
 

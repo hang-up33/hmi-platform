@@ -4,7 +4,7 @@
 >
 > **狙い**：単なる作画デモではなく、**実務 HMI として使える**ことを見据える（通信プロトコル連携・数値入出力・状態表示を核に据える）。
 >
-> 関連：現フェーズ計画 [phase5-widget-expansion-plan.md](phase5-widget-expansion-plan.md)、結線規約 [.claude/rules/qml-module-conventions.md](../.claude/rules/qml-module-conventions.md)、Schema 規約 [.claude/rules/schema-conventions.md](../.claude/rules/schema-conventions.md)。
+> 関連：直近の完了フェーズ計画 [phase6b-numeric-extend-plan.md](phase6b-numeric-extend-plan.md)（Phase 6-B = 直近完了。次フェーズは未承認）、結線規約 [.claude/rules/qml-module-conventions.md](../.claude/rules/qml-module-conventions.md)、Schema 規約 [.claude/rules/schema-conventions.md](../.claude/rules/schema-conventions.md)。
 > **進捗の正本は各 `phase*-plan.md` の「進捗」表**。本書は要求の倉庫であり進捗表ではない。
 
 ---
@@ -13,8 +13,8 @@
 
 ```mermaid
 flowchart LR
-    P5["Phase 5: Label<br/>(進行中 / Task 49 残)"] --> P6["Phase 6: Lamp + 数値入力 / 数値表示<br/>(+ float 変数型)"]
-    P6 --> P7["Phase 7: Modbus 通信対応<br/>(QtSerialBus / 変数ソース)"]
+    P5["Phase 5: Label<br/>(✅ 完了 / Task 47〜49)"] --> P6["Phase 6 / 6-B: 数値入力 NumericField<br/>(✅ 完了 / int→real + min/max)"]
+    P6 --> P7["Phase 7: Modbus 通信対応<br/>(QtSerialBus / 変数ソース・未承認)"]
     P7 -.次点候補.-> Px["複数画面・画面遷移 / アラーム / トレンド ..."]
 ```
 
@@ -37,7 +37,7 @@ flowchart LR
 
 | 機能 | 優先 | 概要 | Schema 影響 |
 |---|---|---|---|
-| Label（文字表示） | — | **実装中**（Phase 5 / Task 47〜49） | 無し |
+| Label（文字表示） | — | **実装済**（Phase 5 / Task 47〜49 完了） | 無し |
 | **Lamp（状態表示ランプ）** | **P0** | bool / int 変数に追従して点灯色・消灯色を切替える表示専用 Widget | 小（点灯色など） |
 | **数値表示（Numeric Display）** | **P0** | 数値変数を桁数・単位付きで表示する読み取り専用 Widget | 小（decimals / unit） |
 | **数値入力（Numeric Input）** | **P0** | 数値を入力して変数へ書き込む対話 Widget（min/max/step） | 中（min/max/step + 書込経路） |
