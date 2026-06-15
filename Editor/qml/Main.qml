@@ -538,6 +538,11 @@ Window {
                 contentWidth: availableWidth
                 clip: true
 
+                // インスペクタを端まで送ったときに「ぐいーっ」と伸びて跳ね返る
+                // overshoot（既定の DragAndOvershootBounds）を止め、端でピタッと
+                // 止める。ScrollView の実体 Flickable（contentItem）へ設定する。
+                Component.onCompleted: contentItem.boundsBehavior = Flickable.StopAtBounds
+
                 Column {
                     width: inspectorScroll.availableWidth
                     spacing: 8
