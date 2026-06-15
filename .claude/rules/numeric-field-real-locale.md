@@ -14,7 +14,7 @@ metadata:
 
 # NumericField を real（浮動小数）対応する時の罠（Phase 6-B Task 53 で確立）
 
-int では素通せた箇所が real では破綻する。Task 53（PR #112）で Codex / CodeRabbit から計 6 件の指摘を受けた。
+int では素通せた箇所が real では破綻する。Task 53（PR #112）でレビューから計 7 件の指摘を受けた（**Codex 6 件**＝locale 整合 / JSON 数値精度 / 指数表記 / 表示固定小数化 / SimulatorCanvas テスト locale / 非有限値、**CodeRabbit 1 件**＝double→long long 範囲外キャスト UB。Codex 上限到達後は CodeRabbit にフォールバック）。
 **核心は「real の表示値は変数ストアの JS 数値（`coerce("real")=Number(raw)`）由来で、常に ASCII 小数点（C locale）」**という前提に、validator・commit・表示・テスト入力を **すべて C locale（ASCII の `.`）へ揃える**こと。int は従来どおり system `Qt.locale()`（IntValidator の locale 桁区切り受理契約を維持。整数は桁区切りが無ければどの locale でも誤読しない）。
 
 ## 守ること（real path）
