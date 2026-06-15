@@ -180,6 +180,20 @@ Rectangle {
         return sign + result;
     }
 
+    // real の **表示値**を固定小数 ASCII へ整形する（Codex PR #112 [Minor]）。delegate は
+    // bound 変数値を `String(v)` で流すため、初期値 / 外部 setVariable が `0.0000001` / `1e21`
+    // 相当だと表示が `1e-7` / `1e+21` の指数表記になり、StandardNotation 固定の DoubleValidator と
+    // 矛盾する（commitValue で避けた矛盾が表示・外部更新経路に残る）。表示テキストにも同じ
+    // `_toFixedNotation` を通して固定小数へ揃える。int（isReal:false）や空・非数値は素通し。
+    function _displayText(s) {
+        if (!root.isReal)
+            return s;
+        if (s === undefined || s === null || String(s).trim() === "")
+            return s;  // 空は 0 化せずそのまま
+        var n = Number(s);
+        return isNaN(n) ? s : _toFixedNotation(n);
+    }
+
     width: 120
     height: 40
     // 不透明度は組込み `opacity` へ resolvedOpacity（未指定→1.0）を割り当てる。
@@ -198,7 +212,8 @@ Rectangle {
         activeFocusOnPress: root.editable
         enabled: root.widgetEnabled
         // delegate が流す表示テキスト。読み（変数追従）はこの宣言バインドで効く。
-        text: root.text
+        // real は `_displayText` で固定小数へ整形して指数表記を避ける（Codex PR #112 [Minor]）。
+        text: root._displayText(root.text)
         // Task 51: フォーカス取得時のみ宣言バインド `text: root.text` を**外す**（現在値を
         // 保ったまま imperative 代入で binding を切る）。これをしないと編集中に外部から同変数が
         // 更新されると入力中の値が上書きされ、確定時に意図しない値を書き戻す（Codex PR #105 P2）。
@@ -248,7 +263,7 @@ Rectangle {
         // 順序が重要：先に貼り直すと確定前に表示が旧 root.text へ戻り入力が失われる（Codex PR #105 P1）。
         onEditingFinished: {
             root.commitValue()
-            field.text = Qt.binding(function() { return root.text })
+            field.text = Qt.binding(function() { return root._displayText(root.text) })
         }
     }
 

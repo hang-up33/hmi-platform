@@ -81,7 +81,9 @@ TestCase {
         // 直接代入値が内部に残る）。
         const tf = findByObjectName(field, "numericTextField");
         if (tf) {
-            tf.text = Qt.binding(function() { return field.text });
+            // 実バインド（`text: root._displayText(root.text)`）と一致させる
+            // （Codex PR #112 [Minor]：real は表示も固定小数へ整形する）。
+            tf.text = Qt.binding(function() { return field._displayText(field.text) });
         }
         // commit の重複排除キャッシュも初期化（前テストの確定値を持ち越さない）。
         field._lastCommittedText = "";
@@ -336,6 +338,33 @@ TestCase {
         compare(committedSpy.signalArguments[0][0], "0.0000001");
         verify(committedSpy.signalArguments[0][0].indexOf("e") === -1, "指数表記になってはいけない");
         compare(Number(committedSpy.signalArguments[0][0]), 1e-7);
+    }
+
+    // Codex PR #112 [Minor]：real の **表示値**も固定小数へ整形する。delegate が bound 値を
+    // String(v) で流すと "1e-7" のような指数表記が入りうるが、表示テキストは "0.0000001" へ
+    // 整形され validator（StandardNotation）と整合する。int / 空はそのまま。
+    function test_real_display_value_avoids_exponential_notation() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.isReal = true;
+        // delegate が String(1e-7) を流す状況を模す（root.text = "1e-7"）。
+        field.text = "1e-7";
+        compare(tf.text, "0.0000001");
+        verify(tf.text.indexOf("e") === -1, "表示が指数表記になってはいけない");
+        // 通常の固定小数値はそのまま表示される。
+        field.text = "36.5";
+        compare(tf.text, "36.5");
+    }
+
+    // Codex PR #112 [Minor]：int（isReal:false）の表示は整形せず素通し。空も 0 化しない。
+    function test_int_display_value_passthrough() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.isReal = false;
+        field.text = "42";
+        compare(tf.text, "42");
+        field.text = "";
+        compare(tf.text, "");
     }
 
     // Task 53: isReal:false（int）では従来どおり小数入力が整数へ丸められる（Math.trunc）。
