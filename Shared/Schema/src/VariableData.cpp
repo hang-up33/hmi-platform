@@ -2,6 +2,9 @@
 
 #include <QJsonValue>
 
+#include <cmath>
+#include <limits>
+
 namespace hmi::schema {
 
 namespace {
@@ -19,9 +22,16 @@ QString jsonValueToString(const QJsonValue &v)
     }
     if (v.isDouble()) {
         const double d = v.toDouble();
-        const long long asInt = static_cast<long long>(d);
-        if (static_cast<double>(asInt) == d) {
-            return QString::number(asInt);  // 整数は整数表現に
+        // 整数値かつ qlonglong の表現範囲内なら整数表現にする。範囲外（例：`1e100`）の double を
+        // `static_cast<long long>` すると UB になるため、`std::isfinite` + `std::modf`（小数部ゼロ
+        // ＝整数判定）+ 範囲確認で守ってからキャストする（CodeRabbit PR #112 [Major]）。
+        // 上限は `< max` の厳密未満：`static_cast<double>(LLONG_MAX)` は 2^63 へ丸まり、2^63 の
+        // キャストは範囲外になるため境界を弾く（LLONG_MAX 自体は double で正確表現できない）。
+        double intPart = 0.0;
+        if (std::isfinite(d) && std::modf(d, &intPart) == 0.0
+            && d >= static_cast<double>(std::numeric_limits<qlonglong>::min())
+            && d < static_cast<double>(std::numeric_limits<qlonglong>::max())) {
+            return QString::number(static_cast<qlonglong>(d));  // 整数は整数表現に
         }
         // 小数（real 初期値）。`QString::number(d)` の既定は有効 6 桁で、
         // `0.123456789` のような real 初期値が読込時に丸められ round-trip が壊れる

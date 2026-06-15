@@ -80,6 +80,17 @@ void VariableDataTest::variableRealRoundTrip()
         // 冗長表現でなく入力どおりの最短表現になっている。
         QCOMPARE(v.initial, QStringLiteral("0.123456789"));
     }
+    {
+        // CodeRabbit PR #112 [Major]：qlonglong の範囲外（1e100）でも UB を起こさず、
+        // 値を失わず round-trip する（整数表現化を試みず小数経路で文字列化される）。
+        const double huge = 1e100;
+        QJsonObject obj;
+        obj["name"] = "big";
+        obj["type"] = "real";
+        obj["initial"] = huge;
+        const VariableData v = VariableData::fromJson(obj);
+        QCOMPARE(v.initial.toDouble(), huge);
+    }
 }
 
 // Task 39（Codex PR #78 [P2]）：非文字列の initial（bool/int）も文字列へ正規化され、
