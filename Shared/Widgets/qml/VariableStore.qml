@@ -43,10 +43,12 @@ QtObject {
             return isNaN(n) ? 0 : n
         }
         // Task 53: real（浮動小数）。Number は全体妥当性を見る（parseFloat は途中まで読む）。
-        // 不正 / 空は 0.0 へ。toggle は bool 専用なので real では呼ばれない。
+        // **有限値のみ**を返す（Codex PR #112 [P2]）：`isFinite` は NaN / ±Infinity を弾くので、
+        // `"1e309"`→Infinity や `"Infinity"` のような非有限入力（NumericField の表示・書き戻しを
+        // 壊す）も 0.0 に落とす。不正 / 空も 0.0。toggle は bool 専用なので real では呼ばれない。
         if (type === "real") {
             const n = Number(raw)
-            return isNaN(n) ? 0.0 : n
+            return isFinite(n) ? n : 0.0
         }
         // string（既定）
         return (raw === undefined || raw === null) ? "" : String(raw)
