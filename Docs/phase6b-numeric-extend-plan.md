@@ -96,7 +96,7 @@ flowchart LR
 
 | Task | 状態 | PR |
 |---|---|---|
-| 53 real 変数型 end-to-end | ⬜ 未着手 | — |
+| 53 real 変数型 end-to-end | ✅ 完了 | [#112](https://github.com/hang-up33/hmi-platform/pull/112) |
 | 54 数値範囲 min/max | ⬜ 未着手 | — |
 | 55 cross-app E2E（real + clamp）+ スクショ | ⬜ 未着手 | — |
 
