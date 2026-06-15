@@ -325,6 +325,12 @@ Item {
                         vAlign: wrapper.modelData.vAlign !== undefined ? wrapper.modelData.vAlign : ""
                         widgetOpacity: wrapper.modelData.opacity !== undefined ? wrapper.modelData.opacity : -1
                         widgetEnabled: wrapper.modelData.enabled !== undefined ? wrapper.modelData.enabled : true
+                        // Task 54: 数値範囲 + presence を流す（presence は未指定時 false）。
+                        // validator bottom/top + 確定時 clamp に効く（HmiNumericField 側で処理）。
+                        minValue: wrapper.modelData.minValue !== undefined ? wrapper.modelData.minValue : 0
+                        maxValue: wrapper.modelData.maxValue !== undefined ? wrapper.modelData.maxValue : 0
+                        hasMin: wrapper.modelData.hasMinValue !== undefined ? wrapper.modelData.hasMinValue : false
+                        hasMax: wrapper.modelData.hasMaxValue !== undefined ? wrapper.modelData.hasMaxValue : false
                         // Task 51: 入力確定（valueCommitted）で binding {property:"value"} の指す
                         // 変数へ書き戻す（読み書き両用 binding の **書き**）。binding が無ければ no-op。
                         // 書き込み後は VariableStore.values が更新され、表示（boundValue("value")）も

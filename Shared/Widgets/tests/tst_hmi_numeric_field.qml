@@ -75,6 +75,11 @@ TestCase {
         field.widgetOpacity = -1;
         field.widgetEnabled = true;
         field.isReal = false;
+        // Task 54: 数値範囲も毎テストでリセット（presence は未指定 = false）。
+        field.minValue = 0;
+        field.maxValue = 0;
+        field.hasMin = false;
+        field.hasMax = false;
         // 一部テストは内部 TextField.text を直接代入して `text: root.text` 宣言バインドを
         // 切る（実機の編集を模すため）。次テストへ持ち越さないよう、毎 init で内部 TextField の
         // バインドを貼り直してから field.text を初期化する（貼り直さないと前テストの
@@ -379,6 +384,133 @@ TestCase {
         field.commitValue();
         compare(committedSpy.count, 1);
         compare(committedSpy.signalArguments[0][0], "36");
+    }
+
+    // Task 54: int で範囲外入力が確定時に境界へ clamp される（拒否でなく丸める）。
+    // hasMin / hasMax のときだけ片側ずつ clamp し、範囲内はそのまま。
+    function test_int_commit_clamps_to_min() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.isReal = false;
+        field.minValue = 10;
+        field.hasMin = true;
+        tf.forceActiveFocus();
+        tf.text = "3";                    // 下限 10 を下回る
+        committedSpy.clear();
+        field.commitValue();
+        compare(committedSpy.count, 1);
+        compare(committedSpy.signalArguments[0][0], "10");  // 下限へ clamp
+    }
+
+    // Task 54: int 変数に小数境界（min=2.5）を設定した場合、確定 clamp も validator
+    // （bottom=ceil(2.5)=3）と揃えて整数実効境界へ丸める。生の 2.5 へ clamp 後に整数化して
+    // min 未満の 2 へ落ちる不整合を防ぐ（確定値は 3）。
+    function test_int_commit_clamps_to_ceil_of_fractional_min() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.isReal = false;
+        field.minValue = 2.5;
+        field.hasMin = true;
+        tf.forceActiveFocus();
+        tf.text = "2";                    // 下限 2.5（実効 int 下限 ceil=3）を下回る
+        committedSpy.clear();
+        field.commitValue();
+        compare(committedSpy.count, 1);
+        compare(committedSpy.signalArguments[0][0], "3");  // ceil(2.5)=3 へ clamp（2 でない）
+    }
+
+    function test_int_commit_clamps_to_max() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.isReal = false;
+        field.maxValue = 100;
+        field.hasMax = true;
+        tf.forceActiveFocus();
+        tf.text = "250";                  // 上限 100 を上回る
+        committedSpy.clear();
+        field.commitValue();
+        compare(committedSpy.count, 1);
+        compare(committedSpy.signalArguments[0][0], "100"); // 上限へ clamp
+    }
+
+    // Task 54: 範囲内の値はそのまま（clamp されない）。
+    function test_commit_within_range_unchanged() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.isReal = false;
+        field.minValue = 0;
+        field.maxValue = 100;
+        field.hasMin = true;
+        field.hasMax = true;
+        tf.forceActiveFocus();
+        tf.text = "42";                   // 範囲内
+        committedSpy.clear();
+        field.commitValue();
+        compare(committedSpy.count, 1);
+        compare(committedSpy.signalArguments[0][0], "42");
+    }
+
+    // Task 54: real でも clamp する。確定値は固定小数表記（指数なし）で境界へ丸まる。
+    function test_real_commit_clamps_to_bounds() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.isReal = true;
+        field.minValue = 0.5;
+        field.maxValue = 36.5;
+        field.hasMin = true;
+        field.hasMax = true;
+
+        // 上限超過 → 36.5 へ clamp。
+        tf.forceActiveFocus();
+        tf.text = "99.9";
+        committedSpy.clear();
+        field.commitValue();
+        compare(committedSpy.count, 1);
+        compare(committedSpy.signalArguments[0][0], "36.5");
+        compare(Number(committedSpy.signalArguments[0][0]), 36.5);
+    }
+
+    // Task 54: 負の下限も clamp に効く（presence フラグ方式なので負値が正当）。
+    function test_negative_min_clamp() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.isReal = false;
+        field.minValue = -50;
+        field.hasMin = true;
+        tf.forceActiveFocus();
+        tf.text = "-100";                 // 下限 -50 を下回る
+        committedSpy.clear();
+        field.commitValue();
+        compare(committedSpy.count, 1);
+        compare(committedSpy.signalArguments[0][0], "-50"); // 負の下限へ clamp
+    }
+
+    // Task 54: presence フラグが false（未指定）のときは clamp されない（全域許容）。
+    function test_no_clamp_when_unspecified() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.isReal = false;
+        // hasMin / hasMax は false（未指定）。minValue/maxValue は 0 だが効かない。
+        tf.forceActiveFocus();
+        tf.text = "9999";
+        committedSpy.clear();
+        field.commitValue();
+        compare(committedSpy.count, 1);
+        compare(committedSpy.signalArguments[0][0], "9999"); // clamp されない
+    }
+
+    // Task 54: validator の bottom/top が presence に応じて設定される
+    //（hasMin/hasMax のとき境界、未指定のとき型全域）。
+    function test_validator_bounds_reflect_range() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.isReal = false;
+        field.minValue = 5;
+        field.maxValue = 50;
+        field.hasMin = true;
+        field.hasMax = true;
+        compare(tf.validator.bottom, 5);
+        compare(tf.validator.top, 50);
     }
 
     // QQuickItem ツリーから指定された objectName の子を再帰的に探す

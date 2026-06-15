@@ -39,6 +39,16 @@ Rectangle {
     // Widget 自身は real/int を持たず、delegate が bound 変数型から導出して渡す（plan Phase 6-B）。
     property bool isReal: false
 
+    // Task 54: 数値範囲（入力 clamp 用）。**負値が正当なので数値センチネル不可**＝presence
+    // フラグ（hasMin / hasMax）で未指定を表す（WidgetData の hasMinValue / hasMaxValue 由来）。
+    // - validator：hasMin / hasMax のときだけ bottom / top を設定する（未指定側は付けない）。
+    // - clamp：commitValue の正規化後、範囲外は境界へ丸める（拒否でなく clamp）。
+    // 型は real（double 境界）。int 変数では QML 側で IntValidator の bottom/top へ丸めて渡す。
+    property real minValue: 0
+    property real maxValue: 0
+    property bool hasMin: false
+    property bool hasMax: false
+
     // スタイル入力。色は "#RRGGBB"（空 = 未指定）、fontSize は px（0 = 未指定）。
     // HmiButton / HmiLabel と同じく「未指定 = 空文字 / 0」を許し resolved* で既定へ。
     property string backgroundColor: ""
@@ -136,13 +146,32 @@ Rectangle {
             //   数字も受理する契約（PR #105）を維持し、それらを ASCII 整数へ正規化する。
             var loc = root.isReal ? Qt.locale("C") : Qt.locale();
             var n = Number.fromLocaleString(loc, field.text);
-            if (!isNaN(n))
+            if (!isNaN(n)) {
                 // real は整数丸めせず（小数を保つ）、int は従来どおり Math.trunc。
+                n = root.isReal ? n : Math.trunc(n);
+                // Task 54: 範囲外は **拒否でなく clamp**（確定時に境界へ丸める）。
+                // hasMin / hasMax のときだけ片側ずつ clamp する（未指定側は無制限）。
+                // **境界は validator と同じ「型に合わせた実効境界」で clamp する**：int は
+                // 小数境界（例 min=2.5）を IntValidator の bottom=ceil/top=floor と揃えて
+                // ceil(min)/floor(max) に丸める（生の 2.5 へ clamp すると後段で整数化されて
+                // min 未満の 2 に落ちる不整合を防ぐ）。real は境界そのまま。
+                if (root.hasMin) {
+                    var lo = root.isReal ? root.minValue : Math.ceil(root.minValue);
+                    if (n < lo)
+                        n = lo;
+                }
+                if (root.hasMax) {
+                    var hi = root.isReal ? root.maxValue : Math.floor(root.maxValue);
+                    if (n > hi)
+                        n = hi;
+                }
                 // real は **固定小数表記**へ整形する（Codex PR #112 [P2]）：素の `String(1e-7)` は
                 // `"1e-7"` のような指数表記になり、StandardNotation 固定の DoubleValidator が
                 // それを Invalid 扱いにして次回編集で矛盾する。`_toFixedNotation` で指数を展開し
-                // ASCII 固定小数へ直す。int は指数化しないので従来どおり String で十分。
-                cleaned = root.isReal ? _toFixedNotation(n) : String(Math.trunc(n));
+                // ASCII 固定小数へ直す。int は指数化しないので従来どおり String で十分
+                // （clamp 後の n は Math.trunc 済み整数 or ceil/floor の整数なので桁化けしない）。
+                cleaned = root.isReal ? _toFixedNotation(n) : String(n);
+            }
         } catch (e) {
             // パース不能（空 / 不正）は raw のまま
         }
@@ -231,8 +260,7 @@ Rectangle {
         // int 変数なら IntValidator。validator は bound 変数型から導出した root.isReal で切替える。
         // DoubleValidator は locale の小数点を使う（commitValue は同一 Qt.locale() で解釈し ASCII
         // 数値へ正規化するので整合する）。notation は StandardNotation（指数表記を許容しない方向）。
-        // TODO（Task 54）: 数値範囲を Widget に持たせる際は validator の bottom/top を設定する。
-        // 現状は未指定＝数値型の全域を許容。
+        // Task 54: 数値範囲（hasMin / hasMax）は各 validator の bottom / top に反映済み（下記定義）。
         validator: root.isReal
             ? doubleValidator
             : intValidator
@@ -272,8 +300,25 @@ Rectangle {
     // DoubleValidator は **C locale**（ASCII 小数点）に固定する（Codex PR #112 [P2]）：
     // 表示・commit と同じ locale に揃え、ASCII の表示値 "36.5" が自身の validator で
     // Invalid 扱いにならないようにする（system locale 既定だと小数点カンマ環境で破綻）。
-    IntValidator { id: intValidator }
-    DoubleValidator { id: doubleValidator; locale: "C"; notation: DoubleValidator.StandardNotation }
+    //
+    // Task 54: 数値範囲を validator の bottom / top にも反映する（入力時の拒否。確定時 clamp と
+    // 二段で担保）。**hasMin / hasMax が未指定の側は型のデフォルト全域**へ戻す（IntValidator は
+    // INT_MIN〜INT_MAX、DoubleValidator は -inf〜+inf が既定）。int validator は int 境界しか
+    // 取れないので、minValue/maxValue（real）を **範囲が広がらない向き**へ丸める：bottom は
+    // Math.ceil（下限を上げる）、top は Math.floor（上限を下げる）。これにより clamp（確定時）と
+    // 矛盾せず、int 変数で min=2.5 のとき "2" を入力拒否・確定 clamp で 3 に揃う。
+    IntValidator {
+        id: intValidator
+        bottom: root.hasMin ? Math.ceil(root.minValue) : -2147483648
+        top: root.hasMax ? Math.floor(root.maxValue) : 2147483647
+    }
+    DoubleValidator {
+        id: doubleValidator
+        locale: "C"
+        notation: DoubleValidator.StandardNotation
+        bottom: root.hasMin ? root.minValue : -Infinity
+        top: root.hasMax ? root.maxValue : Infinity
+    }
 
     // 選択用 MouseArea。TextField の **上** に重ね、editable:false（Editor）のときだけ
     // enabled にして clicked を中継する（TextField がフォーカス / 入力を奪う罠への対処）。
