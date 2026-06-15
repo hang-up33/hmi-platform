@@ -74,6 +74,7 @@ TestCase {
         field.vAlign = "";
         field.widgetOpacity = -1;
         field.widgetEnabled = true;
+        field.isReal = false;
         // 一部テストは内部 TextField.text を直接代入して `text: root.text` 宣言バインドを
         // 切る（実機の編集を模すため）。次テストへ持ち越さないよう、毎 init で内部 TextField の
         // バインドを貼り直してから field.text を初期化する（貼り直さないと前テストの
@@ -268,6 +269,51 @@ TestCase {
         focusSink.forceActiveFocus();
         compare(committedSpy.count, 1);
         compare(committedSpy.signalArguments[0][0], "42");
+    }
+
+    // Task 53: isReal で validator が切替わる。false（既定）= IntValidator、true = DoubleValidator。
+    function test_is_real_switches_validator() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+
+        // 既定（int）は IntValidator。
+        compare(field.isReal, false);
+        verify(tf.validator instanceof IntValidator, "int 変数では IntValidator のはず");
+
+        // real に切替えると DoubleValidator。
+        field.isReal = true;
+        verify(tf.validator instanceof DoubleValidator, "real 変数では DoubleValidator のはず");
+    }
+
+    // Task 53: isReal:true（real）では commitValue が小数を保ったまま正規化する
+    //（int の Math.trunc と違い丸めない）。"36.5" → "36.5"。
+    function test_real_commit_preserves_decimal() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.isReal = true;
+        tf.forceActiveFocus();           // 編集セッション開始（_lastCommittedText クリア）
+        const dp = Qt.locale().decimalPoint;
+        tf.text = "36" + dp + "5";       // locale の小数点で入力
+        committedSpy.clear();
+        field.commitValue();
+        compare(committedSpy.count, 1);
+        // ASCII の小数文字列に正規化される（Number("36.5") = 36.5 と整合）。
+        compare(committedSpy.signalArguments[0][0], "36.5");
+        compare(Number(committedSpy.signalArguments[0][0]), 36.5);
+    }
+
+    // Task 53: isReal:false（int）では従来どおり小数入力が整数へ丸められる（Math.trunc）。
+    function test_int_commit_truncates_decimal() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.isReal = false;
+        tf.forceActiveFocus();
+        const dp = Qt.locale().decimalPoint;
+        tf.text = "36" + dp + "5";       // 小数を入れても int は丸める
+        committedSpy.clear();
+        field.commitValue();
+        compare(committedSpy.count, 1);
+        compare(committedSpy.signalArguments[0][0], "36");
     }
 
     // QQuickItem ツリーから指定された objectName の子を再帰的に探す

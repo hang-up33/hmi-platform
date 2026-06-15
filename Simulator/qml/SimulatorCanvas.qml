@@ -115,6 +115,21 @@ Item {
                     }
                 }
 
+                // Task 53: propertyName に対応する binding が指す変数の型を返す（無ければ ""）。
+                // NumericField の isReal 導出に使う（bound 変数が "real" なら real 入力）。
+                function boundVariableType(propertyName) {
+                    const bindings = modelData.bindings
+                    if (bindings) {
+                        for (let i = 0; i < bindings.length; ++i) {
+                            const b = bindings[i]
+                            if (b && b.property === propertyName) {
+                                return root.variableType(b.variable)
+                            }
+                        }
+                    }
+                    return ""
+                }
+
                 // Task 41: onClick アクションを実行する（setVariable / toggleVariable）。
                 // trigger は "onClick"（既定）のみ反応する。**trigger 省略 / 空も onClick
                 // とみなす**：Schema の ActionData.trigger 既定が "onClick" で、Editor の
@@ -285,6 +300,10 @@ Item {
                         // 入力し確定すると下の onValueCommitted で binding の指す変数へ write する。
                         // Editor キャンバス（読取専用＝editable:false）との出し分けは delegate で行う。
                         editable: true
+                        // Task 53: bound 変数（binding {property:"value"}）が real 型なら DoubleValidator +
+                        // 小数保持の commit。int / 未 bind は false（IntValidator）。Editor キャンバスは
+                        // editable:false で validator 非適用なので isReal:false 固定でよい。
+                        isReal: wrapper.boundVariableType("value") === "real"
                         // Task 50: 読み（表示）。binding {property:"value"} があれば変数の
                         // 現在値を表示し、無ければ modelData の静的 text を使う（Label の text
                         // 追従と同じ boundValue 経路）。

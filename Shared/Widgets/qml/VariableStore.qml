@@ -42,6 +42,12 @@ QtObject {
             const n = parseInt(raw, 10)
             return isNaN(n) ? 0 : n
         }
+        // Task 53: real（浮動小数）。Number は全体妥当性を見る（parseFloat は途中まで読む）。
+        // 不正 / 空は 0.0 へ。toggle は bool 専用なので real では呼ばれない。
+        if (type === "real") {
+            const n = Number(raw)
+            return isNaN(n) ? 0.0 : n
+        }
         // string（既定）
         return (raw === undefined || raw === null) ? "" : String(raw)
     }

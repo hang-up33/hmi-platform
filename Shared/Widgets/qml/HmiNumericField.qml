@@ -34,6 +34,11 @@ Rectangle {
     // 入力可否。既定 true（Simulator）。Editor では false にして読取専用表示にする。
     property bool editable: true
 
+    // Task 53: bound 変数が real（浮動小数）型なら true。validator を DoubleValidator に切替え、
+    // commitValue の正規化を整数丸めなしにする。false（既定 = int）は IntValidator + Math.trunc。
+    // Widget 自身は real/int を持たず、delegate が bound 変数型から導出して渡す（plan Phase 6-B）。
+    property bool isReal: false
+
     // スタイル入力。色は "#RRGGBB"（空 = 未指定）、fontSize は px（0 = 未指定）。
     // HmiButton / HmiLabel と同じく「未指定 = 空文字 / 0」を許し resolved* で既定へ。
     property string backgroundColor: ""
@@ -124,7 +129,9 @@ Rectangle {
         try {
             var n = Number.fromLocaleString(Qt.locale(), field.text);
             if (!isNaN(n))
-                cleaned = String(Math.trunc(n));
+                // Task 53: real は整数丸めせず（小数を保つ）、int は従来どおり Math.trunc。
+                // どちらも ASCII 数値文字列へ正規化（String(...) ＝ロケール非依存の表記）。
+                cleaned = String(root.isReal ? n : Math.trunc(n));
         } catch (e) {
             // パース不能（空 / 不正）は raw のまま
         }
@@ -167,10 +174,15 @@ Rectangle {
                 root._lastCommittedText = ""  // 新しい編集セッション＝同じ値でも改めて確定可にする
             }
         }
-        // 数値のみ許可（int）。MVP は int 変数のみ（real / min-max・範囲指定は別承認）。
-        // TODO（Task 52+）: 数値範囲を Widget に持たせる際は IntValidator の bottom/top を設定する。
-        // 現状は未指定＝C++ int の全域（約 ±21 億）を許容（MVP スコープでは暫定で問題なし）。
-        validator: IntValidator {}
+        // 数値のみ許可。Task 53: real 変数なら DoubleValidator（小数点入力を許可）、
+        // int 変数なら IntValidator。validator は bound 変数型から導出した root.isReal で切替える。
+        // DoubleValidator は locale の小数点を使う（commitValue は同一 Qt.locale() で解釈し ASCII
+        // 数値へ正規化するので整合する）。notation は StandardNotation（指数表記を許容しない方向）。
+        // TODO（Task 54）: 数値範囲を Widget に持たせる際は validator の bottom/top を設定する。
+        // 現状は未指定＝数値型の全域を許容。
+        validator: root.isReal
+            ? doubleValidator
+            : intValidator
         inputMethodHints: Qt.ImhFormattedNumbersOnly
         color: root.resolvedTextColor
         font.pixelSize: root.resolvedFontSize
@@ -201,6 +213,11 @@ Rectangle {
             field.text = Qt.binding(function() { return root.text })
         }
     }
+
+    // Task 53: validator は isReal で切替える。inline 三項では Component を 2 つ持てないため
+    // id 付きで定義し、TextField.validator で参照する。非ビジュアルなので配置位置は任意。
+    IntValidator { id: intValidator }
+    DoubleValidator { id: doubleValidator; notation: DoubleValidator.StandardNotation }
 
     // 選択用 MouseArea。TextField の **上** に重ね、editable:false（Editor）のときだけ
     // enabled にして clicked を中継する（TextField がフォーカス / 入力を奪う罠への対処）。

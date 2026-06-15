@@ -590,7 +590,7 @@ Window {
                                 ComboBox {
                                     objectName: "variableType_" + varRow.index
                                     width: 80
-                                    model: ["bool", "int", "string"]
+                                    model: ["bool", "int", "real", "string"]
                                     currentIndex: Math.max(0, model.indexOf(varRow.modelData.type))
                                     onActivated: rootWindow.updateVariable(varRow.index, "type", currentText)
                                 }

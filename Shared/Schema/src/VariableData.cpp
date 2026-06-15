@@ -74,6 +74,7 @@ bool VariableData::isValidJson(const QJsonObject &obj)
     const QString t = obj.value("type").toString();
     return t == QStringLiteral("bool")
         || t == QStringLiteral("int")
+        || t == QStringLiteral("real")
         || t == QStringLiteral("string");
 }
 

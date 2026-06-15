@@ -13,6 +13,7 @@ class VariableDataTest : public QObject {
 
 private slots:
     void variableRoundTrip();
+    void variableRealRoundTrip();
     void variableInitialNormalizesNonString();
     void variableIsValidJson_data();
     void variableIsValidJson();
@@ -38,6 +39,32 @@ void VariableDataTest::variableRoundTrip()
     QCOMPARE(r.name, src.name);
     QCOMPARE(r.type, src.type);
     QCOMPARE(r.initial, src.initial);
+}
+
+// Task 53: real 型変数の round-trip。type="real" が保たれ、小数の initial（文字列表現 /
+// JSON number どちらでも）が値を失わず文字列保持される。
+void VariableDataTest::variableRealRoundTrip()
+{
+    {
+        VariableData src;
+        src.name = "temperature";
+        src.type = "real";
+        src.initial = "36.5";
+
+        const VariableData r = VariableData::fromJson(src.toJson());
+        QCOMPARE(r.name, src.name);
+        QCOMPARE(r.type, QStringLiteral("real"));
+        QCOMPARE(r.initial, QStringLiteral("36.5"));
+    }
+    {
+        // JSON number（小数）の initial も jsonValueToString で文字列正規化される。
+        QJsonObject obj;
+        obj["name"] = "temperature";
+        obj["type"] = "real";
+        obj["initial"] = 36.5;  // JSON number（小数）
+        const VariableData v = VariableData::fromJson(obj);
+        QCOMPARE(v.initial, QStringLiteral("36.5"));
+    }
 }
 
 // Task 39（Codex PR #78 [P2]）：非文字列の initial（bool/int）も文字列へ正規化され、
@@ -70,6 +97,7 @@ void VariableDataTest::variableIsValidJson_data()
 
     QTest::newRow("bool ok") << "v" << "bool" << true;
     QTest::newRow("int ok") << "v" << "int" << true;
+    QTest::newRow("real ok") << "v" << "real" << true;  // Task 53
     QTest::newRow("string ok") << "v" << "string" << true;
     QTest::newRow("empty name") << "" << "bool" << false;
     QTest::newRow("bad type") << "v" << "float" << false;
