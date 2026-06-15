@@ -43,6 +43,7 @@ CLAUDE.md の肥大化対策で切り出した詳細規約。`paths:` frontmatte
 - [schema-conventions](schema-conventions.md) — Shared/Schema の型・JSON I/O 実装規約（`paths: Shared/Schema/**`）
 - [qml-module-conventions](qml-module-conventions.md) — QML モジュール URI・命名衝突・STATIC plugin 共有・EditableWidget 結線・Simulator/Runtime ソース共有・ルート CMake の `add_subdirectory` 順序制約（`paths: **/*.qml`・Editor/Simulator/Runtime/Shared/Widgets・`**/CMakeLists.txt`）
 - [readme-screenshot-sync](readme-screenshot-sync.md) — 見た目が変わる変更では README ヒーロースクショ（editor.png / simulator.png）とキャプションを同じコミットで同期する。Stop hook（`scripts/hooks/check-readme-screenshots.sh`）と二段構えで強制（`paths: **/*.qml`・Editor/Simulator/Runtime/Shared/Widgets・README.md・Docs/screenshots/**）
+- [numeric-field-real-locale](numeric-field-real-locale.md) — HmiNumericField を real（浮動小数）対応する時の罠：validator/commit/表示/テストを C locale（ASCII 小数点）へ統一、指数表記回避（`_toFixedNotation`）、JSON 数値精度（最短桁探索）、C++ 範囲外キャスト UB 回避（`paths: HmiNumericField.qml`・VariableStore.qml・VariableData.cpp・SimulatorCanvas.qml・各 test）
 
 ## 重複のため移植しなかったメモリ（実体は git 管理ドキュメント側）
 

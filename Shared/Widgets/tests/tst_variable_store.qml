@@ -66,5 +66,11 @@ TestCase {
         compare(VariableStore.coerce("int", "7"), 7);
         compare(VariableStore.coerce("int", "abc"), 0);
         compare(VariableStore.coerce("string", "x"), "x");
+        // Task 53: real は小数を保つ。不正・空は 0.0。
+        compare(VariableStore.coerce("real", "36.5"), 36.5);
+        compare(VariableStore.coerce("real", "abc"), 0.0);
+        // Codex PR #112 [P2]: 非有限値（Infinity / 1e309）は 0.0 に落とす（isFinite で弾く）。
+        compare(VariableStore.coerce("real", "1e309"), 0.0);
+        compare(VariableStore.coerce("real", "Infinity"), 0.0);
     }
 }

@@ -13,6 +13,7 @@ class VariableDataTest : public QObject {
 
 private slots:
     void variableRoundTrip();
+    void variableRealRoundTrip();
     void variableInitialNormalizesNonString();
     void variableIsValidJson_data();
     void variableIsValidJson();
@@ -38,6 +39,58 @@ void VariableDataTest::variableRoundTrip()
     QCOMPARE(r.name, src.name);
     QCOMPARE(r.type, src.type);
     QCOMPARE(r.initial, src.initial);
+}
+
+// Task 53: real 型変数の round-trip。type="real" が保たれ、小数の initial（文字列表現 /
+// JSON number どちらでも）が値を失わず文字列保持される。
+void VariableDataTest::variableRealRoundTrip()
+{
+    {
+        VariableData src;
+        src.name = "temperature";
+        src.type = "real";
+        src.initial = "36.5";
+
+        const VariableData r = VariableData::fromJson(src.toJson());
+        QCOMPARE(r.name, src.name);
+        QCOMPARE(r.type, QStringLiteral("real"));
+        QCOMPARE(r.initial, QStringLiteral("36.5"));
+    }
+    {
+        // JSON number（小数）の initial も jsonValueToString で文字列正規化される。
+        QJsonObject obj;
+        obj["name"] = "temperature";
+        obj["type"] = "real";
+        obj["initial"] = 36.5;  // JSON number（小数）
+        const VariableData v = VariableData::fromJson(obj);
+        QCOMPARE(v.initial, QStringLiteral("36.5"));
+    }
+    {
+        // Codex PR #112 [P2]：高精度の real 初期値が既定 6 桁で丸められず保たれる。
+        // `0.123456789`（9 有効桁）は `QString::number(d)` 既定だと "0.123457" に丸まり
+        // round-trip が壊れるが、最短 round-trip 桁探索で元値に戻る表現を保持する。
+        const double precise = 0.123456789;
+        QJsonObject obj;
+        obj["name"] = "ratio";
+        obj["type"] = "real";
+        obj["initial"] = precise;  // JSON number（高精度小数）
+        const VariableData v = VariableData::fromJson(obj);
+        // 文字列が元の double へ正確に戻る（丸め損失なし）。
+        QCOMPARE(v.initial.toDouble(), precise);
+        // 冗長表現でなく入力どおりの最短表現になっている。
+        QCOMPARE(v.initial, QStringLiteral("0.123456789"));
+    }
+    {
+        // CodeRabbit PR #112 [Major]：qlonglong の範囲外（1e100）でも UB を起こさず、
+        // 値を失わず round-trip する（整数表現化を試みず小数経路で文字列化される）。
+        const double huge = 1e100;
+        QJsonObject obj;
+        obj["name"] = "big";
+        obj["type"] = "real";
+        obj["initial"] = huge;
+        const VariableData v = VariableData::fromJson(obj);
+        QCOMPARE(v.initial.toDouble(), huge);
+    }
 }
 
 // Task 39（Codex PR #78 [P2]）：非文字列の initial（bool/int）も文字列へ正規化され、
@@ -70,6 +123,7 @@ void VariableDataTest::variableIsValidJson_data()
 
     QTest::newRow("bool ok") << "v" << "bool" << true;
     QTest::newRow("int ok") << "v" << "int" << true;
+    QTest::newRow("real ok") << "v" << "real" << true;  // Task 53
     QTest::newRow("string ok") << "v" << "string" << true;
     QTest::newRow("empty name") << "" << "bool" << false;
     QTest::newRow("bad type") << "v" << "float" << false;

@@ -290,10 +290,20 @@ timeline
 **目標**：Phase 6（int 変数のみ）で保留した **real（浮動小数）型**と **数値範囲 min/max** を実装する。
 **計画書**：[Docs/phase6b-numeric-extend-plan.md](phase6b-numeric-extend-plan.md)（Task 53〜55。2026-06-13 ユーザー承認）
 
-- 🟦 着手（計画起票）。スコープは 2 軸：**real は変数スコープ**（`VariableData.type="real"` + `VariableStore.coerce("real")`。NumericField は real/int を持たず、**bound 変数の型から `isReal` を導出**して `DoubleValidator` に切替える）／**min/max は Widget スコープ**（`WidgetData.minValue/maxValue`。同じ変数を別 NumericField が別レンジで編集しうるため Widget 固有）。
+- 🟦 進行中。スコープは 2 軸：**real は変数スコープ**（`VariableData.type="real"` + `VariableStore.coerce("real")`。NumericField は real/int を持たず、**bound 変数の型から `isReal` を導出**して `DoubleValidator` に切替える）／**min/max は Widget スコープ**（`WidgetData.minValue/maxValue`。同じ変数を別 NumericField が別レンジで編集しうるため Widget 固有）。
   - **設計の核（計画段階で確定）**：**min/max は負値が正当なので `-1`/`0` をセンチネルに使えない**（borderWidth/radius との差）→ **presence フラグ方式**（`hasMinValue`/`hasMaxValue` bool ＋ `minValue`/`maxValue` double。JSON はキーの有無で未指定を表す）。範囲外入力は**確定時に clamp**（拒否でなく境界へ丸め）。
   - **タスク**：Task 53（real end-to-end）/ 54（min/max〔Schema presence フラグ + validator/clamp + インスペクタ範囲項目 + delegate〕）/ 55（cross-app E2E〔real typed-write + clamp〕+ スクショ）。
-  - **次は Task 53**。**step / decimals / unit / 後続入力 Widget（Gauge / Toggle）は非スコープ＝別承認**。
+  - **step / decimals / unit / 後続入力 Widget（Gauge / Toggle）は非スコープ＝別承認**。
+
+### Task 53: real 変数型 end-to-end ([PR #112](https://github.com/hang-up33/hmi-platform/pull/112))
+
+- ✅ 完了。`VariableData::isValidJson` に `"real"` を追加 + `VariableStore.coerce("real")`（`Number(raw)`、NaN→0.0）+ Editor 変数定義 ComboBox に `"real"` + `HmiNumericField.isReal`（`DoubleValidator` 切替 + commit を小数保持）+ SimulatorCanvas の `boundVariableType("value")==="real"` で `isReal` 導出。**`WidgetData` 無改変**（real は変数スコープ）。Web `ctest` unit 10 + e2e 8 = **18/18 緑**。
+- **学び（real 型 = 文字列正規化と locale の罠）**：int で素通せた箇所が real では破綻し、レビューから計 7 件の指摘を受けた（**Codex 6 件**＝locale 整合・JSON 数値精度・指数表記・表示整形・SimulatorCanvas テスト locale・非有限値、**CodeRabbit 1 件**＝C++ 範囲外キャスト UB。途中で Codex が利用上限に達し CodeRabbit にフォールバック）。要点は **「real の表示値は変数ストアの JS 数値由来で常に ASCII 小数点（C locale）」**という前提に validator・commit・表示・テスト入力をすべて揃えること：
+  - `DoubleValidator { locale: "C"; notation: StandardNotation }` + commit を `Qt.locale("C")` でパース（system locale で再パースすると小数点カンマ環境で "36.5" を 365 と誤読し書き戻す）。
+  - real 確定値は `String(n)` だと `1e-7` 等の指数表記になり StandardNotation validator と矛盾するため、`_toFixedNotation` で固定小数へ展開（表示テキストにも適用）。
+  - JSON 数値 `initial` は `QString::number(d)` の既定 6 桁で丸まるため、**round-trip する最短桁探索**（prec 1→16 + fallback 17）で保持。整数表現化は `std::isfinite` + `std::modf` + `qlonglong` 範囲チェックで UB 回避。
+  - real のテスト入力は `Qt.locale().decimalPoint` でなく **ASCII "36.5" 固定**（C locale 実装と整合させ locale 依存の test failure を防ぐ）。
+  - 詳細は [.claude/rules/numeric-field-real-locale.md](../.claude/rules/numeric-field-real-locale.md)。
 
 ---
 

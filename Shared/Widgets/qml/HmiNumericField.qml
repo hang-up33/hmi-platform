@@ -34,6 +34,11 @@ Rectangle {
     // 入力可否。既定 true（Simulator）。Editor では false にして読取専用表示にする。
     property bool editable: true
 
+    // Task 53: bound 変数が real（浮動小数）型なら true。validator を DoubleValidator に切替え、
+    // commitValue の正規化を整数丸めなしにする。false（既定 = int）は IntValidator + Math.trunc。
+    // Widget 自身は real/int を持たず、delegate が bound 変数型から導出して渡す（plan Phase 6-B）。
+    property bool isReal: false
+
     // スタイル入力。色は "#RRGGBB"（空 = 未指定）、fontSize は px（0 = 未指定）。
     // HmiButton / HmiLabel と同じく「未指定 = 空文字 / 0」を許し resolved* で既定へ。
     property string backgroundColor: ""
@@ -122,9 +127,22 @@ Rectangle {
     function commitValue() {
         var cleaned = field.text;
         try {
-            var n = Number.fromLocaleString(Qt.locale(), field.text);
+            // 確定値のパース locale は型で分ける（Codex PR #112 [P2]）：
+            // - real：表示値は変数ストアの JS 数値由来で **常に ASCII の小数点**（"36.5"）。
+            //   よって validator・表示・commit をすべて **C locale（ASCII）** に揃える。
+            //   system locale（例：小数点カンマ）で再パースすると、編集せず focus/blur しただけの
+            //   "36.5" が桁区切り誤読され 365 等を書き戻すため、real は必ず C locale で解釈する。
+            // - int：従来どおり system `Qt.locale()`。IntValidator が locale 桁区切り / locale 固有
+            //   数字も受理する契約（PR #105）を維持し、それらを ASCII 整数へ正規化する。
+            var loc = root.isReal ? Qt.locale("C") : Qt.locale();
+            var n = Number.fromLocaleString(loc, field.text);
             if (!isNaN(n))
-                cleaned = String(Math.trunc(n));
+                // real は整数丸めせず（小数を保つ）、int は従来どおり Math.trunc。
+                // real は **固定小数表記**へ整形する（Codex PR #112 [P2]）：素の `String(1e-7)` は
+                // `"1e-7"` のような指数表記になり、StandardNotation 固定の DoubleValidator が
+                // それを Invalid 扱いにして次回編集で矛盾する。`_toFixedNotation` で指数を展開し
+                // ASCII 固定小数へ直す。int は指数化しないので従来どおり String で十分。
+                cleaned = root.isReal ? _toFixedNotation(n) : String(Math.trunc(n));
         } catch (e) {
             // パース不能（空 / 不正）は raw のまま
         }
@@ -133,6 +151,47 @@ Rectangle {
             return;
         root._lastCommittedText = cleaned;
         root.valueCommitted(cleaned);
+    }
+
+    // real の確定値を **指数表記にしない ASCII 固定小数文字列**へ整形する（Codex PR #112 [P2]）。
+    // JS の `String(n)` は `1e-7` / `1e+21` のような指数表記を生むが、DoubleValidator は
+    // StandardNotation（指数非対応）なので、書き戻した表示が自身の validator と矛盾する。
+    // 指数表記を**文字列操作で**固定小数へ展開する（toFixed は >= 1e21 で指数を返すため使わない。
+    // 桁ずらしは精度損失なし）。指数を含まない通常値（"36.5" 等）はそのまま返す。
+    function _toFixedNotation(n) {
+        var s = String(n);
+        if (s.indexOf("e") === -1 && s.indexOf("E") === -1)
+            return s;  // 既に固定小数表記
+        var m = s.match(/^(-?)(\d+)(?:\.(\d+))?[eE]([+-]?\d+)$/);
+        if (!m)
+            return s;  // 想定外の形式はそのまま
+        var sign = m[1];
+        var digits = m[2] + (m[3] || "");       // 仮数の全有効桁（小数点除去）
+        var pointPos = m[2].length + parseInt(m[4], 10);  // 展開後の小数点位置
+        var result;
+        if (pointPos <= 0)
+            result = "0." + "0".repeat(-pointPos) + digits;            // 0.000…digits
+        else if (pointPos >= digits.length)
+            result = digits + "0".repeat(pointPos - digits.length);    // digits000…
+        else
+            result = digits.slice(0, pointPos) + "." + digits.slice(pointPos);
+        if (result.indexOf(".") !== -1)
+            result = result.replace(/\.?0+$/, "");  // 余分な末尾ゼロ / 小数点を除去
+        return sign + result;
+    }
+
+    // real の **表示値**を固定小数 ASCII へ整形する（Codex PR #112 [Minor]）。delegate は
+    // bound 変数値を `String(v)` で流すため、初期値 / 外部 setVariable が `0.0000001` / `1e21`
+    // 相当だと表示が `1e-7` / `1e+21` の指数表記になり、StandardNotation 固定の DoubleValidator と
+    // 矛盾する（commitValue で避けた矛盾が表示・外部更新経路に残る）。表示テキストにも同じ
+    // `_toFixedNotation` を通して固定小数へ揃える。int（isReal:false）や空・非数値は素通し。
+    function _displayText(s) {
+        if (!root.isReal)
+            return s;
+        if (s === undefined || s === null || String(s).trim() === "")
+            return s;  // 空は 0 化せずそのまま
+        var n = Number(s);
+        return isNaN(n) ? s : _toFixedNotation(n);
     }
 
     width: 120
@@ -153,7 +212,8 @@ Rectangle {
         activeFocusOnPress: root.editable
         enabled: root.widgetEnabled
         // delegate が流す表示テキスト。読み（変数追従）はこの宣言バインドで効く。
-        text: root.text
+        // real は `_displayText` で固定小数へ整形して指数表記を避ける（Codex PR #112 [Minor]）。
+        text: root._displayText(root.text)
         // Task 51: フォーカス取得時のみ宣言バインド `text: root.text` を**外す**（現在値を
         // 保ったまま imperative 代入で binding を切る）。これをしないと編集中に外部から同変数が
         // 更新されると入力中の値が上書きされ、確定時に意図しない値を書き戻す（Codex PR #105 P2）。
@@ -167,10 +227,15 @@ Rectangle {
                 root._lastCommittedText = ""  // 新しい編集セッション＝同じ値でも改めて確定可にする
             }
         }
-        // 数値のみ許可（int）。MVP は int 変数のみ（real / min-max・範囲指定は別承認）。
-        // TODO（Task 52+）: 数値範囲を Widget に持たせる際は IntValidator の bottom/top を設定する。
-        // 現状は未指定＝C++ int の全域（約 ±21 億）を許容（MVP スコープでは暫定で問題なし）。
-        validator: IntValidator {}
+        // 数値のみ許可。Task 53: real 変数なら DoubleValidator（小数点入力を許可）、
+        // int 変数なら IntValidator。validator は bound 変数型から導出した root.isReal で切替える。
+        // DoubleValidator は locale の小数点を使う（commitValue は同一 Qt.locale() で解釈し ASCII
+        // 数値へ正規化するので整合する）。notation は StandardNotation（指数表記を許容しない方向）。
+        // TODO（Task 54）: 数値範囲を Widget に持たせる際は validator の bottom/top を設定する。
+        // 現状は未指定＝数値型の全域を許容。
+        validator: root.isReal
+            ? doubleValidator
+            : intValidator
         inputMethodHints: Qt.ImhFormattedNumbersOnly
         color: root.resolvedTextColor
         font.pixelSize: root.resolvedFontSize
@@ -198,9 +263,17 @@ Rectangle {
         // 順序が重要：先に貼り直すと確定前に表示が旧 root.text へ戻り入力が失われる（Codex PR #105 P1）。
         onEditingFinished: {
             root.commitValue()
-            field.text = Qt.binding(function() { return root.text })
+            field.text = Qt.binding(function() { return root._displayText(root.text) })
         }
     }
+
+    // Task 53: validator は isReal で切替える。inline 三項では Component を 2 つ持てないため
+    // id 付きで定義し、TextField.validator で参照する。非ビジュアルなので配置位置は任意。
+    // DoubleValidator は **C locale**（ASCII 小数点）に固定する（Codex PR #112 [P2]）：
+    // 表示・commit と同じ locale に揃え、ASCII の表示値 "36.5" が自身の validator で
+    // Invalid 扱いにならないようにする（system locale 既定だと小数点カンマ環境で破綻）。
+    IntValidator { id: intValidator }
+    DoubleValidator { id: doubleValidator; locale: "C"; notation: DoubleValidator.StandardNotation }
 
     // 選択用 MouseArea。TextField の **上** に重ね、editable:false（Editor）のときだけ
     // enabled にして clicked を中継する（TextField がフォーカス / 入力を奪う罠への対処）。

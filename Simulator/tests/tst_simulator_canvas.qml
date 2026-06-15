@@ -360,4 +360,42 @@ TestCase {
         fld.commitValue();  // binding 無し＝書き戻し先が無い＝no-op
         compare(VariableStore.get("setpoint"), 5);  // 変化なし
     }
+
+    // Task 53: real 変数を bind した NumericField は isReal が導出され、小数を保ったまま
+    // 変数へ書き戻す（int の丸めと違う）。"36.5" → real 変数 36.5 に更新され表示も追従。
+    function test_numeric_real_commit_writes_decimal() {
+        canvas.variableModel = [{ name: "temperature", type: "real", initial: "20.0" }];
+        canvas.widgetModel = [{
+            id: "in1", type: "NumericField", x: 0, y: 0, width: 120, height: 40, text: "0",
+            bindings: [{ property: "value", variable: "temperature" }]
+        }];
+
+        var inWrap = null;
+        tryVerify(function() {
+            inWrap = findByObjectName(canvas, "widget_in1");
+            return inWrap !== null;
+        }, 1000, "NumericField delegate widget_in1 が生成されない");
+        var fld = null;
+        tryVerify(function() {
+            fld = findByObjectName(inWrap, "hmiNumericField");
+            return fld !== null;
+        }, 1000, "HmiNumericField が描かれない");
+
+        // bound 変数が real 型なので isReal が true に導出される。
+        compare(fld.isReal, true);
+
+        const tf = findByObjectName(fld, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        tf.forceActiveFocus();  // 編集セッション開始
+        // real 経路は commitValue / DoubleValidator を C locale（ASCII の "."）固定で解釈するため、
+        // 入力も ASCII 小数点で固定する（Codex PR #112 [P2]：locale.decimalPoint 由来だと
+        // 小数点カンマ環境で "36,5" が 36.5 として扱われずテストが locale 依存で落ちる）。
+        tf.text = "36.5";
+        fld.commitValue();
+
+        // real に coerce され小数が保たれる（int だと 36 に丸まる）。
+        compare(VariableStore.get("temperature"), 36.5);
+        // 表示も boundValue 再評価で 36.5 に揃う。
+        compare(fld.text, "36.5");
+    }
 }

@@ -74,13 +74,16 @@ TestCase {
         field.vAlign = "";
         field.widgetOpacity = -1;
         field.widgetEnabled = true;
+        field.isReal = false;
         // 一部テストは内部 TextField.text を直接代入して `text: root.text` 宣言バインドを
         // 切る（実機の編集を模すため）。次テストへ持ち越さないよう、毎 init で内部 TextField の
         // バインドを貼り直してから field.text を初期化する（貼り直さないと前テストの
         // 直接代入値が内部に残る）。
         const tf = findByObjectName(field, "numericTextField");
         if (tf) {
-            tf.text = Qt.binding(function() { return field.text });
+            // 実バインド（`text: root._displayText(root.text)`）と一致させる
+            // （Codex PR #112 [Minor]：real は表示も固定小数へ整形する）。
+            tf.text = Qt.binding(function() { return field._displayText(field.text) });
         }
         // commit の重複排除キャッシュも初期化（前テストの確定値を持ち越さない）。
         field._lastCommittedText = "";
@@ -268,6 +271,114 @@ TestCase {
         focusSink.forceActiveFocus();
         compare(committedSpy.count, 1);
         compare(committedSpy.signalArguments[0][0], "42");
+    }
+
+    // Task 53: isReal で validator が切替わる。false（既定）= IntValidator、true = DoubleValidator。
+    function test_is_real_switches_validator() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+
+        // 既定（int）は IntValidator。
+        compare(field.isReal, false);
+        verify(tf.validator instanceof IntValidator, "int 変数では IntValidator のはず");
+
+        // real に切替えると DoubleValidator。
+        field.isReal = true;
+        verify(tf.validator instanceof DoubleValidator, "real 変数では DoubleValidator のはず");
+    }
+
+    // Task 53: isReal:true（real）では commitValue が小数を保ったまま正規化する
+    //（int の Math.trunc と違い丸めない）。"36.5" → "36.5"。
+    // Codex PR #112 [P2]：real は表示・validator・commit をすべて **C locale（ASCII 小数点）** に
+    // 揃える。よって入力は locale 依存の `decimalPoint` ではなく **ASCII の "." 固定**で確定する
+    //（変数ストア由来の表示値が常に ASCII なのと整合）。
+    function test_real_commit_preserves_decimal() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.isReal = true;
+        tf.forceActiveFocus();           // 編集セッション開始（_lastCommittedText クリア）
+        tf.text = "36.5";                // ASCII 小数点（C locale）で入力
+        committedSpy.clear();
+        field.commitValue();
+        compare(committedSpy.count, 1);
+        // ASCII の小数文字列に正規化される（Number("36.5") = 36.5 と整合）。
+        compare(committedSpy.signalArguments[0][0], "36.5");
+        compare(Number(committedSpy.signalArguments[0][0]), 36.5);
+    }
+
+    // Codex PR #112 [P2]：変数ストア由来の **ASCII 表示値**（"100.25"）を、編集せず focus → blur
+    // しただけで確定しても値が壊れない（C locale 統一なので小数点カンマ環境でも 10025 等へ
+    // 化けない）。real の commit が C locale で再パースされることを locale 非依存に固定する。
+    function test_real_commit_roundtrips_ascii_display_value() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.isReal = true;
+        tf.forceActiveFocus();
+        tf.text = "100.25";              // 変数の表示値（ASCII）をそのまま確定
+        committedSpy.clear();
+        field.commitValue();
+        compare(committedSpy.count, 1);
+        compare(committedSpy.signalArguments[0][0], "100.25");
+        compare(Number(committedSpy.signalArguments[0][0]), 100.25);
+    }
+
+    // Codex PR #112 [P2]：real の確定値を指数表記にしない。`0.0000001` は素の String() だと
+    // "1e-7" になり StandardNotation の DoubleValidator と矛盾するため、固定小数 "0.0000001" へ
+    // 整形する。値自体は round-trip する（Number("0.0000001") === 1e-7）。
+    function test_real_commit_avoids_exponential_notation() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.isReal = true;
+        tf.forceActiveFocus();
+        tf.text = "0.0000001";           // 素の String(Number(...)) は "1e-7" になる値
+        committedSpy.clear();
+        field.commitValue();
+        compare(committedSpy.count, 1);
+        // 指数表記でなく固定小数で確定される（validator の StandardNotation と整合）。
+        compare(committedSpy.signalArguments[0][0], "0.0000001");
+        verify(committedSpy.signalArguments[0][0].indexOf("e") === -1, "指数表記になってはいけない");
+        compare(Number(committedSpy.signalArguments[0][0]), 1e-7);
+    }
+
+    // Codex PR #112 [Minor]：real の **表示値**も固定小数へ整形する。delegate が bound 値を
+    // String(v) で流すと "1e-7" のような指数表記が入りうるが、表示テキストは "0.0000001" へ
+    // 整形され validator（StandardNotation）と整合する。int / 空はそのまま。
+    function test_real_display_value_avoids_exponential_notation() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.isReal = true;
+        // delegate が String(1e-7) を流す状況を模す（root.text = "1e-7"）。
+        field.text = "1e-7";
+        compare(tf.text, "0.0000001");
+        verify(tf.text.indexOf("e") === -1, "表示が指数表記になってはいけない");
+        // 通常の固定小数値はそのまま表示される。
+        field.text = "36.5";
+        compare(tf.text, "36.5");
+    }
+
+    // Codex PR #112 [Minor]：int（isReal:false）の表示は整形せず素通し。空も 0 化しない。
+    function test_int_display_value_passthrough() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.isReal = false;
+        field.text = "42";
+        compare(tf.text, "42");
+        field.text = "";
+        compare(tf.text, "");
+    }
+
+    // Task 53: isReal:false（int）では従来どおり小数入力が整数へ丸められる（Math.trunc）。
+    function test_int_commit_truncates_decimal() {
+        const tf = findByObjectName(field, "numericTextField");
+        verify(tf !== null, "内部 TextField が見つからない");
+        field.isReal = false;
+        tf.forceActiveFocus();
+        const dp = Qt.locale().decimalPoint;
+        tf.text = "36" + dp + "5";       // 小数を入れても int は丸める
+        committedSpy.clear();
+        field.commitValue();
+        compare(committedSpy.count, 1);
+        compare(committedSpy.signalArguments[0][0], "36");
     }
 
     // QQuickItem ツリーから指定された objectName の子を再帰的に探す
