@@ -37,6 +37,9 @@ bool ModbusController::isBooleanRegister(QModbusDataUnit::RegisterType type)
 
 void ModbusController::configure(const QVariantList &connections, const QVariantList &variables)
 {
+    // 世代を進める（stop() 内でも進むが、明示しておく）。これ以前に発行済みの
+    // reply は finished しても下の世代チェックで弾かれる（CodeRabbit PR #121）。
+    ++m_generation;
     // 再 configure（プロジェクト読み替え）に備えて一旦全停止。
     stop();
 
@@ -61,6 +64,17 @@ void ModbusController::configure(const QVariantList &connections, const QVariant
         if (host.isEmpty()) {
             qWarning().noquote() << "ModbusController: empty host for connection" << id
                                  << "(skipped)";
+            continue;
+        }
+        // 範囲外（手編集 JSON 等）は毎周期失敗し続けるので登録せず弾く（CodeRabbit PR #121）。
+        if (port < 1 || port > 65535) {
+            qWarning().noquote() << "ModbusController: invalid port" << port
+                                 << "for connection" << id << "(skipped)";
+            continue;
+        }
+        if (unitId < 1 || unitId > 247) {
+            qWarning().noquote() << "ModbusController: invalid unitId" << unitId
+                                 << "for connection" << id << "(skipped)";
             continue;
         }
 
@@ -114,11 +128,18 @@ void ModbusController::configure(const QVariantList &connections, const QVariant
             continue;
         }
 
+        const int address = s.value(QStringLiteral("address"), 0).toInt();
+        if (address < 0 || address > 65535) {
+            qWarning().noquote() << "ModbusController: variable" << name
+                                 << "has invalid address" << address << "(skipped)";
+            continue;
+        }
+
         PollItem item;
         item.name = name;
         item.connectionId = connectionId;
         item.regType = regType;
-        item.address = s.value(QStringLiteral("address"), 0).toInt();
+        item.address = address;
         item.poll = s.value(QStringLiteral("poll"), 1000).toInt();
         if (item.poll < 1) {
             item.poll = 1000;
@@ -172,7 +193,13 @@ void ModbusController::pollOne(const PollItem &item)
     }
     const QString name = item.name;
     const bool boolReg = isBooleanRegister(item.regType);
-    QObject::connect(reply, &QModbusReply::finished, this, [this, reply, name, boolReg]() {
+    const quint64 generation = m_generation;
+    QObject::connect(reply, &QModbusReply::finished, this, [this, reply, name, boolReg, generation]() {
+        // configure()/stop() 後に finished した旧世代 reply は古い値を流さず捨てる。
+        if (generation != m_generation) {
+            reply->deleteLater();
+            return;
+        }
         if (reply->error() == QModbusDevice::NoError) {
             const QModbusDataUnit result = reply->result();
             if (result.valueCount() > 0) {
@@ -192,6 +219,8 @@ void ModbusController::pollOne(const PollItem &item)
 
 void ModbusController::stop()
 {
+    // 世代を進め、発行済み reply の finished ラムダを無効化する（CodeRabbit PR #121）。
+    ++m_generation;
     for (QTimer *timer : std::as_const(m_timers)) {
         timer->stop();
         timer->deleteLater();

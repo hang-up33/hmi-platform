@@ -122,7 +122,9 @@ def _start_slave(port: int) -> subprocess.Popen:
         ]
     )
     if not _wait_for_port("127.0.0.1", port, timeout=10.0):
-        proc.terminate()
+        # 起動失敗時もちゃんと reap する（terminate だけだとゾンビが残り E2E 再試行で蓄積。
+        # CodeRabbit PR #121）。_stop_slave と同じ wait→kill フォールバックを使う。
+        _stop_slave(proc)
         raise RuntimeError(f"Modbus slave did not listen on 127.0.0.1:{port}")
     return proc
 

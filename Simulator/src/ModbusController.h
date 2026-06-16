@@ -76,4 +76,8 @@ private:
     QHash<QString, int> m_unitIds;
     QList<PollItem> m_items;
     QList<QTimer *> m_timers;
+    // Phase 7 / MB-2: configure()/stop() ごとに増やす世代カウンタ。非同期 reply の
+    // finished ラムダが capture した世代と一致する時だけ emit し、プロジェクト切替後に
+    // 旧 reply が古い値を VariableStore へ混入させるのを防ぐ（CodeRabbit PR #121）。
+    quint64 m_generation = 0;
 };

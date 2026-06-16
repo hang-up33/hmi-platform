@@ -86,22 +86,27 @@ quint16 TestModbusController::startSlave(QModbusTcpServer &server, int unitId,
     server.setData(type, static_cast<quint16>(address), value);
 
     // 空きポートを OS に選ばせる：先に QTcpServer で空きを取り、即解放してから再利用する
-    // （Qt の QModbusTcpServer はポートを設定 → listen する API のため）。
-    quint16 port = 0;
-    {
-        QTcpServer probe;
-        if (!probe.listen(QHostAddress::LocalHost, 0)) {
-            return 0;
-        }
-        port = probe.serverPort();
-    }
+    // （Qt の QModbusTcpServer はポートを設定 → listen する API のため）。解放と
+    // connectDevice() の間に別プロセスが奪う TOCTOU の取りこぼしに備え、別ポートで数回
+    // リトライする（CodeRabbit PR #121）。
     server.setConnectionParameter(QModbusDevice::NetworkAddressParameter,
                                   QStringLiteral("127.0.0.1"));
-    server.setConnectionParameter(QModbusDevice::NetworkPortParameter, port);
-    if (!server.connectDevice()) {
-        return 0;
+    for (int attempt = 0; attempt < 5; ++attempt) {
+        quint16 port = 0;
+        {
+            QTcpServer probe;
+            if (!probe.listen(QHostAddress::LocalHost, 0)) {
+                continue;
+            }
+            port = probe.serverPort();
+        }
+        server.setConnectionParameter(QModbusDevice::NetworkPortParameter, port);
+        if (server.connectDevice()) {
+            return port;
+        }
+        // 取られていた等で失敗 → 別の空きポートで再試行。
     }
-    return port;
+    return 0;
 }
 
 void TestModbusController::readHoldingRegisterEmitsValue()
@@ -156,6 +161,7 @@ void TestModbusController::readCoilEmitsBool()
 
     QVariantList connections;
     connections.append(QVariantMap{{"id", "plc1"},
+                                   {"proto", "modbusTcp"},
                                    {"host", "127.0.0.1"},
                                    {"port", static_cast<int>(port)},
                                    {"unitId", unitId}});

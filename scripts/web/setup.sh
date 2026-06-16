@@ -77,19 +77,34 @@ ensure_qt_addons() {
   ensure_aqt
   # shellcheck disable=SC2086
   ( cd /tmp && "${AQT_VENV}/bin/aqt" install-qt "${QT_HOST}" "${QT_TARGET}" "${QT_VERSION}" "${QT_ARCH}" \
-    -O "${QT_OUTDIR}" -m ${QT_ADDON_MODULES} ) || \
-    echo "[hmi/web-setup] WARN: Qt addon（${QT_ADDON_MODULES}）の導入に失敗（通信 E2E が組めない可能性）" >&2
+    -O "${QT_OUTDIR}" -m ${QT_ADDON_MODULES} ) || {
+    echo "[hmi/web-setup] ERROR: Qt addon（${QT_ADDON_MODULES}）の導入に失敗" >&2
+    return 1
+  }
+  # SerialBus は Simulator/Runtime の **ビルド必須** 依存。導入後に実体を検証し、
+  # 欠けていれば WARN で流さず明示的に失敗する（後続 CMake の遅延失敗を防ぐ。CodeRabbit PR #121）。
+  if [ ! -d "${QT_PREFIX}/lib/cmake/Qt6SerialBus" ] \
+     || [ ! -d "${QT_PREFIX}/lib/cmake/Qt6SerialPort" ]; then
+    echo "[hmi/web-setup] ERROR: QtSerialBus/QtSerialPort が見つかりません（${QT_PREFIX}）" >&2
+    return 1
+  fi
 }
 
 # Phase 7 / MB-2: E2E のソフト Modbus スレーブ（pymodbus）。製品コードには持ち込まず dev 依存。
 # フォントと同様 Qt キャッシュの有無に関わらず冪等導入する（スナップショット復元時も効くように）。
+# **バージョンは 3.13.* に固定**：tests/e2e/modbus_slave.py が pymodbus 3.13 の新 API
+# （SimData / SimDevice。旧 ModbusSlaveContext/ModbusSequentialDataBlock は deprecated・
+# setValues 不動作）に依存するため、メジャー更新で E2E 再現性が壊れるのを防ぐ（CodeRabbit PR #121）。
+# pymodbus はビルド/ユニットに不要な E2E 専用依存なので、導入失敗は **非致命（WARN）** にして
+# セッション全体は止めない（E2E は不在時 skip する）。
 ensure_pymodbus() {
   if python3 -c "import pymodbus" >/dev/null 2>&1; then
     return 0
   fi
-  pip3 install --quiet --break-system-packages pymodbus 2>/dev/null \
-    || pip3 install --quiet pymodbus 2>/dev/null \
-    || echo "[hmi/web-setup] WARN: pymodbus の導入に失敗（Modbus E2E が走らない）" >&2
+  pip3 install --quiet --break-system-packages 'pymodbus==3.13.*' 2>/dev/null \
+    || pip3 install --quiet 'pymodbus==3.13.*' 2>/dev/null || true
+  python3 -c "import pymodbus" >/dev/null 2>&1 \
+    || echo "[hmi/web-setup] WARN: pymodbus の導入に失敗（Modbus E2E は skip される）" >&2
 }
 
 # 既に導入済みなら即終了（環境キャッシュ復元後・SessionStart 再実行時の冪等性）
