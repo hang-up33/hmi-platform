@@ -185,3 +185,21 @@ set_tests_properties(e2e_modbus_read PROPERTIES
     LABELS e2e
     SKIP_RETURN_CODE 77
 )
+
+# MB-4: Modbus TCP 書込 + 接続状態の cross-app E2E。
+# pymodbus ソフトスレーブ相手に、Simulator で NumericField の入力確定（commitValue を
+# invokeMethod で模す）→ writeBoundValue → ModbusController.writeVariable → PLC の holding
+# register が書き換わることを、別の pymodbus client で読み返して観測する。MB-2 の読み
+# （PLC→HMI）に対し、逆向きの書き（HMI→PLC）を見る初の E2E。Editor は不要（fixture JSON を
+# 手書きし Simulator に --open）。pymodbus 不在 / スレーブ起動失敗時は exit 77 で SKIP。
+add_test(
+    NAME e2e_modbus_write
+    COMMAND ${Python3_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_modbus_write.py
+        --simulator-binary $<TARGET_FILE:hmi_simulator>
+)
+set_tests_properties(e2e_modbus_write PROPERTIES
+    TIMEOUT 90
+    LABELS e2e
+    SKIP_RETURN_CODE 77
+)
