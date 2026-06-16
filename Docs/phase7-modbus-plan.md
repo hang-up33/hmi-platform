@@ -146,8 +146,8 @@ flowchart TD
 | MB-1 変数ソース Schema + Editor UI | 完了 | #119 |
 | MB-2 PC 読込ポーリング（pymodbus E2E） | 完了 | #121 |
 | MB-3 実 PLC 読込確認（ローカル） | 完了（2026-06-16 実 CLICK ＠192.168.1.2） | — |
-| MB-4 書込 + 接続状態 | 未着手 | — |
-| MB-5 実 PLC 書込確認（ローカル） | 未着手 | — |
-| MB-6 実機 Runtime 展開（WSL2+実機） | 未着手 | — |
+| MB-4 書込 + 接続状態 + 自動再接続 | 完了（書込 E2E `tests/e2e/test_modbus_write.py` 含む） | #122 |
+| MB-5 実 PLC 書込確認（ローカル） | 未着手（Web 不可） | — |
+| MB-6 実機 Runtime 展開（WSL2+実機） | 未着手（Web 不可） | — |
 
-> 着手は Phase 5（Task 49）・Phase 6（Lamp/数値）との順序をユーザー承認で確定してから。承認・着手でステータスが動いたら常駐文書（CLAUDE.md / AGENTS.md / README / mvp-task-runner）を同期する（[feedback-phase-status-sync](../.claude/rules/feedback-phase-status-sync.md)）。
+> MB-1〜4（Web 可）完了。次は MB-5〔実 PLC 書込確認〕＝ローカル専用（Web 不可。実 PLC + ローカル Qt SerialBus が要る）。承認・着手でステータスが動いたら常駐文書（CLAUDE.md / AGENTS.md / README / mvp-task-runner / development-history）を同期する（[feedback-phase-status-sync](../.claude/rules/feedback-phase-status-sync.md)）。
