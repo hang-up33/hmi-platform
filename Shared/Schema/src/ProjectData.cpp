@@ -24,6 +24,14 @@ QJsonObject ProjectData::toJson() const
         }
         obj["variables"] = varsArr;
     }
+    // Phase 7 / MB-1: 接続定義も optional。空のとき省略（後方互換）。
+    if (!connections.isEmpty()) {
+        QJsonArray connArr;
+        for (const ConnectionData &c : connections) {
+            connArr.append(c.toJson());
+        }
+        obj["connections"] = connArr;
+    }
     return obj;
 }
 
@@ -40,6 +48,11 @@ ProjectData ProjectData::fromJson(const QJsonObject &obj)
     const QJsonArray varsArr = obj.value("variables").toArray();
     for (const QJsonValue &v : varsArr) {
         p.variables.append(VariableData::fromJson(v.toObject()));
+    }
+    // Phase 7 / MB-1: 接続定義配列（欠落時は空配列）。
+    const QJsonArray connArr = obj.value("connections").toArray();
+    for (const QJsonValue &c : connArr) {
+        p.connections.append(ConnectionData::fromJson(c.toObject()));
     }
     return p;
 }
@@ -68,6 +81,19 @@ bool ProjectData::isValidJson(const QJsonObject &obj)
         const QJsonArray vars = obj.value("variables").toArray();
         for (const QJsonValue &v : vars) {
             if (!v.isObject() || !VariableData::isValidJson(v.toObject())) {
+                return false;
+            }
+        }
+    }
+    // Phase 7 / MB-1: connections も optional。存在する場合は配列で各要素が
+    // ConnectionData として有効（id 非空）であることを要求する（不在は後方互換で許容）。
+    if (obj.contains("connections")) {
+        if (!obj.value("connections").isArray()) {
+            return false;
+        }
+        const QJsonArray conns = obj.value("connections").toArray();
+        for (const QJsonValue &c : conns) {
+            if (!c.isObject() || !ConnectionData::isValidJson(c.toObject())) {
                 return false;
             }
         }

@@ -10,7 +10,7 @@ GUI で HMI 画面を作図 → JSON で保存 → PC でも組込み実機で�
 
 ![HMI Editor](Docs/screenshots/editor.png)
 
-Editor。ツールバーで Widget 追加（ボタン / ラベル / 数値入力）・JSON 開く / 保存・編集補助（スナップ・コピペ・undo / redo）、右のインスペクタでスタイル・配置・アクション・バインディングを編集できる。数値入力（NumericField）は変数の型（int / real）を引き継ぎ、インスペクタ「詳細」の範囲（最小値 / 最大値）で入力 clamp の境界を指定できる（図は real 変数 temperature を bind した選択中の例）。
+Editor。ツールバーで Widget 追加（ボタン / ラベル / 数値入力）・JSON 開く / 保存・編集補助（スナップ・コピペ・undo / redo）、右のインスペクタでスタイル・配置・アクション・バインディングを編集できる。数値入力（NumericField）は変数の型（int / real）を引き継ぎ、インスペクタ「詳細」の範囲（最小値 / 最大値）で入力 clamp の境界を指定できる（図は real 変数 temperature を bind した選択中の例）。**Phase 7（Modbus TCP）着手に伴い、変数パネル（ツールバー「変数」トグル）の各変数に「PLC レジスタに割当」を追加**：チェックすると接続先（ホスト / ポート / Unit ID）とレジスタ写像（レジスタ種別 coil/discrete/input/holding・アドレス・ポーリング間隔 ms）を編集でき、JSON に保存される（MB-1 は定義の保存のみ＝実通信は後続タスク。ヒーロー図の既定ビューは変数パネル非表示のため不変）。
 
 ![HMI Simulator](Docs/screenshots/simulator.png)
 
@@ -113,7 +113,7 @@ SDK 生成・実機 scp・起動（weston）・キャプチャの全手順と罠
 
 ## ステータスとドキュメント
 
-- **現在地**: **Phase 6-B / NumericField 拡張（real 型 + 数値範囲 min/max）完了**（Task 53〜55・PR #112〜#114）。次フェーズは未承認（バックログ：step / decimals / unit、後続入力 Widget〔Gauge / Toggle〕、Phase 7 Modbus 連携）。
+- **現在地**: **Phase 7 / Modbus TCP 通信に着手**（2026-06-16 承認）。MB-1〔変数ソース Schema（`ConnectionData` + `VariableData.source`）+ Editor 変数パネルの接続編集 UI・実通信なし〕実装中。直近完了は Phase 6-B / NumericField 拡張（Task 53〜55・PR #112〜#114）。MB-3/5/6（実 PLC・実機）はローカル専用。進捗の正本は [Docs/phase7-modbus-plan.md](Docs/phase7-modbus-plan.md)。
 - 開発の時系列（各タスクの目的 / PR / 学び）: [Docs/development-history.md](Docs/development-history.md)
 - 各フェーズの計画と進捗表（正本）: [Docs/](Docs/) の `phase*-plan.md`
 - 開発ガイド・ビルドの罠・ルール: [CLAUDE.md](CLAUDE.md)

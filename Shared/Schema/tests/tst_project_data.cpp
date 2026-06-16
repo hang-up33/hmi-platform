@@ -1,5 +1,7 @@
+#include "hmi/schema/ConnectionData.h"
 #include "hmi/schema/ProjectData.h"
 #include "hmi/schema/ScreenData.h"
+#include "hmi/schema/SourceData.h"
 #include "hmi/schema/VariableData.h"
 #include "hmi/schema/WidgetData.h"
 
@@ -8,8 +10,10 @@
 #include <QJsonObject>
 #include <QTest>
 
+using hmi::schema::ConnectionData;
 using hmi::schema::ProjectData;
 using hmi::schema::ScreenData;
+using hmi::schema::SourceData;
 using hmi::schema::VariableData;
 using hmi::schema::WidgetData;
 
@@ -57,6 +61,11 @@ private slots:
     void variablesRoundTrip();
     void omitsEmptyVariables();
     void isValidJsonRejectsInvalidVariables();
+
+    // Phase 7 / MB-1: connections[] + variable.source.connection 参照
+    void connectionsAndSourceRoundTrip();
+    void omitsEmptyConnections();
+    void isValidJsonRejectsInvalidConnections();
 
     void isValidJsonAcceptsNormalProject();
     void isValidJsonRejectsEmptyScreensArray();
@@ -172,6 +181,108 @@ void ProjectDataTest::isValidJsonRejectsInvalidVariables()
         var["initial"] = "false";
         QJsonObject obj = validProjectJson();
         obj["variables"] = QJsonArray{ var };
+        QVERIFY(ProjectData::isValidJson(obj));
+    }
+}
+
+// Phase 7 / MB-1: connections[] と variable.source.connection 参照が round-trip し、
+// source.connection が ConnectionData.id を正しく指す（計画書の正準 JSON 形）。
+void ProjectDataTest::connectionsAndSourceRoundTrip()
+{
+    ProjectData src;
+    src.project = "Sample";
+    src.screens.append(makeScreen("Main"));
+
+    ConnectionData conn;
+    conn.id = "plc1";
+    conn.proto = "modbusTcp";
+    conn.host = "192.168.0.10";
+    conn.port = 502;
+    conn.unitId = 1;
+    src.connections.append(conn);
+
+    VariableData var;
+    var.name = "tankLevel";
+    var.type = "int";
+    var.initial = "0";
+    SourceData s;
+    s.connection = "plc1";
+    s.reg = "holding";
+    s.address = 0;
+    s.poll = 1000;
+    var.source = s;
+    src.variables.append(var);
+
+    const QJsonObject obj = src.toJson();
+    QVERIFY(obj.contains("connections"));
+    // 計画書の正準 JSON：variable.source は接続詳細を持たず id 参照のみ。
+    {
+        const QJsonObject varObj = obj.value("variables").toArray().at(0).toObject();
+        const QJsonObject srcObj = varObj.value("source").toObject();
+        QCOMPARE(srcObj.value("connection").toString(), QStringLiteral("plc1"));
+        QVERIFY(!srcObj.contains("host"));  // 接続詳細は connections[] 側
+    }
+
+    const ProjectData r = ProjectData::fromJson(obj);
+    QCOMPARE(r.connections.size(), 1);
+    QCOMPARE(r.connections.at(0).id, QStringLiteral("plc1"));
+    QCOMPARE(r.connections.at(0).host, QStringLiteral("192.168.0.10"));
+    QCOMPARE(r.connections.at(0).port, 502);
+    QCOMPARE(r.connections.at(0).unitId, 1);
+
+    QCOMPARE(r.variables.size(), 1);
+    QVERIFY(r.variables.at(0).source.has_value());
+    // source.connection が ConnectionData.id を指す（参照が round-trip）。
+    QCOMPARE(r.variables.at(0).source->connection, r.connections.at(0).id);
+    QCOMPARE(r.variables.at(0).source->reg, QStringLiteral("holding"));
+    QCOMPARE(r.variables.at(0).source->address, 0);
+
+    // connections / source を含んでも isValidJson を通る。
+    QVERIFY(ProjectData::isValidJson(obj));
+}
+
+// Phase 7 / MB-1: connections が空のとき toJson で省略（後方互換）。
+void ProjectDataTest::omitsEmptyConnections()
+{
+    ProjectData src;
+    src.project = "Sample";
+    src.screens.append(makeScreen("Main"));
+    // connections は既定の空。
+
+    const QJsonObject obj = src.toJson();
+    QVERIFY(!obj.contains("connections"));
+
+    const ProjectData r = ProjectData::fromJson(obj);
+    QVERIFY(r.connections.isEmpty());
+    // connections を持たない（＝旧）JSON も従来どおり有効。
+    QVERIFY(ProjectData::isValidJson(obj));
+}
+
+// Phase 7 / MB-1: connections は存在するなら配列 + 各要素が ConnectionData として
+// 有効（id 非空）であることを要求する（不在は後方互換で許容）。
+void ProjectDataTest::isValidJsonRejectsInvalidConnections()
+{
+    // connections が配列でない → 無効。
+    {
+        QJsonObject obj = validProjectJson();
+        obj["connections"] = QStringLiteral("not-an-array");
+        QVERIFY(!ProjectData::isValidJson(obj));
+    }
+    // id が空の接続 → 無効。
+    {
+        QJsonObject badConn;
+        badConn["id"] = "";
+        QJsonObject obj = validProjectJson();
+        obj["connections"] = QJsonArray{ badConn };
+        QVERIFY(!ProjectData::isValidJson(obj));
+    }
+    // 妥当な connections は有効。
+    {
+        QJsonObject conn;
+        conn["id"] = "plc1";
+        conn["host"] = "192.168.0.10";
+        QJsonObject obj = validProjectJson();
+        obj["connections"] = QJsonArray{ conn };
         QVERIFY(ProjectData::isValidJson(obj));
     }
 }

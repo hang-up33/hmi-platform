@@ -322,6 +322,20 @@ timeline
 
 ---
 
+## Phase 7: Modbus TCP 通信（PLC と連動）
+
+**計画書**：[Docs/phase7-modbus-plan.md](phase7-modbus-plan.md)（MB-1〜6。2026-06-16 ユーザー承認で着手）
+
+- 🚧 着手中。`hmi_simulator`/`hmi_runtime` が **QtSerialBus（`QModbusTcpClient`）で Modbus マスタ**になり PLC レジスタを周期ポーリング/書込→既存の変数ストア + binding 経路へ流す（実務 HMI の核心）。**通信は Simulator 共有ソース（→Runtime 継承）に置き、Editor は `Qt6::SerialBus` 非リンク**（接続定義を JSON に書くだけ）。実 PLC は CI/Web から不達のため自動検証は **pymodbus ソフトスレーブ相手の E2E**、実 PLC/実機確認はローカル。
+  - **タスク**：MB-1（変数ソース Schema + Editor 編集 UI・実通信なし・Web 可）/ MB-2（PC 読込ポーリング・pymodbus E2E・Web 可）/ MB-3（実 PLC 読込・ローカル）/ MB-4（書込 + 接続状態・Web 可）/ MB-5（実 PLC 書込・ローカル）/ MB-6（実機 Runtime 展開・WSL2+実機・Web 不可）。
+
+### MB-1: 変数ソース Schema + Editor 編集 UI（実通信なし）
+
+- 🚧 実装完了・PR 提出。**Schema**：新型 `ConnectionData`（id/proto=modbusTcp/host/port=502/unitId=1）と `SourceData`（connection/reg〔coil/discrete/input/holding〕/address〔0 始まり正準・常時書出〕/poll=1000ms）を追加し、`VariableData` に optional `source`、`ProjectData` に optional `connections[]`（空時省略＝後方互換）を追加（4 メソッド + isValidJson、optional は必須集合に入れない）。**正準 JSON は connections[] 参照方式**（変数の `source.connection` が接続定義 id を参照）で、Editor UI は接続詳細をインライン保持 → `ProjectIo.save` で connections[] へ dedup 集約、`load` で接続詳細を source へ戻して round-trip。**Editor 変数パネル**に「PLC レジスタに割当」CheckBox + host/port/unitId/reg/address/poll 編集欄を追加（全欄を `variableFieldFocusCount` の Delete 抑止に組込み、新規 objectName `variableSource*_<index>` で既存非破壊）。**Editor は `Qt6::SerialBus` 非リンクのまま**（CMake 無改変・grep で混入 0 確認）。Web `ctest` unit 10/10 緑（Schema round-trip + ProjectIo ブリッジ往復 + 後方互換）。
+- MB-1 の意図的最小化：**接続 id は "plc1" 固定**（複数 PLC 編集 UI は別タスク）。JSON スキーマは複数接続を表現できる connections[] 参照方式を保持。
+
+---
+
 ## 番外: 開発コードネーム「Atlas」決定（2026-05-30）
 
 フェーズタスクとは別に、プロジェクト全体の**開発時の通称（ブランド別名）**を決めた経緯。

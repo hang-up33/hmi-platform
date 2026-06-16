@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ConnectionData.h"
 #include "ScreenData.h"
 #include "VariableData.h"
 
@@ -19,6 +20,10 @@ struct ProjectData {
     // Task 39: Project レベルの変数（タグ）定義。optional 配列で、空のとき toJson で省略
     // （後方互換）。実行時の現在値はランタイム変数ストア（T41）が保持し、ここは定義のみ。
     QList<VariableData> variables;
+
+    // Phase 7 / MB-1: プロジェクト共通の接続定義（PLC への接続先）。optional 配列で空のとき
+    // 省略（後方互換）。VariableData.source.connection がこの id を参照する。
+    QList<ConnectionData> connections;
 
     QJsonObject toJson() const;
     static ProjectData fromJson(const QJsonObject &obj);

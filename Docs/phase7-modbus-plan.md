@@ -5,7 +5,7 @@
 > **本書は計画のみ**（実装は別 PR でタスク 1 つずつ）。要求の倉庫は [requirements.md](requirements.md) の §2.3、結線規約は [.claude/rules/qml-module-conventions.md](../.claude/rules/qml-module-conventions.md)、Schema 規約は [.claude/rules/schema-conventions.md](../.claude/rules/schema-conventions.md)、実機/SDK 事情は [.claude/rules/dev-environment.md](../.claude/rules/dev-environment.md)。
 > **進捗の正本は本ファイル「進捗」表**。
 >
-> **承認状態**：起票（未着手・未承認）。直近完了は Phase 6-B（NumericField 拡張・Task 53〜55）。本フェーズの着手はユーザー承認で確定する（step / decimals / unit や後続入力 Widget〔Gauge / Toggle〕も同列の未承認候補）。
+> **承認状態**：**着手済み（2026-06-16 ユーザー承認）。MB-1〔変数ソース Schema + Editor 編集 UI〕実装中（PR 化）。** 直近完了は Phase 6-B（NumericField 拡張・Task 53〜55）。MB-3 / MB-5 / MB-6（実 PLC・実機 Yocto）はローカル専用で Web 環境では実施不可（MB-1 / MB-2 / MB-4 は Web 可）。step / decimals / unit や後続入力 Widget〔Gauge / Toggle〕は引き続き別承認の候補。
 
 ---
 
@@ -132,7 +132,7 @@ flowchart TD
 
 | 項目 | 内容 |
 |---|---|
-| **SDK/image の qtserialbus（着手前ゲート）** | 現行 image（scarthgap / Qt6 6.8.1）と `meta-toolchain-qt6` SDK の **`qtserialbus` 含有を最優先で確認**（ローカルで `find <SDK-sysroot> -iname '*SerialBus*'` / image の `qtserialbus` 有無）。結果（含有/不含）を本書に記録し、**不含なら MB-6 の Yocto レシピ追加（`IMAGE_INSTALL += "qtserialbus"` + SDK）を前倒しで着手**（image/SDK 再ビルドは数時間かかるため）。**PC 側（MB-1〜5）の Qt（aqtinstall）には SerialBus が同梱されるので先行可**だが、実機展開の手戻りを避けるため確認は早期に。 |
+| **SDK/image の qtserialbus（着手前ゲート）** | 現行 image（scarthgap / Qt6 6.8.1）と `meta-toolchain-qt6` SDK の **`qtserialbus` 含有を最優先で確認**（ローカルで `find <SDK-sysroot> -iname '*SerialBus*'` / image の `qtserialbus` 有無）。結果（含有/不含）を本書に記録し、**不含なら MB-6 の Yocto レシピ追加（`IMAGE_INSTALL += "qtserialbus"` + SDK）を前倒しで着手**（image/SDK 再ビルドは数時間かかるため）。**PC 側（MB-1〜5）の Qt（aqtinstall）には SerialBus が同梱されるので先行可**だが、実機展開の手戻りを避けるため確認は早期に。**2026-06-16 時点：この確認は Web 環境では不可（WSL2 / SDK が要る）＝ローカルで未実施。MB-2 着手前までにローカルで実施し結果を記録する（MB-1 は SerialBus 非依存なので未確認のまま進めて可）。** |
 | **float 変数型 / スケーリング** | 16bit レジスタ → 物理量（温度・圧力）には float 型 + gain/offset が要る（[requirements.md](requirements.md) FR-VAR / バックログ C）。**MB-1〜2 は int/bool/coil で開始でき**、アナログ表示が要る段で float を最小導入（Phase 6 の数値 Widget と連携）。32bit/float レジスタの word/byte order は要調査。 |
 | **Simulator の自動検証相手** | 実 PLC は CI/Web から不達 → E2E は **pymodbus ソフトスレーブ**で固定（PC 単体で `ctest` 緑）。pymodbus 導入は dev 依存に閉じ、製品コードには持ち込まない。 |
 | **Editor の非リンク維持** | Editor が誤って `Qt6::SerialBus` をリンクしないこと（変更時 `git diff` で確認）。通信は Simulator/Runtime のみ。 |
@@ -143,7 +143,7 @@ flowchart TD
 
 | Task | 状態 | PR |
 |---|---|---|
-| MB-1 変数ソース Schema + Editor UI | 未着手 | — |
+| MB-1 変数ソース Schema + Editor UI | 進行中（PR 提出） | — |
 | MB-2 PC 読込ポーリング（pymodbus E2E） | 未着手 | — |
 | MB-3 実 PLC 読込確認（ローカル） | 未着手 | — |
 | MB-4 書込 + 接続状態 | 未着手 | — |
