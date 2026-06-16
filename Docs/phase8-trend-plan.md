@@ -51,8 +51,8 @@ flowchart LR
 | Task | スコープ | 完了基準 |
 |---|---|---|
 | **T-A: Schema 拡張** | `WidgetData` に Trend 固有フィールドを追加（§Schema）。`toJson`/`fromJson`/`toVariantMap`/`fromVariantMap` の **4 メソッド**を揃える（C++ ブリッジ無改変）。`isValidJson` 必須集合は不変（全 optional ＝後方互換）。`tst_widget_data.cpp` に round-trip（presence true/false 両方）を追加。**QML/描画はまだ無し** | build + `ctest` 緑。`type:"Trend"` の JSON が値欠落なく round-trip。`git diff` で C++ ブリッジ無改変を確認 |
-| **T-B: 型分岐の足場 + HmiTrend 描画** | `Shared/Widgets/qml/HmiTrend.qml` 新設（§HmiTrend）。`Shared/Widgets/CMakeLists.txt` の `QML_FILES` 登録。Editor `Canvas.qml` / Simulator `SimulatorCanvas.qml` の delegate に **4 分岐目** `trendComponent`（objectName `hmiTrend`）。Simulator は `boundValue("value")` 変化で 1 点 push。HmiTrend 単体 + delegate 生成の unit 追加。**追加 UI はまだ無し**（手書き JSON で検証） | build + `ctest` 緑。`type:"Trend"` でも選択枠・リサイズ正常。変数変化で `sampleCount` 増加（unit）。**実機 Canvas 性能の VNC 確認 TODO を PR 明記** |
-| **T-C: Editor 追加 UI + インスペクタ型対応** | `addWidget` ホワイトリストに `"Trend"`（既定サイズ大きめ・`text:""`）。ツールバー「トレンド追加」ボタン `addTrendButton`。`selectedIsTrend` 追加・`selectedSupportsClickAction` に `&& !selectedIsTrend`。Trend 詳細セクション（点数 N / Y 軸 min・max〔presence チェック〕/ 線色 / 周期）を `visible: selectedIsTrend` で表示。objectName・編集ロジック・Schema 不変 | build + `ctest` 緑。Editor で Trend を追加・選択・属性設定できる。**`editor.png` 同期** |
+| **T-B: 型分岐の足場 + HmiTrend 描画** | `Shared/Widgets/qml/HmiTrend.qml` 新設（§HmiTrend）。`Shared/Widgets/CMakeLists.txt` の `QML_FILES` 登録。Editor `Canvas.qml` / Simulator `SimulatorCanvas.qml` の delegate に **4 分岐目** `trendComponent`（objectName `hmiTrend`）。Simulator は `boundValue("value")` 変化で 1 点 push。HmiTrend 単体 + delegate 生成の unit 追加。**追加 UI はまだ無し**（手書き JSON で検証） | build + `ctest` 緑。`type:"Trend"` でも選択枠・リサイズ正常。変数変化で `sampleCount` 増加（unit）。完了基準は `ctest` 緑まで（実機 Canvas 性能の VNC 確認は **T-B PR 本文に作業 TODO として追記**し、完了条件には含めない＝ローカル実機が要るため Web で満たせない） |
+| **T-C: Editor 追加 UI + インスペクタ型対応** | `addWidget` ホワイトリストに `"Trend"`（既定サイズ大きめ・`text:""`）。ツールバー「トレンド追加」ボタン `addTrendButton`。`selectedIsTrend` 追加・`selectedSupportsClickAction` に `&& !selectedIsTrend`（Button/NumericField 共有プロパティへの変更＝**Label の既存クリックアクション抑制と競合しないか T-C 着手時に確認**）。Trend 詳細セクション（点数 N / Y 軸 min・max〔presence チェック〕/ 線色 / 周期）を `visible: selectedIsTrend` で表示。objectName・編集ロジック・Schema 不変 | build + `ctest` 緑。Editor で Trend を追加・選択・属性設定できる。**`editor.png` 同期** |
 | **T-D: cross-app E2E + スクショ** | `tests/e2e/test_trend_live.py` 新設。Editor `--open`→`saveTo`→保存 JSON 直接 assert（`type:"Trend"` / value binding / `pointCount`）→ Simulator で操作用 NumericField から変数を複数回更新 → Trend の公開 `sampleCount`/`lastValue` 追従を観測。`CMakeLists.txt` に `e2e_trend_live` 登録。`editor.png`/`simulator.png` 最終同期 | build + `ctest` 緑（`e2e_trend_live` 含む）。E2E が「変数変化→サンプル取り込み」を公開プロパティで観測。スクショ同期 |
 
 > T-C が重ければ T-C1（追加ボタン+ホワイトリスト）/ T-C2（インスペクタ詳細）に分割可（5 本構成）。
@@ -88,6 +88,11 @@ flowchart LR
   "bindings": [ { "property": "value", "variable": "sensorTemp" } ]
 }
 ```
+
+> **`hasYMin`/`hasYMax` は JSON キーではない**（メモリ上の presence フラグ）。JSON では
+> **`yMin`/`yMax` キーの有無自体が presence を表す**（`fromJson`: `hasYMin = obj.contains("yMin")`、
+> `toJson`: `hasYMin` のときだけ `yMin` を書く）。上例は両指定（固定 Y 軸）。両キーを省略すれば
+> 自動スケール。`sampleMs:0` は変更時サンプルのみ。旧 JSON は新キーを持たない＝後方互換で全て既定解決。
 
 ## HmiTrend.qml（§Task B）
 
