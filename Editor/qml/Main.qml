@@ -187,6 +187,27 @@ Window {
         }
     }
 
+    // 座標・サイズの数値欄を ↑/↓ キーで増減する（Shift で ±10）。SpinBox 化された
+    // 文字サイズ・ボーダー・角丸・不透明度は標準の矢印キー増減が効くのに対し、
+    // X/Y/幅/高さ は TextField + IntValidator（Task 27 の SpinBox 不具合回避）で
+    // キー増減が無く「キーボードで微調整できない」差があったため補う。現在値を
+    // validator の範囲（bottom/top）へ clamp し、表示と選択中 live Item の両方を
+    // 更新する（onTextEdited と同じ書き戻し経路）。フォーカス中の編集なので undo は
+    // focus 由来の beginEdit/commitEdit が 1 操作として拾う。
+    function nudgeGeometry(field, prop, step) {
+        if (!canvas.selectedItem) {
+            return
+        }
+        const v = field.validator
+        let cur = parseInt(field.text)
+        if (isNaN(cur)) {
+            cur = v.bottom
+        }
+        const next = Math.max(v.bottom, Math.min(v.top, cur + step))
+        field.text = String(next)
+        canvas.selectedItem[prop] = next
+    }
+
     // Task 46: 色スウォッチの一辺と、色 TextField がスウォッチ用に空ける幅
     //（スウォッチ + Row spacing 6）。3 つの色フィールドで共有する
     //（CodeRabbit PR #99 nitpick: マジックナンバー 34 の重複を定数化）。
@@ -743,6 +764,14 @@ Window {
                                             canvas.selectedItem.x = parseInt(text)
                                         }
                                     }
+                                    Keys.onUpPressed: (event) => {
+                                        rootWindow.nudgeGeometry(fieldX, "x", (event.modifiers & Qt.ShiftModifier) ? 10 : 1)
+                                        event.accepted = true
+                                    }
+                                    Keys.onDownPressed: (event) => {
+                                        rootWindow.nudgeGeometry(fieldX, "x", (event.modifiers & Qt.ShiftModifier) ? -10 : -1)
+                                        event.accepted = true
+                                    }
                                 }
 
                                 Label { text: qsTr("Y") }
@@ -756,6 +785,14 @@ Window {
                                         if (canvas.selectedItem && acceptableInput) {
                                             canvas.selectedItem.y = parseInt(text)
                                         }
+                                    }
+                                    Keys.onUpPressed: (event) => {
+                                        rootWindow.nudgeGeometry(fieldY, "y", (event.modifiers & Qt.ShiftModifier) ? 10 : 1)
+                                        event.accepted = true
+                                    }
+                                    Keys.onDownPressed: (event) => {
+                                        rootWindow.nudgeGeometry(fieldY, "y", (event.modifiers & Qt.ShiftModifier) ? -10 : -1)
+                                        event.accepted = true
                                     }
                                 }
 
@@ -772,6 +809,14 @@ Window {
                                             canvas.selectedItem.width = parseInt(text)
                                         }
                                     }
+                                    Keys.onUpPressed: (event) => {
+                                        rootWindow.nudgeGeometry(fieldW, "width", (event.modifiers & Qt.ShiftModifier) ? 10 : 1)
+                                        event.accepted = true
+                                    }
+                                    Keys.onDownPressed: (event) => {
+                                        rootWindow.nudgeGeometry(fieldW, "width", (event.modifiers & Qt.ShiftModifier) ? -10 : -1)
+                                        event.accepted = true
+                                    }
                                 }
 
                                 Label { text: qsTr("高さ") }
@@ -786,6 +831,14 @@ Window {
                                         if (canvas.selectedItem && acceptableInput) {
                                             canvas.selectedItem.height = parseInt(text)
                                         }
+                                    }
+                                    Keys.onUpPressed: (event) => {
+                                        rootWindow.nudgeGeometry(fieldH, "height", (event.modifiers & Qt.ShiftModifier) ? 10 : 1)
+                                        event.accepted = true
+                                    }
+                                    Keys.onDownPressed: (event) => {
+                                        rootWindow.nudgeGeometry(fieldH, "height", (event.modifiers & Qt.ShiftModifier) ? -10 : -1)
+                                        event.accepted = true
                                     }
                                 }
                             }
