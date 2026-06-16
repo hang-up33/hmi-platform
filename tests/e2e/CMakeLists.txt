@@ -166,3 +166,22 @@ set_tests_properties(e2e_numeric_extend PROPERTIES
     TIMEOUT 60
     LABELS e2e
 )
+
+# MB-2: Modbus TCP 読込ポーリングの cross-app E2E。
+# pymodbus ソフトスレーブ（modbus_slave.py をサブプロセス起動）の holding register を
+# Simulator（ModbusController）が周期ポーリング → 変数 → text binding 追従で Label に反映
+# されることを観測する。外部デバイス（Modbus）由来の値が UI へ流れる初の E2E。
+# Editor は不要（fixture JSON を手書きし Simulator に --open）。pymodbus 不在 / スレーブ
+# 起動失敗時は exit 77 で SKIP（SKIP_RETURN_CODE）。スレーブ起動 + ポーリング待ちのため
+# TIMEOUT は他の cross-app より長めに取る。
+add_test(
+    NAME e2e_modbus_read
+    COMMAND ${Python3_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_modbus_read.py
+        --simulator-binary $<TARGET_FILE:hmi_simulator>
+)
+set_tests_properties(e2e_modbus_read PROPERTIES
+    TIMEOUT 90
+    LABELS e2e
+    SKIP_RETURN_CODE 77
+)

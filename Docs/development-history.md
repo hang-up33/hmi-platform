@@ -331,8 +331,18 @@ timeline
 
 ### MB-1: 変数ソース Schema + Editor 編集 UI（実通信なし）
 
-- 🚧 実装完了・PR 提出。**Schema**：新型 `ConnectionData`（id/proto=modbusTcp/host/port=502/unitId=1）と `SourceData`（connection/reg〔coil/discrete/input/holding〕/address〔0 始まり正準・常時書出〕/poll=1000ms）を追加し、`VariableData` に optional `source`、`ProjectData` に optional `connections[]`（空時省略＝後方互換）を追加（4 メソッド + isValidJson、optional は必須集合に入れない）。**正準 JSON は connections[] 参照方式**（変数の `source.connection` が接続定義 id を参照）で、Editor UI は接続詳細をインライン保持 → `ProjectIo.save` で connections[] へ dedup 集約、`load` で接続詳細を source へ戻して round-trip。**Editor 変数パネル**に「PLC レジスタに割当」CheckBox + host/port/unitId/reg/address/poll 編集欄を追加（全欄を `variableFieldFocusCount` の Delete 抑止に組込み、新規 objectName `variableSource*_<index>` で既存非破壊）。**Editor は `Qt6::SerialBus` 非リンクのまま**（CMake 無改変・grep で混入 0 確認）。Web `ctest` unit 10/10 緑（Schema round-trip + ProjectIo ブリッジ往復 + 後方互換）。
+- ✅ 完了（PR #119）。**Schema**：新型 `ConnectionData`（id/proto=modbusTcp/host/port=502/unitId=1）と `SourceData`（connection/reg〔coil/discrete/input/holding〕/address〔0 始まり正準・常時書出〕/poll=1000ms）を追加し、`VariableData` に optional `source`、`ProjectData` に optional `connections[]`（空時省略＝後方互換）を追加（4 メソッド + isValidJson、optional は必須集合に入れない）。**正準 JSON は connections[] 参照方式**（変数の `source.connection` が接続定義 id を参照）で、Editor UI は接続詳細をインライン保持 → `ProjectIo.save` で connections[] へ dedup 集約、`load` で接続詳細を source へ戻して round-trip。**Editor 変数パネル**に「PLC レジスタに割当」CheckBox + host/port/unitId/reg/address/poll 編集欄を追加（全欄を `variableFieldFocusCount` の Delete 抑止に組込み、新規 objectName `variableSource*_<index>` で既存非破壊）。**Editor は `Qt6::SerialBus` 非リンクのまま**。Web `ctest` unit 10/10 緑。
+- レビュー（Codex/CodeRabbit）対応：`source` 存在時の内容検証（object + `SourceData::isValidJson`）・空 connection の不正 JSON 書出防止（内部変数へ戻す）・同一 id 重複時の先勝ち + 不一致 qWarning・port/address 範囲検証・load 時の孤立 source qWarning。
 - MB-1 の意図的最小化：**接続 id は "plc1" 固定**（複数 PLC 編集 UI は別タスク）。JSON スキーマは複数接続を表現できる connections[] 参照方式を保持。
+
+### MB-2: PC 読込ポーリング（pymodbus ソフトスレーブ E2E）
+
+- 🚧 実装完了・PR 提出。**Simulator 共有ソース（→Runtime 継承）に `ModbusController`（C++）を新設**：`QModbusTcpClient` + `QTimer` で接続ごとに `connectDevice()`、source 持ち変数ごとに `poll`ms 周期で `sendReadRequest` → `QModbusReply::finished`（UI スレッド・非同期）で値を `variableUpdated(name, value)` emit → QML が `VariableStore.setValue` で既存 binding 経路へ流す（coil/discrete は bool 正規化、holding/input は int）。`Simulator/qml/Main.qml` は読込完了時に `modbusController.configure(connections, variables)` を呼ぶ。**読込のみ**（書込・接続状態 UI・再接続は MB-4）。source 無し変数は無視＝後方互換。
+- **CMake**：`find_package(Qt6 ... SerialBus)` は **root `CMakeLists.txt`** に置く（IMPORTED target を hmi_runtime のサブディレクトリスコープからも見えるように）。リンク（`Qt6::SerialBus`）は Simulator の共有 function 内に閉じ、**Editor は非リンク**（`ldd` で 0 確認）。
+- **検証**：build 緑 + `ctest` 21/21 緑（unit 11〔新規 `tst_modbus_controller`：reg 文字列→`QModbusDataUnit::RegisterType` 純関数・Qt 標準 `QModbusTcpServer` in-process スレーブで実 PLC 不要〕+ e2e 10〔新規 `e2e_modbus_read`：pymodbus 3.13 ソフトスレーブを `127.0.0.1:15020` で起動 → Simulator の Label が register 値へ追従するのを Spix で観測。pymodbus 不在は skip〕）。
+- **環境プロビジョニング**：Web 環境の Qt（aqtinstall）に `qtserialbus`/`qtserialport` が無く pymodbus も未導入だったため、`scripts/web/setup.sh` に両 Qt addon（fresh は `-m`、復元スナップショットは冪等 ensure）+ pymodbus 導入を追加（将来セッションでも自動で揃う）。
+- 確認した API：QtSerialBus（`QModbusDevice::Network{Address,Port}Parameter`・`QModbusDataUnit::{Coils,DiscreteInputs,InputRegisters,HoldingRegisters}`・`sendReadRequest(unit, unitId)`）／pymodbus 3.13 は旧 `ModbusSlaveContext`/`ModbusSequentialDataBlock` が deprecated・`setValues` 不動作 → 新 `SimData`/`SimDevice` を `ModbusTcpServer(context=...)` に渡す形が正。
+- 学び（kaizen）：[[qml-module-conventions]] に「Simulator 共有 function だけが要る Qt コンポーネントの `find_package` は root に置く（さもないと hmi_runtime だけ moc/include 解決に失敗）」を追記。
 
 ---
 
