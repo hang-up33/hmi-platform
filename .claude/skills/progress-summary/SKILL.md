@@ -54,13 +54,25 @@ git log --since="<開始> 00:00" --until="<終了+1日> 00:00" \
   （`Task N: ...` 本体や `feat:` を優先。`Codex 指摘対応` `empty commit` `lint` などの過程コミットは既定では畳む）。
 - docs/計画・CI・環境整備の PR も「機能」ではないが成果なので、簡潔版では **1 行に圧縮**して残す。
 
-### Step 3: 既定＝機能だけ列挙して出す
+### Step 3: 総コード行数を計測する
+
+報告の末尾に**必ず**総コード行数を記載する。以下のコマンドで取得する：
+
+```sh
+find /home/user/hmi-platform -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.qml" -o -name "*.cmake" -o -name "CMakeLists.txt" \) | grep -v build | xargs wc -l 2>/dev/null | tail -1
+```
+
+出力例：`総コード行数: 11,227 行（C++/QML/CMake）`
+
+### Step 4: 既定＝機能だけ列挙して出す
 
 ```
 - ボーダー＋角丸（borderColor / borderWidth / radius）の全レイヤ貫通
 - フォント詳細（fontBold / fontItalic / fontFamily）の全レイヤ貫通
 - Claude Code on the web での PC ビルド・テスト対応
 - CI の Linux 主ゲート化（mac/win は必要時のみ）
+
+総コード行数: 11,227 行（C++/QML/CMake）
 ```
 
 「PR / タスクごとに」と明示されたら、PR 番号・ブランチ・タスク番号付きの詳細版に切り替える：
