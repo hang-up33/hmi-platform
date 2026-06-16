@@ -8,7 +8,7 @@
       "source": { "connection": "click1", "reg": "holding", "address": 0, "poll": 500 } },
     { "name": "ds2", "type": "int",
       "source": { "connection": "click1", "reg": "holding", "address": 1, "poll": 500 } },
-    { "name": "c1", "type": "int",
+    { "name": "c1", "type": "bool",
       "source": { "connection": "click1", "reg": "coil", "address": 16384, "poll": 500 } }
   ],
   "screens": [
