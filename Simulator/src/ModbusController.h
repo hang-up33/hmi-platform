@@ -3,6 +3,7 @@
 #include <QHash>
 #include <QList>
 #include <QModbusDataUnit>
+#include <QModbusDevice>
 #include <QObject>
 #include <QPointer>
 #include <QString>
@@ -34,6 +35,9 @@ QT_END_NAMESPACE
 //     して落ちない（再接続の作り込みは MB-4 スコープ）。
 class ModbusController : public QObject {
     Q_OBJECT
+    // Phase 7 / MB-4: 接続 id → 状態文字列（"connected"/"connecting"/"disconnected"/
+    // "error"）のマップ。QML が接続状態をラベル等へ最小表示できるよう公開する。
+    Q_PROPERTY(QVariantMap connectionStates READ connectionStates NOTIFY connectionStatesChanged)
 public:
     explicit ModbusController(QObject *parent = nullptr);
     ~ModbusController() override;
@@ -47,6 +51,19 @@ public:
     // 全タイマ停止・全接続切断（再 configure や終了時に呼ぶ）。
     Q_INVOKABLE void stop();
 
+    // Phase 7 / MB-4: HMI 操作（NumericField 確定 / Button アクション）由来の変数更新を
+    // PLC へ書き込む。name が書込可能な source（coil / holding のみ）を持つ変数なら、
+    // 対応接続の QModbusTcpClient で sendWriteRequest を発行する。source 無し / 読取専用
+    // レジスタ（discrete / input）は no-op + 警告（呼ぶ側は気にせず呼べる）。
+    // 読込（variableUpdated→setValue）由来の変化では呼ばないこと（読込ループ回避）。
+    Q_INVOKABLE void writeVariable(const QString &name, const QVariant &value);
+
+    // 接続 id → 状態文字列のマップ（Q_PROPERTY READ）。
+    QVariantMap connectionStates() const { return m_connectionStates; }
+
+    // reg 種別が書込可能か（coil / holding のみ true）。write 表構築と unit テストで共用。
+    static bool isWritableRegister(QModbusDataUnit::RegisterType type);
+
     // reg 文字列（"coil"/"discrete"/"input"/"holding"）→ QModbusDataUnit::RegisterType。
     // 不正 / 空は QModbusDataUnit::Invalid を返す。read 発行と unit テストで共用する純関数。
     static QModbusDataUnit::RegisterType registerTypeFromString(const QString &reg);
@@ -58,6 +75,9 @@ signals:
     // ポーリングで読んだレジスタ値を変数名付きで通知する。QML 側が VariableStore.setValue へ接続。
     void variableUpdated(const QString &name, const QVariant &value);
 
+    // Phase 7 / MB-4: 接続状態マップが変化したときに通知する。
+    void connectionStatesChanged();
+
 private:
     // 1 つのポーリング対象（変数 → 接続/レジスタ写像）。
     struct PollItem {
@@ -68,14 +88,33 @@ private:
         int poll = 1000;
     };
 
+    // Phase 7 / MB-4: 書込対象（変数名 → 接続/レジスタ写像）。coil / holding のみ登録する。
+    struct WriteItem {
+        QString connectionId;
+        QModbusDataUnit::RegisterType regType = QModbusDataUnit::Invalid;
+        int address = 0;
+    };
+
     void startPolling();
     void pollOne(const PollItem &item);
+    // Phase 7 / MB-4: 接続状態の更新（重複通知を避けつつ connectionStatesChanged を emit）。
+    void setConnectionState(const QString &id, QModbusDevice::State state);
+    // Phase 7 / MB-4: 切断 / エラー時の再接続を一定間隔で試みるタイマを開始する。
+    void scheduleReconnect(const QString &id);
 
     // 接続 id → クライアント / unitId。
     QHash<QString, QPointer<QModbusTcpClient>> m_clients;
     QHash<QString, int> m_unitIds;
     QList<PollItem> m_items;
     QList<QTimer *> m_timers;
+    // Phase 7 / MB-4: 変数名 → 書込写像（coil / holding のみ）。writeVariable で引く。
+    QHash<QString, WriteItem> m_writeItems;
+    // Phase 7 / MB-4: 接続 id → 状態文字列（QML 公開用）。
+    QVariantMap m_connectionStates;
+    // Phase 7 / MB-4: 接続 id → 再接続タイマ。stop() / configure() で確実に止める。
+    QHash<QString, QTimer *> m_reconnectTimers;
+    // 再接続の試行間隔（ミリ秒）。poll とは独立した固定値。
+    static constexpr int kReconnectIntervalMs = 4000;
     // Phase 7 / MB-2: configure()/stop() ごとに増やす世代カウンタ。非同期 reply の
     // finished ラムダが capture した世代と一致する時だけ emit し、プロジェクト切替後に
     // 旧 reply が古い値を VariableStore へ混入させるのを防ぐ（CodeRabbit PR #121）。

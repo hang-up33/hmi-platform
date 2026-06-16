@@ -19,6 +19,25 @@ Item {
     // Widget 配置情報。Main.qml から projectLoader.load() の結果を流し込む。
     property var widgetModel: []
 
+    // Phase 7 / MB-4: Modbus マスタ（Main.qml から渡す。テスト等では null のまま）。
+    // ユーザー操作（NumericField 確定 / Button アクション）で VariableStore を更新した
+    // **直後だけ** writeVariable を呼んで PLC へ書く。読込（variableUpdated→setValue）由来の
+    // 変化では呼ばないので「読込→書戻し」のループが起きない（経路で分離する設計）。
+    // writeVariable は source 無し / 読取専用レジスタの変数では no-op なので、呼ぶ側は
+    // 変数が PLC source を持つか気にせず一律に呼んでよい。
+    // **名前は context property の "modbusController" と意図的に変える**：QML のバインド右辺は
+    // 代入先（canvas）のプロパティを先に解決するため、同名にすると self-reference になり
+    // 常に null を指す（バインドが自分自身を見る）。別名にして Main.qml から context property を渡す。
+    property var plcController: null
+
+    // Phase 7 / MB-4: 変数を VariableStore 更新と同じ操作で PLC へも書く共通ヘルパー。
+    // ユーザー操作経路（writeBoundValue / runClickActions）からのみ呼ぶ。
+    function writeToPlc(name, value) {
+        if (plcController !== null) {
+            plcController.writeVariable(name, value)
+        }
+    }
+
     // Task 41: 変数定義（[{name,type,initial}, ...]）。Main.qml から
     // projectLoader.load() の result.variables を流し込む。設定されると実行時の
     // 変数ストア（VariableStore）を初期値で初期化する。**読み取り専用アプリが
@@ -106,9 +125,12 @@ Item {
                         for (let i = 0; i < bindings.length; ++i) {
                             const b = bindings[i]
                             if (b && b.property === propertyName) {
-                                VariableStore.setValue(
-                                    b.variable,
-                                    VariableStore.coerce(root.variableType(b.variable), raw))
+                                const coerced =
+                                    VariableStore.coerce(root.variableType(b.variable), raw)
+                                VariableStore.setValue(b.variable, coerced)
+                                // Phase 7 / MB-4: ユーザー入力確定なので PLC へも書く
+                                // （読込由来でない＝ループしない）。
+                                root.writeToPlc(b.variable, coerced)
                                 return
                             }
                         }
@@ -158,11 +180,15 @@ Item {
                             continue
                         }
                         if (a.op === "setVariable") {
-                            VariableStore.setValue(
-                                a.target,
-                                VariableStore.coerce(root.variableType(a.target), a.value))
+                            const coerced =
+                                VariableStore.coerce(root.variableType(a.target), a.value)
+                            VariableStore.setValue(a.target, coerced)
+                            // Phase 7 / MB-4: ユーザー操作（クリック）由来なので PLC へも書く。
+                            root.writeToPlc(a.target, coerced)
                         } else if (a.op === "toggleVariable") {
                             VariableStore.toggle(a.target)
+                            // トグル後の現在値を PLC へ書く（coil 等の出力操作）。
+                            root.writeToPlc(a.target, VariableStore.values[a.target])
                         }
                     }
                 }

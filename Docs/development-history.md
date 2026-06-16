@@ -344,6 +344,14 @@ timeline
 - 確認した API：QtSerialBus（`QModbusDevice::Network{Address,Port}Parameter`・`QModbusDataUnit::{Coils,DiscreteInputs,InputRegisters,HoldingRegisters}`・`sendReadRequest(unit, unitId)`）／pymodbus 3.13 は旧 `ModbusSlaveContext`/`ModbusSequentialDataBlock` が deprecated・`setValues` 不動作 → 新 `SimData`/`SimDevice` を `ModbusTcpServer(context=...)` に渡す形が正。
 - 学び（kaizen）：[[qml-module-conventions]] に「Simulator 共有 function だけが要る Qt コンポーネントの `find_package` は root に置く（さもないと hmi_runtime だけ moc/include 解決に失敗）」を追記。
 
+### MB-4: 書込 + 接続状態 + 自動再接続（pymodbus write E2E）
+
+- 🚧 実装完了・PR 提出。**書込**：`ModbusController::writeVariable(name, value)` を追加。configure 時に **coil/holding のみ**を書込写像 `m_writeItems`（name→{connection,reg,address}）へ登録（discrete/input は読取専用＝no-op + 警告）。coil は bool→0/1、holding は int→`quint16` を `sendWriteRequest`。**読込ループ回避**は「経路分離」で実現：読込（`variableUpdated`→`setValue`）由来では書かず、**ユーザー操作の書き経路**（`SimulatorCanvas.writeBoundValue`〔NumericField 確定〕/ `runClickActions` の `setVariable`/`toggleVariable`〔Button アクション〕）が `VariableStore` 更新直後に `writeToPlc`→`writeVariable` を呼ぶ（`SimulatorCanvas` に `plcController` 参照を渡す）。
+- **接続状態**：各接続の `stateChanged`/`errorOccurred` を購読し `Q_PROPERTY QVariantMap connectionStates`（id→"connected"/"connecting"/"disconnected"/"error"、`NOTIFY connectionStatesChanged`）で QML へ公開。Simulator の変数パネル内に最小一覧表示（専用 Widget は作らない）。**自動再接続**：`UnconnectedState` 化で固定 4s 間隔の `QTimer`（`scheduleReconnect`）が `connectDevice()` を再試行、成功でタイマ破棄。世代カウンタ（MB-2 既存）で configure/stop 後の旧クライアント・旧 reply・旧再接続タイマを弾く。stop で再接続タイマ片付け + 状態クリア。
+- **検証**：build 緑 + `ctest` 22/22 緑（unit 12〔write〔holding/coil が in-process `QModbusTcpServer` で変わる〕・read 専用 reg の no-op・接続状態 "connected" + stop クリア・`isWritableRegister` 純関数を追加〕+ e2e 11〔新規 `e2e_modbus_write`：pymodbus スレーブ相手に NumericField 確定 → `writeVariable` → スレーブの holding が変わるのを別 client で読み返し assert。pymodbus 不在は skip〕）。**Editor は SerialBus 非リンク維持**。
+- 意図的最小化：接続状態は最小一覧表示のみ（専用 Widget なし）。int/bool のみ（float/スケーリングは別）。Editor 不変。
+- 学び（kaizen）：①QML バインド右辺の self-reference（context property と同名 property に渡すと自分自身=null）→ 受け口を `plcController` に改名。②`hmi_simulator` 単体ビルドでは qmlplugin が更新されず QML テストが古い QML で落ちる → フルビルド必須。③`WriteSingleCoil` の ON は `0xFF00`＝サーバ側 `data()` は 65280 を返す → coil 検証は `!= 0`。
+
 ---
 
 ## 番外: 開発コードネーム「Atlas」決定（2026-05-30）
