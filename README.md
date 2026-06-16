@@ -113,7 +113,7 @@ SDK 生成・実機 scp・起動（weston）・キャプチャの全手順と罠
 
 ## ステータスとドキュメント
 
-- **現在地**: **Phase 6-B / NumericField 拡張（real 型 + 数値範囲 min/max）完了**（Task 53〜55・PR #112〜#114）。次フェーズは未承認（バックログ：step / decimals / unit、後続入力 Widget〔Gauge / Toggle〕、Phase 7 Modbus 連携）。
+- **現在地**: **Phase 7 / Modbus TCP 通信に着手**（2026-06-16 承認）。MB-1〔変数ソース Schema（`ConnectionData` + `VariableData.source`）+ Editor 変数パネルの接続編集 UI・実通信なし〕実装中。直近完了は Phase 6-B / NumericField 拡張（Task 53〜55・PR #112〜#114）。MB-3/5/6（実 PLC・実機）はローカル専用。進捗の正本は [Docs/phase7-modbus-plan.md](Docs/phase7-modbus-plan.md)。
 - 開発の時系列（各タスクの目的 / PR / 学び）: [Docs/development-history.md](Docs/development-history.md)
 - 各フェーズの計画と進捗表（正本）: [Docs/](Docs/) の `phase*-plan.md`
 - 開発ガイド・ビルドの罠・ルール: [CLAUDE.md](CLAUDE.md)

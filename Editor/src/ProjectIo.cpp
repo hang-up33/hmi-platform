@@ -1,14 +1,19 @@
 #include "ProjectIo.h"
 
+#include "hmi/schema/ConnectionData.h"
 #include "hmi/schema/ProjectData.h"
 #include "hmi/schema/ScreenData.h"
+#include "hmi/schema/SourceData.h"
 #include "hmi/schema/VariableData.h"
 #include "hmi/schema/WidgetData.h"
 
 #include <QFile>
 #include <QFileInfo>
+#include <QHash>
 #include <QJsonDocument>
+#include <QMetaType>
 #include <QSaveFile>
+#include <QVariant>
 #include <QVariantList>
 #include <QVariantMap>
 
@@ -32,9 +37,33 @@ bool ProjectIo::save(const QUrl &fileUrl,
     ProjectData proj;
     proj.project = projectName;
     // Task 39: Project レベルの変数定義（optional。空可）。
+    // Phase 7 / MB-1: QML 側の variable.source は接続詳細（connection / host / port / unitId /
+    // reg / address / poll）をインラインで持つ。ここで connections[] へ dedup 集約し、
+    // variable.source からは接続詳細（host/port/unitId）を落として {connection,reg,address,poll}
+    // に絞る（計画書の正準＝connections[] 参照方式の JSON に round-trip する）。
     proj.variables.reserve(variables.size());
+    QHash<QString, int> connIndexById;  // connection id → proj.connections の index
     for (const QVariant &v : variables) {
-        proj.variables.append(VariableData::fromVariantMap(v.toMap()));
+        const QVariantMap vmap = v.toMap();
+        VariableData var = VariableData::fromVariantMap(vmap);
+        const QVariant sourceVar = vmap.value(QStringLiteral("source"));
+        if (sourceVar.typeId() == QMetaType::QVariantMap) {
+            const QVariantMap smap = sourceVar.toMap();
+            // 接続詳細から ConnectionData を組み、connections[] に dedup 登録する。
+            ConnectionData conn;
+            conn.id = smap.value(QStringLiteral("connection")).toString();
+            const QString proto = smap.value(QStringLiteral("proto")).toString();
+            conn.proto = proto.isEmpty() ? QStringLiteral("modbusTcp") : proto;
+            conn.host = smap.value(QStringLiteral("host")).toString();
+            conn.port = smap.value(QStringLiteral("port"), 502).toInt();
+            conn.unitId = smap.value(QStringLiteral("unitId"), 1).toInt();
+            // id が空のソースは接続として登録しない（接続無し＝内部変数扱い）。
+            if (!conn.id.isEmpty() && !connIndexById.contains(conn.id)) {
+                connIndexById.insert(conn.id, proj.connections.size());
+                proj.connections.append(conn);
+            }
+        }
+        proj.variables.append(var);
     }
 
     ScreenData screen;
@@ -113,10 +142,30 @@ QVariantMap ProjectIo::load(const QUrl &fileUrl)
         widgetsVar.append(w.toVariantMap());
     }
 
+    // Phase 7 / MB-1: connection id → ConnectionData の引き当て表を作り、各変数の source に
+    // 接続詳細（host / port / unitId / proto）を戻して Editor UI が再表示できるようにする
+    // （save 時に variable.source からは接続詳細を落としたため）。
+    QHash<QString, ConnectionData> connById;
+    for (const ConnectionData &c : proj.connections) {
+        connById.insert(c.id, c);
+    }
+
     QVariantList variablesVar;
     variablesVar.reserve(proj.variables.size());
     for (const VariableData &var : proj.variables) {
-        variablesVar.append(var.toVariantMap());
+        QVariantMap vmap = var.toVariantMap();
+        if (var.source) {
+            QVariantMap smap = var.source->toVariantMap();
+            const auto it = connById.constFind(var.source->connection);
+            if (it != connById.constEnd()) {
+                smap.insert(QStringLiteral("host"), it->host);
+                smap.insert(QStringLiteral("port"), it->port);
+                smap.insert(QStringLiteral("unitId"), it->unitId);
+                smap.insert(QStringLiteral("proto"), it->proto);
+            }
+            vmap.insert(QStringLiteral("source"), smap);
+        }
+        variablesVar.append(vmap);
     }
 
     result.insert(QStringLiteral("ok"), true);

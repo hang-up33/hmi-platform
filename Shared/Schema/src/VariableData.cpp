@@ -1,6 +1,8 @@
 #include "hmi/schema/VariableData.h"
 
 #include <QJsonValue>
+#include <QMetaType>
+#include <QVariant>
 
 #include <cmath>
 #include <limits>
@@ -56,6 +58,10 @@ QJsonObject VariableData::toJson() const
     obj["name"] = name;
     obj["type"] = type;
     obj["initial"] = initial;
+    // Phase 7 / MB-1: source は optional。設定時のみ書き出す（後方互換）。
+    if (source) {
+        obj["source"] = source->toJson();
+    }
     return obj;
 }
 
@@ -66,6 +72,10 @@ VariableData VariableData::fromJson(const QJsonObject &obj)
     v.type = obj.value("type").toString();
     // 非文字列 initial（bool/int）も文字列へ正規化して値を保つ。
     v.initial = jsonValueToString(obj.value("initial"));
+    // Phase 7 / MB-1: source は欠落時 nullopt（内部変数）。object なら SourceData を復元。
+    if (obj.value("source").isObject()) {
+        v.source = SourceData::fromJson(obj.value("source").toObject());
+    }
     return v;
 }
 
@@ -75,6 +85,10 @@ QVariantMap VariableData::toVariantMap() const
     m.insert(QStringLiteral("name"), name);
     m.insert(QStringLiteral("type"), type);
     m.insert(QStringLiteral("initial"), initial);
+    // Phase 7 / MB-1: source は設定時のみ QVariantMap として入れる（QML 側は undefined で判定）。
+    if (source) {
+        m.insert(QStringLiteral("source"), source->toVariantMap());
+    }
     return m;
 }
 
@@ -84,6 +98,12 @@ VariableData VariableData::fromVariantMap(const QVariantMap &map)
     v.name = map.value(QStringLiteral("name")).toString();
     v.type = map.value(QStringLiteral("type")).toString();
     v.initial = map.value(QStringLiteral("initial")).toString();
+    // Phase 7 / MB-1: source は QVariantMap（QML の JS オブジェクト）のとき復元。
+    // QML が undefined を渡すと invalid QVariant になるため typeId で厳密に判定する。
+    const QVariant sv = map.value(QStringLiteral("source"));
+    if (sv.typeId() == QMetaType::QVariantMap) {
+        v.source = SourceData::fromVariantMap(sv.toMap());
+    }
     return v;
 }
 

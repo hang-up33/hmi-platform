@@ -87,6 +87,45 @@ Window {
         }
         return false
     }
+    // Phase 7 / MB-1: 変数ソース（PLC 接続写像）の編集ヘルパー。実通信はしない＝入力値を
+    // variable.source（{connection, host, port, unitId, reg, address, poll}）に保存するだけ。
+    // 接続詳細はインラインで持ち、保存（ProjectIo.save）時に connections[] へ集約される。
+    // MB-1 は最小：接続 id は "plc1" 固定（複数 PLC は別タスク）。
+    function setVariableSourceEnabled(index, enabled) {
+        if (index < 0 || index >= projectVariables.length) {
+            return
+        }
+        const next = projectVariables.slice()
+        const v = Object.assign({}, next[index])
+        if (enabled) {
+            // 既定の source（holding / 0 番地 / 1000ms / plc1 / 502 / unitId 1）。
+            v.source = {
+                connection: "plc1", host: "", port: 502, unitId: 1,
+                reg: "holding", address: 0, poll: 1000
+            }
+        } else {
+            delete v.source
+        }
+        next[index] = v
+        projectVariables = next
+    }
+    function updateVariableSource(index, key, value) {
+        if (index < 0 || index >= projectVariables.length) {
+            return
+        }
+        const v = projectVariables[index]
+        if (!v.source) {
+            return
+        }
+        const next = projectVariables.slice()
+        const nv = Object.assign({}, next[index])
+        const ns = Object.assign({}, nv.source)
+        ns[key] = value
+        nv.source = ns
+        next[index] = nv
+        projectVariables = next
+    }
+
     // ComboBox（アクション target / バインディング variable）の選択肢：先頭に "(未選択)"。
     function variableNameModel() {
         const names = ["(未選択)"]
@@ -584,56 +623,160 @@ Window {
 
                         Repeater {
                             model: rootWindow.projectVariables
-                            delegate: Row {
+                            delegate: Column {
                                 id: varRow
                                 required property var modelData
                                 required property int index
+                                // Phase 7 / MB-1: source を持つ変数は PLC レジスタ写像つき
+                                //（接続先 + レジスタ）の編集欄を展開する。
+                                readonly property var rowSource:
+                                    varRow.modelData.source !== undefined ? varRow.modelData.source : null
                                 width: parent.width
                                 spacing: 4
 
-                                TextField {
-                                    id: varNameField
-                                    objectName: "variableName_" + varRow.index
-                                    width: 80
-                                    text: varRow.modelData.name !== undefined ? varRow.modelData.name : ""
-                                    placeholderText: qsTr("名前")
-                                    // **空名・重複名を保存しない**：空名は VariableData.isValidJson が
-                                    // 無効としプロジェクト全体が再読込不能になり（Codex PR #80 [P1]）、
-                                    // 重複名は VariableStore（名前キー map）で後勝ちになり参照先を
-                                    // 区別できなくなる（Codex PR #80 [P2]）。どちらも元の名前へ戻す
-                                    // （削除は × ボタンで行う）。
-                                    onEditingFinished: {
-                                        if (text.length > 0
-                                                && !rootWindow.isVariableNameTaken(varRow.index, text)) {
-                                            rootWindow.updateVariable(varRow.index, "name", text)
-                                        } else {
-                                            text = Qt.binding(function() {
-                                                return varRow.modelData.name !== undefined
-                                                    ? varRow.modelData.name : ""
-                                            })
+                                Row {
+                                    width: parent.width
+                                    spacing: 4
+
+                                    TextField {
+                                        id: varNameField
+                                        objectName: "variableName_" + varRow.index
+                                        width: 80
+                                        text: varRow.modelData.name !== undefined ? varRow.modelData.name : ""
+                                        placeholderText: qsTr("名前")
+                                        // **空名・重複名を保存しない**：空名は VariableData.isValidJson が
+                                        // 無効としプロジェクト全体が再読込不能になり（Codex PR #80 [P1]）、
+                                        // 重複名は VariableStore（名前キー map）で後勝ちになり参照先を
+                                        // 区別できなくなる（Codex PR #80 [P2]）。どちらも元の名前へ戻す
+                                        // （削除は × ボタンで行う）。
+                                        onEditingFinished: {
+                                            if (text.length > 0
+                                                    && !rootWindow.isVariableNameTaken(varRow.index, text)) {
+                                                rootWindow.updateVariable(varRow.index, "name", text)
+                                            } else {
+                                                text = Qt.binding(function() {
+                                                    return varRow.modelData.name !== undefined
+                                                        ? varRow.modelData.name : ""
+                                                })
+                                            }
                                         }
+                                        onActiveFocusChanged: rootWindow.variableFieldFocusCount += activeFocus ? 1 : -1
                                     }
-                                    onActiveFocusChanged: rootWindow.variableFieldFocusCount += activeFocus ? 1 : -1
+                                    ComboBox {
+                                        objectName: "variableType_" + varRow.index
+                                        width: 80
+                                        model: ["bool", "int", "real", "string"]
+                                        currentIndex: Math.max(0, model.indexOf(varRow.modelData.type))
+                                        onActivated: rootWindow.updateVariable(varRow.index, "type", currentText)
+                                    }
+                                    TextField {
+                                        objectName: "variableInitial_" + varRow.index
+                                        width: 60
+                                        text: varRow.modelData.initial !== undefined ? varRow.modelData.initial : ""
+                                        placeholderText: qsTr("初期値")
+                                        onEditingFinished: rootWindow.updateVariable(varRow.index, "initial", text)
+                                        onActiveFocusChanged: rootWindow.variableFieldFocusCount += activeFocus ? 1 : -1
+                                    }
+                                    Button {
+                                        objectName: "variableDelete_" + varRow.index
+                                        text: qsTr("×")
+                                        onClicked: rootWindow.removeVariable(varRow.index)
+                                    }
                                 }
-                                ComboBox {
-                                    objectName: "variableType_" + varRow.index
-                                    width: 80
-                                    model: ["bool", "int", "real", "string"]
-                                    currentIndex: Math.max(0, model.indexOf(varRow.modelData.type))
-                                    onActivated: rootWindow.updateVariable(varRow.index, "type", currentText)
+
+                                // Phase 7 / MB-1: PLC 接続写像（source）の有効化トグル。
+                                // チェックで variable.source を付ける（内部変数 ↔ PLC 変数）。
+                                CheckBox {
+                                    objectName: "variableSourceEnabled_" + varRow.index
+                                    text: qsTr("PLC レジスタに割当")
+                                    checked: varRow.rowSource !== null
+                                    onToggled: rootWindow.setVariableSourceEnabled(varRow.index, checked)
                                 }
-                                TextField {
-                                    objectName: "variableInitial_" + varRow.index
-                                    width: 60
-                                    text: varRow.modelData.initial !== undefined ? varRow.modelData.initial : ""
-                                    placeholderText: qsTr("初期値")
-                                    onEditingFinished: rootWindow.updateVariable(varRow.index, "initial", text)
-                                    onActiveFocusChanged: rootWindow.variableFieldFocusCount += activeFocus ? 1 : -1
+
+                                // 接続先 + レジスタ写像の編集欄（source ありのときのみ）。実通信はせず
+                                // 入力値を JSON（保存時 connections[] と variable.source）へ書くだけ。
+                                Grid {
+                                    objectName: "variableSourceGrid_" + varRow.index
+                                    visible: varRow.rowSource !== null
+                                    columns: 2
+                                    rowSpacing: 4
+                                    columnSpacing: 6
+                                    leftPadding: 12
+
+                                    Label { text: qsTr("ホスト") }
+                                    TextField {
+                                        objectName: "variableSourceHost_" + varRow.index
+                                        width: 120
+                                        text: varRow.rowSource ? (varRow.rowSource.host !== undefined ? varRow.rowSource.host : "") : ""
+                                        placeholderText: qsTr("192.168.0.10")
+                                        onEditingFinished: rootWindow.updateVariableSource(varRow.index, "host", text)
+                                        onActiveFocusChanged: rootWindow.variableFieldFocusCount += activeFocus ? 1 : -1
+                                    }
+
+                                    Label { text: qsTr("ポート") }
+                                    TextField {
+                                        objectName: "variableSourcePort_" + varRow.index
+                                        width: 80
+                                        inputMethodHints: Qt.ImhDigitsOnly
+                                        validator: IntValidator { bottom: 1; top: 65535 }
+                                        text: varRow.rowSource ? String(varRow.rowSource.port !== undefined ? varRow.rowSource.port : 502) : ""
+                                        placeholderText: qsTr("502")
+                                        onEditingFinished: if (acceptableInput) rootWindow.updateVariableSource(varRow.index, "port", parseInt(text, 10))
+                                        onActiveFocusChanged: rootWindow.variableFieldFocusCount += activeFocus ? 1 : -1
+                                    }
+
+                                    Label { text: qsTr("Unit ID") }
+                                    TextField {
+                                        objectName: "variableSourceUnitId_" + varRow.index
+                                        width: 80
+                                        inputMethodHints: Qt.ImhDigitsOnly
+                                        validator: IntValidator { bottom: 0; top: 255 }
+                                        text: varRow.rowSource ? String(varRow.rowSource.unitId !== undefined ? varRow.rowSource.unitId : 1) : ""
+                                        placeholderText: qsTr("1")
+                                        onEditingFinished: if (acceptableInput) rootWindow.updateVariableSource(varRow.index, "unitId", parseInt(text, 10))
+                                        onActiveFocusChanged: rootWindow.variableFieldFocusCount += activeFocus ? 1 : -1
+                                    }
+
+                                    Label { text: qsTr("レジスタ") }
+                                    ComboBox {
+                                        objectName: "variableSourceReg_" + varRow.index
+                                        width: 120
+                                        model: ["coil", "discrete", "input", "holding"]
+                                        currentIndex: Math.max(0, model.indexOf(varRow.rowSource ? varRow.rowSource.reg : "holding"))
+                                        onActivated: rootWindow.updateVariableSource(varRow.index, "reg", currentText)
+                                    }
+
+                                    // address は 0 始まりのプロトコル番地（JSON / 内部の正準は 0 ベース）。
+                                    Label { text: qsTr("アドレス") }
+                                    TextField {
+                                        objectName: "variableSourceAddress_" + varRow.index
+                                        width: 80
+                                        inputMethodHints: Qt.ImhDigitsOnly
+                                        validator: IntValidator { bottom: 0; top: 65535 }
+                                        text: varRow.rowSource ? String(varRow.rowSource.address !== undefined ? varRow.rowSource.address : 0) : ""
+                                        placeholderText: qsTr("0")
+                                        onEditingFinished: if (acceptableInput) rootWindow.updateVariableSource(varRow.index, "address", parseInt(text, 10))
+                                        onActiveFocusChanged: rootWindow.variableFieldFocusCount += activeFocus ? 1 : -1
+                                    }
+
+                                    Label { text: qsTr("ポーリング(ms)") }
+                                    TextField {
+                                        objectName: "variableSourcePoll_" + varRow.index
+                                        width: 80
+                                        inputMethodHints: Qt.ImhDigitsOnly
+                                        validator: IntValidator { bottom: 1; top: 600000 }
+                                        text: varRow.rowSource ? String(varRow.rowSource.poll !== undefined ? varRow.rowSource.poll : 1000) : ""
+                                        placeholderText: qsTr("1000")
+                                        onEditingFinished: if (acceptableInput) rootWindow.updateVariableSource(varRow.index, "poll", parseInt(text, 10))
+                                        onActiveFocusChanged: rootWindow.variableFieldFocusCount += activeFocus ? 1 : -1
+                                    }
                                 }
-                                Button {
-                                    objectName: "variableDelete_" + varRow.index
-                                    text: qsTr("×")
-                                    onClicked: rootWindow.removeVariable(varRow.index)
+
+                                Rectangle {
+                                    visible: varRow.index < rootWindow.projectVariables.length - 1
+                                    width: parent.width
+                                    height: 1
+                                    color: "#eeeeee"
                                 }
                             }
                         }

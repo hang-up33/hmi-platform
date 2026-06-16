@@ -82,6 +82,10 @@ private slots:
     void loadRejectsEmptyUrl();
     void saveRejectsEmptyUrl();
     void actionsBindingsVariablesRoundTripThroughBridge();
+    // Phase 7 / MB-1
+    void variableSourceRoundTripsThroughBridge();
+    void saveAggregatesConnectionsFromSources();
+    void variableWithoutSourceStaysInternal();
 };
 
 void ProjectIoTest::saveThenLoadRoundTrip()
@@ -365,6 +369,143 @@ void ProjectIoTest::actionsBindingsVariablesRoundTripThroughBridge()
     QCOMPARE(bindings.size(), 1);
     QCOMPARE(bindings.at(0).toMap().value("property").toString(), QStringLiteral("backgroundColor"));
     QCOMPARE(bindings.at(0).toMap().value("variable").toString(), QStringLiteral("runColor"));
+}
+
+// Phase 7 / MB-1: QML 側の variable.source（接続詳細インライン）が C++ ブリッジ
+//（save: connections[] へ dedup 集約 + source は id 参照に絞る / load: connections[] を
+// 引いて source へ接続詳細を戻す）を往復しても再現されることを固定する。
+void ProjectIoTest::variableSourceRoundTripsThroughBridge()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+
+    // QML 側の編集モデルを模す：source に接続詳細をインラインで持つ。
+    QVariantMap source;
+    source.insert("connection", "plc1");
+    source.insert("host", "192.168.0.10");
+    source.insert("port", 502);
+    source.insert("unitId", 1);
+    source.insert("reg", "holding");
+    source.insert("address", 0);
+    source.insert("poll", 1000);
+
+    QVariantMap var;
+    var.insert("name", "tankLevel");
+    var.insert("type", "int");
+    var.insert("initial", "0");
+    var.insert("source", source);
+
+    ProjectIo io;
+    const QUrl url = urlForFile(dir, "source.json");
+    QVERIFY(io.save(url, "Sample", "Main", QVariantList{}, QVariantList{ var }));
+
+    const QVariantMap result = io.load(url);
+    QCOMPARE(result.value("ok").toBool(), true);
+
+    const QVariantList vars = result.value("variables").toList();
+    QCOMPARE(vars.size(), 1);
+    const QVariantMap loadedVar = vars.at(0).toMap();
+    QCOMPARE(loadedVar.value("name").toString(), QStringLiteral("tankLevel"));
+
+    // load 側で source に接続詳細が戻っている（Editor UI が再表示できる）。
+    const QVariantMap loadedSource = loadedVar.value("source").toMap();
+    QCOMPARE(loadedSource.value("connection").toString(), QStringLiteral("plc1"));
+    QCOMPARE(loadedSource.value("reg").toString(), QStringLiteral("holding"));
+    QCOMPARE(loadedSource.value("address").toInt(), 0);   // 0 ベース正準
+    QCOMPARE(loadedSource.value("poll").toInt(), 1000);
+    QCOMPARE(loadedSource.value("host").toString(), QStringLiteral("192.168.0.10"));
+    QCOMPARE(loadedSource.value("port").toInt(), 502);
+    QCOMPARE(loadedSource.value("unitId").toInt(), 1);
+}
+
+// Phase 7 / MB-1: ディスク上の JSON が計画書の正準形（connections[] 参照方式）になる。
+// 同一接続を指す複数変数は connections[] に 1 件だけ dedup され、各 variable.source は
+// 接続詳細（host 等）を持たず connection id だけを持つ。
+void ProjectIoTest::saveAggregatesConnectionsFromSources()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+
+    auto makeVar = [](const QString &name, const QString &reg, int address) {
+        QVariantMap source;
+        source.insert("connection", "plc1");
+        source.insert("host", "192.168.0.10");
+        source.insert("port", 502);
+        source.insert("unitId", 1);
+        source.insert("reg", reg);
+        source.insert("address", address);
+        source.insert("poll", 1000);
+        QVariantMap var;
+        var.insert("name", name);
+        var.insert("type", "int");
+        var.insert("initial", "0");
+        var.insert("source", source);
+        return var;
+    };
+
+    ProjectIo io;
+    const QString path = dir.filePath("aggregate.json");
+    QVERIFY(io.save(QUrl::fromLocalFile(path), "Sample", "Main", QVariantList{},
+                    QVariantList{ makeVar("a", "holding", 0), makeVar("b", "input", 1) }));
+
+    QFile file(path);
+    QVERIFY(file.open(QIODevice::ReadOnly | QIODevice::Text));
+    const QByteArray bytes = file.readAll();
+    file.close();
+
+    const QJsonDocument doc = QJsonDocument::fromJson(bytes);
+    QVERIFY(doc.isObject());
+    const QJsonObject root = doc.object();
+
+    // connections[] は 1 件（同一 id を dedup）。
+    const QJsonArray conns = root.value("connections").toArray();
+    QCOMPARE(conns.size(), 1);
+    QCOMPARE(conns.at(0).toObject().value("id").toString(), QStringLiteral("plc1"));
+    QCOMPARE(conns.at(0).toObject().value("host").toString(), QStringLiteral("192.168.0.10"));
+    QCOMPARE(conns.at(0).toObject().value("port").toInt(), 502);
+
+    // 各 variable.source は接続詳細を持たず id 参照のみ。
+    const QJsonArray vars = root.value("variables").toArray();
+    QCOMPARE(vars.size(), 2);
+    for (const QJsonValue &v : vars) {
+        const QJsonObject srcObj = v.toObject().value("source").toObject();
+        QCOMPARE(srcObj.value("connection").toString(), QStringLiteral("plc1"));
+        QVERIFY(!srcObj.contains("host"));  // 接続詳細は connections[] へ集約
+        QVERIFY(!srcObj.contains("port"));
+        QVERIFY(!srcObj.contains("unitId"));
+    }
+}
+
+// Phase 7 / MB-1: source を持たない変数は内部変数のまま（後方互換）。
+// connections[] は生成されず、load 側で source キーも付かない。
+void ProjectIoTest::variableWithoutSourceStaysInternal()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+
+    QVariantMap var;
+    var.insert("name", "running");
+    var.insert("type", "bool");
+    var.insert("initial", "false");
+    // source キー無し（内部変数）。
+
+    ProjectIo io;
+    const QString path = dir.filePath("internal.json");
+    QVERIFY(io.save(QUrl::fromLocalFile(path), "Sample", "Main", QVariantList{},
+                    QVariantList{ var }));
+
+    QFile file(path);
+    QVERIFY(file.open(QIODevice::ReadOnly | QIODevice::Text));
+    const QByteArray bytes = file.readAll();
+    file.close();
+    const QJsonObject root = QJsonDocument::fromJson(bytes).object();
+    QVERIFY(!root.contains("connections"));  // 接続なし
+    QVERIFY(!root.value("variables").toArray().at(0).toObject().contains("source"));
+
+    const QVariantMap result = io.load(QUrl::fromLocalFile(path));
+    QCOMPARE(result.value("ok").toBool(), true);
+    const QVariantMap loadedVar = result.value("variables").toList().at(0).toMap();
+    QVERIFY(!loadedVar.contains("source"));
 }
 
 QTEST_APPLESS_MAIN(ProjectIoTest)
