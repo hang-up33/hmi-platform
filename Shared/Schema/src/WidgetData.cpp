@@ -293,6 +293,8 @@ WidgetData WidgetData::fromVariantMap(const QVariantMap &map)
     w.hasMaxValue = map.value(QStringLiteral("hasMaxValue")).toBool();
     w.maxValue = map.value(QStringLiteral("maxValue")).toDouble();
     // Task T-A（Phase 8）: Trend 固有フィールド。pointCount / sampleMs は欠落時 0（= 未指定）。
+    // 負値が来てもクランプしない（fontSize 前例と同じ＝下流の HmiTrend が `> 0` のときだけ採用し、
+    // `0`/負はいずれも既定へ解決する。toJson が `> 0` でしか書かないため JSON には負値は残らない）。
     // yMin / yMax は **min/max と同じく presence（hasYMin/hasYMax）と値を対で読む**（presence は
     // キー欠落時 false）。lineColor は欠落時 空文字（= 未指定）。
     w.pointCount = map.value(QStringLiteral("pointCount")).toInt();
