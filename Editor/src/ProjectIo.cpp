@@ -9,6 +9,7 @@
 
 #include <QFile>
 #include <QFileInfo>
+#include <QDebug>
 #include <QHash>
 #include <QJsonDocument>
 #include <QMetaType>
@@ -47,20 +48,37 @@ bool ProjectIo::save(const QUrl &fileUrl,
         const QVariantMap vmap = v.toMap();
         VariableData var = VariableData::fromVariantMap(vmap);
         const QVariant sourceVar = vmap.value(QStringLiteral("source"));
-        if (sourceVar.typeId() == QMetaType::QVariantMap) {
-            const QVariantMap smap = sourceVar.toMap();
-            // 接続詳細から ConnectionData を組み、connections[] に dedup 登録する。
-            ConnectionData conn;
-            conn.id = smap.value(QStringLiteral("connection")).toString();
-            const QString proto = smap.value(QStringLiteral("proto")).toString();
-            conn.proto = proto.isEmpty() ? QStringLiteral("modbusTcp") : proto;
-            conn.host = smap.value(QStringLiteral("host")).toString();
-            conn.port = smap.value(QStringLiteral("port"), 502).toInt();
-            conn.unitId = smap.value(QStringLiteral("unitId"), 1).toInt();
-            // id が空のソースは接続として登録しない（接続無し＝内部変数扱い）。
-            if (!conn.id.isEmpty() && !connIndexById.contains(conn.id)) {
-                connIndexById.insert(conn.id, proj.connections.size());
-                proj.connections.append(conn);
+        if (sourceVar.typeId() == QMetaType::QVariantMap && var.source) {
+            // 不完全 / 不正な source（connection 空・reg 不正など）は **内部変数へ戻す**
+            // （= source を落とす）。これをしないと SourceData::isValidJson が弾く不正 JSON
+            // が書き出され、再読込で parseValidated に拒否される（CodeRabbit PR #119 [重大]）。
+            if (!SourceData::isValidJson(var.source->toJson())) {
+                var.source = std::nullopt;
+            } else {
+                const QVariantMap smap = sourceVar.toMap();
+                // 接続詳細から ConnectionData を組み、connections[] に dedup 登録する。
+                ConnectionData conn;
+                conn.id = var.source->connection;  // 有効＝非空が保証される。
+                const QString proto = smap.value(QStringLiteral("proto")).toString();
+                conn.proto = proto.isEmpty() ? QStringLiteral("modbusTcp") : proto;
+                conn.host = smap.value(QStringLiteral("host")).toString();
+                conn.port = smap.value(QStringLiteral("port"), 502).toInt();
+                conn.unitId = smap.value(QStringLiteral("unitId"), 1).toInt();
+                // 同一 id は **最初の定義を採用**（connections[] は id で一意）。MB-1 は
+                // 接続 id を "plc1" 固定なので実際には 1 件だが、将来複数変数が同 id で
+                // 異なる host/port/unitId を持つ source を定義しうる。その場合は最初の定義を
+                // 使い後続を捨てるが、設定ミスを隠さないよう不一致を警告する（CodeRabbit PR #119）。
+                if (!connIndexById.contains(conn.id)) {
+                    connIndexById.insert(conn.id, proj.connections.size());
+                    proj.connections.append(conn);
+                } else {
+                    const ConnectionData &existing = proj.connections.at(connIndexById.value(conn.id));
+                    if (existing.host != conn.host || existing.port != conn.port
+                        || existing.unitId != conn.unitId || existing.proto != conn.proto) {
+                        qWarning() << "ProjectIo::save: connection id" << conn.id
+                                   << "に異なる接続詳細が複数定義されています。最初の定義を採用します。";
+                    }
+                }
             }
         }
         proj.variables.append(var);
@@ -162,6 +180,11 @@ QVariantMap ProjectIo::load(const QUrl &fileUrl)
                 smap.insert(QStringLiteral("port"), it->port);
                 smap.insert(QStringLiteral("unitId"), it->unitId);
                 smap.insert(QStringLiteral("proto"), it->proto);
+            } else {
+                // connections[] に対応 id が無い（壊れた JSON 等）。host/port/unitId は
+                // 補完できず Editor では既定表示になる。診断のため警告する（CodeRabbit PR #119）。
+                qWarning() << "ProjectIo::load: connection id not found:"
+                           << var.source->connection;
             }
             vmap.insert(QStringLiteral("source"), smap);
         }

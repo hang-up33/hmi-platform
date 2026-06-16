@@ -57,7 +57,18 @@ ConnectionData ConnectionData::fromVariantMap(const QVariantMap &map)
 
 bool ConnectionData::isValidJson(const QJsonObject &obj)
 {
-    return obj.value("id").isString() && !obj.value("id").toString().isEmpty();
+    if (!obj.value("id").isString() || obj.value("id").toString().isEmpty()) {
+        return false;
+    }
+    // port は存在する場合のみ範囲検証（欠落時は fromJson が 502 を補う）。外部 JSON を
+    // fromJson 経由で読む際の不正値素通りを防ぐ（CodeRabbit PR #119）。
+    if (obj.contains("port")) {
+        const int port = obj.value("port").toInt(0);
+        if (port < 1 || port > 65535) {
+            return false;
+        }
+    }
+    return true;
 }
 
 } // namespace hmi::schema

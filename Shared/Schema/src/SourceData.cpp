@@ -52,10 +52,18 @@ bool SourceData::isValidJson(const QJsonObject &obj)
         return false;
     }
     const QString reg = obj.value("reg").toString();
-    return reg == QStringLiteral("coil")
-        || reg == QStringLiteral("discrete")
-        || reg == QStringLiteral("input")
-        || reg == QStringLiteral("holding");
+    if (reg != QStringLiteral("coil")
+        && reg != QStringLiteral("discrete")
+        && reg != QStringLiteral("input")
+        && reg != QStringLiteral("holding")) {
+        return false;
+    }
+    // address は 0 始まりの非負番地。存在する場合のみ検証（欠落時は fromJson が 0 を補う）。
+    // 外部 JSON の不正値素通りを防ぐ（CodeRabbit PR #119）。
+    if (obj.contains("address") && obj.value("address").toInt(0) < 0) {
+        return false;
+    }
+    return true;
 }
 
 } // namespace hmi::schema

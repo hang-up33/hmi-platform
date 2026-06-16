@@ -10,7 +10,7 @@ GUI で HMI 画面を作図 → JSON で保存 → PC でも組込み実機で�
 
 ![HMI Editor](Docs/screenshots/editor.png)
 
-Editor。ツールバーで Widget 追加（ボタン / ラベル / 数値入力）・JSON 開く / 保存・編集補助（スナップ・コピペ・undo / redo）、右のインスペクタでスタイル・配置・アクション・バインディングを編集できる。数値入力（NumericField）は変数の型（int / real）を引き継ぎ、インスペクタ「詳細」の範囲（最小値 / 最大値）で入力 clamp の境界を指定できる（図は real 変数 temperature を bind した選択中の例）。
+Editor。ツールバーで Widget 追加（ボタン / ラベル / 数値入力）・JSON 開く / 保存・編集補助（スナップ・コピペ・undo / redo）、右のインスペクタでスタイル・配置・アクション・バインディングを編集できる。数値入力（NumericField）は変数の型（int / real）を引き継ぎ、インスペクタ「詳細」の範囲（最小値 / 最大値）で入力 clamp の境界を指定できる（図は real 変数 temperature を bind した選択中の例）。**Phase 7（Modbus TCP）着手に伴い、変数パネル（ツールバー「変数」トグル）の各変数に「PLC レジスタに割当」を追加**：チェックすると接続先（ホスト / ポート / Unit ID）とレジスタ写像（レジスタ種別 coil/discrete/input/holding・アドレス・ポーリング間隔 ms）を編集でき、JSON に保存される（MB-1 は定義の保存のみ＝実通信は後続タスク。ヒーロー図の既定ビューは変数パネル非表示のため不変）。
 
 ![HMI Simulator](Docs/screenshots/simulator.png)
 
