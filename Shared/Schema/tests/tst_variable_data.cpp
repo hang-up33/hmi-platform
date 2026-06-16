@@ -23,6 +23,7 @@ private slots:
     // Phase 7 / MB-1: 変数ソース（SourceData）+ 接続（ConnectionData）
     void variableSourceBackwardCompat();
     void variableSourceRoundTrip();
+    void variableSourceInvalidRejected();
     void sourceDefaults();
     void sourceAddressZeroRoundTrip();
     void sourceIsValidJson_data();
@@ -213,6 +214,55 @@ void VariableDataTest::variableSourceRoundTrip()
     }
     // source を持つ変数も isValidJson を通る（source は必須集合に入れない）。
     QVERIFY(VariableData::isValidJson(src.toJson()));
+}
+
+// Phase 7 / MB-1（Codex PR #119 [P2]）：source は optional だが、存在する場合は内容を
+// 検証する。不正な source（非 object / reg 不正 / connection 空）を持つ変数は弾く。
+void VariableDataTest::variableSourceInvalidRejected()
+{
+    // 正常な土台。
+    QJsonObject base;
+    base["name"] = "tankLevel";
+    base["type"] = "int";
+    base["initial"] = "0";
+
+    // source 無しは通る（後方互換）。
+    QVERIFY(VariableData::isValidJson(base));
+
+    // source が object でない（文字列）→ 弾く。
+    {
+        QJsonObject o = base;
+        o["source"] = QStringLiteral("bad");
+        QVERIFY(!VariableData::isValidJson(o));
+    }
+    // reg が不正種別 → 弾く。
+    {
+        QJsonObject src;
+        src["connection"] = "plc1";
+        src["reg"] = "bad";
+        QJsonObject o = base;
+        o["source"] = src;
+        QVERIFY(!VariableData::isValidJson(o));
+    }
+    // connection が空 → 弾く。
+    {
+        QJsonObject src;
+        src["connection"] = "";
+        src["reg"] = "holding";
+        QJsonObject o = base;
+        o["source"] = src;
+        QVERIFY(!VariableData::isValidJson(o));
+    }
+    // 正常な source → 通る。
+    {
+        QJsonObject src;
+        src["connection"] = "plc1";
+        src["reg"] = "holding";
+        src["address"] = 0;
+        QJsonObject o = base;
+        o["source"] = src;
+        QVERIFY(VariableData::isValidJson(o));
+    }
 }
 
 // Phase 7 / MB-1: SourceData の欠落時既定（address 0 / poll 1000）。

@@ -113,10 +113,23 @@ bool VariableData::isValidJson(const QJsonObject &obj)
         return false;
     }
     const QString t = obj.value("type").toString();
-    return t == QStringLiteral("bool")
-        || t == QStringLiteral("int")
-        || t == QStringLiteral("real")
-        || t == QStringLiteral("string");
+    if (t != QStringLiteral("bool")
+        && t != QStringLiteral("int")
+        && t != QStringLiteral("real")
+        && t != QStringLiteral("string")) {
+        return false;
+    }
+    // Phase 7 / MB-1: source は optional（不在は後方互換で許容）だが、存在する場合は
+    // object かつ SourceData として有効（connection 非空・reg が既知の種別）であることを
+    // 要求する。型だけで素通しすると不正な source が silently drop / 不正なまま再保存される
+    // （Codex PR #119 [P2]。ProjectData の connections[] 検証と対称）。
+    if (obj.contains("source")) {
+        if (!obj.value("source").isObject()
+            || !SourceData::isValidJson(obj.value("source").toObject())) {
+            return false;
+        }
+    }
+    return true;
 }
 
 } // namespace hmi::schema
