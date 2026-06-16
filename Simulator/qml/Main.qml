@@ -185,6 +185,34 @@ Window {
         }
     }
 
+    // Phase 7 / MB-2: 読込成功時に Modbus マスタへ接続定義 + 変数（source 写像）を渡し、
+    // 周期ポーリングを開始する共通ハンドラ。configure 内で前回分は stop されるため
+    // 再読込でも安全。読み取り専用アプリの「実行」概念（binding 追従 / 入力書き戻し）と
+    // 同じく、ここでは PLC からの読込値を VariableStore へ流すだけで編集 UI は持ち込まない。
+    function applyLoadedProject(result) {
+        // Task 41: 変数定義を widgetModel より先に設定し、delegate 生成時に
+        // 変数ストアが初期化済みになるようにする（binding の初期表示を正す）。
+        canvas.variableModel = result.variables !== undefined ? result.variables : []
+        canvas.widgetModel = result.widgets
+        canvas.loaded = true
+        // Modbus 接続を（再）構成。source を持つ変数が無ければ何もしない（後方互換）。
+        if (typeof modbusController !== "undefined" && modbusController !== null) {
+            modbusController.configure(
+                result.connections !== undefined ? result.connections : [],
+                result.variables !== undefined ? result.variables : [])
+        }
+    }
+
+    // Phase 7 / MB-2: Modbus マスタが PLC レジスタを読むたびに変数現在値を更新する。
+    // VariableStore.setValue は再代入で通知するため、binding 追従（boundValue 経路）が
+    // 自動再評価され UI（Label / NumericField 等）が PLC の値に追従する。
+    Connections {
+        target: typeof modbusController !== "undefined" ? modbusController : null
+        function onVariableUpdated(name, value) {
+            VariableStore.setValue(name, value)
+        }
+    }
+
     // 起動時に CLI 引数 `--open <path>` 相当を main.cpp 側で
     // initialJsonUrl コンテキストプロパティに詰めている。空でなければ自動ロード。
     Component.onCompleted: {
@@ -193,11 +221,7 @@ Window {
             && String(initialJsonUrl) !== "") {
             const result = projectLoader.load(initialJsonUrl)
             if (result && result.ok) {
-                // Task 41: 変数定義を widgetModel より先に設定し、delegate 生成時に
-                // 変数ストアが初期化済みになるようにする（binding の初期表示を正す）。
-                canvas.variableModel = result.variables !== undefined ? result.variables : []
-                canvas.widgetModel = result.widgets
-                canvas.loaded = true
+                applyLoadedProject(result)
                 console.log("起動時 JSON 読込:", initialJsonUrl,
                             "widgets =", result.widgets.length)
             } else {
@@ -217,10 +241,8 @@ Window {
                 console.warn("プロジェクト読込に失敗:", openDialog.selectedFile)
                 return
             }
-            // Task 41: 変数定義を widgetModel より先に設定する（上記 onCompleted と同様）。
-            canvas.variableModel = result.variables !== undefined ? result.variables : []
-            canvas.widgetModel = result.widgets
-            canvas.loaded = true
+            // Task 41 / MB-2: 変数・widget 設定 + Modbus 再構成を共通ハンドラで行う。
+            applyLoadedProject(result)
             console.log("プロジェクト読込:", openDialog.selectedFile,
                         "widgets =", result.widgets.length)
         }

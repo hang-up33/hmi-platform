@@ -52,9 +52,66 @@ ensure_fonts() {
 }
 ensure_fonts
 
+# --- aqtinstall venv（Qt addon の追加導入にも使う）---
+AQT_VENV="/opt/aqt-venv"
+ensure_aqt() {
+  if [ ! -x "${AQT_VENV}/bin/aqt" ]; then
+    python3 -m venv "${AQT_VENV}"
+    "${AQT_VENV}/bin/pip" install --quiet --upgrade pip
+    "${AQT_VENV}/bin/pip" install --quiet aqtinstall
+  fi
+}
+
+# Phase 7 / MB-2: 通信（Simulator/Runtime の ModbusController）に必要な Qt addon。
+# QtSerialBus（QModbusTcpClient）は QtSerialPort に依存するため両方必要。base デスクトップ
+# パッケージには含まれないので addon（-m）で導入する。HMI_QT_MODULES で追加分を足せる。
+QT_ADDON_MODULES="qtserialbus qtserialport ${HMI_QT_MODULES:-}"
+
+# Qt base は導入済みだが addon（SerialBus 等）が欠けている場合に補う（スナップショットを
+# 旧 setup.sh で作った環境でも次回 setup 実行で揃うように。Phase 7 MB-2 で追加）。
+ensure_qt_addons() {
+  if [ -d "${QT_PREFIX}/lib/cmake/Qt6SerialBus" ] \
+     && [ -d "${QT_PREFIX}/lib/cmake/Qt6SerialPort" ]; then
+    return 0
+  fi
+  ensure_aqt
+  # shellcheck disable=SC2086
+  ( cd /tmp && "${AQT_VENV}/bin/aqt" install-qt "${QT_HOST}" "${QT_TARGET}" "${QT_VERSION}" "${QT_ARCH}" \
+    -O "${QT_OUTDIR}" -m ${QT_ADDON_MODULES} ) || {
+    echo "[hmi/web-setup] ERROR: Qt addon（${QT_ADDON_MODULES}）の導入に失敗" >&2
+    return 1
+  }
+  # SerialBus は Simulator/Runtime の **ビルド必須** 依存。導入後に実体を検証し、
+  # 欠けていれば WARN で流さず明示的に失敗する（後続 CMake の遅延失敗を防ぐ。CodeRabbit PR #121）。
+  if [ ! -d "${QT_PREFIX}/lib/cmake/Qt6SerialBus" ] \
+     || [ ! -d "${QT_PREFIX}/lib/cmake/Qt6SerialPort" ]; then
+    echo "[hmi/web-setup] ERROR: QtSerialBus/QtSerialPort が見つかりません（${QT_PREFIX}）" >&2
+    return 1
+  fi
+}
+
+# Phase 7 / MB-2: E2E のソフト Modbus スレーブ（pymodbus）。製品コードには持ち込まず dev 依存。
+# フォントと同様 Qt キャッシュの有無に関わらず冪等導入する（スナップショット復元時も効くように）。
+# **バージョンは 3.13.* に固定**：tests/e2e/modbus_slave.py が pymodbus 3.13 の新 API
+# （SimData / SimDevice。旧 ModbusSlaveContext/ModbusSequentialDataBlock は deprecated・
+# setValues 不動作）に依存するため、メジャー更新で E2E 再現性が壊れるのを防ぐ（CodeRabbit PR #121）。
+# pymodbus はビルド/ユニットに不要な E2E 専用依存なので、導入失敗は **非致命（WARN）** にして
+# セッション全体は止めない（E2E は不在時 skip する）。
+ensure_pymodbus() {
+  if python3 -c "import pymodbus" >/dev/null 2>&1; then
+    return 0
+  fi
+  pip3 install --quiet --break-system-packages 'pymodbus==3.13.*' 2>/dev/null \
+    || pip3 install --quiet 'pymodbus==3.13.*' 2>/dev/null || true
+  python3 -c "import pymodbus" >/dev/null 2>&1 \
+    || echo "[hmi/web-setup] WARN: pymodbus の導入に失敗（Modbus E2E は skip される）" >&2
+}
+
 # 既に導入済みなら即終了（環境キャッシュ復元後・SessionStart 再実行時の冪等性）
 if [ -d "${QT_PREFIX}/lib/cmake/Qt6" ]; then
   echo "[hmi/web-setup] Qt 既導入: ${QT_PREFIX}（スキップ）"
+  ensure_qt_addons   # Phase 7: 復元スナップショットに SerialBus が無ければ補う
+  ensure_pymodbus    # Phase 7: Modbus E2E 用ソフトスレーブ
   write_prefix_marker
   exit 0
 fi
@@ -75,22 +132,17 @@ apt-get install -y --no-install-recommends \
   apt-get install -y --no-install-recommends libgl1 libegl1 libgl-dev libopengl-dev mesa-common-dev || true
 
 # --- aqtinstall を venv に入れて Qt を取得 ---
-AQT_VENV="/opt/aqt-venv"
-if [ ! -x "${AQT_VENV}/bin/aqt" ]; then
-  python3 -m venv "${AQT_VENV}"
-  "${AQT_VENV}/bin/pip" install --quiet --upgrade pip
-  "${AQT_VENV}/bin/pip" install --quiet aqtinstall
-fi
+ensure_aqt
 
 # QtQuick(qtdeclarative) / qtshadertools は Qt 6.10 では base デスクトップパッケージに含まれるため
 # -m 指定は不要（addon 扱いにすると "not found while parsing XML" で落ちる）。
-# 追加 addon が要るときは HMI_QT_MODULES（スペース区切り）で渡す。
-EXTRA_MODULES="${HMI_QT_MODULES:-}"
+# Phase 7 / MB-2: QtSerialBus + QtSerialPort は base に無いので addon（QT_ADDON_MODULES）で導入する。
+# HMI_QT_MODULES（スペース区切り）で追加 addon を足せる。
 # aqt は cwd に aqtinstall.log を吐くため、リポジトリを汚さないよう /tmp で実行する。
 # shellcheck disable=SC2086
 ( cd /tmp && "${AQT_VENV}/bin/aqt" install-qt "${QT_HOST}" "${QT_TARGET}" "${QT_VERSION}" "${QT_ARCH}" \
   -O "${QT_OUTDIR}" \
-  ${EXTRA_MODULES:+-m ${EXTRA_MODULES}} )
+  -m ${QT_ADDON_MODULES} )
 
 if [ ! -d "${QT_PREFIX}/lib/cmake/Qt6" ]; then
   echo "[hmi/web-setup] ERROR: 期待した Qt prefix が見つかりません: ${QT_PREFIX}" >&2
@@ -98,6 +150,7 @@ if [ ! -d "${QT_PREFIX}/lib/cmake/Qt6" ]; then
   exit 1
 fi
 
+ensure_pymodbus    # Phase 7 / MB-2: Modbus E2E 用ソフトスレーブ
 write_prefix_marker
 echo "[hmi/web-setup] 完了。CMAKE_PREFIX_PATH=${QT_PREFIX}"
 echo "[hmi/web-setup] ビルド例: cmake -S . -B build -DCMAKE_PREFIX_PATH=${QT_PREFIX} && cmake --build build"

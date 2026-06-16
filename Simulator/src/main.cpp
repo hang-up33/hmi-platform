@@ -1,3 +1,4 @@
+#include "ModbusController.h"
 #include "ProjectLoader.h"
 #include "ScreenshotGrabber.h"
 
@@ -80,9 +81,16 @@ int main(int argc, char *argv[])
     // **前に** 宣言することで `engine` が先に破棄されることを保証する。
     ProjectLoader projectLoader;
 
+    // Phase 7 / MB-2: Modbus TCP マスタ。projectLoader と同じく engine より前に宣言して
+    // engine が先に破棄されることを保証する（LIFO）。QML から configure/stop を呼び、
+    // variableUpdated シグナルを VariableStore.setValue へ接続する（Main.qml）。
+    ModbusController modbusController;
+
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty(QStringLiteral("projectLoader"),
                                              &projectLoader);
+    engine.rootContext()->setContextProperty(QStringLiteral("modbusController"),
+                                             &modbusController);
     engine.rootContext()->setContextProperty(QStringLiteral("initialJsonUrl"),
                                              startupUrl);
 

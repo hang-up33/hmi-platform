@@ -14,6 +14,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Qml Quick)
 
+# Phase 7 / MB-2: Modbus TCP マスタ機能（Simulator/src/ModbusController）が QtSerialBus を
+# 使う。これを必要とするのは hmi_simulator / hmi_runtime（Simulator ソース共有）のみで、
+# Editor は接続定義を JSON に書くだけ＝実通信しないため **Qt6::SerialBus を一切リンクしない**。
+# find_package を root に置くのは hmi_runtime（Runtime/ サブディレクトリで Simulator の
+# 共通 function を呼ぶ）からも IMPORTED target を見えるようにするため（Simulator/ 内だけで
+# find_package すると Runtime 側の moc/include 解決に失敗する）。リンクは Simulator の
+# function 内に閉じているので Editor には波及しない。
+find_package(Qt6 6.5 REQUIRED COMPONENTS SerialBus)
+
 qt_standard_project_setup(REQUIRES 6.5)
 
 include(CTest)

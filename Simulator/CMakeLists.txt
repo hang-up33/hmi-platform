@@ -29,12 +29,15 @@ function(hmi_add_simulator_like_executable target)
         "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/src/main.cpp"
         "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/src/ProjectLoader.cpp"
         "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/src/ProjectLoader.h"
+        "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/src/ModbusController.cpp"
+        "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/src/ModbusController.h"
         "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/src/ScreenshotGrabber.h"
     )
 
     target_link_libraries(${target}
         PRIVATE
             Qt6::Quick
+            Qt6::SerialBus
             hmi_schema
             hmi_widgetsplugin
             hmi_simulator_qmlplugin
