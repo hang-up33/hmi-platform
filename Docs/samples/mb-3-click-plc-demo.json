@@ -1,0 +1,29 @@
+{
+  "project": "Atlas / AutomationDirect CLICK (Modbus TCP) Demo",
+  "connections": [
+    { "id": "click1", "proto": "modbusTcp", "host": "192.168.1.2", "port": 502, "unitId": 1 }
+  ],
+  "variables": [
+    { "name": "ds1", "type": "int",
+      "source": { "connection": "click1", "reg": "holding", "address": 0, "poll": 500 } },
+    { "name": "ds2", "type": "int",
+      "source": { "connection": "click1", "reg": "holding", "address": 1, "poll": 500 } },
+    { "name": "c1", "type": "int",
+      "source": { "connection": "click1", "reg": "coil", "address": 16384, "poll": 500 } }
+  ],
+  "screens": [
+    {
+      "name": "Main",
+      "widgets": [
+        { "id": "title", "type": "Label", "x": 60, "y": 40, "width": 700, "height": 56, "text": "CLICK PLC @ 192.168.1.2 / Modbus TCP", "textColor": "#1d3557", "fontSize": 30, "fontBold": true },
+        { "id": "lblDs1", "type": "Label", "x": 60, "y": 140, "width": 320, "height": 44, "text": "DS1 (holding 0):", "textColor": "#1d3557", "fontSize": 22 },
+        { "id": "valDs1", "type": "Label", "x": 400, "y": 140, "width": 200, "height": 44, "text": "?", "textColor": "#2a9d8f", "fontSize": 24, "fontBold": true, "bindings": [ { "property": "text", "variable": "ds1" } ] },
+        { "id": "lblDs2", "type": "Label", "x": 60, "y": 200, "width": 320, "height": 44, "text": "DS2 (holding 1):", "textColor": "#1d3557", "fontSize": 22 },
+        { "id": "valDs2", "type": "Label", "x": 400, "y": 200, "width": 200, "height": 44, "text": "?", "textColor": "#2a9d8f", "fontSize": 24, "fontBold": true, "bindings": [ { "property": "text", "variable": "ds2" } ] },
+        { "id": "lblC1", "type": "Label", "x": 60, "y": 260, "width": 320, "height": 44, "text": "C1 (coil 16384):", "textColor": "#1d3557", "fontSize": 22 },
+        { "id": "valC1", "type": "Label", "x": 400, "y": 260, "width": 200, "height": 44, "text": "?", "textColor": "#e76f51", "fontSize": 24, "fontBold": true, "bindings": [ { "property": "text", "variable": "c1" } ] },
+        { "id": "hint", "type": "Label", "x": 60, "y": 340, "width": 700, "height": 30, "text": "CLICK Modbus: DS1=400001 -> 0, C1=16385(coil) -> 16384 (JSON addr is 0-based)", "textColor": "#888888", "fontSize": 15 }
+      ]
+    }
+  ]
+}

@@ -42,6 +42,11 @@
   - 初回のみ `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` が必要。
   - **PowerShell から WSL を呼ぶとき `$HOME` 等の `$` 変数は PowerShell 側で先に展開される**（2026-06-09 実証）。`wsl ... bash -lc "... HMI_BUILD_DIR=$HOME/... "` と書くと PS が `$HOME`(=`C:\Users\k`) を埋め、WSL では `C:Usersk/...`（`:` と `\` が落ちた壊れたパス）になり CMake が `try_compile`/source-dir で落ちる。回避：**WSL の絶対パスを直書き**（`/home/ubuntu/...`）するか、`bash -lc` の引数を**単一引用符**で囲って PS の変数展開を止める。
   - **GUI サブシステムの exe（hmi_editor.exe 等）は PowerShell の `&` で起動しても待たれない**（`$LASTEXITCODE` も取れない）。`--screenshot` のような「起動→処理→終了」を待つには `Start-Process -Wait -PassThru` を使う。
+  - **QtSerialBus / QtSerialPort はローカル kit に未同梱だった（2026-06-16 / Phase 7 MB-3 で発覚・解消済み）**：`C:\Qt\6.11.0\mingw_64` には SerialBus / SerialPort が入っておらず、MB-2 の `ModbusController`（`Qt6::SerialBus`）が `find_package` 段階で `Could NOT find Qt6SerialBus` → ビルド不可だった（MB-2 は Web/CI の aqtinstall 同梱前提で書かれていた）。**Modbus を扱うローカルビルドにはこの 2 モジュールが必須**。導入手順（実証済み）：
+    - **MaintenanceTool は不可**：`qt.qt6.6110.addons.qtserialbus` を `Component(s) not found` で選択できない（6.11.0 が「歴史的バージョン」扱いになり既定リポジトリから外れているため。GUI updater 実行を要求される）。
+    - **aqtinstall（v3.3.0）も `install-qt` 不可**：6.11.0 の desktop リポジトリは arch 別フォルダ（`qt6_6110/qt6_6110_mingw/`）に分割済みだが aqt 3.3.0 は旧レイアウト（`qt6_6110/qt6_6110/Updates.xml`）を見に行き 404 →「Failed to locate XML data」。ハッシュ検証を切る `INSECURE_NOT_FOR_PRODUCTION_ignore_hash` はセキュリティ上使わない（自動拒否される）。
+    - **正攻法＝7z を直接 DL→検証→マージ**：`.../qt6_6110/qt6_6110_mingw/qt.qt6.6110.addons.qtserialbus.win64_mingw/<version>qtserialbus-...-X86_64.7z`（+ `qtserialport` も同様。SerialBus は SerialPort に依存）を `curl` で取得し、**同梱の `.sha256` で照合**してから `py7zr`（aqtinstall の依存で入る）で展開、`bin/ include/ lib/ plugins/ ...` を `C:\Qt\6.11.0\mingw_64\` に `Copy-Item -Recurse -Force` でマージ。`lib\cmake\Qt6SerialBus\Qt6SerialBusConfig.cmake` と `bin\Qt6SerialBus.dll` が入れば OK。`QModbusTcpClient` は SerialBus 本体にあり modbus plugin は不要。
+    - **Editor 非リンクは維持される**：`objdump -p build-mingw/hmi_editor.exe | grep -i serialbus` が空、`hmi_simulator.exe` は `Qt6SerialBus.dll` を import。Explorer 起動には `deploy.ps1`（windeployqt）で `Qt6SerialBus.dll` / `Qt6SerialPort.dll` 同梱が要る（PATH 経由の直起動なら不要）。
 
 ### macOS の詳細
 

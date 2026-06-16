@@ -113,7 +113,7 @@ SDK 生成・実機 scp・起動（weston）・キャプチャの全手順と罠
 
 ## ステータスとドキュメント
 
-- **現在地**: **Phase 7 / Modbus TCP 通信を実装中**（2026-06-16 承認）。MB-1〔変数ソース Schema（`ConnectionData` + `VariableData.source`）+ Editor 接続編集 UI・実通信なし〕完了（PR #119）。MB-2〔PC 読込ポーリング：Simulator/Runtime が `QModbusTcpClient` で PLC レジスタを周期読込 →変数ストア + binding 経路へ。pymodbus ソフトスレーブ E2E〕実装中。直近完了は Phase 6-B / NumericField 拡張（Task 53〜55・PR #112〜#114）。MB-3/5/6（実 PLC・実機）はローカル専用。進捗の正本は [Docs/phase7-modbus-plan.md](Docs/phase7-modbus-plan.md)。
+- **現在地**: **Phase 7 / Modbus TCP 通信を実装中**（2026-06-16 承認）。MB-1〔変数ソース Schema（`ConnectionData` + `VariableData.source`）+ Editor 接続編集 UI・実通信なし〕完了（PR #119）。MB-2〔PC 読込ポーリング：Simulator/Runtime が `QModbusTcpClient` で PLC レジスタを周期読込 →変数ストア + binding 経路へ〕完了（PR #121）。MB-3〔実 PLC 読込確認〕ローカル達成（2026-06-16：実 AutomationDirect CLICK ＠192.168.1.2 へ接続し holding/coil 読込・binding 追従を確認。証跡 `Docs/samples/mb-3-click-plc-demo.json`）。次は MB-4〔書込 + 接続状態〕。直近完了は Phase 6-B / NumericField 拡張（Task 53〜55・PR #112〜#114）。MB-5/6（実 PLC 書込・実機）はローカル専用。進捗の正本は [Docs/phase7-modbus-plan.md](Docs/phase7-modbus-plan.md)。
 - 開発の時系列（各タスクの目的 / PR / 学び）: [Docs/development-history.md](Docs/development-history.md)
 - 各フェーズの計画と進捗表（正本）: [Docs/](Docs/) の `phase*-plan.md`
 - 開発ガイド・ビルドの罠・ルール: [CLAUDE.md](CLAUDE.md)
