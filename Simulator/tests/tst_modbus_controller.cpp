@@ -278,13 +278,13 @@ void TestModbusController::writeCoilUpdatesSlave()
     controller.writeVariable("run", true);
 
     // WriteSingleCoil の ON は Modbus 仕様で 0xFF00。QModbusTcpServer は生値（0xFF00=65280）
-    // を保存するため、ここでは「非ゼロ＝ON」で判定する（OFF は 0）。
+    // を保存するため、誤実装（1 等）を取りこぼさないよう厳密に 0xFF00 で判定する（OFF は 0）。
     auto readCoil = [&server]() {
         quint16 v = 0;
         server.data(QModbusDataUnit::Coils, 0, &v);
         return static_cast<int>(v);
     };
-    QTRY_VERIFY_WITH_TIMEOUT(readCoil() != 0, 5000);
+    QTRY_VERIFY_WITH_TIMEOUT(readCoil() == 0xFF00, 5000);
 }
 
 void TestModbusController::writeReadOnlyRegisterIsNoOp()
@@ -358,9 +358,11 @@ void TestModbusController::connectionStateReflectsConnected()
         5000);
     QVERIFY(stateSpy.count() > 0);
 
-    // stop() で状態がクリアされ通知される。
+    // stop() で状態がクリアされ、QML バインディング向けに通知（connectionStatesChanged）も発火する。
+    const int beforeStop = stateSpy.count();
     controller.stop();
     QVERIFY(controller.connectionStates().isEmpty());
+    QVERIFY(stateSpy.count() > beforeStop);
 }
 
 QTEST_MAIN(TestModbusController)

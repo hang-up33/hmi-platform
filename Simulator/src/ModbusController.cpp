@@ -347,9 +347,16 @@ void ModbusController::scheduleReconnect(const QString &id)
     auto *timer = new QTimer(this);
     timer->setInterval(kReconnectIntervalMs);
     const quint64 generation = m_generation;
-    QObject::connect(timer, &QTimer::timeout, this, [this, id, generation]() {
-        // 世代が変わった（configure / stop）なら何もしない（タイマは stop で片付けられる）。
+    QObject::connect(timer, &QTimer::timeout, this, [this, id, generation, timer]() {
+        // 世代が変わった（configure / stop）なら、このタイマ自身を止めて破棄してから抜ける
+        // （stop でも片付くが、無駄な再試行を残さないよう明示的に止める。CodeRabbit PR #122）。
+        // hash には同 id の新世代タイマが入っている可能性があるので、自分自身のときだけ外す。
         if (generation != m_generation) {
+            if (m_reconnectTimers.value(id) == timer) {
+                m_reconnectTimers.remove(id);
+            }
+            timer->stop();
+            timer->deleteLater();
             return;
         }
         QModbusTcpClient *c = m_clients.value(id);

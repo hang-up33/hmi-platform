@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -173,8 +174,6 @@ def _simulator_writes_slave(simulator_binary: str, sim_port: int, slave_port: in
         while time.monotonic() < deadline:
             body = call_method(url, "getStringProperty", numeric, "text")
             if "<value>" in body:
-                import re
-
                 m = re.search(r"<value>(?:<string>)?(.*?)(?:</string>)?</value>", body, re.DOTALL)
                 if m and m.group(1).strip() == "0":
                     break
