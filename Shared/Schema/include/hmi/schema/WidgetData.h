@@ -87,6 +87,30 @@ struct WidgetData {
     bool hasMinValue = false;
     bool hasMaxValue = false;
 
+    // Task T-A（Phase 8）: Trend（トレンドグラフ）固有フィールド。いずれも optional で
+    // isValidJson の必須集合には含めない（全 optional ＝後方互換）。未指定表現は他フィールドと
+    // 同じ規約に揃える：
+    //   pointCount : 表示点数 N。**`0` = 未指定**（HmiTrend が既定 N へ解決）。`0` は「0 点」という
+    //                正当値を持たない → fontSize と同型の `0` センチネル可。toJson は `> 0` で書く。
+    //   yMin / hasYMin, yMax / hasYMax : Y 軸下限/上限。**負値が正当**（Y 軸下限の負値）なので
+    //                センチネル不可 → **presence フラグ方式**（minValue/maxValue の前例踏襲）。
+    //                toJson は has* のときだけ yMin/yMax を書く（未指定はキー省略＝後方互換）。
+    //                fromJson は has* = obj.contains("yMin")、値は toDouble()。
+    //                **JSON には hasYMin/hasYMax というキーは作らない**（presence は yMin/yMax
+    //                キーの有無で表す）。一方 **C++↔QML ブリッジの QVariantMap では既存 min/max に
+    //                倣い明示 bool キー hasYMin/hasYMax を持つ**（QML 側が presence 判定に使う）。
+    //   lineColor  : 折れ線の色。`""` = 未指定（HmiTrend が既定線色へ解決）。backgroundColor 同型。
+    //   sampleMs   : 周期サンプリング間隔[ms]。**`0` = 未指定**（周期サンプリングなし＝変更時のみ）。
+    //                周期 0ms は無意味 → fontSize と同型の `0` センチネル可。toJson は `> 0` で書く。
+    // 既定外観（既定 N / 既定線色 / 既定背景）は描画の唯一の真実である HmiTrend 側に集約する。
+    int pointCount = 0;
+    double yMin = 0.0;
+    double yMax = 0.0;
+    bool hasYMin = false;
+    bool hasYMax = false;
+    QString lineColor;
+    int sampleMs = 0;
+
     // Task 39: アクション（書き手）/ バインディング（読み手）。いずれも optional 配列で、
     // 空のとき toJson で省略（後方互換）。実行 / 描画への反映は T41 以降で、本タスクでは
     // 型と保存（round-trip）のみ。isValidJson の必須集合には含めない（後方互換）。

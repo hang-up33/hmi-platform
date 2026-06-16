@@ -47,6 +47,12 @@ private slots:
     void minMaxRoundTrip();
     void minMaxOmittedWhenUnspecified();
     void negativeMinMaxRoundTrip();
+    // Task T-A（Phase 8）: Trend 固有フィールドの round-trip。pointCount / lineColor / sampleMs
+    //（`0`/空センチネル）と yMin/yMax（presence フラグ方式・負値含む）の往復、および presence
+    // false 時に yMin/yMax キーが現れない（後方互換）ことを固定する。
+    void trendFieldsRoundTrip();
+    void trendYAxisOmittedWhenUnspecified();
+    void negativeTrendYAxisRoundTrip();
     void actionsAndBindingsRoundTrip();
     void omitsEmptyActionsAndBindings();
     void isValidJsonRejectsInvalidActionsBindings();
@@ -88,6 +94,13 @@ void WidgetDataTest::roundTripFullFields()
     src.hAlign = "left";
     src.vAlign = "top";
     src.opacity = 0.5;
+    src.pointCount = 120;
+    src.yMin = 0.0;
+    src.yMax = 100.0;
+    src.hasYMin = true;
+    src.hasYMax = true;
+    src.lineColor = "#4cc9f0";
+    src.sampleMs = 250;
 
     const QJsonObject obj = src.toJson();
     const WidgetData restored = WidgetData::fromJson(obj);
@@ -112,6 +125,13 @@ void WidgetDataTest::roundTripFullFields()
     QCOMPARE(restored.hAlign, src.hAlign);
     QCOMPARE(restored.vAlign, src.vAlign);
     QCOMPARE(restored.opacity, src.opacity);
+    QCOMPARE(restored.pointCount, src.pointCount);
+    QCOMPARE(restored.hasYMin, src.hasYMin);
+    QCOMPARE(restored.hasYMax, src.hasYMax);
+    QCOMPARE(restored.yMin, src.yMin);
+    QCOMPARE(restored.yMax, src.yMax);
+    QCOMPARE(restored.lineColor, src.lineColor);
+    QCOMPARE(restored.sampleMs, src.sampleMs);
 }
 
 // Task 31: ボーダー＋角丸は未指定（色は空、数値は -1 センチネル）のとき toJson で
@@ -377,6 +397,123 @@ void WidgetDataTest::negativeMinMaxRoundTrip()
     QCOMPARE(restored.maxValue, -1.0);
 }
 
+// Task T-A（Phase 8）: Trend 固有フィールドの round-trip（JSON / QVariantMap 両方）。
+// pointCount / lineColor / sampleMs（`0`/空センチネル）と yMin/yMax（presence フラグ true 側）が
+// 往復で保たれることを固定する。
+void WidgetDataTest::trendFieldsRoundTrip()
+{
+    WidgetData src;
+    src.id = "trend001";
+    src.type = "Trend";
+    src.width = 320;
+    src.height = 160;
+    src.pointCount = 120;
+    src.yMin = 0.0;     // 0 も正当値（has* で指定済みなので書かれる）
+    src.yMax = 100.0;
+    src.hasYMin = true;
+    src.hasYMax = true;
+    src.lineColor = "#4cc9f0";
+    src.sampleMs = 250;
+
+    // JSON round-trip
+    const QJsonObject obj = src.toJson();
+    QVERIFY(obj.contains("pointCount"));
+    QVERIFY(obj.contains("yMin"));
+    QVERIFY(obj.contains("yMax"));
+    QVERIFY(obj.contains("lineColor"));
+    QVERIFY(obj.contains("sampleMs"));
+    // presence は yMin/yMax キーの有無で表す → hasYMin/hasYMax という JSON キーは存在しない。
+    QVERIFY(!obj.contains("hasYMin"));
+    QVERIFY(!obj.contains("hasYMax"));
+
+    const WidgetData restored = WidgetData::fromJson(obj);
+    QCOMPARE(restored.pointCount, 120);
+    QCOMPARE(restored.hasYMin, true);
+    QCOMPARE(restored.hasYMax, true);
+    QCOMPARE(restored.yMin, 0.0);
+    QCOMPARE(restored.yMax, 100.0);
+    QCOMPARE(restored.lineColor, QStringLiteral("#4cc9f0"));
+    QCOMPARE(restored.sampleMs, 250);
+
+    // QVariantMap round-trip。C++↔QML ブリッジでは min/max と同じく明示 bool キー
+    // hasYMin/hasYMax を持つ（QML 側が presence 判定に使う）。
+    const QVariantMap m = src.toVariantMap();
+    QCOMPARE(m.value("hasYMin").toBool(), true);
+    QCOMPARE(m.value("hasYMax").toBool(), true);
+    const WidgetData r = WidgetData::fromVariantMap(m);
+    QCOMPARE(r.pointCount, 120);
+    QCOMPARE(r.hasYMin, true);
+    QCOMPARE(r.hasYMax, true);
+    QCOMPARE(r.yMin, 0.0);
+    QCOMPARE(r.yMax, 100.0);
+    QCOMPARE(r.lineColor, QStringLiteral("#4cc9f0"));
+    QCOMPARE(r.sampleMs, 250);
+}
+
+// Task T-A（Phase 8）: Trend の未指定（pointCount/sampleMs=0、lineColor=空、hasY*=false）の
+// とき、pointCount/yMin/yMax/lineColor/sampleMs キーが JSON で省略され（後方互換）、
+// QVariantMap では presence bool（hasYMin/hasYMax）が false になることを固定する。
+void WidgetDataTest::trendYAxisOmittedWhenUnspecified()
+{
+    WidgetData src;
+    src.id = "trend002";
+    src.type = "Trend";
+    src.width = 320;
+    src.height = 160;
+    // pointCount / sampleMs は既定 0、lineColor は既定の空、hasYMin / hasYMax は既定 false。
+
+    const QJsonObject obj = src.toJson();
+    QVERIFY(!obj.contains("pointCount"));
+    QVERIFY(!obj.contains("yMin"));
+    QVERIFY(!obj.contains("yMax"));
+    QVERIFY(!obj.contains("lineColor"));
+    QVERIFY(!obj.contains("sampleMs"));
+
+    const WidgetData restored = WidgetData::fromJson(obj);
+    QCOMPARE(restored.pointCount, 0);
+    QCOMPARE(restored.hasYMin, false);
+    QCOMPARE(restored.hasYMax, false);
+    QVERIFY(restored.lineColor.isEmpty());
+    QCOMPARE(restored.sampleMs, 0);
+
+    // QVariantMap では presence bool が false（min/max と同じ。値キーは常に入るが has*=false）。
+    const QVariantMap m = src.toVariantMap();
+    QCOMPARE(m.value("hasYMin").toBool(), false);
+    QCOMPARE(m.value("hasYMax").toBool(), false);
+    const WidgetData r = WidgetData::fromVariantMap(m);
+    QCOMPARE(r.hasYMin, false);
+    QCOMPARE(r.hasYMax, false);
+}
+
+// Task T-A（Phase 8）: 負値の yMin/yMax が round-trip する（presence フラグ方式なので
+// `-1` 等の負値も正当値として保存・復元できる。minValue/maxValue の前例と同じ）。
+void WidgetDataTest::negativeTrendYAxisRoundTrip()
+{
+    WidgetData src;
+    src.id = "trend003";
+    src.type = "Trend";
+    src.width = 320;
+    src.height = 160;
+    src.yMin = -50.0;   // 負の下限（センチネルでは表せない）
+    src.yMax = -1.0;    // -1 も正当値（presence フラグなので未指定と区別される）
+    src.hasYMin = true;
+    src.hasYMax = true;
+
+    const QJsonObject obj = src.toJson();
+    const WidgetData restored = WidgetData::fromJson(obj);
+    QCOMPARE(restored.hasYMin, true);
+    QCOMPARE(restored.hasYMax, true);
+    QCOMPARE(restored.yMin, -50.0);
+    QCOMPARE(restored.yMax, -1.0);
+
+    const QVariantMap m = src.toVariantMap();
+    const WidgetData r = WidgetData::fromVariantMap(m);
+    QCOMPARE(r.hasYMin, true);
+    QCOMPARE(r.hasYMax, true);
+    QCOMPARE(r.yMin, -50.0);
+    QCOMPARE(r.yMax, -1.0);
+}
+
 // Task 39: アクション / バインディング配列が round-trip で要素ごと再現される。
 void WidgetDataTest::actionsAndBindingsRoundTrip()
 {
@@ -555,6 +692,13 @@ void WidgetDataTest::fromJsonFillsDefaultsForMissingKeys()
     QVERIFY(w.hAlign.isEmpty());
     QVERIFY(w.vAlign.isEmpty());
     QCOMPARE(w.opacity, -1.0);
+    // Task T-A（Phase 8）: Trend 固有フィールドの欠落時既定（pointCount/sampleMs=0、
+    // lineColor=空、yMin/yMax presence=false）を固定する。
+    QCOMPARE(w.pointCount, 0);
+    QCOMPARE(w.hasYMin, false);
+    QCOMPARE(w.hasYMax, false);
+    QVERIFY(w.lineColor.isEmpty());
+    QCOMPARE(w.sampleMs, 0);
 }
 
 // C++ ブリッジ集約（refactoring）：全フィールド（actions / bindings 含む）が
@@ -590,6 +734,13 @@ void WidgetDataTest::variantMapRoundTripFullFields()
     src.maxValue = 250.0;
     src.hasMinValue = true;
     src.hasMaxValue = true;
+    src.pointCount = 90;   // Task T-A: Trend 固有フィールドも QVariantMap で往復する
+    src.yMin = -10.0;      // 負の Y 軸下限も presence フラグ方式なら往復する
+    src.yMax = 200.0;
+    src.hasYMin = true;
+    src.hasYMax = true;
+    src.lineColor = "#4cc9f0";
+    src.sampleMs = 500;
 
     ActionData a;
     a.trigger = "onClick";
@@ -633,6 +784,13 @@ void WidgetDataTest::variantMapRoundTripFullFields()
     QCOMPARE(r.hasMaxValue, src.hasMaxValue);
     QCOMPARE(r.minValue, src.minValue);
     QCOMPARE(r.maxValue, src.maxValue);
+    QCOMPARE(r.pointCount, src.pointCount);
+    QCOMPARE(r.hasYMin, src.hasYMin);
+    QCOMPARE(r.hasYMax, src.hasYMax);
+    QCOMPARE(r.yMin, src.yMin);
+    QCOMPARE(r.yMax, src.yMax);
+    QCOMPARE(r.lineColor, src.lineColor);
+    QCOMPARE(r.sampleMs, src.sampleMs);
     QCOMPARE(r.actions.size(), 1);
     QCOMPARE(r.actions.at(0).trigger, QStringLiteral("onClick"));
     QCOMPARE(r.actions.at(0).op, QStringLiteral("setVariable"));
@@ -665,6 +823,12 @@ void WidgetDataTest::fromVariantMapFillsSentinelDefaults()
     QCOMPARE(w.checked, false);
     QCOMPARE(w.hasMinValue, false);  // Task 54: presence は欠落時 false（未指定）
     QCOMPARE(w.hasMaxValue, false);
+    // Task T-A（Phase 8）: Trend 固有フィールドも欠落時に既定（0 / 空 / has*=false）になる。
+    QCOMPARE(w.pointCount, 0);
+    QCOMPARE(w.hasYMin, false);
+    QCOMPARE(w.hasYMax, false);
+    QVERIFY(w.lineColor.isEmpty());
+    QCOMPARE(w.sampleMs, 0);
     QVERIFY(w.actions.isEmpty());
     QVERIFY(w.bindings.isEmpty());
 }
