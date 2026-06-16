@@ -35,6 +35,12 @@ bool ModbusController::isBooleanRegister(QModbusDataUnit::RegisterType type)
     return type == QModbusDataUnit::Coils || type == QModbusDataUnit::DiscreteInputs;
 }
 
+bool ModbusController::isWritableRegister(QModbusDataUnit::RegisterType type)
+{
+    // discrete / input は読取専用、coil / holding のみ書込可能（Modbus 仕様）。
+    return type == QModbusDataUnit::Coils || type == QModbusDataUnit::HoldingRegisters;
+}
+
 void ModbusController::configure(const QVariantList &connections, const QVariantList &variables)
 {
     // 世代を進める（stop() 内でも進むが、明示しておく）。これ以前に発行済みの
@@ -81,15 +87,37 @@ void ModbusController::configure(const QVariantList &connections, const QVariant
         auto *client = new QModbusTcpClient(this);
         client->setConnectionParameter(QModbusDevice::NetworkAddressParameter, host);
         client->setConnectionParameter(QModbusDevice::NetworkPortParameter, port);
-        // 接続失敗は致命にせず警告のみ（再接続の作り込みは MB-4）。
+        // Phase 7 / MB-4: 接続状態を QML へ反映し、切断 / エラー時は再接続を試みる。
+        const quint64 generation = m_generation;
+        QObject::connect(client, &QModbusClient::stateChanged, this,
+                         [this, id, generation](QModbusDevice::State state) {
+                             if (generation != m_generation) {
+                                 return; // 旧世代のクライアントは無視。
+                             }
+                             setConnectionState(id, state);
+                             if (state == QModbusDevice::UnconnectedState) {
+                                 // 接続が落ちた / 接続失敗で未接続に戻ったら再接続を試みる。
+                                 scheduleReconnect(id);
+                             }
+                         });
         QObject::connect(client, &QModbusClient::errorOccurred, this,
-                         [id](QModbusDevice::Error error) {
+                         [this, id, generation](QModbusDevice::Error error) {
+                             if (generation != m_generation) {
+                                 return;
+                             }
                              if (error != QModbusDevice::NoError) {
                                  qWarning().noquote()
                                      << "ModbusController: connection" << id
                                      << "error" << error;
+                                 // 接続エラーは状態を "error" にする（state は別途 stateChanged で更新）。
+                                 if (error == QModbusDevice::ConnectionError) {
+                                     m_connectionStates.insert(id, QStringLiteral("error"));
+                                     emit connectionStatesChanged();
+                                 }
                              }
                          });
+        // 初期状態を反映（connectDevice 前は disconnected）。
+        setConnectionState(id, client->state());
         if (!client->connectDevice()) {
             qWarning().noquote() << "ModbusController: connectDevice() failed for" << id
                                  << client->errorString();
@@ -145,6 +173,16 @@ void ModbusController::configure(const QVariantList &connections, const QVariant
             item.poll = 1000;
         }
         m_items.append(item);
+
+        // Phase 7 / MB-4: 書込可能レジスタ（coil / holding）なら write 表にも登録する。
+        // discrete / input は読取専用なので write 表に入れない（writeVariable で no-op）。
+        if (isWritableRegister(regType)) {
+            WriteItem witem;
+            witem.connectionId = connectionId;
+            witem.regType = regType;
+            witem.address = address;
+            m_writeItems.insert(name, witem);
+        }
     }
 
     startPolling();
@@ -217,6 +255,130 @@ void ModbusController::pollOne(const PollItem &item)
     });
 }
 
+void ModbusController::writeVariable(const QString &name, const QVariant &value)
+{
+    // 書込写像が無い変数（内部変数 / 読取専用レジスタ）は何もしない（呼ぶ側は気にせず呼べる）。
+    const auto it = m_writeItems.constFind(name);
+    if (it == m_writeItems.constEnd()) {
+        return;
+    }
+    const WriteItem &witem = it.value();
+
+    QModbusTcpClient *client = m_clients.value(witem.connectionId);
+    if (!client) {
+        qWarning().noquote() << "ModbusController: writeVariable" << name
+                             << "has no client for connection" << witem.connectionId;
+        return;
+    }
+    if (client->state() != QModbusDevice::ConnectedState) {
+        // 未接続なら書けない（接続復帰後の次の操作で書ける）。読込ポーリングが
+        // 復帰後に最新値を持ってくるので致命にはしない。
+        qWarning().noquote() << "ModbusController: writeVariable" << name
+                             << "skipped (connection" << witem.connectionId << "not connected)";
+        return;
+    }
+
+    // coil は bool→0/1、holding は int→quint16 に正規化する。
+    QModbusDataUnit unit(witem.regType, witem.address, 1);
+    if (witem.regType == QModbusDataUnit::Coils) {
+        unit.setValue(0, value.toBool() ? 1 : 0);
+    } else { // HoldingRegisters
+        unit.setValue(0, static_cast<quint16>(value.toInt()));
+    }
+
+    const int unitId = m_unitIds.value(witem.connectionId, 1);
+    auto *reply = client->sendWriteRequest(unit, unitId);
+    if (!reply) {
+        qWarning().noquote() << "ModbusController: sendWriteRequest returned null for"
+                             << name << client->errorString();
+        return;
+    }
+    if (reply->isFinished()) {
+        reply->deleteLater();
+        return;
+    }
+    const quint64 generation = m_generation;
+    const QString capturedName = name;
+    QObject::connect(reply, &QModbusReply::finished, this,
+                     [this, reply, capturedName, generation]() {
+                         // configure() / stop() 後に finished した旧世代 reply は無視。
+                         if (generation == m_generation
+                             && reply->error() != QModbusDevice::NoError) {
+                             qWarning().noquote() << "ModbusController: write error for"
+                                                  << capturedName << reply->errorString();
+                         }
+                         reply->deleteLater();
+                     });
+}
+
+void ModbusController::setConnectionState(const QString &id, QModbusDevice::State state)
+{
+    QString text;
+    switch (state) {
+    case QModbusDevice::ConnectingState:
+        text = QStringLiteral("connecting");
+        break;
+    case QModbusDevice::ConnectedState:
+        text = QStringLiteral("connected");
+        break;
+    case QModbusDevice::ClosingState:
+    case QModbusDevice::UnconnectedState:
+    default:
+        text = QStringLiteral("disconnected");
+        break;
+    }
+    if (m_connectionStates.value(id).toString() == text) {
+        return; // 重複通知を避ける。
+    }
+    m_connectionStates.insert(id, text);
+    emit connectionStatesChanged();
+}
+
+void ModbusController::scheduleReconnect(const QString &id)
+{
+    // 既に再接続タイマが回っているなら二重起動しない。
+    if (m_reconnectTimers.contains(id)) {
+        return;
+    }
+    QModbusTcpClient *client = m_clients.value(id);
+    if (!client) {
+        return;
+    }
+    auto *timer = new QTimer(this);
+    timer->setInterval(kReconnectIntervalMs);
+    const quint64 generation = m_generation;
+    QObject::connect(timer, &QTimer::timeout, this, [this, id, generation, timer]() {
+        // 世代が変わった（configure / stop）なら、このタイマ自身を止めて破棄してから抜ける
+        // （stop でも片付くが、無駄な再試行を残さないよう明示的に止める。CodeRabbit PR #122）。
+        // hash には同 id の新世代タイマが入っている可能性があるので、自分自身のときだけ外す。
+        if (generation != m_generation) {
+            if (m_reconnectTimers.value(id) == timer) {
+                m_reconnectTimers.remove(id);
+            }
+            timer->stop();
+            timer->deleteLater();
+            return;
+        }
+        QModbusTcpClient *c = m_clients.value(id);
+        if (!c) {
+            return;
+        }
+        if (c->state() == QModbusDevice::ConnectedState) {
+            // 既に接続済みなら再接続タイマを止めて破棄する。
+            if (QTimer *t = m_reconnectTimers.take(id)) {
+                t->stop();
+                t->deleteLater();
+            }
+            return;
+        }
+        if (c->state() == QModbusDevice::UnconnectedState) {
+            c->connectDevice(); // 失敗しても次周期で再試行。
+        }
+    });
+    timer->start();
+    m_reconnectTimers.insert(id, timer);
+}
+
 void ModbusController::stop()
 {
     // 世代を進め、発行済み reply の finished ラムダを無効化する（CodeRabbit PR #121）。
@@ -227,6 +389,16 @@ void ModbusController::stop()
     }
     m_timers.clear();
     m_items.clear();
+    m_writeItems.clear();
+
+    // Phase 7 / MB-4: 再接続タイマを確実に止める（世代切替後に旧接続を叩かないように）。
+    for (QTimer *timer : std::as_const(m_reconnectTimers)) {
+        if (timer) {
+            timer->stop();
+            timer->deleteLater();
+        }
+    }
+    m_reconnectTimers.clear();
 
     for (const QPointer<QModbusTcpClient> &client : std::as_const(m_clients)) {
         if (client) {
@@ -236,4 +408,10 @@ void ModbusController::stop()
     }
     m_clients.clear();
     m_unitIds.clear();
+
+    // Phase 7 / MB-4: 接続状態をクリアして QML へ通知する（再 configure 時の stale 表示防止）。
+    if (!m_connectionStates.isEmpty()) {
+        m_connectionStates.clear();
+        emit connectionStatesChanged();
+    }
 }

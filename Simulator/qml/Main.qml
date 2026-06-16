@@ -68,6 +68,11 @@ Window {
             anchors.centerIn: parent
             canvasWidth: 800
             canvasHeight: 600
+            // Phase 7 / MB-4: ユーザー操作由来の変数更新を PLC へ書き戻すため、Modbus
+            // マスタ（context property modbusController）を渡す（読込由来の更新では
+            // writeVariable を呼ばないので書戻しループ無し）。canvas 側の受け口は
+            // self-reference を避けるため別名 plcController にしている。
+            plcController: (typeof modbusController !== "undefined") ? modbusController : null
         }
 
         // ── 変数（タグ）デバッグパネル ──────────────────────────────
@@ -118,11 +123,69 @@ Window {
                 color: "#333333"
             }
 
+            // ── 接続状態（Phase 7 / MB-4）─────────────────────────────────
+            // Modbus 接続の状態（connected / connecting / disconnected / error）を最小表示する。
+            // connectionStatesChanged で再代入されるので各行は自動更新される。接続定義が無ければ
+            // 何も出さない（後方互換）。専用の状態表示 Widget までは作らない（MB-4 の主眼は
+            // write と再接続。状態は最小可視化に留める）。
+            Column {
+                id: connStatusBox
+                objectName: "connStatusBox"
+                anchors.top: varPanelHeader.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.margins: 10
+                anchors.topMargin: 6
+                spacing: 2
+                // connectionStates のキー数で可視判定（接続定義が無ければ隠す）。
+                visible: connStatusRepeater.model.length > 0
+
+                Label {
+                    width: parent.width
+                    text: qsTr("接続状態")
+                    font.bold: true
+                    font.pixelSize: 11
+                    color: "#666666"
+                }
+
+                Repeater {
+                    id: connStatusRepeater
+                    // connectionStates（id→状態文字列）のキー配列。modbusController 不在時は空。
+                    model: (typeof modbusController !== "undefined" && modbusController !== null)
+                           ? Object.keys(modbusController.connectionStates) : []
+                    delegate: Row {
+                        required property var modelData
+                        objectName: "connStatusRow_" + modelData
+                        width: parent.width
+                        spacing: 6
+
+                        Label {
+                            width: parent.width * 0.5
+                            elide: Text.ElideRight
+                            color: "#444444"
+                            font.pixelSize: 11
+                            text: modelData
+                        }
+                        Label {
+                            objectName: "connStatusValue"
+                            width: parent.width * 0.5 - parent.spacing
+                            elide: Text.ElideRight
+                            font.pixelSize: 11
+                            font.bold: true
+                            text: modbusController.connectionStates[modelData]
+                            color: text === "connected" ? "#2a9d8f"
+                                 : text === "error" ? "#e63946"
+                                 : "#888888"
+                        }
+                    }
+                }
+            }
+
             // 変数行のスクロール領域（Codex PR #109 P3）。変数定義がパネル高さを超える
             // 件数でも全行を閲覧できるよう、Repeater を高さ制約付き ScrollView + clip に入れる。
             ScrollView {
                 id: varScroll
-                anchors.top: varPanelHeader.bottom
+                anchors.top: connStatusBox.visible ? connStatusBox.bottom : varPanelHeader.bottom
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom

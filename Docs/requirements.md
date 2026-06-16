@@ -65,7 +65,32 @@ flowchart LR
 | アラーム / イベント管理 | P1 | 条件成立で通知・履歴・確認（ack） |
 | ロギング / トレンド記録 | P2 | 変数値の時系列記録（トレンドグラフの土台） |
 | バインディングの式評価 | P2 | 単純追従だけでなく演算・条件式（`a > 80` 等） |
-| 他プロトコル（OPC-UA / MQTT / CAN / シリアル） | P2 | Modbus で通信抽象の足場を作ってから横展開 |
+| **OPC-UA クライアント対応** | P2 | Modbus の次に主流。`ConnectionData`/`VariableData.source` が複数プロトコル前提なので足場を流用（下の補足参照） |
+| 他プロトコル（MQTT / CAN / シリアル RTU） | P2 | Modbus / OPC-UA で通信抽象の足場を固めてから横展開。IIoT 連携なら MQTT + Sparkplug B |
+
+#### 補足：通信プロトコルの主流トレンドと OPC-UA 対応の位置づけ
+
+業界の主流は「**下位 I/O 層 = Modbus（枯れて軽量・既存設備に必須）／上位層 = OPC-UA（型情報・セキュリティ・pub-sub の事実上標準）／クラウド連携 = MQTT + Sparkplug B**」の構成。HMI/SCADA 側は Web ベース（ブラウザ＝クライアント）+ Edge/IIoT が伸びている。Atlas はあえて「Qt ネイティブ + 組込み実機（i.MX8MP/Yocto）密結合 + 軽量・オフライン」ニッチに寄せる方針なので、OPC-UA は**主流に一歩寄せたい時の次の一手**という位置づけ（Modbus 確定の Phase 7 完了後に承認判断、自動着手しない）。
+
+```mermaid
+flowchart LR
+    Field["現場 I/O 層<br/>Modbus(実装中)"] --> Up["上位層<br/>OPC-UA(P2 候補)"]
+    Up --> Cloud["クラウド/IIoT<br/>MQTT+Sparkplug B(P2)"]
+```
+
+**OPC-UA 対応の概算工数**（Modbus 実装＝`ModbusController` ~320 行 + Schema を物差し。Qt6::OpcUa〔open62541 ラッパー〕を利用、既存 `ConnectionData`/`source` 設計を流用する前提）：
+
+| 範囲 | 内容 | 人月 |
+|---|---|---|
+| Schema 拡張 | `proto:"opcua"` + NodeId アドレス（`ns=2;s=...`） | 0.3 |
+| OpcUaController | 接続 / 購読(subscription) / 読込 | 1.0 |
+| 書込 + 接続状態 | write + 状態監視 | 0.3 |
+| Editor 接続 UI | OPC-UA 用編集 UI | 0.3 |
+| E2E | ソフト OPC-UA サーバ（open62541 / python-opcua）で cross-app | 0.5 |
+| 実サーバ + Yocto | 実機検証 + i.MX rootfs へ qtopcua/open62541 同梱 | 0.5 |
+
+- **happy-path MVP**（Security=None・読込のみ・PC のみ）≈ **1〜1.5 人月**／**プロダクション品質**（証明書・暗号化・書込・実機まで）≈ **2.5〜3.5 人月**（実績ペース・1 人）。
+- **Modbus に無い固有リスク 3 つ**：①**セキュリティ**（証明書交換・Basic256Sha256 暗号化＝最大の沼。None で逃げれば激減）／②**Yocto**（meta-qt6 が qtopcua + open62541 を実機 image にビルドできるか未確認）／③**アドレス空間**（フラットなレジスタ番地でなく NodeId 名前空間で Schema/UI が複雑化）。
 
 ### D. 編集体験（Editor UX）
 

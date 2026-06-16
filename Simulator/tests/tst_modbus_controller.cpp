@@ -21,9 +21,14 @@ class TestModbusController : public QObject {
 private slots:
     void registerTypeMapping();
     void booleanRegisterClassification();
+    void writableRegisterClassification();
     void configureWithoutSourceEmitsNothing();
     void readHoldingRegisterEmitsValue();
     void readCoilEmitsBool();
+    void writeHoldingRegisterUpdatesSlave();
+    void writeCoilUpdatesSlave();
+    void writeReadOnlyRegisterIsNoOp();
+    void connectionStateReflectsConnected();
 
 private:
     // 任意レジスタ値を載せた in-process Modbus TCP スレーブを起動し、listen ポートを返す。
@@ -53,6 +58,16 @@ void TestModbusController::booleanRegisterClassification()
     QVERIFY(!ModbusController::isBooleanRegister(QModbusDataUnit::InputRegisters));
     QVERIFY(!ModbusController::isBooleanRegister(QModbusDataUnit::HoldingRegisters));
     QVERIFY(!ModbusController::isBooleanRegister(QModbusDataUnit::Invalid));
+}
+
+void TestModbusController::writableRegisterClassification()
+{
+    // coil / holding のみ書込可能。discrete / input は読取専用。
+    QVERIFY(ModbusController::isWritableRegister(QModbusDataUnit::Coils));
+    QVERIFY(ModbusController::isWritableRegister(QModbusDataUnit::HoldingRegisters));
+    QVERIFY(!ModbusController::isWritableRegister(QModbusDataUnit::DiscreteInputs));
+    QVERIFY(!ModbusController::isWritableRegister(QModbusDataUnit::InputRegisters));
+    QVERIFY(!ModbusController::isWritableRegister(QModbusDataUnit::Invalid));
 }
 
 void TestModbusController::configureWithoutSourceEmitsNothing()
@@ -182,6 +197,172 @@ void TestModbusController::readCoilEmitsBool()
     // coil は bool に正規化される（0/1 ではなく true/false）。
     QCOMPARE(args.at(1).typeId(), QMetaType::Bool);
     QCOMPARE(args.at(1).toBool(), true);
+}
+
+void TestModbusController::writeHoldingRegisterUpdatesSlave()
+{
+    QModbusTcpServer server;
+    const int unitId = 1;
+    // 初期値 0 の holding register を addr 2 に用意する。
+    const quint16 port = startSlave(server, unitId, QModbusDataUnit::HoldingRegisters,
+                                    /*address*/ 2, /*value*/ 0);
+    if (port == 0) {
+        QSKIP("Could not start in-process Modbus TCP slave");
+    }
+
+    ModbusController controller;
+    QVariantList connections;
+    connections.append(QVariantMap{{"id", "plc1"},
+                                   {"proto", "modbusTcp"},
+                                   {"host", "127.0.0.1"},
+                                   {"port", static_cast<int>(port)},
+                                   {"unitId", unitId}});
+    QVariantList variables;
+    // 読込は不要なので poll を長めにして write を主眼にする。
+    variables.append(QVariantMap{
+        {"name", "setpoint"},
+        {"type", "int"},
+        {"source", QVariantMap{{"connection", "plc1"},
+                               {"reg", "holding"},
+                               {"address", 2},
+                               {"poll", 5000}}}});
+    controller.configure(connections, variables);
+
+    // 接続状態が "connected" になるまで待つ（非同期）。
+    QTRY_VERIFY_WITH_TIMEOUT(
+        controller.connectionStates().value("plc1").toString() == QStringLiteral("connected"),
+        5000);
+
+    controller.writeVariable("setpoint", 4242);
+
+    // サーバ側の holding register が write 値に変わるのを待つ。
+    auto readHr = [&server]() {
+        quint16 v = 0;
+        server.data(QModbusDataUnit::HoldingRegisters, 2, &v);
+        return static_cast<int>(v);
+    };
+    QTRY_VERIFY_WITH_TIMEOUT(readHr() == 4242, 5000);
+}
+
+void TestModbusController::writeCoilUpdatesSlave()
+{
+    QModbusTcpServer server;
+    const int unitId = 1;
+    const quint16 port = startSlave(server, unitId, QModbusDataUnit::Coils,
+                                    /*address*/ 0, /*value*/ 0);
+    if (port == 0) {
+        QSKIP("Could not start in-process Modbus TCP slave");
+    }
+
+    ModbusController controller;
+    QVariantList connections;
+    connections.append(QVariantMap{{"id", "plc1"},
+                                   {"proto", "modbusTcp"},
+                                   {"host", "127.0.0.1"},
+                                   {"port", static_cast<int>(port)},
+                                   {"unitId", unitId}});
+    QVariantList variables;
+    variables.append(QVariantMap{
+        {"name", "run"},
+        {"type", "bool"},
+        {"source", QVariantMap{{"connection", "plc1"},
+                               {"reg", "coil"},
+                               {"address", 0},
+                               {"poll", 5000}}}});
+    controller.configure(connections, variables);
+
+    QTRY_VERIFY_WITH_TIMEOUT(
+        controller.connectionStates().value("plc1").toString() == QStringLiteral("connected"),
+        5000);
+
+    controller.writeVariable("run", true);
+
+    // WriteSingleCoil の ON は Modbus 仕様で 0xFF00。QModbusTcpServer は生値（0xFF00=65280）
+    // を保存するため、誤実装（1 等）を取りこぼさないよう厳密に 0xFF00 で判定する（OFF は 0）。
+    auto readCoil = [&server]() {
+        quint16 v = 0;
+        server.data(QModbusDataUnit::Coils, 0, &v);
+        return static_cast<int>(v);
+    };
+    QTRY_VERIFY_WITH_TIMEOUT(readCoil() == 0xFF00, 5000);
+}
+
+void TestModbusController::writeReadOnlyRegisterIsNoOp()
+{
+    // input register（読取専用）を source に持つ変数は write 表に入らないので、
+    // writeVariable しても何も起きない（サーバ側の値が変わらない）。
+    QModbusTcpServer server;
+    const int unitId = 1;
+    const quint16 port = startSlave(server, unitId, QModbusDataUnit::InputRegisters,
+                                    /*address*/ 1, /*value*/ 7);
+    if (port == 0) {
+        QSKIP("Could not start in-process Modbus TCP slave");
+    }
+
+    ModbusController controller;
+    QVariantList connections;
+    connections.append(QVariantMap{{"id", "plc1"},
+                                   {"proto", "modbusTcp"},
+                                   {"host", "127.0.0.1"},
+                                   {"port", static_cast<int>(port)},
+                                   {"unitId", unitId}});
+    QVariantList variables;
+    variables.append(QVariantMap{
+        {"name", "sensor"},
+        {"type", "int"},
+        {"source", QVariantMap{{"connection", "plc1"},
+                               {"reg", "input"},
+                               {"address", 1},
+                               {"poll", 5000}}}});
+    controller.configure(connections, variables);
+
+    QTRY_VERIFY_WITH_TIMEOUT(
+        controller.connectionStates().value("plc1").toString() == QStringLiteral("connected"),
+        5000);
+
+    // 読取専用への writeVariable は no-op（write 表に無い）。
+    controller.writeVariable("sensor", 999);
+
+    // サーバ値が変わらないことを少し待って確認する。
+    QTest::qWait(300);
+    quint16 v = 0;
+    server.data(QModbusDataUnit::InputRegisters, 1, &v);
+    QCOMPARE(static_cast<int>(v), 7);
+}
+
+void TestModbusController::connectionStateReflectsConnected()
+{
+    QModbusTcpServer server;
+    const int unitId = 1;
+    const quint16 port = startSlave(server, unitId, QModbusDataUnit::HoldingRegisters,
+                                    /*address*/ 0, /*value*/ 0);
+    if (port == 0) {
+        QSKIP("Could not start in-process Modbus TCP slave");
+    }
+
+    ModbusController controller;
+    QSignalSpy stateSpy(&controller, &ModbusController::connectionStatesChanged);
+
+    QVariantList connections;
+    connections.append(QVariantMap{{"id", "plc1"},
+                                   {"proto", "modbusTcp"},
+                                   {"host", "127.0.0.1"},
+                                   {"port", static_cast<int>(port)},
+                                   {"unitId", unitId}});
+    QVariantList variables; // 変数なしでも接続状態は出る。
+    controller.configure(connections, variables);
+
+    // 状態変化が通知され、最終的に "connected" になる。
+    QTRY_VERIFY_WITH_TIMEOUT(
+        controller.connectionStates().value("plc1").toString() == QStringLiteral("connected"),
+        5000);
+    QVERIFY(stateSpy.count() > 0);
+
+    // stop() で状態がクリアされ、QML バインディング向けに通知（connectionStatesChanged）も発火する。
+    const int beforeStop = stateSpy.count();
+    controller.stop();
+    QVERIFY(controller.connectionStates().isEmpty());
+    QVERIFY(stateSpy.count() > beforeStop);
 }
 
 QTEST_MAIN(TestModbusController)
