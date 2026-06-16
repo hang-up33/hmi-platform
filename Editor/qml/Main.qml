@@ -757,6 +757,9 @@ Window {
                                     objectName: "inspectorXField"
                                     width: 150
                                     inputMethodHints: Qt.ImhDigitsOnly
+                                    // フォーカス取得時に全選択し、クリック / Tab 直後に
+                                    // 数値をそのまま打ち直せるようにする（消す手間を省く）。
+                                    onActiveFocusChanged: if (activeFocus) selectAll()
                                     validator: IntValidator { bottom: 0; top: 9999 }
                                     // 妥当な数値の時だけ選択中 Item へ書き戻す（acceptableInput）。
                                     onTextEdited: {
@@ -780,6 +783,7 @@ Window {
                                     objectName: "inspectorYField"
                                     width: 150
                                     inputMethodHints: Qt.ImhDigitsOnly
+                                    onActiveFocusChanged: if (activeFocus) selectAll()
                                     validator: IntValidator { bottom: 0; top: 9999 }
                                     onTextEdited: {
                                         if (canvas.selectedItem && acceptableInput) {
@@ -802,6 +806,7 @@ Window {
                                     objectName: "inspectorWidthField"
                                     width: 150
                                     inputMethodHints: Qt.ImhDigitsOnly
+                                    onActiveFocusChanged: if (activeFocus) selectAll()
                                     // 最小幅 30（EditableWidget.minWidth と整合）。
                                     validator: IntValidator { bottom: 30; top: 9999 }
                                     onTextEdited: {
@@ -825,6 +830,7 @@ Window {
                                     objectName: "inspectorHeightField"
                                     width: 150
                                     inputMethodHints: Qt.ImhDigitsOnly
+                                    onActiveFocusChanged: if (activeFocus) selectAll()
                                     // 最小高さ 24（EditableWidget.minHeight と整合）。
                                     validator: IntValidator { bottom: 24; top: 9999 }
                                     onTextEdited: {
@@ -1491,6 +1497,7 @@ Window {
                                 width: parent.width
                                 visible: rootWindow.selectedIsNumericField
                                 placeholderText: qsTr("(未指定)")
+                                onActiveFocusChanged: if (activeFocus) selectAll()
                                 // 空 または 任意符号付き整数 / 小数（先頭 `-`・小数点・指数なし）。
                                 validator: RegularExpressionValidator {
                                     regularExpression: /^(-?\d*\.?\d*)$/
@@ -1531,6 +1538,7 @@ Window {
                                 width: parent.width
                                 visible: rootWindow.selectedIsNumericField
                                 placeholderText: qsTr("(未指定)")
+                                onActiveFocusChanged: if (activeFocus) selectAll()
                                 validator: RegularExpressionValidator {
                                     regularExpression: /^(-?\d*\.?\d*)$/
                                 }
