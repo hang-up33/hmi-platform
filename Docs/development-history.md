@@ -326,7 +326,7 @@ timeline
 
 **計画書**：[Docs/phase7-modbus-plan.md](phase7-modbus-plan.md)（MB-1〜6。2026-06-16 ユーザー承認で着手）
 
-- 🚧 着手中。`hmi_simulator`/`hmi_runtime` が **QtSerialBus（`QModbusTcpClient`）で Modbus マスタ**になり PLC レジスタを周期ポーリング/書込→既存の変数ストア + binding 経路へ流す（実務 HMI の核心）。**通信は Simulator 共有ソース（→Runtime 継承）に置き、Editor は `Qt6::SerialBus` 非リンク**（接続定義を JSON に書くだけ）。実 PLC は CI/Web から不達のため自動検証は **pymodbus ソフトスレーブ相手の E2E**、実 PLC/実機確認はローカル。
+- ✅ **MB-1〜MB-4（Web 分）完了**（PR #119/#121/#122）。残る MB-5〔実 PLC 書込確認〕/ MB-6〔実機 Runtime 展開〕はローカル専用＝Web 不可。`hmi_simulator`/`hmi_runtime` が **QtSerialBus（`QModbusTcpClient`）で Modbus マスタ**になり PLC レジスタを周期ポーリング/書込→既存の変数ストア + binding 経路へ流す（実務 HMI の核心）。**通信は Simulator 共有ソース（→Runtime 継承）に置き、Editor は `Qt6::SerialBus` 非リンク**（接続定義を JSON に書くだけ）。実 PLC は CI/Web から不達のため自動検証は **pymodbus ソフトスレーブ相手の E2E**、実 PLC/実機確認はローカル。
   - **タスク**：MB-1（変数ソース Schema + Editor 編集 UI・実通信なし・Web 可）/ MB-2（PC 読込ポーリング・pymodbus E2E・Web 可）/ MB-3（実 PLC 読込・ローカル）/ MB-4（書込 + 接続状態・Web 可）/ MB-5（実 PLC 書込・ローカル）/ MB-6（実機 Runtime 展開・WSL2+実機・Web 不可）。
 
 ### MB-1: 変数ソース Schema + Editor 編集 UI（実通信なし）
@@ -351,6 +351,15 @@ timeline
 - **検証**：build 緑 + `ctest` 22/22 緑（unit 12〔write〔holding/coil が in-process `QModbusTcpServer` で変わる〕・read 専用 reg の no-op・接続状態 "connected" + stop クリア・`isWritableRegister` 純関数を追加〕+ e2e 11〔新規 `e2e_modbus_write`：pymodbus スレーブ相手に NumericField 確定 → `writeVariable` → スレーブの holding が変わるのを別 client で読み返し assert。pymodbus 不在は skip〕）。**Editor は SerialBus 非リンク維持**。
 - 意図的最小化：接続状態は最小一覧表示のみ（専用 Widget なし）。int/bool のみ（float/スケーリングは別）。Editor 不変。
 - 学び（kaizen）：①QML バインド右辺の self-reference（context property と同名 property に渡すと自分自身=null）→ 受け口を `plcController` に改名。②`hmi_simulator` 単体ビルドでは qmlplugin が更新されず QML テストが古い QML で落ちる → フルビルド必須。③`WriteSingleCoil` の ON は `0xFF00`＝サーバ側 `data()` は 65280 を返す → coil 検証は `!= 0`。
+
+---
+
+## Phase 8: トレンドグラフ（Trend・ライブ折れ線）
+
+**計画書**：[Docs/phase8-trend-plan.md](phase8-trend-plan.md)（T-A〜T-D。2026-06-16 ユーザー要望「トレンドグラフ欲しい」+ スコープ 2 問確定で着手）
+
+- 🚧 着手中（計画起票）。新 Widget 種別「Trend」を Phase 5（Label）/ Phase 6（NumericField）の **横展開テンプレ**（型分岐の足場 + Schema 4 メソッド + インスペクタ型対応 + cross-app E2E）に乗せる。**ライブのみ**（bound 変数を変更時/周期サンプリングしリングバッファに直近 N 点保持、履歴永続化は非スコープ）。**描画は QML `Canvas` 自描画で新 Qt モジュール依存ゼロ**（QtCharts 不使用＝Phase 7 の QtSerialBus 同梱問題を構造的に回避し i.MX8MP rootfs にそのまま載る）。サンプル源は既存 `bindings` の「読み」を再利用するため **Schema / C++ ブリッジは無改変**。Canvas はピクセル不可視のため、E2E は公開プロパティ（`sampleCount`/`lastValue`）でサンプル取り込みを観測する。
+  - **タスク**：T-A（Schema 拡張：`type:"Trend"` + `pointCount`/Y軸 min·max〔presence フラグ〕/線色/`sampleMs`）/ T-B（`HmiTrend.qml` Canvas 描画 + delegate 4 分岐目）/ T-C（Editor 追加 UI + インスペクタ型対応）/ T-D（cross-app E2E + スクショ）。すべて Web 可。
 
 ---
 
