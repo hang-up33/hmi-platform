@@ -113,7 +113,8 @@ SDK 生成・実機 scp・起動（weston）・キャプチャの全手順と罠
 
 ## ステータスとドキュメント
 
-- **現在地**: **Phase 7 / Modbus TCP 通信を実装中**（2026-06-16 承認）。MB-1〔変数ソース Schema（`ConnectionData` + `VariableData.source`）+ Editor 接続編集 UI・実通信なし〕完了（PR #119）。MB-2〔PC 読込ポーリング：Simulator/Runtime が `QModbusTcpClient` で PLC レジスタを周期読込 →変数ストア + binding 経路へ〕完了（PR #121）。MB-3〔実 PLC 読込確認〕ローカル達成（2026-06-16：実 AutomationDirect CLICK ＠192.168.1.2 へ接続し holding/coil 読込・binding 追従を確認。証跡 `Docs/samples/mb-3-click-plc-demo.json`）。MB-4〔書込 + 接続状態 + 自動再接続。書込 E2E 込み〕完了（PR #122）。次は MB-5〔実 PLC 書込確認〕＝ローカル専用。MB-5/6（実 PLC 書込・実機）はローカル専用で Web 不可。進捗の正本は [Docs/phase7-modbus-plan.md](Docs/phase7-modbus-plan.md)。
+- **現在地**: **Phase 8 / トレンドグラフ（Trend・ライブ折れ線）に着手**（2026-06-16 承認・計画起票）。新 Widget 種別「Trend」を横展開テンプレに乗せ、**QML `Canvas` 自描画で新 Qt モジュール依存ゼロ**（QtCharts 不使用＝実機にそのまま載る）。サンプル源は既存 binding の「読み」を再利用。T-A〔Schema 拡張〕→ T-B〔HmiTrend 描画〕→ T-C〔Editor UI〕→ T-D〔ライブ E2E〕。進捗の正本は [Docs/phase8-trend-plan.md](Docs/phase8-trend-plan.md)。
+  - **Phase 7 / Modbus TCP** は MB-1〜MB-4（書込 + 接続状態 + 自動再接続・PR #119/#121/#122）完了。残る MB-5〔実 PLC 書込確認〕/ MB-6〔実機 Yocto〕はローカル専用で Web 不可。進捗の正本は [Docs/phase7-modbus-plan.md](Docs/phase7-modbus-plan.md)。
 - 開発の時系列（各タスクの目的 / PR / 学び）: [Docs/development-history.md](Docs/development-history.md)
 - 各フェーズの計画と進捗表（正本）: [Docs/](Docs/) の `phase*-plan.md`
 - 開発ガイド・ビルドの罠・ルール: [CLAUDE.md](CLAUDE.md)
