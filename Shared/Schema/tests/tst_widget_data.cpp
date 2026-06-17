@@ -6,6 +6,7 @@
 
 using hmi::schema::ActionData;
 using hmi::schema::BindingData;
+using hmi::schema::TrendSeriesData;
 using hmi::schema::WidgetData;
 
 namespace {
@@ -53,6 +54,12 @@ private slots:
     void trendFieldsRoundTrip();
     void trendYAxisOmittedWhenUnspecified();
     void negativeTrendYAxisRoundTrip();
+    // Task 8B-A（Phase 8-B）: Trend 拡張（複数系列 + 軸目盛り/凡例）の round-trip。
+    // series（子型配列）+ showGrid/showLegend（既定 false の bool optional）+ yTickCount
+    //（`0` センチネル）の往復、空 series + 既定フラグの省略（後方互換）、series の検証を固定する。
+    void trendSeriesAndFlagsRoundTrip();
+    void trendSeriesAndFlagsOmittedWhenEmpty();
+    void isValidJsonRejectsInvalidSeries();
     void actionsAndBindingsRoundTrip();
     void omitsEmptyActionsAndBindings();
     void isValidJsonRejectsInvalidActionsBindings();
@@ -512,6 +519,126 @@ void WidgetDataTest::negativeTrendYAxisRoundTrip()
     QCOMPARE(r.hasYMax, true);
     QCOMPARE(r.yMin, -50.0);
     QCOMPARE(r.yMax, -1.0);
+}
+
+// Task 8B-A（Phase 8-B）: 複数系列（series）+ 軸目盛り/凡例フラグの round-trip（JSON / QVariantMap 両方）。
+void WidgetDataTest::trendSeriesAndFlagsRoundTrip()
+{
+    WidgetData src;
+    src.id = "trend010";
+    src.type = "Trend";
+    src.width = 360;
+    src.height = 180;
+    src.showGrid = true;
+    src.showLegend = true;
+    src.yTickCount = 5;
+    TrendSeriesData s0;
+    s0.variable = "sensorTemp";
+    s0.color = "#4cc9f0";
+    s0.label = "Temp";
+    TrendSeriesData s1;
+    s1.variable = "sensorPressure";  // color / label は省略（未指定）
+    src.series.append(s0);
+    src.series.append(s1);
+
+    // JSON round-trip
+    const QJsonObject obj = src.toJson();
+    QVERIFY(obj.contains("series"));
+    QVERIFY(obj.contains("showGrid"));
+    QVERIFY(obj.contains("showLegend"));
+    QVERIFY(obj.contains("yTickCount"));
+    QCOMPARE(obj.value("series").toArray().size(), 2);
+    // s1 は color / label 未指定 → そのキーは省略される（子型 toJson の規則）。
+    const QJsonObject s1obj = obj.value("series").toArray().at(1).toObject();
+    QVERIFY(s1obj.contains("variable"));
+    QVERIFY(!s1obj.contains("color"));
+    QVERIFY(!s1obj.contains("label"));
+
+    const WidgetData restored = WidgetData::fromJson(obj);
+    QCOMPARE(restored.series.size(), 2);
+    QCOMPARE(restored.series.at(0).variable, QStringLiteral("sensorTemp"));
+    QCOMPARE(restored.series.at(0).color, QStringLiteral("#4cc9f0"));
+    QCOMPARE(restored.series.at(0).label, QStringLiteral("Temp"));
+    QCOMPARE(restored.series.at(1).variable, QStringLiteral("sensorPressure"));
+    QVERIFY(restored.series.at(1).color.isEmpty());
+    QVERIFY(restored.series.at(1).label.isEmpty());
+    QCOMPARE(restored.showGrid, true);
+    QCOMPARE(restored.showLegend, true);
+    QCOMPARE(restored.yTickCount, 5);
+
+    // QVariantMap round-trip
+    const QVariantMap m = src.toVariantMap();
+    QCOMPARE(m.value("series").toList().size(), 2);
+    QCOMPARE(m.value("showGrid").toBool(), true);
+    QCOMPARE(m.value("showLegend").toBool(), true);
+    QCOMPARE(m.value("yTickCount").toInt(), 5);
+    const WidgetData r = WidgetData::fromVariantMap(m);
+    QCOMPARE(r.series.size(), 2);
+    QCOMPARE(r.series.at(0).variable, QStringLiteral("sensorTemp"));
+    QCOMPARE(r.series.at(0).color, QStringLiteral("#4cc9f0"));
+    QCOMPARE(r.series.at(1).variable, QStringLiteral("sensorPressure"));
+    QCOMPARE(r.showGrid, true);
+    QCOMPARE(r.showLegend, true);
+    QCOMPARE(r.yTickCount, 5);
+}
+
+// Task 8B-A（Phase 8-B）: series 空 + 既定フラグ（showGrid/showLegend=false、yTickCount=0）の
+// とき、series/showGrid/showLegend/yTickCount キーが JSON で省略される（Phase 8 単系列 JSON の後方互換）。
+void WidgetDataTest::trendSeriesAndFlagsOmittedWhenEmpty()
+{
+    WidgetData src;
+    src.id = "trend011";
+    src.type = "Trend";
+    src.width = 360;
+    src.height = 180;
+    // series は既定の空、showGrid/showLegend は既定 false、yTickCount は既定 0。
+
+    const QJsonObject obj = src.toJson();
+    QVERIFY(!obj.contains("series"));
+    QVERIFY(!obj.contains("showGrid"));
+    QVERIFY(!obj.contains("showLegend"));
+    QVERIFY(!obj.contains("yTickCount"));
+
+    const WidgetData r = WidgetData::fromJson(obj);
+    QVERIFY(r.series.isEmpty());
+    QCOMPARE(r.showGrid, false);
+    QCOMPARE(r.showLegend, false);
+    QCOMPARE(r.yTickCount, 0);
+}
+
+// Task 8B-A（Phase 8-B）: series は存在するなら配列 + 各要素が子型として有効（variable 非空）で
+// あることを isValidJson が要求する（不在は後方互換で許容）。
+void WidgetDataTest::isValidJsonRejectsInvalidSeries()
+{
+    QJsonObject base;
+    base["id"] = "trend001";
+    base["type"] = "Trend";
+    base["width"] = 360;
+    base["height"] = 180;
+    QVERIFY(WidgetData::isValidJson(base));
+
+    // series が配列でない → 無効。
+    {
+        QJsonObject obj = base;
+        obj["series"] = QStringLiteral("not-an-array");
+        QVERIFY(!WidgetData::isValidJson(obj));
+    }
+    // series 要素に variable が無い → 無効。
+    {
+        QJsonObject badSeries;
+        badSeries["color"] = "#4cc9f0";  // variable 欠落
+        QJsonObject obj = base;
+        obj["series"] = QJsonArray{ badSeries };
+        QVERIFY(!WidgetData::isValidJson(obj));
+    }
+    // 妥当な series は有効。
+    {
+        QJsonObject series;
+        series["variable"] = "sensorTemp";
+        QJsonObject obj = base;
+        obj["series"] = QJsonArray{ series };
+        QVERIFY(WidgetData::isValidJson(obj));
+    }
 }
 
 // Task 39: アクション / バインディング配列が round-trip で要素ごと再現される。

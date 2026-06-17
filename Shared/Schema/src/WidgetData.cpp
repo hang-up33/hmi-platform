@@ -109,6 +109,25 @@ QJsonObject WidgetData::toJson() const
     if (sampleMs > 0) {
         obj["sampleMs"] = sampleMs;
     }
+    // Task 8B-A（Phase 8-B）: Trend 拡張。series は空のとき省略（actions/bindings 同型）。
+    // showGrid / showLegend は **true のときだけ書く**（既定 false ＝ bool optional の規則）。
+    // yTickCount は **`> 0`** で書く（`0` センチネル＝pointCount 同型）。
+    if (!series.isEmpty()) {
+        QJsonArray seriesArr;
+        for (const TrendSeriesData &s : series) {
+            seriesArr.append(s.toJson());
+        }
+        obj["series"] = seriesArr;
+    }
+    if (showGrid) {
+        obj["showGrid"] = showGrid;
+    }
+    if (showLegend) {
+        obj["showLegend"] = showLegend;
+    }
+    if (yTickCount > 0) {
+        obj["yTickCount"] = yTickCount;
+    }
     // Task 39: アクション / バインディングは optional 配列。空のとき省略（後方互換）。
     if (!actions.isEmpty()) {
         QJsonArray actionsArr;
@@ -181,6 +200,16 @@ WidgetData WidgetData::fromJson(const QJsonObject &obj)
     w.yMax = obj.value("yMax").toDouble();
     w.lineColor = obj.value("lineColor").toString();
     w.sampleMs = obj.value("sampleMs").toInt(0);
+    // Task 8B-A（Phase 8-B）: Trend 拡張。series 配列（欠落時は空配列＝暗黙単系列）。
+    // showGrid / showLegend は欠落時 false（toBool() の既定）。yTickCount は **`toInt(0)`**
+    // （欠落時 0 = 未指定。`0` センチネル）。
+    const QJsonArray seriesArr = obj.value("series").toArray();
+    for (const QJsonValue &v : seriesArr) {
+        w.series.append(TrendSeriesData::fromJson(v.toObject()));
+    }
+    w.showGrid = obj.value("showGrid").toBool();
+    w.showLegend = obj.value("showLegend").toBool();
+    w.yTickCount = obj.value("yTickCount").toInt(0);
     // Task 39: アクション / バインディング配列（欠落時は空配列）。
     const QJsonArray actionsArr = obj.value("actions").toArray();
     for (const QJsonValue &v : actionsArr) {
@@ -241,6 +270,17 @@ QVariantMap WidgetData::toVariantMap() const
     m.insert(QStringLiteral("yMax"), yMax);
     m.insert(QStringLiteral("hasYMin"), hasYMin);
     m.insert(QStringLiteral("hasYMax"), hasYMax);
+    // Task 8B-A（Phase 8-B）: Trend 拡張。series は QVariantList of QVariantMap で往復
+    // （actions/bindings 同型）。showGrid/showLegend/yTickCount は素通し。
+    QVariantList seriesVar;
+    seriesVar.reserve(series.size());
+    for (const TrendSeriesData &s : series) {
+        seriesVar.append(s.toVariantMap());
+    }
+    m.insert(QStringLiteral("series"), seriesVar);
+    m.insert(QStringLiteral("showGrid"), showGrid);
+    m.insert(QStringLiteral("showLegend"), showLegend);
+    m.insert(QStringLiteral("yTickCount"), yTickCount);
     QVariantList actionsVar;
     actionsVar.reserve(actions.size());
     for (const ActionData &a : actions) {
@@ -304,6 +344,15 @@ WidgetData WidgetData::fromVariantMap(const QVariantMap &map)
     w.yMax = map.value(QStringLiteral("yMax")).toDouble();
     w.lineColor = map.value(QStringLiteral("lineColor")).toString();
     w.sampleMs = map.value(QStringLiteral("sampleMs")).toInt();
+    // Task 8B-A（Phase 8-B）: Trend 拡張。series はリストから子型を読む。
+    // showGrid/showLegend は欠落時 false、yTickCount は欠落時 0（= 未指定）。
+    const QVariantList seriesVar = map.value(QStringLiteral("series")).toList();
+    for (const QVariant &v : seriesVar) {
+        w.series.append(TrendSeriesData::fromVariantMap(v.toMap()));
+    }
+    w.showGrid = map.value(QStringLiteral("showGrid")).toBool();
+    w.showLegend = map.value(QStringLiteral("showLegend")).toBool();
+    w.yTickCount = map.value(QStringLiteral("yTickCount")).toInt();
     const QVariantList actionsVar = map.value(QStringLiteral("actions")).toList();
     for (const QVariant &v : actionsVar) {
         w.actions.append(ActionData::fromVariantMap(v.toMap()));
@@ -344,6 +393,19 @@ bool WidgetData::isValidJson(const QJsonObject &obj)
         const QJsonArray bindingsArr = obj.value("bindings").toArray();
         for (const QJsonValue &v : bindingsArr) {
             if (!v.isObject() || !BindingData::isValidJson(v.toObject())) {
+                return false;
+            }
+        }
+    }
+    // Task 8B-A（Phase 8-B）: series も optional だが、存在する場合は配列で各要素が
+    // 子型として有効（variable 非空）であることを要求する（不在は後方互換で許容）。
+    if (obj.contains("series")) {
+        if (!obj.value("series").isArray()) {
+            return false;
+        }
+        const QJsonArray seriesArr = obj.value("series").toArray();
+        for (const QJsonValue &v : seriesArr) {
+            if (!v.isObject() || !TrendSeriesData::isValidJson(v.toObject())) {
                 return false;
             }
         }

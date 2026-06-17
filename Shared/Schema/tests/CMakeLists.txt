@@ -39,3 +39,12 @@ target_link_libraries(tst_variable_data
         hmi_schema
 )
 add_test(NAME tst_variable_data COMMAND tst_variable_data)
+
+# Task 8B-A（Phase 8-B）: Trend 系列の子型 TrendSeriesData
+add_executable(tst_trend_series_data tst_trend_series_data.cpp)
+target_link_libraries(tst_trend_series_data
+    PRIVATE
+        Qt6::Test
+        hmi_schema
+)
+add_test(NAME tst_trend_series_data COMMAND tst_trend_series_data)
