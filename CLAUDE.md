@@ -111,6 +111,7 @@ JSON 入出力は `QJsonDocument`（外部依存なし）。Editor / Simulator �
 | [qt6-build](.claude/skills/qt6-build/SKILL.md) | Qt6 + CMake セットアップ・ビルド手順と既知の罠（macOS AGL / Windows / CI aqtinstall） |
 | [e2e-spix](.claude/skills/e2e-spix/SKILL.md) | Spix（E2E）+ AnyRPC 統合・ctest -L e2e の罠と回避策 |
 | [screenshot-capture](.claude/skills/screenshot-capture/SKILL.md) | 動作証跡スクショ撮影（macOS / Windows）・PR 埋め込み・README 同期 |
+| [hero-demo](.claude/skills/hero-demo/SKILL.md) | README ヒーローをリッチな HMI ダッシュボードに保つ（ショーケース demo の組み立て技法 + 撮影）。新 Widget 種別追加時にデモを育てる |
 | [kaizen-close](.claude/skills/kaizen-close/SKILL.md) | タスク完了直前に学びをドキュメントに反映する手順 |
 | [progress-summary](.claude/skills/progress-summary/SKILL.md) | 指定期間の実装状況を PR / タスクごとに列挙する（既定は機能だけの簡潔版） |
 
