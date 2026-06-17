@@ -150,9 +150,11 @@ Item {
                 maxValue: item.widgetMaxValue,
                 hasMinValue: item.widgetHasMin,
                 hasMaxValue: item.widgetHasMax,
-                // Task T-B: Trend 固有も live Item から取り込む。Schema 側で pointCount/sampleMs は
-                // > 0 のとき、lineColor は非空のとき、yMin/yMax は hasYMin/hasYMax が true のときだけ
-                // 書き出される（presence は JSON キー有無で表現＝hasYMin/hasYMax 自体は JSON キーでない）。
+                // Task T-B: Trend 固有も live Item から取り込む。このスナップショットは
+                // QVariantMap 経路（C++ の WidgetData::fromVariantMap）へ渡るため、min/max と同じく
+                // **明示 bool キー hasYMin/hasYMax を含める**（QML↔C++ ブリッジの presence 表現）。
+                // JSON へ書き出す段（WidgetData::toJson）で C++ 側が hasYMin/hasYMax を JSON キーに
+                // せず yMin/yMax キーの有無へ畳む（pointCount/sampleMs は >0、lineColor は非空のとき書く）。
                 pointCount: item.widgetPointCount,
                 yMin: item.widgetYMin,
                 yMax: item.widgetYMax,

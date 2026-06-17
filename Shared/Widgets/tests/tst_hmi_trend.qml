@@ -61,8 +61,7 @@ TestCase {
         trend.hasYMax = false;
         trend.sampleMs = 0;
         trend._buffer = [];
-        trend.sampleCount = 0;
-        trend.lastValue = 0;
+        trend.resetStats();  // sampleCount / lastValue をまとめてリセット（公開 API）
         trend.live = true;
         clickedSpy.clear();
     }

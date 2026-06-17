@@ -101,7 +101,10 @@ Rectangle {
         if (isNaN(n)) {
             return;
         }
-        var buf = root._buffer.slice();  // 再代入でバインディングへ通知（bufferSize）
+        // 再代入でバインディング（bufferSize）へ通知するため毎回コピーする。高頻度
+        // サンプリング（例 sampleMs=50＝20Hz）では将来の最適化候補（リングインデックス化等。
+        // 実機 Canvas 性能 VNC 確認 TODO と合わせて評価）。MVP は素朴な slice で十分。
+        var buf = root._buffer.slice();
         buf.push(n);
         while (buf.length > root.resolvedPointCount) {
             buf.shift();
@@ -110,6 +113,26 @@ Rectangle {
         root.lastValue = n;
         root.sampleCount += 1;
         canvas.requestPaint();
+    }
+
+    // テスト用統計（sampleCount / lastValue）のリセット。テストが直接代入する代わりに
+    // この関数経由でまとめてリセットできる（外部 API を明確にする）。
+    function resetStats() {
+        root.sampleCount = 0;
+        root.lastValue = 0;
+    }
+
+    // pointCount を実行時に大→小へ変えたとき、次の _push を待たずバッファを即トリムする
+    // （resolvedPointCount 超過分の最古を捨てて再描画。縮小が描画へ即反映される）。
+    onResolvedPointCountChanged: {
+        if (root._buffer.length > root.resolvedPointCount) {
+            var buf = root._buffer.slice();
+            while (buf.length > root.resolvedPointCount) {
+                buf.shift();
+            }
+            root._buffer = buf;
+            canvas.requestPaint();
+        }
     }
 
     width: 240
@@ -124,8 +147,10 @@ Rectangle {
     border.width: root.resolvedBorderWidth
 
     // 方式 A（既定）：value 変化のたび 1 点取り込む（live のときだけ）。
+    // **方式 B（周期 Timer, sampleMs>0）が有効なときは方式 A を抑止する**（同一変化で
+    // 2 点取り込む二重サンプルを避け、等間隔サンプリングを保つ）。
     onValueChanged: {
-        if (root.live) {
+        if (root.live && root.sampleMs <= 0) {
             root._push(root.value);
         }
     }
