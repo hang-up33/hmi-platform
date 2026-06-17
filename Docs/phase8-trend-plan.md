@@ -160,8 +160,8 @@ delegate は Loader 三項 + inline Component に **4 分岐目** `trendComponen
 |---|---|---|
 | T-A Schema 拡張（trend フィールド round-trip） | 完了 | #127 |
 | T-B 型分岐の足場 + HmiTrend 描画（Canvas） | 完了 | #128 |
-| T-C Editor 追加 UI + インスペクタ型対応 | 実装済み（レビュー中） | #130 |
-| T-D cross-app E2E（ライブサンプリング）+ スクショ | 実装済み（レビュー中） | — |
+| T-C Editor 追加 UI + インスペクタ型対応 | 完了 | #130 |
+| T-D cross-app E2E（ライブサンプリング）+ スクショ | 実装済み（レビュー中・再ランド） | — |
 
 **Phase 8 完了**（T-A〜T-D）。`tests/e2e/test_trend_live.py`（`e2e_trend_live`）で Editor round-trip
 （`type:"Trend"` / value binding / `pointCount`）→ Simulator で操作用 NumericField の `commitValue()`
