@@ -158,14 +158,15 @@ Phase 8 の `HmiTrend` を N 系列へ一般化する。要点：
 
 | Task | 状態 | PR |
 |---|---|---|
-| 8B-A Schema 拡張（TrendSeriesData + series + 軸/凡例フラグ round-trip） | 未着手 | — |
+| 8B-A Schema 拡張（TrendSeriesData + series + 軸/凡例フラグ round-trip） | 実装済み（レビュー中） | #132 |
 | 8B-B HmiTrend 複数系列描画 + delegate 値供給 | 未着手 | — |
 | 8B-C 軸目盛り/凡例描画 | 未着手 | — |
 | 8B-D Editor 系列エディタ + 軸/凡例トグル | 未着手 | — |
 | 8B-E cross-app E2E（系列ごと独立サンプリング）+ スクショ | 未着手 | — |
 
-**次タスク = 8B-A（Schema 拡張）。** 横展開テンプレの機械適用（Schema 4 メソッド → delegate → メタ →
-HmiTrend → インスペクタ → E2E）。
+**次タスク = 8B-B（HmiTrend 複数系列描画 + delegate 値供給）。** 8B-A（PR #132）で Schema 層
+（子型 `TrendSeriesData` + `series`/`showGrid`/`showLegend`/`yTickCount`）+ Editor 保存の素通し保持を実装済み。
+横展開テンプレの機械適用（Schema 4 メソッド → delegate → メタ → HmiTrend → インスペクタ → E2E）。
 
 ## 非スコープ（別承認）
 
