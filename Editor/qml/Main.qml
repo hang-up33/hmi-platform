@@ -348,6 +348,12 @@ Window {
         || inspectorBindingVarCombo.activeFocus
         || inspectorMinValueField.activeFocus
         || inspectorMaxValueField.activeFocus
+        // Task T-C: Trend 詳細欄（点数 / Y 軸 min・max / 線色 / 周期）も undo の操作境界に含める。
+        || inspectorPointCountSpin.activeFocus
+        || inspectorYMinField.activeFocus
+        || inspectorYMaxField.activeFocus
+        || inspectorLineColorField.activeFocus
+        || inspectorSampleMsSpin.activeFocus
         || fieldX.activeFocus || fieldY.activeFocus
         || fieldW.activeFocus || fieldH.activeFocus
 
@@ -376,12 +382,20 @@ Window {
     readonly property bool selectedIsNumericField:
         canvas.selectedItem !== null && canvas.selectedItem.widgetType === "NumericField"
 
-    // Task 51: クリックアクション（onClick）を扱える Widget か（= Button のみ）。Label /
-    // NumericField はクリックアクションを持たないため、`!selectedIsLabel && !selectedIsNumericField`
+    // Task T-C: 選択中 Widget が Trend 型か。Trend は表示専用（ライブ折れ線）で、状態
+    //（トグル/初期オン）・クリックアクション・文字（フォント）を持たない。背景・枠（グラフ枠）・
+    // 不透明度・有効・バインディング（サンプル対象変数 = value 読み）は持つ。Trend 詳細
+    //（点数 / Y 軸 / 線色 / 周期）は selectedIsTrend で出し分ける。
+    readonly property bool selectedIsTrend:
+        canvas.selectedItem !== null && canvas.selectedItem.widgetType === "Trend"
+
+    // Task 51 / T-C: クリックアクション（onClick）を扱える Widget か（= Button のみ）。Label /
+    // NumericField / Trend はクリックアクションを持たないため、`!selectedIsLabel && …`
     // を毎回連結せず派生プロパティへまとめる（今後の入力 / 表示 Widget 追加で破綻しにくい。
-    // 新たに「クリックアクション非対応」種別が増えたらここだけ直せばよい）。
+    // 新たに「クリックアクション非対応」種別が増えたらここだけ直せばよい）。Trend は
+    // Label の既存抑制（selectedIsLabel）と独立に AND するだけで競合しない（派生 1 本に集約）。
     readonly property bool selectedSupportsClickAction:
-        !selectedIsLabel && !selectedIsNumericField
+        !selectedIsLabel && !selectedIsNumericField && !selectedIsTrend
 
     // Task 38: インスペクタの Widget 編集を undo の 1 操作境界にする。どれかの入力欄が
     // フォーカスを得た時に前状態を保留（beginEdit）し、全フィールドからフォーカスが
@@ -511,6 +525,14 @@ Window {
                 objectName: "addNumericButton"
                 text: qsTr("数値入力追加")
                 onClicked: canvas.addWidget("NumericField")
+            }
+
+            // Task T-C: トレンドグラフ（Trend）追加。Phase 8 の最初の表示 Widget（ライブ
+            // 折れ線）。同じ addWidget を type 違いで呼ぶ（ホワイトリストに "Trend" を追加済み）。
+            Button {
+                objectName: "addTrendButton"
+                text: qsTr("トレンド追加")
+                onClicked: canvas.addWidget("Trend")
             }
 
             Button {
@@ -856,10 +878,12 @@ Window {
                         InspectorSection {
                             title: qsTr("基本")
 
-                            Label { text: qsTr("Text") }
+                            // Task T-C: Trend は文字を持たないため Text 入力（ラベル + 欄）を隠す。
+                            Label { text: qsTr("Text"); visible: !rootWindow.selectedIsTrend }
                             TextField {
                                 id: inspectorTextField
                                 objectName: "inspectorTextField"
+                                visible: !rootWindow.selectedIsTrend
                                 width: parent.width
                                 // ユーザー入力のみ選択中 Item へ書き戻す
                                 // （textEdited はプログラム変更では発火しない）。
@@ -1014,8 +1038,11 @@ Window {
                         }
 
                         // ── 文字 : フォント / 文字サイズ / 太字 / 斜体 / 文字色 / 配置 ──
+                        // Task T-C: Trend は文字を持たない（表示専用の折れ線グラフ）ため
+                        // 文字セクションを丸ごと隠す（型出し分けは visible のみ）。
                         InspectorSection {
                             title: qsTr("文字")
+                            visible: !rootWindow.selectedIsTrend
 
                             // フォント family は ComboBox。model 先頭に「(既定フォント)」を置き、
                             // index 0 = 未指定（空文字 = システム既定）にマップする。残りは
@@ -1418,6 +1445,189 @@ Window {
                                         //（HmiButton の resolvedOpacity と整合）。
                                         inspectorOpacitySpin.value = (it && it.widgetOpacity >= 0)
                                             ? Math.round(it.widgetOpacity * 100) : 100
+                                    }
+                                }
+                            }
+                        }
+
+                        // ── Trend 詳細（Trend 選択時のみ）: 点数 N / Y 軸 min・max / 線色 / 周期 ──
+                        // Task T-C: Trend 固有の編集 UI。型出し分けは visible のみ（objectName・
+                        // 編集ロジック・Schema 不変）。点数 / 周期は int（SpinBox）、Y 軸 min/max は
+                        // double で **負値も正当なので presence チェック方式**（NumericField の min/max
+                        // を手本）。線色は色スウォッチ + ColorDialog（Task 46 の色入力を手本）。
+                        // すべて 2 本立て（onValueModified/onTextEdited で live Item へ書き戻し、
+                        // Connections.onSelectedItemChanged で表示同期）。
+                        InspectorSection {
+                            objectName: "inspectorTrendSection"
+                            title: qsTr("Trend 詳細")
+                            visible: rootWindow.selectedIsTrend
+
+                            // 点数 N（直近何点を表示するか）。0/未指定は HmiTrend 側で既定 60 へ解決。
+                            // SpinBox（editable なし）で from を 2 にし（折れ線は 2 点以上で意味を持つ）、
+                            // 未指定（widgetPointCount<=0）は既定 60 を表示する。
+                            Label { text: qsTr("点数 (N)") }
+                            SpinBox {
+                                id: inspectorPointCountSpin
+                                objectName: "inspectorPointCountSpin"
+                                from: 2
+                                to: 2000
+                                value: 60
+                                ToolTip.text: qsTr("直近に表示するサンプル点数。満杯になると最古を捨てて横スクロールします")
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
+                                onValueModified: {
+                                    if (canvas.selectedItem) {
+                                        canvas.selectedItem.widgetPointCount = value
+                                    }
+                                }
+                                Connections {
+                                    target: canvas
+                                    function onSelectedItemChanged() {
+                                        const it = canvas.selectedItem
+                                        // 0/未指定は既定 60 を表示（HmiTrend の resolvedPointCount と整合）。
+                                        inspectorPointCountSpin.value = (it && it.widgetPointCount > 0)
+                                            ? it.widgetPointCount : 60
+                                    }
+                                }
+                            }
+
+                            // Y 軸 最小値（presence 方式）。空欄 = 未指定（hasYMin=false → 自動スケール）、
+                            // 値を入れると hasYMin=true。負値・小数も許す（NumericField min と同型の
+                            // RegularExpressionValidator＝空 または 数値）。
+                            Label { text: qsTr("Y 軸 最小値") }
+                            TextField {
+                                id: inspectorYMinField
+                                objectName: "inspectorYMinField"
+                                width: parent.width
+                                placeholderText: qsTr("(自動)")
+                                onActiveFocusChanged: if (activeFocus) selectAll()
+                                validator: RegularExpressionValidator {
+                                    regularExpression: /^(-?\d*\.?\d*)$/
+                                }
+                                ToolTip.text: qsTr("グラフ下端の値。空欄でデータから自動スケールします")
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
+                                onTextEdited: {
+                                    if (canvas.selectedItem && acceptableInput) {
+                                        var t = text.trim()
+                                        var nv = Number(t)
+                                        if (t === "" || t === "-" || t === "." || isNaN(nv)) {
+                                            canvas.selectedItem.widgetHasYMin = false
+                                        } else {
+                                            canvas.selectedItem.widgetYMin = nv
+                                            canvas.selectedItem.widgetHasYMin = true
+                                        }
+                                    }
+                                }
+                                Connections {
+                                    target: canvas
+                                    function onSelectedItemChanged() {
+                                        inspectorYMinField.text =
+                                            (canvas.selectedItem && canvas.selectedItem.widgetHasYMin)
+                                                ? String(canvas.selectedItem.widgetYMin) : ""
+                                    }
+                                }
+                            }
+
+                            Label { text: qsTr("Y 軸 最大値") }
+                            TextField {
+                                id: inspectorYMaxField
+                                objectName: "inspectorYMaxField"
+                                width: parent.width
+                                placeholderText: qsTr("(自動)")
+                                onActiveFocusChanged: if (activeFocus) selectAll()
+                                validator: RegularExpressionValidator {
+                                    regularExpression: /^(-?\d*\.?\d*)$/
+                                }
+                                ToolTip.text: qsTr("グラフ上端の値。空欄でデータから自動スケールします")
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
+                                onTextEdited: {
+                                    if (canvas.selectedItem && acceptableInput) {
+                                        var t = text.trim()
+                                        var nv = Number(t)
+                                        if (t === "" || t === "-" || t === "." || isNaN(nv)) {
+                                            canvas.selectedItem.widgetHasYMax = false
+                                        } else {
+                                            canvas.selectedItem.widgetYMax = nv
+                                            canvas.selectedItem.widgetHasYMax = true
+                                        }
+                                    }
+                                }
+                                Connections {
+                                    target: canvas
+                                    function onSelectedItemChanged() {
+                                        inspectorYMaxField.text =
+                                            (canvas.selectedItem && canvas.selectedItem.widgetHasYMax)
+                                                ? String(canvas.selectedItem.widgetYMax) : ""
+                                    }
+                                }
+                            }
+
+                            // 線色（"#RRGGBB" hex の TextField + 色スウォッチ）。背景色等と同じ
+                            // 2 本立て + ColorDialog 起動（Task 46）。空 = 未指定＝既定線色 #4cc9f0。
+                            Label { text: qsTr("線色 (#RRGGBB)") }
+                            Row {
+                                width: parent.width - parent.leftPadding
+                                spacing: 6
+
+                                TextField {
+                                    id: inspectorLineColorField
+                                    objectName: "inspectorLineColorField"
+                                    width: parent.width - rootWindow.colorSwatchReserve
+                                    placeholderText: qsTr("#4cc9f0")
+                                    validator: RegularExpressionValidator {
+                                        regularExpression: /^(#[0-9A-Fa-f]{6})?$/
+                                    }
+                                    onTextEdited: {
+                                        if (canvas.selectedItem && acceptableInput) {
+                                            canvas.selectedItem.widgetLineColor = text
+                                        }
+                                    }
+                                    Connections {
+                                        target: canvas
+                                        function onSelectedItemChanged() {
+                                            inspectorLineColorField.text = canvas.selectedItem
+                                                ? canvas.selectedItem.widgetLineColor : ""
+                                        }
+                                    }
+                                }
+                                ColorSwatch {
+                                    objectName: "inspectorLineColorSwatch"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    field: inspectorLineColorField
+                                    targetProperty: "widgetLineColor"
+                                    // HmiTrend.resolvedLineColor の既定と揃える。
+                                    fallback: "#4cc9f0"
+                                }
+                            }
+
+                            // サンプル周期[ms]。0/未指定は HmiTrend 側で「変更時サンプルのみ」(方式 A)。
+                            // >0 で周期 Timer 駆動(方式 B)。SpinBox（editable なし）で from を 0 にし
+                            // 0=変更時のみを選べるようにする。
+                            Label { text: qsTr("サンプル周期 (ms)") }
+                            SpinBox {
+                                id: inspectorSampleMsSpin
+                                objectName: "inspectorSampleMsSpin"
+                                from: 0
+                                to: 600000
+                                value: 0
+                                stepSize: 100
+                                ToolTip.text: qsTr("0 = 変数の変化時のみ取り込み。1 以上で指定ミリ秒ごとに周期サンプリングします")
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
+                                onValueModified: {
+                                    if (canvas.selectedItem) {
+                                        canvas.selectedItem.widgetSampleMs = value
+                                    }
+                                }
+                                Connections {
+                                    target: canvas
+                                    function onSelectedItemChanged() {
+                                        const it = canvas.selectedItem
+                                        // 0/未指定はそのまま 0（変更時サンプルのみ）を表示する。
+                                        inspectorSampleMsSpin.value = (it && it.widgetSampleMs > 0)
+                                            ? it.widgetSampleMs : 0
                                     }
                                 }
                             }
