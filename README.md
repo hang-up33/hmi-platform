@@ -10,7 +10,7 @@ GUI で HMI 画面を作図 → JSON で保存 → PC でも組込み実機で�
 
 ![HMI Editor](Docs/screenshots/editor.png)
 
-Editor。ツールバーで Widget 追加（ボタン / ラベル / 数値入力）・JSON 開く / 保存・編集補助（スナップ・コピペ・undo / redo）、右のインスペクタでスタイル・配置・アクション・バインディングを編集できる。数値入力（NumericField）は変数の型（int / real）を引き継ぎ、インスペクタ「詳細」の範囲（最小値 / 最大値）で入力 clamp の境界を指定できる（図は real 変数 temperature を bind した選択中の例）。**Phase 7（Modbus TCP）着手に伴い、変数パネル（ツールバー「変数」トグル）の各変数に「PLC レジスタに割当」を追加**：チェックすると接続先（ホスト / ポート / Unit ID）とレジスタ写像（レジスタ種別 coil/discrete/input/holding・アドレス・ポーリング間隔 ms）を編集でき、JSON に保存される（MB-1 は定義の保存のみ＝実通信は後続タスク。ヒーロー図の既定ビューは変数パネル非表示のため不変）。
+Editor。ツールバーで Widget 追加（ボタン / ラベル / 数値入力 / トレンド）・JSON 開く / 保存・編集補助（スナップ・コピペ・undo / redo）、右のインスペクタでスタイル・配置・アクション・バインディングを編集できる。**Phase 8（トレンドグラフ）着手に伴い、トレンド Widget（ライブ折れ線）を追加**：選択するとインスペクタに「Trend 詳細」セクションが現れ、表示点数（N）・Y 軸範囲（最小値 / 最大値・空欄で自動スケール）・線色・サンプル周期（ms）を編集できる（描画は QML Canvas 自描画で新 Qt モジュール依存なし。Editor では濃紺背景＋ダミー波形のプレビュー、実行時〔Simulator / Runtime〕は bind した変数の値をサンプルして折れ線描画。図はトレンドを選択中の例で、文字セクションやクリックアクションは Trend では非表示）。数値入力（NumericField）は変数の型（int / real）を引き継ぎ、インスペクタ「詳細」の範囲（最小値 / 最大値）で入力 clamp の境界を指定できる。**Phase 7（Modbus TCP）の変数パネル（ツールバー「変数」トグル）では各変数に「PLC レジスタに割当」を追加**：チェックすると接続先（ホスト / ポート / Unit ID）とレジスタ写像（レジスタ種別 coil/discrete/input/holding・アドレス・ポーリング間隔 ms）を編集でき、JSON に保存される。
 
 ![HMI Simulator](Docs/screenshots/simulator.png)
 
@@ -113,7 +113,7 @@ SDK 生成・実機 scp・起動（weston）・キャプチャの全手順と罠
 
 ## ステータスとドキュメント
 
-- **現在地**: **Phase 8 / トレンドグラフ（Trend・ライブ折れ線）に着手**（2026-06-16 承認・計画起票）。新 Widget 種別「Trend」を横展開テンプレに乗せ、**QML `Canvas` 自描画で新 Qt モジュール依存ゼロ**（QtCharts 不使用＝実機にそのまま載る）。サンプル源は既存 binding の「読み」を再利用。T-A〔Schema 拡張〕→ T-B〔HmiTrend 描画〕→ T-C〔Editor UI〕→ T-D〔ライブ E2E〕。進捗の正本は [Docs/phase8-trend-plan.md](Docs/phase8-trend-plan.md)。
+- **現在地**: **Phase 8 / トレンドグラフ（Trend・ライブ折れ線）進行中**（2026-06-16 承認）。新 Widget 種別「Trend」を横展開テンプレに乗せ、**QML `Canvas` 自描画で新 Qt モジュール依存ゼロ**（QtCharts 不使用＝実機にそのまま載る）。サンプル源は既存 binding の「読み」を再利用。T-A〔Schema 拡張〕/ T-B〔HmiTrend 描画〕/ T-C〔Editor 追加 UI + インスペクタ型対応〕完了、**次は T-D〔ライブ E2E + スクショ〕**。進捗の正本は [Docs/phase8-trend-plan.md](Docs/phase8-trend-plan.md)。
   - **Phase 7 / Modbus TCP** は MB-1〜MB-4（書込 + 接続状態 + 自動再接続・PR #119/#121/#122）完了。残る MB-5〔実 PLC 書込確認〕/ MB-6〔実機 Yocto〕はローカル専用で Web 不可。進捗の正本は [Docs/phase7-modbus-plan.md](Docs/phase7-modbus-plan.md)。
 - 開発の時系列（各タスクの目的 / PR / 学び）: [Docs/development-history.md](Docs/development-history.md)
 - 各フェーズの計画と進捗表（正本）: [Docs/](Docs/) の `phase*-plan.md`
