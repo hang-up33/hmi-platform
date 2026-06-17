@@ -89,6 +89,26 @@ QJsonObject WidgetData::toJson() const
     if (hasMaxValue) {
         obj["maxValue"] = maxValue;
     }
+    // Task T-A（Phase 8）: Trend 固有フィールド。pointCount / sampleMs は **`> 0`** で書く
+    // （fontSize と同型の `0` センチネル＝0 は未指定）。yMin / yMax は **負値が正当**なので
+    // presence フラグ方式：hasYMin / hasYMax が true のときだけ書く（未指定はキー省略＝
+    // 後方互換。minValue/maxValue と同じ）。lineColor は空（= 未指定）のとき省略。
+    // **hasYMin / hasYMax という JSON キーは作らない**（presence は yMin/yMax キーの有無で表す）。
+    if (pointCount > 0) {
+        obj["pointCount"] = pointCount;
+    }
+    if (hasYMin) {
+        obj["yMin"] = yMin;
+    }
+    if (hasYMax) {
+        obj["yMax"] = yMax;
+    }
+    if (!lineColor.isEmpty()) {
+        obj["lineColor"] = lineColor;
+    }
+    if (sampleMs > 0) {
+        obj["sampleMs"] = sampleMs;
+    }
     // Task 39: アクション / バインディングは optional 配列。空のとき省略（後方互換）。
     if (!actions.isEmpty()) {
         QJsonArray actionsArr;
@@ -150,6 +170,17 @@ WidgetData WidgetData::fromJson(const QJsonObject &obj)
     w.minValue = obj.value("minValue").toDouble();
     w.hasMaxValue = obj.contains("maxValue");
     w.maxValue = obj.value("maxValue").toDouble();
+    // Task T-A（Phase 8）: Trend 固有フィールド。pointCount / sampleMs は **`toInt(0)`**
+    // （欠落時 0 = 未指定。`0` センチネル）。yMin / yMax は **presence を `obj.contains()` で
+    // 判定**（数値センチネル不可：負値が正当なので「キーの有無」が唯一の未指定判定。minValue/
+    // maxValue と同じ）。値はキーがある時のみ toDouble() で読む。lineColor は欠落時 空文字（= 未指定）。
+    w.pointCount = obj.value("pointCount").toInt(0);
+    w.hasYMin = obj.contains("yMin");
+    w.yMin = obj.value("yMin").toDouble();
+    w.hasYMax = obj.contains("yMax");
+    w.yMax = obj.value("yMax").toDouble();
+    w.lineColor = obj.value("lineColor").toString();
+    w.sampleMs = obj.value("sampleMs").toInt(0);
     // Task 39: アクション / バインディング配列（欠落時は空配列）。
     const QJsonArray actionsArr = obj.value("actions").toArray();
     for (const QJsonValue &v : actionsArr) {
@@ -198,6 +229,18 @@ QVariantMap WidgetData::toVariantMap() const
     m.insert(QStringLiteral("maxValue"), maxValue);
     m.insert(QStringLiteral("hasMinValue"), hasMinValue);
     m.insert(QStringLiteral("hasMaxValue"), hasMaxValue);
+    // Task T-A（Phase 8）: Trend 固有フィールド。pointCount / sampleMs / lineColor は素通し。
+    // yMin / yMax は **min/max と同じく値 + presence（hasYMin/hasYMax）を対で転写**する。
+    // QML 側は hasYMin を見て未指定（has*=false）を判定する（minValue/maxValue と同じ流儀。
+    // 注：JSON 表現〔toJson/fromJson〕は presence をキーの有無で表すが、C++↔QML ブリッジの
+    // QVariantMap では既存 min/max に倣い明示 bool キーを持つ）。
+    m.insert(QStringLiteral("pointCount"), pointCount);
+    m.insert(QStringLiteral("lineColor"), lineColor);
+    m.insert(QStringLiteral("sampleMs"), sampleMs);
+    m.insert(QStringLiteral("yMin"), yMin);
+    m.insert(QStringLiteral("yMax"), yMax);
+    m.insert(QStringLiteral("hasYMin"), hasYMin);
+    m.insert(QStringLiteral("hasYMax"), hasYMax);
     QVariantList actionsVar;
     actionsVar.reserve(actions.size());
     for (const ActionData &a : actions) {
@@ -249,6 +292,18 @@ WidgetData WidgetData::fromVariantMap(const QVariantMap &map)
     w.minValue = map.value(QStringLiteral("minValue")).toDouble();
     w.hasMaxValue = map.value(QStringLiteral("hasMaxValue")).toBool();
     w.maxValue = map.value(QStringLiteral("maxValue")).toDouble();
+    // Task T-A（Phase 8）: Trend 固有フィールド。pointCount / sampleMs は欠落時 0（= 未指定）。
+    // 負値が来てもクランプしない（fontSize 前例と同じ＝下流の HmiTrend が `> 0` のときだけ採用し、
+    // `0`/負はいずれも既定へ解決する。toJson が `> 0` でしか書かないため JSON には負値は残らない）。
+    // yMin / yMax は **min/max と同じく presence（hasYMin/hasYMax）と値を対で読む**（presence は
+    // キー欠落時 false）。lineColor は欠落時 空文字（= 未指定）。
+    w.pointCount = map.value(QStringLiteral("pointCount")).toInt();
+    w.hasYMin = map.value(QStringLiteral("hasYMin")).toBool();
+    w.yMin = map.value(QStringLiteral("yMin")).toDouble();
+    w.hasYMax = map.value(QStringLiteral("hasYMax")).toBool();
+    w.yMax = map.value(QStringLiteral("yMax")).toDouble();
+    w.lineColor = map.value(QStringLiteral("lineColor")).toString();
+    w.sampleMs = map.value(QStringLiteral("sampleMs")).toInt();
     const QVariantList actionsVar = map.value(QStringLiteral("actions")).toList();
     for (const QVariant &v : actionsVar) {
         w.actions.append(ActionData::fromVariantMap(v.toMap()));

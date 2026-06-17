@@ -87,6 +87,23 @@ struct WidgetData {
     bool hasMinValue = false;
     bool hasMaxValue = false;
 
+    // Task T-A（Phase 8）: Trend（トレンドグラフ）固有フィールド。設計の正本は
+    // Docs/phase8-trend-plan.md「§Task A」。すべて optional ＝ isValidJson 必須集合に含めない（後方互換）。
+    //   pointCount(N) / sampleMs[ms] : `0` センチネル（= 未指定）。toJson は `> 0` のときだけ書く。
+    //     `0`/負値はいずれも下流（HmiTrend）が「未指定」として既定へ解決するためクランプしない。
+    //   yMin/hasYMin・yMax/hasYMax : Y 軸範囲。**負値が正当**なのでセンチネル不可 → presence フラグ方式
+    //     （minValue/maxValue の前例踏襲）。**JSON は hasYMin キーを作らず yMin キーの有無で presence を
+    //     表す**が、**C++↔QML ブリッジの QVariantMap は既存 min/max に倣い明示 bool キー hasYMin/hasYMax を持つ**。
+    //   lineColor : `""` センチネル（= 未指定）。非空のときだけ書く（backgroundColor 同型）。
+    // 既定外観（既定 N / 既定線色 / 既定背景）は描画の唯一の真実である HmiTrend 側に集約する。
+    int pointCount = 0;
+    double yMin = 0.0;
+    double yMax = 0.0;
+    bool hasYMin = false;
+    bool hasYMax = false;
+    QString lineColor;
+    int sampleMs = 0;
+
     // Task 39: アクション（書き手）/ バインディング（読み手）。いずれも optional 配列で、
     // 空のとき toJson で省略（後方互換）。実行 / 描画への反映は T41 以降で、本タスクでは
     // 型と保存（round-trip）のみ。isValidJson の必須集合には含めない（後方互換）。
