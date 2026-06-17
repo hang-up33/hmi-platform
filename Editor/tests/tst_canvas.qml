@@ -926,6 +926,36 @@ TestCase {
         compare(fld.editable, false);
     }
 
+    // Task T-B（Phase 8）: type:"Trend" の delegate は HmiTrend を描き、他種別は生成しない。
+    // EditableWidget でラップされるため Trend でも選択枠・リサイズハンドルが効く。Editor は
+    // 設計面なので live:false（ダミー波形プレビュー）。pointCount / 線色がプレビューへ伝播する。
+    function test_delegate_renders_trend_for_trend_type() {
+        canvas.widgetModel = [
+            { id: "tr1", type: "Trend", x: 0, y: 0, width: 320, height: 160,
+              pointCount: 80, lineColor: "#ff0000" }
+        ];
+        tryVerify(function() { return editableChildren().length === 1; }, 1000,
+                  "Trend モデルが反映されない");
+        const wrapper = editableChildren()[0];
+        compare(wrapper.widgetType, "Trend");
+        var trend = null;
+        tryVerify(function() {
+            trend = findByObjectName(wrapper, "hmiTrend");
+            return trend !== null;
+        }, 1000, "Trend type で HmiTrend が描かれない");
+        verify(findByObjectName(wrapper, "hmiButton") === null,
+               "Trend type なのに HmiButton も生成された");
+        verify(findByObjectName(wrapper, "hmiLabel") === null,
+               "Trend type なのに HmiLabel も生成された");
+        verify(findByObjectName(wrapper, "hmiNumericField") === null,
+               "Trend type なのに HmiNumericField も生成された");
+        // Editor キャンバスは設計面＝live:false（ダミー波形プレビュー）。
+        compare(trend.live, false);
+        // pointCount / 線色がプレビューへ伝播する。
+        compare(trend.resolvedPointCount, 80);
+        compare(trend.resolvedLineColor, Qt.color("#ff0000"));
+    }
+
     // Task 48: 追加した Widget の id だけが btn001 と異なるものを返すヘルパ。
     function addedWidget() {
         const ch = editableChildren();

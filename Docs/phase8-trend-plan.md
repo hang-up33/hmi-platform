@@ -158,8 +158,8 @@ delegate は Loader 三項 + inline Component に **4 分岐目** `trendComponen
 
 | Task | 状態 | PR |
 |---|---|---|
-| T-A Schema 拡張（trend フィールド round-trip） | 実装済み（レビュー中） | #127 |
-| T-B 型分岐の足場 + HmiTrend 描画（Canvas） | 未着手 | — |
+| T-A Schema 拡張（trend フィールド round-trip） | 完了 | #127 |
+| T-B 型分岐の足場 + HmiTrend 描画（Canvas） | 実装済み（レビュー中） | #128 |
 | T-C Editor 追加 UI + インスペクタ型対応 | 未着手 | — |
 | T-D cross-app E2E（ライブサンプリング）+ スクショ | 未着手 | — |
 

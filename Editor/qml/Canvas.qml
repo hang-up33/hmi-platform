@@ -150,6 +150,18 @@ Item {
                 maxValue: item.widgetMaxValue,
                 hasMinValue: item.widgetHasMin,
                 hasMaxValue: item.widgetHasMax,
+                // Task T-B: Trend 固有も live Item から取り込む。このスナップショットは
+                // QVariantMap 経路（C++ の WidgetData::fromVariantMap）へ渡るため、min/max と同じく
+                // **明示 bool キー hasYMin/hasYMax を含める**（QML↔C++ ブリッジの presence 表現）。
+                // JSON へ書き出す段（WidgetData::toJson）で C++ 側が hasYMin/hasYMax を JSON キーに
+                // せず yMin/yMax キーの有無へ畳む（pointCount/sampleMs は >0、lineColor は非空のとき書く）。
+                pointCount: item.widgetPointCount,
+                yMin: item.widgetYMin,
+                yMax: item.widgetYMax,
+                hasYMin: item.widgetHasYMin,
+                hasYMax: item.widgetHasYMax,
+                lineColor: item.widgetLineColor,
+                sampleMs: item.widgetSampleMs,
                 // Task 39: アクション / バインディングも保存スナップショットへ含める
                 //（読み込んだ定義を Editor の保存で失わないため。Codex PR #78 [P1]）。
                 actions: item.widgetActions,
@@ -720,6 +732,14 @@ Item {
                     widgetMaxValue: modelData.maxValue !== undefined ? modelData.maxValue : 0
                     widgetHasMin: modelData.hasMinValue !== undefined ? modelData.hasMinValue : false
                     widgetHasMax: modelData.hasMaxValue !== undefined ? modelData.hasMaxValue : false
+                    // Task T-B: Trend 固有フィールドを流す（未指定は 0 / 空 / presence false）。
+                    widgetPointCount: modelData.pointCount !== undefined ? modelData.pointCount : 0
+                    widgetYMin: modelData.yMin !== undefined ? modelData.yMin : 0
+                    widgetYMax: modelData.yMax !== undefined ? modelData.yMax : 0
+                    widgetHasYMin: modelData.hasYMin !== undefined ? modelData.hasYMin : false
+                    widgetHasYMax: modelData.hasYMax !== undefined ? modelData.hasYMax : false
+                    widgetLineColor: modelData.lineColor !== undefined ? modelData.lineColor : ""
+                    widgetSampleMs: modelData.sampleMs !== undefined ? modelData.sampleMs : 0
                     // Task 39: アクション / バインディングを素通し保持（保存で失わないため）。
                     widgetActions: modelData.actions !== undefined ? modelData.actions : []
                     widgetBindings: modelData.bindings !== undefined ? modelData.bindings : []
@@ -789,6 +809,7 @@ Item {
                         anchors.fill: parent
                         sourceComponent: wrapper.widgetType === "Label" ? labelComponent
                                        : wrapper.widgetType === "NumericField" ? numericComponent
+                                       : wrapper.widgetType === "Trend" ? trendComponent
                                                                         : buttonComponent
                     }
 
@@ -904,6 +925,39 @@ Item {
                             hasMax: wrapper.widgetHasMax
                             // Task 50: 選択中継は Button / Label と同形。write 結線（valueCommitted）は
                             // Task 51 で SimulatorCanvas 側に足す（Editor は読取専用なので結線しない）。
+                            onClicked: function(modifiers) {
+                                wrapper.selectRequested(wrapper.widgetId, modifiers)
+                            }
+                        }
+                    }
+
+                    Component {
+                        id: trendComponent
+                        HmiTrend {
+                            // Task T-B: 型分岐の観察用 objectName（他 Widget と対。
+                            // E2E / unit は hmiTrend で参照）。
+                            objectName: "hmiTrend"
+                            anchors.fill: parent
+                            // Editor キャンバスは設計面＝ライブデータが無い。live:false にして
+                            // ダミー波形プレビューを描く（サンプリング・Timer は動かさない）。
+                            live: false
+                            // pointCount / 線色 / 背景はプレビューに反映する（Y 範囲 / 周期は
+                            // 流すだけで描画形状に影響＝プレビューでも一貫させる）。Trend は
+                            // text / フォント / トグルを持たないので渡さない。
+                            pointCount: wrapper.widgetPointCount
+                            yMin: wrapper.widgetYMin
+                            yMax: wrapper.widgetYMax
+                            hasYMin: wrapper.widgetHasYMin
+                            hasYMax: wrapper.widgetHasYMax
+                            lineColor: wrapper.widgetLineColor
+                            sampleMs: wrapper.widgetSampleMs
+                            backgroundColor: wrapper.widgetBackgroundColor
+                            borderColor: wrapper.widgetBorderColor
+                            borderWidth: wrapper.widgetBorderWidth
+                            cornerRadius: wrapper.widgetRadius
+                            widgetOpacity: wrapper.widgetOpacity
+                            widgetEnabled: wrapper.widgetEnabled
+                            // Task T-B: 選択中継は他 Widget と同形。
                             onClicked: function(modifiers) {
                                 wrapper.selectRequested(wrapper.widgetId, modifiers)
                             }
