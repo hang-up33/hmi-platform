@@ -171,5 +171,7 @@ delegate は Loader 三項 + inline Component に **4 分岐目** `trendComponen
 
 ## 非スコープ（別承認）
 
-履歴永続化（historian）・複数系列・軸目盛り/凡例・トレンドの拡縮ズーム・後続入力 Widget（Gauge / Toggle）・
+> **複数系列・軸目盛り/凡例は 2026-06-17 に承認され [Phase 8-B](phase8b-trend-extend-plan.md) へ移動**（本フェーズ＝単系列のまま）。
+
+履歴永続化（historian）・トレンドの拡縮ズーム・後続入力 Widget（Gauge / Toggle）・
 NumericField の step/decimals/unit・OPC-UA。
