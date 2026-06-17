@@ -162,6 +162,13 @@ Item {
                 hasYMax: item.widgetHasYMax,
                 lineColor: item.widgetLineColor,
                 sampleMs: item.widgetSampleMs,
+                // Task 8B-A: Trend 拡張（複数系列 + 軸/凡例）も保存スナップショットへ含める
+                //（series 付き JSON を Editor で開いて保存しても失わないため。Codex PR #132 [P2]）。
+                // series は QVariantList of QVariantMap として WidgetData::fromVariantMap へ渡る。
+                series: item.widgetSeries,
+                showGrid: item.widgetShowGrid,
+                showLegend: item.widgetShowLegend,
+                yTickCount: item.widgetYTickCount,
                 // Task 39: アクション / バインディングも保存スナップショットへ含める
                 //（読み込んだ定義を Editor の保存で失わないため。Codex PR #78 [P1]）。
                 actions: item.widgetActions,
@@ -748,6 +755,12 @@ Item {
                     widgetHasYMax: modelData.hasYMax !== undefined ? modelData.hasYMax : false
                     widgetLineColor: modelData.lineColor !== undefined ? modelData.lineColor : ""
                     widgetSampleMs: modelData.sampleMs !== undefined ? modelData.sampleMs : 0
+                    // Task 8B-A: Trend 拡張（複数系列 + 軸/凡例）を素通し保持（描画 / 編集 UI は
+                    // 8B-B〜8B-D だが、series 付き JSON を開いて保存しても失わないため）。
+                    widgetSeries: modelData.series !== undefined ? modelData.series : []
+                    widgetShowGrid: modelData.showGrid !== undefined ? modelData.showGrid : false
+                    widgetShowLegend: modelData.showLegend !== undefined ? modelData.showLegend : false
+                    widgetYTickCount: modelData.yTickCount !== undefined ? modelData.yTickCount : 0
                     // Task 39: アクション / バインディングを素通し保持（保存で失わないため）。
                     widgetActions: modelData.actions !== undefined ? modelData.actions : []
                     widgetBindings: modelData.bindings !== undefined ? modelData.bindings : []

@@ -101,6 +101,15 @@ Item {
     property string widgetLineColor: ""
     property int widgetSampleMs: 0
 
+    // Task 8B-A（Phase 8-B）: Trend 拡張（複数系列 + 軸目盛り/凡例）のメタ。描画 / 編集 UI は
+    // 後続タスク（8B-B〜8B-D）だが、**series 付き Trend JSON を Editor で開いて保存しても
+    // 失わない**ため、ここで素通し保持する（delegate が modelData から流し込み、snapshotModel が
+    // JSON キー series/showGrid/showLegend/yTickCount へ書き戻す。Codex PR #132 [P2]）。
+    property var widgetSeries: []
+    property bool widgetShowGrid: false
+    property bool widgetShowLegend: false
+    property int widgetYTickCount: 0
+
     // Task 39: アクション / バインディングのメタ。Editor は T40 まで編集 UI を持たないが、
     // **読み込んだ定義を保存で失わない**ため、ここで素通し保持する（delegate が modelData
     // から流し込み、snapshotModel が保存へ書き戻す。Codex PR #78 [P1]）。配列をそのまま持つ。

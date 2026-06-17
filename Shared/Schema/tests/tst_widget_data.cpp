@@ -956,6 +956,12 @@ void WidgetDataTest::fromVariantMapFillsSentinelDefaults()
     QCOMPARE(w.hasYMax, false);
     QVERIFY(w.lineColor.isEmpty());
     QCOMPARE(w.sampleMs, 0);
+    // Task 8B-A（Phase 8-B）: Trend 拡張フィールドも欠落時に既定（空 / false / 0）になる
+    //（CodeRabbit PR #132 — fromVariantMap 既定値の回帰を固定）。
+    QVERIFY(w.series.isEmpty());
+    QCOMPARE(w.showGrid, false);
+    QCOMPARE(w.showLegend, false);
+    QCOMPARE(w.yTickCount, 0);
     QVERIFY(w.actions.isEmpty());
     QVERIFY(w.bindings.isEmpty());
 }

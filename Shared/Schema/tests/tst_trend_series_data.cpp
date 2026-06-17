@@ -1,5 +1,6 @@
 #include "hmi/schema/TrendSeriesData.h"
 
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QTest>
 
@@ -16,6 +17,7 @@ private slots:
     void variantMapRoundTrip();
     void isValidJson_data();
     void isValidJson();
+    void isValidJsonRejectsNonStringColorLabel();
 };
 
 void TrendSeriesDataTest::roundTripFullFields()
@@ -91,6 +93,32 @@ void TrendSeriesDataTest::isValidJson()
         obj["variable"] = variable;
     }
     QCOMPARE(TrendSeriesData::isValidJson(obj), valid);
+}
+
+// CodeRabbit PR #132: color / label は optional だが、存在する場合は文字列であることを要求する
+// （非文字列は無効）。さもないと fromJson が空文字へ畳んで値が黙って欠落する。
+void TrendSeriesDataTest::isValidJsonRejectsNonStringColorLabel()
+{
+    QJsonObject base;
+    base["variable"] = "v1";
+    QVERIFY(TrendSeriesData::isValidJson(base));  // color / label 不在は有効
+
+    {
+        QJsonObject obj = base;
+        obj["color"] = 123;  // 非文字列 → 無効
+        QVERIFY(!TrendSeriesData::isValidJson(obj));
+    }
+    {
+        QJsonObject obj = base;
+        obj["label"] = QJsonArray{ 1, 2 };  // 非文字列 → 無効
+        QVERIFY(!TrendSeriesData::isValidJson(obj));
+    }
+    {
+        QJsonObject obj = base;
+        obj["color"] = "#4cc9f0";  // 文字列 → 有効
+        obj["label"] = "Temp";
+        QVERIFY(TrendSeriesData::isValidJson(obj));
+    }
 }
 
 QTEST_APPLESS_MAIN(TrendSeriesDataTest)

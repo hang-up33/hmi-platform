@@ -45,7 +45,19 @@ TrendSeriesData TrendSeriesData::fromVariantMap(const QVariantMap &map)
 
 bool TrendSeriesData::isValidJson(const QJsonObject &obj)
 {
-    return obj.value("variable").isString() && !obj.value("variable").toString().isEmpty();
+    // variable は必須（非空文字列）。color / label は optional だが、**存在する場合は
+    // 文字列であることを要求する**（CodeRabbit PR #132）。さもないと {"variable":"v1","color":123}
+    // のような不正値が有効扱いになり、fromJson が空文字へ畳んで値が黙って欠落する。
+    if (!obj.value("variable").isString() || obj.value("variable").toString().isEmpty()) {
+        return false;
+    }
+    if (obj.contains("color") && !obj.value("color").isString()) {
+        return false;
+    }
+    if (obj.contains("label") && !obj.value("label").isString()) {
+        return false;
+    }
+    return true;
 }
 
 } // namespace hmi::schema
