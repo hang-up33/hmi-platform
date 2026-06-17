@@ -88,6 +88,19 @@ Item {
     property bool widgetHasMin: false
     property bool widgetHasMax: false
 
+    // Task T-B（Phase 8）: Trend（トレンドグラフ）固有のメタ。点数 N / 線色 / 周期は
+    // センチネル（0 / 空文字）、Y 軸範囲は presence フラグ方式（widgetHasYMin/Max）。
+    // 既定外観は HmiTrend 側に集約し、ここでは素通しするだけ。delegate（Canvas.qml）で
+    // HmiTrend の pointCount/yMin/hasYMin/yMax/hasYMax/lineColor/sampleMs へ渡し、
+    // snapshotModel が JSON キー pointCount/yMin/yMax/lineColor/sampleMs へ書き戻す。
+    property int widgetPointCount: 0
+    property real widgetYMin: 0
+    property real widgetYMax: 0
+    property bool widgetHasYMin: false
+    property bool widgetHasYMax: false
+    property string widgetLineColor: ""
+    property int widgetSampleMs: 0
+
     // Task 39: アクション / バインディングのメタ。Editor は T40 まで編集 UI を持たないが、
     // **読み込んだ定義を保存で失わない**ため、ここで素通し保持する（delegate が modelData
     // から流し込み、snapshotModel が保存へ書き戻す。Codex PR #78 [P1]）。配列をそのまま持つ。

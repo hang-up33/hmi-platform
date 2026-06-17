@@ -398,4 +398,53 @@ TestCase {
         // 表示も boundValue 再評価で 36.5 に揃う。
         compare(fld.text, "36.5");
     }
+
+    // Task T-B（Phase 8）: type:"Trend" の delegate は HmiTrend を描き（他種別は描かない）、
+    // live:true でサンプリングする。binding {property:"value"} の指す変数を更新すると
+    // サンプルが取り込まれ、公開 sampleCount / lastValue が追従する（Canvas ピクセルは見ない）。
+    function test_delegate_renders_trend_and_samples_bound_value() {
+        canvas.variableModel = [{ name: "sensorTemp", type: "int", initial: 10 }];
+        canvas.widgetModel = [{
+            id: "t1", type: "Trend", x: 0, y: 0, width: 320, height: 160,
+            pointCount: 60,
+            bindings: [{ property: "value", variable: "sensorTemp" }]
+        }];
+
+        var wrapper = null;
+        tryVerify(function() {
+            wrapper = findByObjectName(canvas, "widget_t1");
+            return wrapper !== null;
+        }, 1000, "Trend delegate widget_t1 が生成されない");
+
+        var trend = null;
+        tryVerify(function() {
+            trend = findByObjectName(wrapper, "hmiTrend");
+            return trend !== null;
+        }, 1000, "Trend type で HmiTrend が描かれない");
+        // 型分岐：他種別の Widget は生成されない。
+        verify(findByObjectName(wrapper, "hmiButton") === null,
+               "Trend type なのに HmiButton も生成された");
+        verify(findByObjectName(wrapper, "hmiLabel") === null,
+               "Trend type なのに HmiLabel も生成された");
+        verify(findByObjectName(wrapper, "hmiNumericField") === null,
+               "Trend type なのに HmiNumericField も生成された");
+
+        // Simulator はライブ実行＝live:true。
+        compare(trend.live, true);
+        compare(trend.resolvedPointCount, 60);
+
+        // 初期サンプル：value が初期値 10 へバインドされた瞬間に 1 点取り込まれている可能性が
+        // ある（onValueChanged）。ここでは初期 sampleCount を基準に、以降の変数更新で
+        // 取り込みが増えることを観測する（初期分の有無に依存しない）。
+        const baseCount = trend.sampleCount;
+
+        // 変数を複数回更新するとサンプルが取り込まれ sampleCount / lastValue が追従する。
+        VariableStore.setValue("sensorTemp", 20);
+        compare(trend.sampleCount, baseCount + 1);
+        compare(trend.lastValue, 20);
+
+        VariableStore.setValue("sensorTemp", 35);
+        compare(trend.sampleCount, baseCount + 2);
+        compare(trend.lastValue, 35);
+    }
 }

@@ -209,6 +209,7 @@ Item {
                     anchors.fill: parent
                     sourceComponent: wrapper.modelData.type === "Label" ? labelComponent
                                    : wrapper.modelData.type === "NumericField" ? numericComponent
+                                   : wrapper.modelData.type === "Trend" ? trendComponent
                                                                         : buttonComponent
                 }
 
@@ -365,6 +366,43 @@ Item {
                         onValueCommitted: function(text) {
                             wrapper.writeBoundValue("value", text)
                         }
+                    }
+                }
+
+                Component {
+                    id: trendComponent
+                    HmiTrend {
+                        // Task T-B: 型分岐の観察用 objectName（他 Widget と対。
+                        // E2E / unit は hmiTrend で参照）。
+                        objectName: "hmiTrend"
+                        anchors.fill: parent
+                        // Simulator/Runtime はライブ実行＝live:true。value 変化 / 周期で
+                        // リングバッファへ取り込む。Runtime は本ソース共有で自動継承。
+                        live: true
+                        // サンプル源：binding {property:"value"} の指す変数の現在値へ追従する
+                        // （Label の text 追従と同じ boundValue 経路＝読みのみ。書きはしない）。
+                        // 無 bind 時は modelData.value（無ければ 0）。
+                        value: {
+                            const v = wrapper.boundValue("value")
+                            return v !== undefined ? Number(v)
+                                : (wrapper.modelData.value !== undefined ? Number(wrapper.modelData.value) : 0)
+                        }
+                        // Trend 固有フィールド（未指定は 0 / 空 / presence false）。
+                        pointCount: wrapper.modelData.pointCount !== undefined ? wrapper.modelData.pointCount : 0
+                        yMin: wrapper.modelData.yMin !== undefined ? wrapper.modelData.yMin : 0
+                        yMax: wrapper.modelData.yMax !== undefined ? wrapper.modelData.yMax : 0
+                        hasYMin: wrapper.modelData.hasYMin !== undefined ? wrapper.modelData.hasYMin : false
+                        hasYMax: wrapper.modelData.hasYMax !== undefined ? wrapper.modelData.hasYMax : false
+                        lineColor: wrapper.modelData.lineColor !== undefined ? wrapper.modelData.lineColor : ""
+                        sampleMs: wrapper.modelData.sampleMs !== undefined ? wrapper.modelData.sampleMs : 0
+                        // 背景・枠スタイル（Editor delegate と対）。
+                        backgroundColor: wrapper.modelData.backgroundColor !== undefined ? wrapper.modelData.backgroundColor : ""
+                        borderColor: wrapper.modelData.borderColor !== undefined ? wrapper.modelData.borderColor : ""
+                        borderWidth: wrapper.modelData.borderWidth !== undefined ? wrapper.modelData.borderWidth : -1
+                        cornerRadius: wrapper.modelData.radius !== undefined ? wrapper.modelData.radius : -1
+                        widgetOpacity: wrapper.modelData.opacity !== undefined ? wrapper.modelData.opacity : -1
+                        widgetEnabled: wrapper.modelData.enabled !== undefined ? wrapper.modelData.enabled : true
+                        // Trend は表示専用＝clicked を action へ結線しない。
                     }
                 }
             }
