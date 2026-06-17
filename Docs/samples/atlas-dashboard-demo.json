@@ -19,7 +19,8 @@
         { "id": "pill", "type": "Button", "x": 600, "y": 26, "width": 172, "height": 40,
           "text": "RUNNING", "backgroundColor": "#1b4332", "textColor": "#ffffff",
           "fontSize": 16, "fontBold": true, "hAlign": "center", "vAlign": "middle",
-          "borderColor": "#2d6a4f", "borderWidth": 1, "radius": 20 },
+          "borderColor": "#2d6a4f", "borderWidth": 1, "radius": 20,
+          "bindings": [ { "property": "checked", "variable": "running" } ] },
         { "id": "pillLed", "type": "Button", "x": 616, "y": 39, "width": 14, "height": 14,
           "text": "", "backgroundColor": "#95d5b2", "borderWidth": 0, "radius": 7 },
 
