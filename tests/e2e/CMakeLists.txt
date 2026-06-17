@@ -167,6 +167,27 @@ set_tests_properties(e2e_numeric_extend PROPERTIES
     LABELS e2e
 )
 
+# Task T-D (Phase 8): Trend のライブサンプリング cross-app E2E。
+# Editor で sensorTemp(int) 変数 + Trend(value binding, pointCount) + 操作用 NumericField
+# (同変数 value binding) を `--open` → saveTo で round-trip → 保存 JSON を直接検証
+# （type:"Trend" / value binding / pointCount）→ Simulator を `--open` で起動し、操作用
+# NumericField を setStringProperty + commitValue() で複数回確定して同変数を変化させ、
+# Trend（objectName "hmiTrend"）の公開 sampleCount が増加し lastValue が直近の書込値へ
+# 追従するのを getStringProperty で観測する。Canvas はピクセル不可視なので公開プロパティ
+# のみで「変数変化 → サンプル取り込み」を見る初の E2E。2 プロセス起動のため TIMEOUT は
+# 他の cross-app と同等。
+add_test(
+    NAME e2e_trend_live
+    COMMAND ${Python3_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_trend_live.py
+        --editor-binary $<TARGET_FILE:hmi_editor>
+        --simulator-binary $<TARGET_FILE:hmi_simulator>
+)
+set_tests_properties(e2e_trend_live PROPERTIES
+    TIMEOUT 60
+    LABELS e2e
+)
+
 # MB-2: Modbus TCP 読込ポーリングの cross-app E2E。
 # pymodbus ソフトスレーブ（modbus_slave.py をサブプロセス起動）の holding register を
 # Simulator（ModbusController）が周期ポーリング → 変数 → text binding 追従で Label に反映

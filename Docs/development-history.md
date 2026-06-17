@@ -358,8 +358,9 @@ timeline
 
 **計画書**：[Docs/phase8-trend-plan.md](phase8-trend-plan.md)（T-A〜T-D。2026-06-16 ユーザー要望「トレンドグラフ欲しい」+ スコープ 2 問確定で着手）
 
-- 🚧 着手中（計画起票）。新 Widget 種別「Trend」を Phase 5（Label）/ Phase 6（NumericField）の **横展開テンプレ**（型分岐の足場 + Schema 4 メソッド + インスペクタ型対応 + cross-app E2E）に乗せる。**ライブのみ**（bound 変数を変更時/周期サンプリングしリングバッファに直近 N 点保持、履歴永続化は非スコープ）。**描画は QML `Canvas` 自描画で新 Qt モジュール依存ゼロ**（QtCharts 不使用＝Phase 7 の QtSerialBus 同梱問題を構造的に回避し i.MX8MP rootfs にそのまま載る）。サンプル源は既存 `bindings` の「読み」を再利用するため **Schema / C++ ブリッジは無改変**。Canvas はピクセル不可視のため、E2E は公開プロパティ（`sampleCount`/`lastValue`）でサンプル取り込みを観測する。
-  - **タスク**：T-A（Schema 拡張：`type:"Trend"` + `pointCount`/Y軸 min·max〔presence フラグ〕/線色/`sampleMs`）/ T-B（`HmiTrend.qml` Canvas 描画 + delegate 4 分岐目）/ T-C（Editor 追加 UI + インスペクタ型対応）/ T-D（cross-app E2E + スクショ）。すべて Web 可。
+- ✅ 完了（T-A〜T-D）。新 Widget 種別「Trend」を Phase 5（Label）/ Phase 6（NumericField）の **横展開テンプレ**（型分岐の足場 + Schema 4 メソッド + インスペクタ型対応 + cross-app E2E）に乗せた。**ライブのみ**（bound 変数を変更時/周期サンプリングしリングバッファに直近 N 点保持、履歴永続化は非スコープ）。**描画は QML `Canvas` 自描画で新 Qt モジュール依存ゼロ**（QtCharts 不使用＝Phase 7 の QtSerialBus 同梱問題を構造的に回避し i.MX8MP rootfs にそのまま載る）。サンプル源は既存 `bindings` の「読み」を再利用するため **Schema / C++ ブリッジは無改変**。Canvas はピクセル不可視のため、E2E は公開プロパティ（`sampleCount`/`lastValue`）でサンプル取り込みを観測する。
+  - **タスク**：T-A（Schema 拡張：`type:"Trend"` + `pointCount`/Y軸 min·max〔presence フラグ〕/線色/`sampleMs`・PR #127）/ T-B（`HmiTrend.qml` Canvas 描画 + delegate 4 分岐目・PR #128）/ T-C（Editor 追加 UI + インスペクタ型対応・PR #130）/ T-D（cross-app E2E `tests/e2e/test_trend_live.py`〔`e2e_trend_live`〕+ `simulator.png` ライブ折れ線スクショ）。すべて Web 可。
+  - **学び**：Spix の `getStringProperty` は int（`sampleCount`）/ real（`lastValue`）プロパティも QVariant 文字列化で取得でき、Canvas 非可視でも公開プロパティだけで「変数変化 → サンプル取り込み」を観測できる。simulator.png は使い捨て Spix スクリプトで操作用 NumericField を `commitValue()` 連打してサンプルを溜め `takeScreenshotAsBase64` で撮ると、ライブ折れ線が描かれた状態を残せる。Web `ctest` 23/23 緑。
 
 ---
 
