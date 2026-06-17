@@ -246,9 +246,19 @@ Rectangle {
         if (!root.live) {
             var buf = [];
             var count = root.resolvedPointCount;
+            // ダミー波形は **設定中の Y 範囲いっぱい** に張る（固定 Y 軸が設定された Widget で
+            // 0..1 の波が下端へ潰れて「真っ黒な箱＋底辺の線」に見えるのを防ぐ）。両端指定が
+            // あれば [yMin, yMax]、無ければ [0, 1]（自動スケールがそのまま全高へ広げる）。
+            var effLo = root.hasYMin ? root.yMin : 0;
+            var effHi = root.hasYMax ? root.yMax : 1;
+            if (effHi <= effLo) {
+                effLo = 0;
+                effHi = 1;
+            }
             for (var i = 0; i < count; ++i) {
-                // 0..1 を行き来するサイン波（見た目のプレビュー用）。
-                buf.push(Math.sin(i / count * Math.PI * 4) * 0.5 + 0.5);
+                // 0..1 を行き来するサイン波を Y 範囲へマップ（見た目のプレビュー用）。
+                var t = Math.sin(i / count * Math.PI * 4) * 0.5 + 0.5;
+                buf.push(effLo + t * (effHi - effLo));
             }
             root._buffer = buf;
             canvas.requestPaint();
