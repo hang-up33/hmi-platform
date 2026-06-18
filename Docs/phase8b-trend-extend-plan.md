@@ -154,6 +154,10 @@ Phase 8 の `HmiTrend` を N 系列へ一般化する。要点：
 4. **単系列項目の去就**：Phase 8 の `lineColor`/単一 `value` バインドと新 `series` の二重定義を、インスペクタでどう一本化するか（8B-D 着手時に確定）。Schema は両方温存（後方互換）。
 5. **自動 Y スケールの全系列横断**：複数系列で min/max を全系列から取ると軸が暴れうる → 固定 Y 軸（`hasYMin`/`hasYMax`）併用を推奨運用とする（Phase 8 のリスク継承）。
 
+## フォローアップ（別タスク・8B-A スコープ外）
+
+- **変数 rename/削除を undo/redo/clipboard にも同期する**（CodeRabbit PR #132 [Major]）：`Canvas.renameVariableReferences()`/`removeVariableReferences()` は現状 `widgetModel` だけ更新し、`undoStack`/`redoStack`/`_pendingUndo`/`clipboard` 内のスナップショットは旧変数名のまま残る → rename/削除後に undo/redo/paste すると dangling 参照が復活する。**これは Task 40（PR #80）以来の既存仕様で `series` 固有ではなく `actions.target`/`bindings.variable` にも等しく該当**するため、8B-A スコープ外として**別タスクで series + actions + bindings 横断で一括対応**する（2026-06-18 ユーザー判断「別タスクで対応」）。Codex は 97159f6/b52ff75 をクリーン👍。変数操作時に履歴・clipboard へ同じ変換を適用するか、変数操作で履歴・clipboard を明示破棄するかは着手時に設計確定。
+
 ## 進捗
 
 | Task | 状態 | PR |
