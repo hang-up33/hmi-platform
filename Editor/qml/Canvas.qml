@@ -346,6 +346,17 @@ Item {
                     }
                 }
             }
+            // Task 8B-A（Codex PR #132）: Trend の系列もサンプル源変数を参照する
+            //（series[].variable）ため、リネームに追従する。漏らすと series 付き Trend を含む
+            // プロジェクトで変数を改名したとき系列だけ旧名のまま保存され dangling 参照になる。
+            if (w.series) {
+                for (let s = 0; s < w.series.length; ++s) {
+                    if (w.series[s].variable === oldName) {
+                        w.series[s].variable = newName
+                        changed = true
+                    }
+                }
+            }
         }
         if (changed) {
             widgetModel = snap
@@ -376,6 +387,15 @@ Item {
                 const keptB = w.bindings.filter(function(b) { return b.variable !== name })
                 if (keptB.length !== w.bindings.length) {
                     w.bindings = keptB
+                    changed = true
+                }
+            }
+            // Task 8B-A（Codex PR #132）: Trend の系列も削除変数を参照する（series[].variable）
+            // ため、その変数を指す系列を取り除く（actions/bindings と同じ流儀。残すと dangling 参照）。
+            if (w.series) {
+                const keptS = w.series.filter(function(s) { return s.variable !== name })
+                if (keptS.length !== w.series.length) {
+                    w.series = keptS
                     changed = true
                 }
             }
