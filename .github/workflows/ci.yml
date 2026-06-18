@@ -1,20 +1,20 @@
 name: CI
 
 on:
-  # 【CI コスト削減（2026-06-10）】GitHub Actions の課金を抑えるため、PR / push の
-  # 自動トリガを一旦停止し、手動実行（workflow_dispatch）でのみ CI を回す運用に切替。
-  # 検証が要るときは Actions タブ → CI → Run workflow で任意ブランチを手動実行する。
-  # 元に戻すときは下記 pull_request / push のコメントアウトを解除する。
+  # 【2026-06-18 自動 CI 復活】2026-06-10 に GitHub Actions の課金回避で自動トリガを
+  # 停止していたが、Proxmox 上の self-hosted runner（linux ジョブ）に載せ替えて
+  # 課金ゼロのまま自動 CI を復活した。linux=self-hosted（0 円）が日常 PR / main push の
+  # 主ゲート。desktop（mac 10x / win 2x）は手動 dispatch か `ci-desktop` ラベル時のみ。
+  # 詳細は Docs/ci-self-hosted-plan.md。
   workflow_dispatch:
-  #
-  # pull_request:
-  #   branches: [main]
-  #   # 既定の types は opened/synchronize/reopened のみで、ラベル付与では workflow が
-  #   # 起動しない。desktop ジョブを PR の `ci-desktop` ラベルで有効化する設計のため、
-  #   # labeled を明示的に拾う（Codex PR #72 P2 指摘）。
-  #   types: [opened, synchronize, reopened, labeled]
-  # push:
-  #   branches: [main]
+  pull_request:
+    branches: [main]
+    # 既定の types は opened/synchronize/reopened のみで、ラベル付与では workflow が
+    # 起動しない。desktop ジョブを PR の `ci-desktop` ラベルで有効化する設計のため、
+    # labeled を明示的に拾う（Codex PR #72 P2 指摘）。
+    types: [opened, synchronize, reopened, labeled]
+  push:
+    branches: [main]
 
 # 同じブランチで連続 push されたとき、古い CI をキャンセルして最新だけ走らせる。
 concurrency:
@@ -28,7 +28,10 @@ jobs:
   # 13/13 緑を実証済み。日常の PR 検証はこのジョブで完結させる。
   linux:
     name: Linux / Qt 6.10
-    runs-on: ubuntu-latest
+    # self-hosted runner（Proxmox LXC / Ubuntu 24.04）で実行＝課金ゼロの主ゲート。
+    # private リポ前提の固定値。public 化 / fork PR を許可する場合は fork なら
+    # GitHub-hosted へ逃がす条件式に差し替える（Docs/ci-self-hosted-plan.md「セキュリティ注意」）。
+    runs-on: [self-hosted, linux]
     timeout-minutes: 45
     steps:
       - name: Checkout
@@ -58,7 +61,9 @@ jobs:
           host: linux
           target: desktop
           arch: linux_gcc_64
-          modules: ""
+          # CMakeLists が SerialBus 必須（Phase 7 / Modbus）。無いと configure で
+          # Qt6SerialBus 未検出になり落ちる（scripts/web/setup.sh と同じ addon）。
+          modules: "qtserialbus qtserialport"
           cache: true
 
       - name: Show toolchain
@@ -103,8 +108,11 @@ jobs:
   # ビルド・テストを確認できる（ローカル開発は元々 macOS / Windows 母艦で行う）。
   desktop:
     name: ${{ matrix.name }}
+    # 課金倍率が高い（mac=10x / win=2x）ため、手動 workflow_dispatch か PR の
+    # `ci-desktop` ラベル時のみ走らせる。main push では走らせない（main merge 毎の
+    # mac/win 自動課金を防ぐ。Codex PR #133 P2）。
     if: >-
-      github.event_name != 'pull_request'
+      github.event_name == 'workflow_dispatch'
       || contains(github.event.pull_request.labels.*.name, 'ci-desktop')
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
@@ -148,7 +156,8 @@ jobs:
           host: ${{ matrix.qt_host }}
           target: desktop
           arch: ${{ matrix.qt_arch }}
-          modules: ""
+          # linux 同様 SerialBus 必須（desktop も ci-desktop ラベル/手動で走るため）。
+          modules: "qtserialbus qtserialport"
           # Windows MinGW kit を選ぶと aqt が tools_mingw1310 / tools_ninja も同梱しないため、
           # 別途 tools を指定する。macOS では tools は空のままで OK。
           tools: ${{ matrix.qt_host == 'windows' && 'tools_mingw1310 tools_ninja' || '' }}
