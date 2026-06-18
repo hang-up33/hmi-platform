@@ -2,6 +2,7 @@
 
 #include "hmi/schema/ActionData.h"
 #include "hmi/schema/BindingData.h"
+#include "hmi/schema/TrendSeriesData.h"
 
 #include <QJsonObject>
 #include <QList>
@@ -103,6 +104,21 @@ struct WidgetData {
     bool hasYMax = false;
     QString lineColor;
     int sampleMs = 0;
+
+    // Task 8B-A（Phase 8-B）: Trend 拡張。複数系列 + 軸目盛り/凡例。すべて optional ＝
+    // isValidJson 必須集合に含めない（後方互換）。設計の正本は
+    // Docs/phase8b-trend-extend-plan.md「§Task 8B-A」。
+    //   series      : N 本の折れ線（子型 TrendSeriesData {variable, color, label} の配列）。
+    //     空のとき toJson 省略（actions/bindings 同型）。**series 空＝Phase 8 単系列の暗黙 1 系列**
+    //     （既存 value バインド + lineColor）として下流の HmiTrend が後方互換で 1 本描く。
+    //   showGrid / showLegend : グリッド線 / 凡例の表示。**既定 false** ＝ bool optional の規則で
+    //     true のときだけ toJson に書き、欠落時 false（fontBold 同型）。
+    //   yTickCount  : Y 軸目盛りの分割数。`0` センチネル（= 未指定。HmiTrend が既定へ解決。
+    //     `0` は「目盛り 0 本」の正当値を持たない＝pointCount/fontSize 同型）。toJson は `> 0` で書く。
+    QList<TrendSeriesData> series;
+    bool showGrid = false;
+    bool showLegend = false;
+    int yTickCount = 0;
 
     // Task 39: アクション（書き手）/ バインディング（読み手）。いずれも optional 配列で、
     // 空のとき toJson で省略（後方互換）。実行 / 描画への反映は T41 以降で、本タスクでは

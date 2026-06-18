@@ -103,6 +103,15 @@ Item {
     // 直接 concat すると、Repeater 再生成で未保存の編集が古い値へ戻る
     // （Codex PR #52 P2 指摘）。Main.qml の保存経路（saveTo / onAccepted）も
     // 同じ走査をしていたため本関数に集約して共用する。
+    // Task 8B-A（CodeRabbit PR #132）: JSON 値（配列 / オブジェクト）の deep copy。
+    // series のような **入れ子の var** を delegate 受け取り時と snapshot 保存時にコピーして
+    // 参照共有を切る（live / undo / clipboard が同一参照を共有すると、8B-D 以降の系列 in-place
+    // 編集で undo 差分消失や複製間の意図しない連動が起きる）。series はスカラ文字列のみなので
+    // JSON 往復で無損失。undefined は undefined のまま返す（JSON.parse 例外回避）。
+    function cloneJsonValue(v) {
+        return v === undefined ? undefined : JSON.parse(JSON.stringify(v))
+    }
+
     function snapshotModel() {
         const items = widgetItems
         const result = []
@@ -162,8 +171,20 @@ Item {
                 hasYMax: item.widgetHasYMax,
                 lineColor: item.widgetLineColor,
                 sampleMs: item.widgetSampleMs,
+                // Task 8B-A: Trend 拡張（複数系列 + 軸/凡例）も保存スナップショットへ含める
+                //（series 付き JSON を Editor で開いて保存しても失わないため。Codex PR #132 [P2]）。
+                // series は QVariantList of QVariantMap として WidgetData::fromVariantMap へ渡る。
+                // deep copy で live/undo/clipboard の参照共有を切る（CodeRabbit PR #132）。
+                series: root.cloneJsonValue(item.widgetSeries),
+                showGrid: item.widgetShowGrid,
+                showLegend: item.widgetShowLegend,
+                yTickCount: item.widgetYTickCount,
                 // Task 39: アクション / バインディングも保存スナップショットへ含める
                 //（読み込んだ定義を Editor の保存で失わないため。Codex PR #78 [P1]）。
+                // 注：series と違い deep copy しないのは、actions/bindings はインスペクタで
+                // **配列を丸ごと置換**して編集する（in-place 変更しない）ため参照共有でも実害が
+                // 無いから（CodeRabbit PR #132 で非対称性を確認）。in-place 編集を足す時は series と
+                // 同じく cloneJsonValue を挟むこと。
                 actions: item.widgetActions,
                 bindings: item.widgetBindings
             })
@@ -271,6 +292,13 @@ Item {
             for (const key in src) {
                 copy[key] = src[key]
             }
+            // Task 8B-A（CodeRabbit PR #132）: 上のシャローコピーでは入れ子の series 配列が
+            // クリップボード元エントリと同一参照のままになる。deep copy で切り、ペースト後の
+            // 系列 in-place 編集（8B-D 以降）が元エントリへ波及しないようにする。actions/bindings は
+            // 現状インスペクタで配列丸ごと置換のみ＝参照共有でも実害が無いため既存パターン据え置き。
+            if (copy.series !== undefined && copy.series !== null) {
+                copy.series = cloneJsonValue(copy.series)
+            }
             // push 済みの新 id も含む snapshot を渡すので連続採番でも重複しない。
             copy.id = nextWidgetId(snapshot)
             const w = (src.width !== undefined ? src.width : 120)
@@ -318,6 +346,17 @@ Item {
                     }
                 }
             }
+            // Task 8B-A（Codex PR #132）: Trend の系列もサンプル源変数を参照する
+            //（series[].variable）ため、リネームに追従する。漏らすと series 付き Trend を含む
+            // プロジェクトで変数を改名したとき系列だけ旧名のまま保存され dangling 参照になる。
+            if (w.series) {
+                for (let s = 0; s < w.series.length; ++s) {
+                    if (w.series[s].variable === oldName) {
+                        w.series[s].variable = newName
+                        changed = true
+                    }
+                }
+            }
         }
         if (changed) {
             widgetModel = snap
@@ -348,6 +387,15 @@ Item {
                 const keptB = w.bindings.filter(function(b) { return b.variable !== name })
                 if (keptB.length !== w.bindings.length) {
                     w.bindings = keptB
+                    changed = true
+                }
+            }
+            // Task 8B-A（Codex PR #132）: Trend の系列も削除変数を参照する（series[].variable）
+            // ため、その変数を指す系列を取り除く（actions/bindings と同じ流儀。残すと dangling 参照）。
+            if (w.series) {
+                const keptS = w.series.filter(function(s) { return s.variable !== name })
+                if (keptS.length !== w.series.length) {
+                    w.series = keptS
                     changed = true
                 }
             }
@@ -748,6 +796,12 @@ Item {
                     widgetHasYMax: modelData.hasYMax !== undefined ? modelData.hasYMax : false
                     widgetLineColor: modelData.lineColor !== undefined ? modelData.lineColor : ""
                     widgetSampleMs: modelData.sampleMs !== undefined ? modelData.sampleMs : 0
+                    // Task 8B-A: Trend 拡張（複数系列 + 軸/凡例）を素通し保持（描画 / 編集 UI は
+                    // 8B-B〜8B-D だが、series 付き JSON を開いて保存しても失わないため）。
+                    widgetSeries: root.cloneJsonValue(modelData.series !== undefined && modelData.series !== null ? modelData.series : [])
+                    widgetShowGrid: modelData.showGrid !== undefined ? modelData.showGrid : false
+                    widgetShowLegend: modelData.showLegend !== undefined ? modelData.showLegend : false
+                    widgetYTickCount: modelData.yTickCount !== undefined ? modelData.yTickCount : 0
                     // Task 39: アクション / バインディングを素通し保持（保存で失わないため）。
                     widgetActions: modelData.actions !== undefined ? modelData.actions : []
                     widgetBindings: modelData.bindings !== undefined ? modelData.bindings : []

@@ -113,7 +113,8 @@ SDK 生成・実機 scp・起動（weston）・キャプチャの全手順と罠
 
 ## ステータスとドキュメント
 
-- **現在地**: **Phase 8 / トレンドグラフ（Trend・ライブ折れ線）完了**（2026-06-16 承認）。新 Widget 種別「Trend」を横展開テンプレに乗せ、**QML `Canvas` 自描画で新 Qt モジュール依存ゼロ**（QtCharts 不使用＝実機にそのまま載る）。サンプル源は既存 binding の「読み」を再利用。T-A〔Schema 拡張〕/ T-B〔HmiTrend 描画〕/ T-C〔Editor 追加 UI + インスペクタ型対応〕/ T-D〔ライブ E2E `e2e_trend_live` + スクショ〕完了。次フェーズ候補（履歴永続化・複数系列・Gauge / Toggle・OPC-UA 等）は未承認＝先にスコープ確定する。進捗の正本は [Docs/phase8-trend-plan.md](Docs/phase8-trend-plan.md)。
+- **現在地**: **Phase 8-B / Trend 拡張（複数系列 + 軸目盛り/凡例）着手**（2026-06-17 承認）。Phase 8 の単系列 Trend を ①複数系列（N 本の折れ線・色分け・各系列が {変数 / 線色 / 凡例ラベル} を持つ）②軸目盛り/凡例（グリッド線・Y 軸目盛りラベル・系列名の凡例）へ拡張する。**Phase 8 の「新 Qt モジュール依存ゼロ（QML `Canvas` 自描画のみ）」を維持**し、**単系列 JSON は無改変で動く**（後方互換）。8B-A〔Schema 拡張〕実装済み（PR #132 レビュー中）→ 8B-B〔HmiTrend N 系列描画〕→ 8B-C〔軸/凡例描画〕→ 8B-D〔Editor 系列エディタ + トグル〕→ 8B-E〔cross-app E2E + スクショ〕。次タスク = 8B-B。進捗の正本は [Docs/phase8b-trend-extend-plan.md](Docs/phase8b-trend-extend-plan.md)。
+  - **Phase 8 / トレンドグラフ（単系列ライブ折れ線）完了**（2026-06-16 承認・PR #127〜#131）。新 Widget 種別「Trend」を横展開テンプレに乗せ、`Canvas` 自描画で実機にそのまま載る。進捗の正本は [Docs/phase8-trend-plan.md](Docs/phase8-trend-plan.md)。
   - **Phase 7 / Modbus TCP** は MB-1〜MB-4（書込 + 接続状態 + 自動再接続・PR #119/#121/#122）完了。残る MB-5〔実 PLC 書込確認〕/ MB-6〔実機 Yocto〕はローカル専用で Web 不可。進捗の正本は [Docs/phase7-modbus-plan.md](Docs/phase7-modbus-plan.md)。
 - 開発の時系列（各タスクの目的 / PR / 学び）: [Docs/development-history.md](Docs/development-history.md)
 - 各フェーズの計画と進捗表（正本）: [Docs/](Docs/) の `phase*-plan.md`

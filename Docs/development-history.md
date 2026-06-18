@@ -364,6 +364,15 @@ timeline
 
 ---
 
+## Phase 8-B: Trend 拡張（複数系列 + 軸目盛り/凡例）
+
+**計画書**：[Docs/phase8b-trend-extend-plan.md](phase8b-trend-extend-plan.md)（8B-A〜8B-E。2026-06-17 着手承認＝Phase 8 完了後の候補から「複数系列 + 軸目盛り/凡例」をユーザー選択。履歴永続化は今回非スコープ）
+
+- 🚧 進行中 — 計画起票。Phase 8 の単系列 Trend を ①複数系列（子型 `TrendSeriesData {variable, color, label}` の `series` 配列で N 本の折れ線・色分け）②軸目盛り/凡例（グリッド線・Y 軸目盛りラベル・系列名凡例）へ拡張する。**Phase 8 の最重要制約「新 Qt モジュール依存ゼロ（QML `Canvas` 自描画のみ・QtCharts 不使用）」を維持**（グリッド/目盛り/凡例も `Canvas` の `strokeText`/`fillText`/線描）。**Phase 8 の単系列 JSON は無改変で動く**（`series` 空＝既存 `value` バインド + `lineColor` を暗黙 1 系列に合成する後方互換）。
+  - **タスク**：8B-A（Schema 拡張：子型 `TrendSeriesData` + `WidgetData.series`/`showGrid`/`showLegend`/`yTickCount`・4 メソッド + round-trip）/ 8B-B（`HmiTrend.qml` を N 系列化〔`_buffers` + `series`/`seriesValues`〕+ Simulator delegate が `VariableStore` から各系列値を供給）/ 8B-C（軸/凡例描画）/ 8B-D（Editor 系列エディタ + 軸/凡例トグル + `editor.png`）/ 8B-E（cross-app E2E〔系列ごと独立サンプリング〕+ スクショ）。すべて Web 可。
+
+---
+
 ## 番外: 開発コードネーム「Atlas」決定（2026-05-30）
 
 フェーズタスクとは別に、プロジェクト全体の**開発時の通称（ブランド別名）**を決めた経緯。

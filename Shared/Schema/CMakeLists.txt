@@ -7,6 +7,7 @@ qt_add_library(hmi_schema STATIC
     src/BindingData.cpp
     src/SourceData.cpp
     src/ConnectionData.cpp
+    src/TrendSeriesData.cpp
 )
 
 target_include_directories(hmi_schema PUBLIC include)

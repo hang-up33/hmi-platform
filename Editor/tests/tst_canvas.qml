@@ -716,9 +716,15 @@ TestCase {
             id: "btnB", type: "Button", x: 0, y: 50, width: 100, height: 40, text: "B", tag: "",
             actions: [{ trigger: "onClick", op: "setVariable", target: "other", value: "1" }],
             bindings: []
+        }, {
+            // Task 8B-A（Codex PR #132）：Trend の系列もサンプル源変数（series[].variable）を
+            // リネームに追従させる。running を指す系列と other を指す系列を 1 本ずつ持たせる。
+            id: "trendC", type: "Trend", x: 0, y: 100, width: 200, height: 100, text: "", tag: "",
+            series: [{ variable: "running", color: "#4cc9f0", label: "R" },
+                     { variable: "other", color: "#f72585", label: "O" }]
         }];
-        tryVerify(function() { return editableChildren().length === 2; }, 1000,
-                  "2 件モデルが反映されない");
+        tryVerify(function() { return editableChildren().length === 3; }, 1000,
+                  "3 件モデルが反映されない");
 
         // Task 40（Codex PR #80 [P2]）：変数リネームは Canvas undo に載せない。
         // 載せると Undo で widget 参照だけ旧名に戻り、変数定義（projectVariables）は
@@ -729,16 +735,20 @@ TestCase {
         compare(canvas.canUndo, false, "変数リネームが undo スタックに積まれている");
 
         const snap = canvas.snapshotModel();
-        let a = null, b = null;
+        let a = null, b = null, c = null;
         for (let i = 0; i < snap.length; ++i) {
             if (snap[i].id === "btnA") a = snap[i];
             if (snap[i].id === "btnB") b = snap[i];
+            if (snap[i].id === "trendC") c = snap[i];
         }
         // btnA の running 参照は isRunning へ更新される。
         compare(a.actions[0].target, "isRunning");
         compare(a.bindings[0].variable, "isRunning");
         // btnB の別変数 other は影響を受けない。
         compare(b.actions[0].target, "other");
+        // Task 8B-A: trendC の系列 running は isRunning へ更新、other は不変。
+        compare(c.series[0].variable, "isRunning");
+        compare(c.series[1].variable, "other");
     }
 
     // Task 40（Codex PR #80 [P2]）：変数を削除したら、その変数を参照している Widget の
@@ -753,19 +763,26 @@ TestCase {
             id: "btnB", type: "Button", x: 0, y: 50, width: 100, height: 40, text: "B", tag: "",
             actions: [{ trigger: "onClick", op: "setVariable", target: "other", value: "1" }],
             bindings: []
+        }, {
+            // Task 8B-A（Codex PR #132）：Trend の系列も削除変数（series[].variable）を指す系列を
+            // 取り除く。running を指す系列と other を指す系列を 1 本ずつ持たせる。
+            id: "trendC", type: "Trend", x: 0, y: 100, width: 200, height: 100, text: "", tag: "",
+            series: [{ variable: "running", color: "#4cc9f0", label: "R" },
+                     { variable: "other", color: "#f72585", label: "O" }]
         }];
-        tryVerify(function() { return editableChildren().length === 2; }, 1000,
-                  "2 件モデルが反映されない");
+        tryVerify(function() { return editableChildren().length === 3; }, 1000,
+                  "3 件モデルが反映されない");
 
         canvas.clearHistory();
         canvas.removeVariableReferences("running");
         compare(canvas.canUndo, false, "変数参照削除が undo スタックに積まれている");
 
         const snap = canvas.snapshotModel();
-        let a = null, b = null;
+        let a = null, b = null, c = null;
         for (let i = 0; i < snap.length; ++i) {
             if (snap[i].id === "btnA") a = snap[i];
             if (snap[i].id === "btnB") b = snap[i];
+            if (snap[i].id === "trendC") c = snap[i];
         }
         // btnA の running 参照は actions/bindings ともに取り除かれる。
         compare(a.actions.length, 0);
@@ -773,6 +790,9 @@ TestCase {
         // btnB の別変数 other は影響を受けない。
         compare(b.actions.length, 1);
         compare(b.actions[0].target, "other");
+        // Task 8B-A: trendC の running 系列は除去され、other 系列だけ残る。
+        compare(c.series.length, 1);
+        compare(c.series[0].variable, "other");
     }
 
     // Task 36（Codex PR #75 [P2]）：widgetModel 差し替え（プロジェクト読込相当）で、
