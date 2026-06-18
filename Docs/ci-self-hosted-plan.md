@@ -84,7 +84,8 @@ sudo visudo -cf /etc/sudoers.d/runner-nopasswd   # 構文チェック
 ### 3. GitHub Actions runner を登録
 - リポジトリ → **Settings → Actions → Runners → New self-hosted runner（Linux x64）** に出るコマンドを LXC で実行（`./config.sh ...`（token 込み）→ `./run.sh`）。
 - **ラベル**：既定の `self-hosted` `Linux` `X64` に加え、必要なら `qt` 等を付与（`ci.yml` 側の `runs-on` と一致させる）。
-- **常駐化**：`./svc.sh install && ./svc.sh start` で systemd サービス化（LXC 起動で自動復帰）。
+- **常駐化（root 権限で）**：`sudo ./svc.sh install runner && sudo ./svc.sh start` で systemd サービス化（LXC 起動で自動復帰）。systemd unit の作成・起動には root が要る（GitHub 公式手順も `sudo ./svc.sh ...`）。
+  - **§2.5 の `NOPASSWD: /usr/bin/apt-get` 制限とは衝突しない**：あの最小権限は **runner プロセスがジョブ実行中に使う sudo**（＝ci.yml の apt ステップ）用。**この `svc.sh` 常駐化は一度きりのセットアップ**で、LXC の **root もしくはフル sudo 権限を持つ管理ユーザー**で実行する（制限付き `runner` ユーザーの sudoers では通らないので、root シェルか別の admin sudo で行う）。
 
 ### 4. 動作確認
 - **テスト用ブランチで `ci.yml` を次のように変えてから** `workflow_dispatch` を打つ → linux ジョブが **self-hosted runner に割り当たって完走**し 13/13 緑を確認する：
