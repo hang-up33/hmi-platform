@@ -138,6 +138,7 @@ jobs:
 - **①linux ジョブの `runs-on`** `ubuntu-latest` → `[self-hosted, linux]`。
 - **②自動トリガ**（`pull_request` / `push`）のコメント解除。
 - **③desktop ジョブの `if`** を `workflow_dispatch` + `ci-desktop` ラベル限定に変更し **main push を除外**（main merge 毎の mac 10x / win 2x 自動課金を防ぐ。Codex PR #133 P2）。desktop の steps 自体は無改変。
+- **④install-qt-action の `modules`** を `""` → `"qtserialbus qtserialport"` に（CMakeLists が SerialBus 必須。無いと configure で `Qt6SerialBus` 未検出。Codex PR #133 P2）。linux / desktop 両ジョブとも。
 - apt の Linux deps ステップは **self-hosted でも冪等に通る**（既導入なら skip 扱い）。passwordless sudo を runner ユーザーに付けておく。
 - 復活したら [dev-environment.md](../.claude/rules/dev-environment.md)「リポジトリ運用の注意」の「CI は手動のみ」記述も更新する。
 
@@ -173,4 +174,4 @@ CI を回す箱（self-hosted）ができた後の **上積み候補**。今回�
 | Proxmox LXC 作成 + CI 依存導入 | ⬜ 未 | 君の手元（手順は本書「構築手順」§1〜2） |
 | self-hosted runner 登録・常駐化 | ⬜ 未 | registration token は Web 不可（手元で） |
 | runner で手動実行 → 13/13 緑確認 | ⬜ 未 | §4 |
-| `ci.yml` 改修（①linux=self-hosted ②自動トリガ復活 ③desktop=main push 除外）+ dev-environment.md 更新 | ⬜ 未 | runner 緑確認後に別 PR |
+| `ci.yml` 改修（①linux=self-hosted ②自動トリガ復活 ③desktop=main push 除外 ④modules=qtserialbus qtserialport）+ dev-environment.md 更新 | ⬜ 未 | runner 緑確認後に別 PR |
