@@ -181,6 +181,10 @@ Item {
                 yTickCount: item.widgetYTickCount,
                 // Task 39: アクション / バインディングも保存スナップショットへ含める
                 //（読み込んだ定義を Editor の保存で失わないため。Codex PR #78 [P1]）。
+                // 注：series と違い deep copy しないのは、actions/bindings はインスペクタで
+                // **配列を丸ごと置換**して編集する（in-place 変更しない）ため参照共有でも実害が
+                // 無いから（CodeRabbit PR #132 で非対称性を確認）。in-place 編集を足す時は series と
+                // 同じく cloneJsonValue を挟むこと。
                 actions: item.widgetActions,
                 bindings: item.widgetBindings
             })
@@ -287,6 +291,13 @@ Item {
             const copy = {}
             for (const key in src) {
                 copy[key] = src[key]
+            }
+            // Task 8B-A（CodeRabbit PR #132）: 上のシャローコピーでは入れ子の series 配列が
+            // クリップボード元エントリと同一参照のままになる。deep copy で切り、ペースト後の
+            // 系列 in-place 編集（8B-D 以降）が元エントリへ波及しないようにする。actions/bindings は
+            // 現状インスペクタで配列丸ごと置換のみ＝参照共有でも実害が無いため既存パターン据え置き。
+            if (copy.series !== undefined) {
+                copy.series = cloneJsonValue(copy.series)
             }
             // push 済みの新 id も含む snapshot を渡すので連続採番でも重複しない。
             copy.id = nextWidgetId(snapshot)
@@ -767,7 +778,7 @@ Item {
                     widgetSampleMs: modelData.sampleMs !== undefined ? modelData.sampleMs : 0
                     // Task 8B-A: Trend 拡張（複数系列 + 軸/凡例）を素通し保持（描画 / 編集 UI は
                     // 8B-B〜8B-D だが、series 付き JSON を開いて保存しても失わないため）。
-                    widgetSeries: modelData.series !== undefined ? root.cloneJsonValue(modelData.series) : []
+                    widgetSeries: root.cloneJsonValue(modelData.series !== undefined && modelData.series !== null ? modelData.series : [])
                     widgetShowGrid: modelData.showGrid !== undefined ? modelData.showGrid : false
                     widgetShowLegend: modelData.showLegend !== undefined ? modelData.showLegend : false
                     widgetYTickCount: modelData.yTickCount !== undefined ? modelData.yTickCount : 0
