@@ -69,10 +69,12 @@ sudo apt-get install -y --no-install-recommends \
 ci.yml の Linux deps ステップが `sudo apt-get` を非対話で実行するため、runner 実行ユーザー（例 `runner`）に NOPASSWD sudo を付ける：
 ```sh
 sudo useradd -m -s /bin/bash runner   # 既存なら不要
-echo 'runner ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/runner-nopasswd
+# ci.yml が要る sudo は apt-get のみ＝最小権限で絞る（NOPASSWD:ALL は付けない）
+echo 'runner ALL=(ALL) NOPASSWD: /usr/bin/apt-get' | sudo tee /etc/sudoers.d/runner-nopasswd
 sudo chmod 0440 /etc/sudoers.d/runner-nopasswd
 sudo visudo -cf /etc/sudoers.d/runner-nopasswd   # 構文チェック
 ```
+> 隔離 LXC で許容するなら `NOPASSWD:ALL` でも動くが、**最小権限（apt-get のみ）が推奨**。将来 deps を増やして別コマンドの sudo が要るようになったら、その実行ファイルを列挙に足す。
 > deps を LXC イメージに焼き込んで ci.yml 側の apt ステップを self-hosted では skip する運用なら、この sudo 付与は省ける（その場合は deps を §2 で事前導入済みにしておく）。
 
 ### 3. GitHub Actions runner を登録
@@ -81,7 +83,9 @@ sudo visudo -cf /etc/sudoers.d/runner-nopasswd   # 構文チェック
 - **常駐化**：`./svc.sh install && ./svc.sh start` で systemd サービス化（LXC 起動で自動復帰）。
 
 ### 4. 動作確認
-- 適当なブランチで `ci.yml` を手動実行（`workflow_dispatch`）し、linux ジョブを **self-hosted で完走** → 13/13 緑を確認。
+- **テスト用ブランチで `ci.yml` の linux ジョブの `runs-on` を一時的に `[self-hosted, linux]` に変えて** `workflow_dispatch` を打つ → linux ジョブが **self-hosted runner に割り当たって完走**し 13/13 緑を確認する。
+  - 現状の `ci.yml`（`runs-on: ubuntu-latest`）のまま手動実行しても linux は **GitHub-hosted に流れる**ため、self-hosted の確認にはならない（runs-on を変えて初めて self-hosted に乗る）。
+  - 確認できたら、このテストブランチをそのまま下記「`ci.yml` 改修案」の PR に発展させてよい（revert は不要）。
 
 ---
 
