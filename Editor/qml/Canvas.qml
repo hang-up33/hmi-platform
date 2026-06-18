@@ -103,6 +103,15 @@ Item {
     // 直接 concat すると、Repeater 再生成で未保存の編集が古い値へ戻る
     // （Codex PR #52 P2 指摘）。Main.qml の保存経路（saveTo / onAccepted）も
     // 同じ走査をしていたため本関数に集約して共用する。
+    // Task 8B-A（CodeRabbit PR #132）: JSON 値（配列 / オブジェクト）の deep copy。
+    // series のような **入れ子の var** を delegate 受け取り時と snapshot 保存時にコピーして
+    // 参照共有を切る（live / undo / clipboard が同一参照を共有すると、8B-D 以降の系列 in-place
+    // 編集で undo 差分消失や複製間の意図しない連動が起きる）。series はスカラ文字列のみなので
+    // JSON 往復で無損失。undefined は undefined のまま返す（JSON.parse 例外回避）。
+    function cloneJsonValue(v) {
+        return v === undefined ? undefined : JSON.parse(JSON.stringify(v))
+    }
+
     function snapshotModel() {
         const items = widgetItems
         const result = []
@@ -165,7 +174,8 @@ Item {
                 // Task 8B-A: Trend 拡張（複数系列 + 軸/凡例）も保存スナップショットへ含める
                 //（series 付き JSON を Editor で開いて保存しても失わないため。Codex PR #132 [P2]）。
                 // series は QVariantList of QVariantMap として WidgetData::fromVariantMap へ渡る。
-                series: item.widgetSeries,
+                // deep copy で live/undo/clipboard の参照共有を切る（CodeRabbit PR #132）。
+                series: root.cloneJsonValue(item.widgetSeries),
                 showGrid: item.widgetShowGrid,
                 showLegend: item.widgetShowLegend,
                 yTickCount: item.widgetYTickCount,
@@ -757,7 +767,7 @@ Item {
                     widgetSampleMs: modelData.sampleMs !== undefined ? modelData.sampleMs : 0
                     // Task 8B-A: Trend 拡張（複数系列 + 軸/凡例）を素通し保持（描画 / 編集 UI は
                     // 8B-B〜8B-D だが、series 付き JSON を開いて保存しても失わないため）。
-                    widgetSeries: modelData.series !== undefined ? modelData.series : []
+                    widgetSeries: modelData.series !== undefined ? root.cloneJsonValue(modelData.series) : []
                     widgetShowGrid: modelData.showGrid !== undefined ? modelData.showGrid : false
                     widgetShowLegend: modelData.showLegend !== undefined ? modelData.showLegend : false
                     widgetYTickCount: modelData.yTickCount !== undefined ? modelData.yTickCount : 0
