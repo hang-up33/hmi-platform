@@ -296,7 +296,7 @@ Item {
             // クリップボード元エントリと同一参照のままになる。deep copy で切り、ペースト後の
             // 系列 in-place 編集（8B-D 以降）が元エントリへ波及しないようにする。actions/bindings は
             // 現状インスペクタで配列丸ごと置換のみ＝参照共有でも実害が無いため既存パターン据え置き。
-            if (copy.series !== undefined) {
+            if (copy.series !== undefined && copy.series !== null) {
                 copy.series = cloneJsonValue(copy.series)
             }
             // push 済みの新 id も含む snapshot を渡すので連続採番でも重複しない。
