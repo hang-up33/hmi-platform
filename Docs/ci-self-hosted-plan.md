@@ -116,7 +116,8 @@ on:
 jobs:
   linux:
     name: Linux / Qt 6.10
-    runs-on: [self-hosted, linux]   # ← ① ubuntu-latest から変更
+    # ① private リポ前提の固定値。public 化 / fork PR 許可時は下の「⑤ fork」へ差し替える
+    runs-on: [self-hosted, linux]   # ← ubuntu-latest から変更
     steps:
       ...
       - name: Install Qt
@@ -135,13 +136,21 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch'
       || contains(github.event.pull_request.labels.*.name, 'ci-desktop')
-    ...
+    steps:
+      ...
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.10.0"
+          modules: "qtserialbus qtserialport"   # ④ desktop も "" から変更（SerialBus 必須）
+          ...
 ```
 
-- **①linux ジョブの `runs-on`** `ubuntu-latest` → `[self-hosted, linux]`。
+- **①linux ジョブの `runs-on`** `ubuntu-latest` → `[self-hosted, linux]`（**private リポ前提**。public/fork は ⑤ 参照）。
 - **②自動トリガ**（`pull_request` / `push`）のコメント解除。
-- **③desktop ジョブの `if`** を `workflow_dispatch` + `ci-desktop` ラベル限定に変更し **main push を除外**（main merge 毎の mac 10x / win 2x 自動課金を防ぐ。Codex PR #133 P2）。desktop の steps 自体は無改変。
-- **④install-qt-action の `modules`** を `""` → `"qtserialbus qtserialport"` に（CMakeLists が SerialBus 必須。無いと configure で `Qt6SerialBus` 未検出。Codex PR #133 P2）。linux / desktop 両ジョブとも。
+- **③desktop ジョブの `if`** を `workflow_dispatch` + `ci-desktop` ラベル限定に変更し **main push を除外**（main merge 毎の mac 10x / win 2x 自動課金を防ぐ。Codex PR #133 P2）。
+- **④install-qt-action の `modules`** を `""` → `"qtserialbus qtserialport"` に（CMakeLists が SerialBus 必須。無いと configure で `Qt6SerialBus` 未検出。Codex PR #133 P2）。**linux / desktop 両ジョブの `Install Qt` ステップとも**（desktop も `ci-desktop` ラベル/手動で走るので必須）。
+- **⑤【public/fork 対応時のみ】** linux の `runs-on` を固定値でなく **fork 判定式**（「セキュリティ注意」の `${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || fromJSON('["self-hosted","linux"]') }}`）に差し替える。**private のままなら ① の固定値で良い**（この案は private 前提で、public 化時に①を⑤へ置換する）。
 - apt の Linux deps ステップは **self-hosted でも冪等に通る**（既導入なら skip 扱い）。passwordless sudo を runner ユーザーに付けておく。
 - 復活したら [dev-environment.md](../.claude/rules/dev-environment.md)「リポジトリ運用の注意」の「CI は手動のみ」記述も更新する。
 
