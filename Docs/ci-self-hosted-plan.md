@@ -2,7 +2,7 @@
 
 > **位置づけ**：2026-06-10 に GitHub Actions の課金回避で自動 CI（`pull_request` / `push` トリガ）を停止し、`workflow_dispatch`（手動）のみにした（[ci.yml](../.github/workflows/ci.yml) 冒頭コメント / [dev-environment.md](../.claude/rules/dev-environment.md)「リポジトリ運用の注意」）。これを **Proxmox 上の self-hosted runner で課金ゼロのまま自動 CI に戻す**ための計画。
 >
-> **本書は計画のみ**。**CI はまだ off のまま**（`ci.yml` は変更しない）。**Proxmox に runner が立って動作確認が取れてから** `ci.yml` を改修して自動トリガを復活させる。
+> **状態（2026-06-18 更新）**：Proxmox に self-hosted runner を構築・動作確認（self-hosted で 100% green）まで完了。**本 PR `docs/ci-restore-selfhosted` で `ci.yml` を改修し自動 CI を on に戻す**（計画どおり）。
 > **進捗の正本は本ファイル「進捗」表**。
 
 ---
@@ -183,7 +183,7 @@ CI を回す箱（self-hosted）ができた後の **上積み候補**。今回�
 | ステップ | 状態 | メモ |
 |---|---|---|
 | 計画書作成 | ✅ 本書 | CI は off のまま。`ci.yml` 未変更 |
-| Proxmox LXC 作成 + CI 依存導入 | ⬜ 未 | 君の手元（手順は本書「構築手順」§1〜2） |
-| self-hosted runner 登録・常駐化 | ⬜ 未 | registration token は Web 不可（手元で） |
-| runner で手動実行 → 13/13 緑確認 | ⬜ 未 | §4 |
-| `ci.yml` 改修（①linux=self-hosted ②自動トリガ復活 ③desktop=main push 除外 ④modules=qtserialbus qtserialport）+ dev-environment.md 更新 | ⬜ 未 | runner 緑確認後に別 PR |
+| Proxmox LXC 作成 + CI 依存導入 | ✅ 完了 | 2026-06-18。`pve`（VE 9.1.6）に **CT 101 `gh-runner`**（Ubuntu 24.04 / 4 vCPU・4GB・swap2GB / rootfs 32GB local-lvm / net vmbr0 DHCP=192.168.40.209 / unprivileged / nesting=1 / onboot=1）。CI 依存（本書 §2 一覧 + cmake/build-essential/curl/git/python3/sudo）導入済。`runner` ユーザー + NOPASSWD sudo は `apt-get` のみに限定（§2.5） |
+| self-hosted runner 登録・常駐化 | ✅ 完了 | 2026-06-18。actions/runner **v2.335.1** を `runner` ユーザーで `config.sh`（labels: `self-hosted` `Linux` `X64` `qt`、name `gh-runner-lxc`）→ `svc.sh install/start` で systemd 常駐（online / idle）。registration token は `gh api` で自動発行 |
+| runner で手動実行 → 緑確認 | ✅ 完了 | 2026-06-18。検証ブランチ `ci/verify-selfhosted`（linux=self-hosted / desktop=`if:false` / modules 追加）を `gh workflow run` → **self-hosted で 100% tests passed（22 passed、modbus 2 件は pymodbus 未導入で Skipped）**。run [27753217404](https://github.com/hang-up33/hmi-platform/actions/runs/27753217404) |
+| `ci.yml` 改修（①linux=self-hosted ②自動トリガ復活 ③desktop=main push 除外 ④modules=qtserialbus qtserialport）+ dev-environment.md 更新 | 🔄 本 PR | `docs/ci-restore-selfhosted`。本書の改修案を適用＝自動 CI on |
