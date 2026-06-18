@@ -47,11 +47,11 @@ flowchart LR
 > runner 登録には **registration token**（リポジトリ Settings で都度発行・短命）が要るため、この部分は Web からは実施できない。
 
 ### 1. LXC コンテナ作成（Ubuntu 24.04）
-- **OS**：Ubuntu 24.04（CI の `ubuntu-latest` = 24.04 と揃える。`scripts/web/setup.sh` と同じ前提）。
+- **OS**：Ubuntu 24.04（**本書執筆時点で** GitHub の `ubuntu-latest` = 24.04。`scripts/web/setup.sh` と同じ前提）。`ubuntu-latest` の実体は将来更新されうるので、ズレたら [GitHub runner-images](https://github.com/actions/runner-images) で現行版を確認して LXC を揃える。
 - **スペック目安**：2〜4 vCPU / 4GB+ RAM / 30GB+ disk。
 - **Docker は当面不要**＝LXC で十分（将来 runner 内で Docker を回すなら `features: nesting=1` を付けるか VM に切替）。
 
-### 2. CI 依存を入れる（[ci.yml](../.github/workflows/ci.yml) の Linux deps と同一）
+### 2. CI 依存を入れる（[ci.yml](../.github/workflows/ci.yml) の Linux deps + α）
 ```sh
 sudo apt-get update
 sudo apt-get install -y --no-install-recommends \
@@ -61,8 +61,19 @@ sudo apt-get install -y --no-install-recommends \
   ninja-build fonts-dejavu-core fonts-noto-cjk \
   curl git python3 python3-pip
 ```
+- **末尾 4 つ（`curl git python3 python3-pip`）は `ci.yml` の apt 一覧には無い**が、これは**意図的な差分**：GitHub-hosted の `ubuntu-latest` イメージにはこれらが**プリインストール済み**なので ci.yml は列挙しないが、**素の LXC には入っていない**ため明示導入が要る（`curl`/`git`=runner 取得・checkout、`python3`/`pip`=E2E harness と `setup-python` の土台）。それ以外（libgl 〜 fonts）は ci.yml の Linux deps と同一。
 - Qt 本体は **`ci.yml` 内の `jurplel/install-qt-action` が self-hosted でも動く**（初回 DL、persistent runner なのでキャッシュで2回目以降速い）。事前手動導入は不要。
 - 外向きネットワークで **`download.qt.io` に到達できること**（Qt 取得）。Proxmox の LAN がそのまま出られるなら OK。
+
+### 2.5. runner ユーザーに passwordless sudo を付与
+ci.yml の Linux deps ステップが `sudo apt-get` を非対話で実行するため、runner 実行ユーザー（例 `runner`）に NOPASSWD sudo を付ける：
+```sh
+sudo useradd -m -s /bin/bash runner   # 既存なら不要
+echo 'runner ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/runner-nopasswd
+sudo chmod 0440 /etc/sudoers.d/runner-nopasswd
+sudo visudo -cf /etc/sudoers.d/runner-nopasswd   # 構文チェック
+```
+> deps を LXC イメージに焼き込んで ci.yml 側の apt ステップを self-hosted では skip する運用なら、この sudo 付与は省ける（その場合は deps を §2 で事前導入済みにしておく）。
 
 ### 3. GitHub Actions runner を登録
 - リポジトリ → **Settings → Actions → Runners → New self-hosted runner（Linux x64）** に出るコマンドを LXC で実行（`./config.sh ...`（token 込み）→ `./run.sh`）。
@@ -114,7 +125,9 @@ jobs:
 
 ## セキュリティ注意
 
-- **self-hosted runner は public リポだと fork PR が任意コード実行できて危険**。本リポが **private なら問題なし**。public 化する場合は fork PR を GitHub-hosted に振り分ける設定が必須（self-hosted には流さない）。
+- **self-hosted runner は public リポだと fork PR が任意コード実行できて危険**。本リポが **private なら問題なし**。public 化する場合は fork PR を self-hosted に流さず GitHub-hosted へ振り分ける。具体策のいずれか：
+  - **設定で塞ぐ（推奨）**：Settings → Actions → General の **"Fork pull request workflows from outside collaborators"** を「require approval for all external collaborators」にし、未承認の fork PR で workflow を起動させない。
+  - **ジョブ条件で振り分け**：linux ジョブを `runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || fromJSON('["self-hosted","linux"]') }}` のように **fork なら GitHub-hosted・自リポ PR なら self-hosted** に分岐する（fork のコードを self-hosted で実行しない）。
 - runner は専用 LXC に隔離し、不要な権限（host の Proxmox 操作等）を持たせない。
 
 ---
