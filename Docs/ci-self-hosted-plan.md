@@ -90,7 +90,7 @@ sudo visudo -cf /etc/sudoers.d/runner-nopasswd   # 構文チェック
 - **テスト用ブランチで `ci.yml` を次のように変えてから** `workflow_dispatch` を打つ → linux ジョブが **self-hosted runner に割り当たって完走**し 13/13 緑を確認する：
   - **linux の `runs-on`** を `[self-hosted, linux]` に。
   - **install-qt-action の `modules`** に `qtserialbus qtserialport` を追加（無いと SerialBus で configure 落ち。§2「⚠️ SerialBus」参照）。
-  - **⚠️ desktop ジョブも同時に止める**：現行 desktop の `if`（`github.event_name != 'pull_request'`）は **`workflow_dispatch` でも true** なので、何もしないと手動実行で **mac(10x)/win(2x) も一緒に走り課金が出る**。テストブランチでは下記「改修案 ③」の `if`（手動 + `ci-desktop` ラベル限定）を**先に適用**するか、`ci-desktop` ラベルを付けず desktop を一時 `if: false` にして **linux だけ dispatch** する（Codex PR #133 P2）。
+  - **⚠️ desktop ジョブを `if: false` でハード無効化する**：現行 desktop の `if`（`github.event_name != 'pull_request'`）も、改修案 ③ の `if`（`workflow_dispatch` + `ci-desktop` ラベル）も、**どちらも `workflow_dispatch` を許可**しているため、`if` を改修案③に差し替えるだけでは **手動 dispatch で mac(10x)/win(2x) が走り課金が出る**。linux だけ確認したいこの検証では、テストブランチで **desktop の `if` を一時的に `if: false` に固定**して dispatch する（＝検証中は desktop を確実に止める。確認後に改修案③の `if` へ戻す。Codex PR #133 P2）。
   - 現状の `ci.yml`（`runs-on: ubuntu-latest`）のまま手動実行しても linux は **GitHub-hosted に流れる**ため、self-hosted の確認にはならない。
   - 確認できたら、このテストブランチをそのまま下記「`ci.yml` 改修案」の PR に発展させてよい（revert は不要）。
 
