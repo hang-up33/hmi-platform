@@ -82,10 +82,12 @@ sudo visudo -cf /etc/sudoers.d/runner-nopasswd   # 構文チェック
 > deps を LXC イメージに焼き込んで ci.yml 側の apt ステップを self-hosted では skip する運用なら、この sudo 付与は省ける（その場合は deps を §2 で事前導入済みにしておく）。
 
 ### 3. GitHub Actions runner を登録
-- リポジトリ → **Settings → Actions → Runners → New self-hosted runner（Linux x64）** に出るコマンドを LXC で実行（`./config.sh ...`（token 込み）→ `./run.sh`）。
-- **ラベル**：既定の `self-hosted` `Linux` `X64` に加え、必要なら `qt` 等を付与（`ci.yml` 側の `runs-on` と一致させる）。
-- **常駐化（root 権限で）**：`sudo ./svc.sh install runner && sudo ./svc.sh start` で systemd サービス化（LXC 起動で自動復帰）。systemd unit の作成・起動には root が要る（GitHub 公式手順も `sudo ./svc.sh ...`）。
-  - **§2.5 の `NOPASSWD: /usr/bin/apt-get` 制限とは衝突しない**：あの最小権限は **runner プロセスがジョブ実行中に使う sudo**（＝ci.yml の apt ステップ）用。**この `svc.sh` 常駐化は一度きりのセットアップ**で、LXC の **root もしくはフル sudo 権限を持つ管理ユーザー**で実行する（制限付き `runner` ユーザーの sudoers では通らないので、root シェルか別の admin sudo で行う）。
+**実行ユーザーを分ける**：`config.sh` は root 実行を拒否する（`Must not run with sudo` で終了）ため **`runner` ユーザー**で、`svc.sh`（systemd 化）は root で実行する。
+
+- **① 登録（`runner` ユーザーで）**：`sudo -iu runner` で runner ユーザーになり、`~/actions-runner` を作って **リポジトリ → Settings → Actions → Runners → New self-hosted runner（Linux x64）** に出るコマンド（tarball DL + `./config.sh ...`（token 込み））を**そのユーザーで**実行する。`./run.sh` で前景起動の動作確認も可（確認したら Ctrl-C で抜けて ② で常駐化）。
+  - **ラベル**：既定の `self-hosted` `Linux` `X64` に加え、必要なら `qt` 等を付与（`ci.yml` 側の `runs-on` と一致させる）。
+- **② 常駐化（root / admin で）**：runner ディレクトリで `sudo ./svc.sh install runner && sudo ./svc.sh start`（`install` の `runner` 引数 = サービスをこのユーザーで動かす指定）。systemd unit の作成・起動には root が要る（GitHub 公式手順も `sudo ./svc.sh ...`）。**制限付き `runner` ユーザーの sudoers（§2.5）では通らない**ので root シェルか別の admin sudo で行う。
+  - **§2.5 の `NOPASSWD: /usr/bin/apt-get` 制限とは衝突しない**：あの最小権限は **runner プロセスがジョブ実行中に使う sudo**（＝ci.yml の apt ステップ）用で、**この ① 登録・② 常駐化は一度きりのセットアップ**。①は `runner` ユーザー自身（sudo 不要）、②は root/admin で行う、と実行者を分ければ権限不一致は起きない。
 
 ### 4. 動作確認
 - **テスト用ブランチで `ci.yml` を次のように変えてから** `workflow_dispatch` を打つ → linux ジョブが **self-hosted runner に割り当たって完走**し 13/13 緑を確認する：
@@ -147,9 +149,9 @@ jobs:
 
 ## セキュリティ注意
 
-- **self-hosted runner は public リポだと fork PR が任意コード実行できて危険**。本リポが **private なら問題なし**。public 化する場合は fork PR を self-hosted に流さず GitHub-hosted へ振り分ける。具体策のいずれか：
-  - **設定で塞ぐ（推奨）**：Settings → Actions → General の **"Fork pull request workflows from outside collaborators"** を「require approval for all external collaborators」にし、未承認の fork PR で workflow を起動させない。
-  - **ジョブ条件で振り分け**：linux ジョブを `runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || fromJSON('["self-hosted","linux"]') }}` のように **fork なら GitHub-hosted・自リポ PR なら self-hosted** に分岐する（fork のコードを self-hosted で実行しない）。
+- **self-hosted runner は public リポだと fork PR が任意コード実行できて危険**。本リポが **private なら問題なし**。public 化する場合は fork PR を self-hosted に流さず GitHub-hosted へ振り分ける。
+  - **【必須】ジョブ条件で振り分ける**：linux ジョブを `runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || fromJSON('["self-hosted","linux"]') }}` のように **fork なら GitHub-hosted・自リポ PR なら self-hosted** に分岐する（fork のコードを self-hosted で実行しない）。**承認設定だけでは不十分**＝後述の承認は「未承認 fork の起動」を止めるだけで、**いったん承認した外部 PR は同じ `[self-hosted, linux]` に乗ってしまう**ため、実行場所そのものを `runs-on` で fork→GitHub-hosted に逃がすこの条件を必須とする。
+  - **【補助】設定で起動自体を絞る**：Settings → Actions → General の **"Fork pull request workflows from outside collaborators"** を「require approval for all external collaborators」にし、未承認の fork PR で workflow を起動させない（上の `runs-on` 振り分けと併用する補助策。これ単独を防壁にしない）。
 - runner は専用 LXC に隔離し、不要な権限（host の Proxmox 操作等）を持たせない。
 
 ---
