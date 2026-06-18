@@ -25,11 +25,12 @@
 | ジョブ | 実行場所 | トリガ | 課金 |
 |---|---|---|---|
 | **linux**（主ゲート） | **Proxmox の self-hosted runner** | 毎 PR / main push（自動） | **0 円** |
-| **desktop**（mac / win） | GitHub-hosted（据え置き） | `ci-desktop` ラベル + main push + 手動 | 必要時のみ |
+| **desktop**（mac / win） | GitHub-hosted（据え置き） | **`ci-desktop` ラベル + 手動のみ**（main push を除外） | 必要時のみ |
 
 - 日常 PR は self-hosted Linux で unit + e2e（offscreen）を毎回自動チェック＝**緑ゲート復活**。
 - 実機 2 OS（mac/win）の確認は従来どおり必要時だけ GitHub-hosted で（10x の自動消費を避ける）。
-- `ci.yml` の変更は **linux ジョブの `runs-on` だけ**＋**自動トリガのコメント解除**。desktop ジョブは無改変。
+- **⚠️ desktop ジョブの `if` も直す必要がある**（Codex PR #133 P2 指摘）。現行 `ci.yml:106-108` の `if: github.event_name != 'pull_request' || ...ci-desktop...` は **main push でも desktop（mac 10x / win 2x）が走る**。自動トリガで `push: main` を復活させると、main merge 毎に mac/win が自動起動して「課金ゼロ・mac 自動化しない」目的に反する。よって **desktop の `if` を「workflow_dispatch（手動）+ `ci-desktop` ラベル」限定に変える**（main push を除外）。
+- `ci.yml` の変更は **①linux ジョブの `runs-on`** ＋ **②自動トリガのコメント解除** ＋ **③desktop ジョブの `if` を main push 除外**の 3 点。
 
 ```mermaid
 flowchart LR
@@ -90,12 +91,22 @@ on:
 jobs:
   linux:
     name: Linux / Qt 6.10
-    runs-on: [self-hosted, linux]   # ← ubuntu-latest から変更
+    runs-on: [self-hosted, linux]   # ← ① ubuntu-latest から変更
+    ...
+
+  desktop:
+    name: ${{ matrix.name }}
+    # ③ main push を除外し、手動 + ci-desktop ラベルのときだけ走らせる
+    # （変更前は `github.event_name != 'pull_request'` で main push でも mac/win が走った）
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || contains(github.event.pull_request.labels.*.name, 'ci-desktop')
     ...
 ```
 
-- **linux ジョブの `runs-on` だけ** `ubuntu-latest` → `[self-hosted, linux]`。
-- **desktop ジョブ（mac/win）は無改変**（GitHub-hosted・ラベル/手動ゲートのまま）。
+- **①linux ジョブの `runs-on`** `ubuntu-latest` → `[self-hosted, linux]`。
+- **②自動トリガ**（`pull_request` / `push`）のコメント解除。
+- **③desktop ジョブの `if`** を `workflow_dispatch` + `ci-desktop` ラベル限定に変更し **main push を除外**（main merge 毎の mac 10x / win 2x 自動課金を防ぐ。Codex PR #133 P2）。desktop の steps 自体は無改変。
 - apt の Linux deps ステップは **self-hosted でも冪等に通る**（既導入なら skip 扱い）。passwordless sudo を runner ユーザーに付けておく。
 - 復活したら [dev-environment.md](../.claude/rules/dev-environment.md)「リポジトリ運用の注意」の「CI は手動のみ」記述も更新する。
 
@@ -129,4 +140,4 @@ CI を回す箱（self-hosted）ができた後の **上積み候補**。今回�
 | Proxmox LXC 作成 + CI 依存導入 | ⬜ 未 | 君の手元（手順は本書「構築手順」§1〜2） |
 | self-hosted runner 登録・常駐化 | ⬜ 未 | registration token は Web 不可（手元で） |
 | runner で手動実行 → 13/13 緑確認 | ⬜ 未 | §4 |
-| `ci.yml` 改修（self-hosted 化 + 自動トリガ復活）+ dev-environment.md 更新 | ⬜ 未 | runner 緑確認後に別 PR |
+| `ci.yml` 改修（①linux=self-hosted ②自動トリガ復活 ③desktop=main push 除外）+ dev-environment.md 更新 | ⬜ 未 | runner 緑確認後に別 PR |
