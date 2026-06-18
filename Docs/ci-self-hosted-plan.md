@@ -59,11 +59,15 @@ sudo apt-get install -y --no-install-recommends \
   libglib2.0-0t64 libx11-6 libxcb1 \
   libgl-dev libglx-dev libopengl-dev libegl-dev mesa-common-dev \
   ninja-build fonts-dejavu-core fonts-noto-cjk \
-  curl git python3 python3-pip
+  cmake build-essential curl git python3 python3-pip
 ```
-- **末尾 4 つ（`curl git python3 python3-pip`）は `ci.yml` の apt 一覧には無い**が、これは**意図的な差分**：GitHub-hosted の `ubuntu-latest` イメージにはこれらが**プリインストール済み**なので ci.yml は列挙しないが、**素の LXC には入っていない**ため明示導入が要る（`curl`/`git`=runner 取得・checkout、`python3`/`pip`=E2E harness と `setup-python` の土台）。それ以外（libgl 〜 fonts）は ci.yml の Linux deps と同一。
-- Qt 本体は **`ci.yml` 内の `jurplel/install-qt-action` が self-hosted でも動く**（初回 DL、persistent runner なのでキャッシュで2回目以降速い）。事前手動導入は不要。
+- **末尾の `cmake build-essential curl git python3 python3-pip` は `ci.yml` の apt 一覧には無い**が、これは**意図的な差分**：GitHub-hosted の `ubuntu-latest` イメージにはこれらが**プリインストール済み**なので ci.yml は列挙しないが、**素の LXC には入っていない**ため明示導入が要る。内訳：
+  - **`cmake` / `build-essential`（= `g++` 等）**：ci.yml は直後に `cmake --version` / `g++ --version` / configure / build を実行する（[ci.yml](../.github/workflows/ci.yml) の Linux ジョブ）。`install-qt-action` も `ninja-build` もコンパイラ・cmake は供給しないため、無いと **テストの前に configure/build が落ちる**。
+  - **`curl` / `git`**：runner 取得・checkout。**`python3` / `pip`**：E2E harness と `setup-python` の土台。
+  - それ以外（libgl 〜 fonts）は ci.yml の Linux deps と同一。
+- Qt 本体は **`ci.yml` 内の `jurplel/install-qt-action` で取得**（self-hosted でも動く。初回 DL・persistent runner なのでキャッシュで2回目以降速い）。**ただし下記「⚠️ SerialBus」の通り `modules` 追加が要る**。
 - 外向きネットワークで **`download.qt.io` に到達できること**（Qt 取得）。Proxmox の LAN がそのまま出られるなら OK。
+- **⚠️ SerialBus アドオンが要る**：root `CMakeLists.txt` は `find_package(Qt6 ... SerialBus)` を **REQUIRED** にしている（Phase 7 / Modbus）。一方で現行 `ci.yml` の `install-qt-action` は **`modules: ""`（SerialBus 無し）**のままなので、`runs-on` を変えるだけでは **configure 時に `Qt6SerialBus` が見つからず CI が復活しない**。下記「`ci.yml` 改修案」で **`modules: "qtserialbus qtserialport"` を追加**する（`scripts/web/setup.sh` も同じ addon を別途導入している前提と揃える）。
 
 ### 2.5. runner ユーザーに passwordless sudo を付与
 ci.yml の Linux deps ステップが `sudo apt-get` を非対話で実行するため、runner 実行ユーザー（例 `runner`）に NOPASSWD sudo を付ける：
@@ -83,8 +87,11 @@ sudo visudo -cf /etc/sudoers.d/runner-nopasswd   # 構文チェック
 - **常駐化**：`./svc.sh install && ./svc.sh start` で systemd サービス化（LXC 起動で自動復帰）。
 
 ### 4. 動作確認
-- **テスト用ブランチで `ci.yml` の linux ジョブの `runs-on` を一時的に `[self-hosted, linux]` に変えて** `workflow_dispatch` を打つ → linux ジョブが **self-hosted runner に割り当たって完走**し 13/13 緑を確認する。
-  - 現状の `ci.yml`（`runs-on: ubuntu-latest`）のまま手動実行しても linux は **GitHub-hosted に流れる**ため、self-hosted の確認にはならない（runs-on を変えて初めて self-hosted に乗る）。
+- **テスト用ブランチで `ci.yml` を次のように変えてから** `workflow_dispatch` を打つ → linux ジョブが **self-hosted runner に割り当たって完走**し 13/13 緑を確認する：
+  - **linux の `runs-on`** を `[self-hosted, linux]` に。
+  - **install-qt-action の `modules`** に `qtserialbus qtserialport` を追加（無いと SerialBus で configure 落ち。§2「⚠️ SerialBus」参照）。
+  - **⚠️ desktop ジョブも同時に止める**：現行 desktop の `if`（`github.event_name != 'pull_request'`）は **`workflow_dispatch` でも true** なので、何もしないと手動実行で **mac(10x)/win(2x) も一緒に走り課金が出る**。テストブランチでは下記「改修案 ③」の `if`（手動 + `ci-desktop` ラベル限定）を**先に適用**するか、`ci-desktop` ラベルを付けず desktop を一時 `if: false` にして **linux だけ dispatch** する（Codex PR #133 P2）。
+  - 現状の `ci.yml`（`runs-on: ubuntu-latest`）のまま手動実行しても linux は **GitHub-hosted に流れる**ため、self-hosted の確認にはならない。
   - 確認できたら、このテストブランチをそのまま下記「`ci.yml` 改修案」の PR に発展させてよい（revert は不要）。
 
 ---
@@ -107,7 +114,16 @@ jobs:
   linux:
     name: Linux / Qt 6.10
     runs-on: [self-hosted, linux]   # ← ① ubuntu-latest から変更
-    ...
+    steps:
+      ...
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.10.0"
+          # ④ SerialBus/SerialPort を追加（CMakeLists が SerialBus 必須）
+          modules: "qtserialbus qtserialport"   # ← "" から変更
+          ...
+      ...
 
   desktop:
     name: ${{ matrix.name }}
