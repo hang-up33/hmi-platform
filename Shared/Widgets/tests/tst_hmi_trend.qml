@@ -62,8 +62,7 @@ TestCase {
         trend.hasYMin = false;
         trend.hasYMax = false;
         trend.sampleMs = 0;
-        trend._buffers = [[]];      // 全系列バッファをクリア（系列 0 互換 _buffer 同期）
-        trend.resetStats();         // sampleCounts / lastValues をまとめてリセット（公開 API）
+        trend.clearBuffers();       // 全系列バッファ・統計・サンプル済みスナップショットを公開 API でクリア
         trend.live = true;
         clickedSpy.clear();
     }
@@ -266,5 +265,57 @@ TestCase {
         previewTrend.value = 999;
         compare(previewTrend.sampleCount, beforeCount);
         compare(previewTrend.bufferSize, beforeSize);
+    }
+
+    // Task 8B-B（Codex PR #136 [Major]）: seriesValues の参照だけが変わって内容が同じ
+    // 場合は再サンプリングしない（無関係変数の更新による重複サンプル防止）。
+    function test_no_resample_when_series_values_unchanged() {
+        trend.series = [
+            { variable: "a", color: "", label: "" },
+            { variable: "b", color: "", label: "" }
+        ];
+        trend.seriesValues = [10, 100];
+        compare(trend.sampleCountAt(0), 1);
+        compare(trend.sampleCountAt(1), 1);
+
+        // 同じ内容の新しい配列を代入（参照は変わるが値は不変）→ push されない。
+        trend.seriesValues = [10, 100];
+        compare(trend.sampleCountAt(0), 1);
+        compare(trend.sampleCountAt(1), 1);
+
+        // 1 系列でも値が変われば全系列を取り込む（X 軸整列のため）。
+        trend.seriesValues = [10, 200];
+        compare(trend.sampleCountAt(0), 2);
+        compare(trend.sampleCountAt(1), 2);
+        compare(trend.lastValueAt(1), 200);
+    }
+
+    // Task 8B-B: 系列数を動的に増減してもバッファ・統計配列が追従する（範囲外は安全）。
+    function test_dynamic_series_count_change() {
+        trend.series = [{ variable: "a", color: "", label: "" }];
+        compare(trend.seriesCount, 1);
+        trend.series = [
+            { variable: "a", color: "", label: "" },
+            { variable: "b", color: "", label: "" },
+            { variable: "c", color: "", label: "" }
+        ];
+        compare(trend.seriesCount, 3);
+        trend.seriesValues = [1, 2, 3];
+        compare(trend.sampleCountAt(2), 1);
+        // 1 系列へ縮小しても破綻しない。
+        trend.series = [{ variable: "a", color: "", label: "" }];
+        compare(trend.seriesCount, 1);
+        compare(trend.bufferSizeAt(0) >= 0, true);
+    }
+
+    // Task 8B-B: 範囲外インデックスのアクセサは安全な既定値（0）を返す。
+    function test_accessors_out_of_range_are_safe() {
+        trend.series = [{ variable: "a", color: "", label: "" }];
+        compare(trend.sampleCountAt(-1), 0);
+        compare(trend.sampleCountAt(99), 0);
+        compare(trend.lastValueAt(-1), 0);
+        compare(trend.lastValueAt(99), 0);
+        compare(trend.bufferSizeAt(-1), 0);
+        compare(trend.bufferSizeAt(99), 0);
     }
 }

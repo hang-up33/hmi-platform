@@ -216,6 +216,43 @@ Rectangle {
         root._pushAt(0, v);
     }
 
+    // 直近に「変化トリガ（方式 A）」で取り込んだ各系列値のスナップショット。
+    // seriesValues は var 配列なので、Simulator 側 binding が VariableStore.values の
+    // 再代入のたびに新しい配列を返す（系列対象外の変数更新でも参照が変わる）。参照変化
+    // だけで無条件に push すると、値が同じでも重複サンプルが積まれ sampleMs=0 の履歴が
+    // 重複値で巻き取られて実変化が消える（Codex PR #136 [Major]）。前回サンプル値と
+    // 要素比較し、1 つでも変わったときだけ push する。
+    property var _lastSampledSeriesValues: []
+
+    // seriesValues の現在値が前回サンプル時から 1 要素でも変わったか。参照だけ変わって
+    // 内容が同じ（無関係変数の更新など）なら false ＝サンプルしない。初回（未サンプル）は true。
+    function _seriesValuesChangedSinceLastSample() {
+        var cur = root.seriesValues || [];
+        var prev = root._lastSampledSeriesValues || [];
+        var n = root.effectiveSeriesCount;
+        if (prev.length < n) {
+            return true;  // 未サンプル / 系列増＝必ず取り込む
+        }
+        for (var i = 0; i < n; ++i) {
+            var v = (i < cur.length) ? Number(cur[i]) : NaN;
+            var p = Number(prev[i]);
+            if (v !== p && !(isNaN(v) && isNaN(p))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 現在の seriesValues を「前回サンプル」スナップショットへ保存する（_pushAllSeries 直後に呼ぶ）。
+    function _snapshotSampledSeriesValues() {
+        var n = root.effectiveSeriesCount;
+        var snap = [];
+        for (var i = 0; i < n; ++i) {
+            snap.push((root.seriesValues && i < root.seriesValues.length) ? Number(root.seriesValues[i]) : NaN);
+        }
+        root._lastSampledSeriesValues = snap;
+    }
+
     // 全系列の現在値を 1 点ずつ push する（方式 B Timer / seriesValues 変化トリガで使う）。
     function _pushAllSeries() {
         var n = root.effectiveSeriesCount;
@@ -230,6 +267,22 @@ Rectangle {
             // 暗黙 1 系列（series 空）は従来の value を系列 0 へ。
             root._pushAt(0, root.value);
         }
+    }
+
+    // 全系列のリングバッファ・統計・サンプル済みスナップショットを実効系列数ぶん空へ戻す
+    // 公開 API（テストが内部 `_buffers` を直接代入しない代替＝CodeRabbit PR #136）。
+    function clearBuffers() {
+        var n = root.effectiveSeriesCount;
+        var bufs = [];
+        for (var i = 0; i < n; ++i) {
+            bufs.push([]);
+        }
+        root._syncingBuffer = true;
+        root._buffers = bufs;
+        root._syncingBuffer = false;
+        root._lastSampledSeriesValues = [];
+        root.resetStats();
+        canvas.requestPaint();
     }
 
     // テスト用統計（sampleCounts / lastValues）のリセット。テストが直接代入する代わりに
@@ -299,8 +352,10 @@ Rectangle {
     }
     onSeriesValuesChanged: {
         if (root.live && root.sampleMs <= 0
-                && root.series && root.series.length > 0) {
+                && root.series && root.series.length > 0
+                && root._seriesValuesChangedSinceLastSample()) {
             root._pushAllSeries();
+            root._snapshotSampledSeriesValues();
         }
     }
 
