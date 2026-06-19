@@ -28,10 +28,11 @@ FRAME_DIR = os.path.join(ROOT, "Docs/screenshots/hero-frames")
 OUT_GIF = os.path.join(ROOT, "Docs/screenshots/editor.gif")
 CAPTURE = os.path.join(ROOT, "scripts/capture-app-screenshot-linux.sh")
 
-# 各マイルストーンで "ここまで widget を置いた" 状態を見せる累積カット数。
+# 各マイルストーンで "ここまで widget を置いた" 状態を見せる累積カット数 (中間段階)。
 # atlas-dashboard-demo.json の widgets 配列は組み上げ順 (ヘッダ -> ステータス ->
 # KPI タイル -> 機械ステータス盤 -> 操作 -> トレンド) に並んでいるので前方スライスで段階を作る。
-MILESTONES = [1, 3, 6, 9, 12, 15, 18, 21, 33, 35, 38, 40]
+# 最終フレームは実行時に widget 総数へ自動で揃えるため (main 参照)、末尾値の手動更新は不要。
+MILESTONES = [1, 3, 6, 9, 12, 15, 18, 21, 33, 35, 38]
 
 
 def main():
@@ -40,22 +41,21 @@ def main():
     with open(DEMO, encoding="utf-8") as f:
         demo = json.load(f)
     widgets = demo["screens"][0]["widgets"]
-    # MILESTONES 最終値がデモの widget 総数を超えると最終フレームがサイレントに
-    # 短縮される (前方スライスのため)。demo に Widget を足したら MILESTONES を更新する。
-    assert MILESTONES[-1] <= len(widgets), (
-        f"MILESTONES[-1]={MILESTONES[-1]} が widgets 総数 {len(widgets)} を超えています"
-    )
+    # 最終マイルストーンは常に widget 総数に揃える (前方スライスなので、demo に
+    # Widget を足したら最終フレームへ自動反映される)。総数以上の固定値は捨てて
+    # 重複を避ける。これで MILESTONES の手動更新漏れでもヒーローが欠けない。
+    milestones = [m for m in MILESTONES if m < len(widgets)] + [len(widgets)]
     os.makedirs(FRAME_DIR, exist_ok=True)
 
     png_paths = []
-    for i, count in enumerate(MILESTONES):
+    for i, count in enumerate(milestones):
         frame = copy.deepcopy(demo)
         frame["screens"][0]["widgets"] = widgets[:count]
         frame_json = os.path.join(FRAME_DIR, f"frame_{i:02d}.json")
         frame_png = os.path.join(FRAME_DIR, f"frame_{i:02d}.png")
         with open(frame_json, "w", encoding="utf-8") as f:
             json.dump(frame, f, ensure_ascii=False, indent=2)
-        print(f"[{i+1}/{len(MILESTONES)}] widgets={count} 撮影 -> {frame_png}")
+        print(f"[{i+1}/{len(milestones)}] widgets={count} 撮影 -> {frame_png}")
         subprocess.run(
             [bash, CAPTURE, "-a", "editor", "-o", frame_png, "-j", frame_json, "-d", "700"],
             check=True, cwd=ROOT,
