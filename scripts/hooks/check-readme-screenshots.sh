@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Stop hook: UI(QML 本体)に変更があるのに README ヒーロースクショ
-# (Docs/screenshots/editor.png / simulator.png) が未更新ならリマインドする。
+# Stop hook: UI(QML 本体)に変更があるのに README ヒーロー画像
+# (Docs/screenshots/editor.gif / simulator.png) が未更新ならリマインドする。
 #
 # 背景: README スクショ同期ルールは元々 screenshot-capture スキルの末尾にだけ
 # 書かれており、オンデマンドの skill 内に埋もれて自動では効かなかった

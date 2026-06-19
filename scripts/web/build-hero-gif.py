@@ -13,6 +13,7 @@
   Docs/screenshots/hero-frames/frame_NN.png (中間フレーム)
   Docs/screenshots/editor.gif (ヒーロー GIF)
 """
+import copy
 import json
 import os
 import shutil
@@ -39,11 +40,16 @@ def main():
     with open(DEMO, encoding="utf-8") as f:
         demo = json.load(f)
     widgets = demo["screens"][0]["widgets"]
+    # MILESTONES 最終値がデモの widget 総数を超えると最終フレームがサイレントに
+    # 短縮される (前方スライスのため)。demo に Widget を足したら MILESTONES を更新する。
+    assert MILESTONES[-1] <= len(widgets), (
+        f"MILESTONES[-1]={MILESTONES[-1]} が widgets 総数 {len(widgets)} を超えています"
+    )
     os.makedirs(FRAME_DIR, exist_ok=True)
 
     png_paths = []
     for i, count in enumerate(MILESTONES):
-        frame = json.loads(json.dumps(demo))
+        frame = copy.deepcopy(demo)
         frame["screens"][0]["widgets"] = widgets[:count]
         frame_json = os.path.join(FRAME_DIR, f"frame_{i:02d}.json")
         frame_png = os.path.join(FRAME_DIR, f"frame_{i:02d}.png")
@@ -56,7 +62,10 @@ def main():
         )
         png_paths.append(frame_png)
 
-    frames = [Image.open(p).convert("RGB") for p in png_paths]
+    frames = []
+    for p in png_paths:
+        with Image.open(p) as img:
+            frames.append(img.convert("RGB"))
     # 各フレーム 700ms、完成 (最終) は 2500ms 保持して余韻を残す。
     durations = [700] * (len(frames) - 1) + [2500]
     frames[0].save(
@@ -65,6 +74,7 @@ def main():
     )
     size_kb = os.path.getsize(OUT_GIF) / 1024
     print(f"GIF 生成完了: {OUT_GIF} ({size_kb:.0f} KB, {len(frames)} frames)")
+    return 0
 
 
 if __name__ == "__main__":
