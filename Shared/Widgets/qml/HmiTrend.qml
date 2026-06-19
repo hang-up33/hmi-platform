@@ -105,29 +105,10 @@ Rectangle {
 
     // リングバッファ（系列ごとの配列の配列＝[[系列0の点...], [系列1の点...], ...]）。
     // Task 8B-B で単一 _buffer から多系列 _buffers へ一般化。各系列が独立に push 順で値を
-    // 保持し、満杯（resolvedPointCount）で先頭を捨てる。
+    // 保持し、満杯（resolvedPointCount）で先頭を捨てる。バッファのリセットは公開 API
+    // clearBuffers() 経由（テストも同 API を使う。先頭 _ 付きプロパティの変更ハンドラは
+    // QML で解決されずロードを壊すため、従来の _buffer 別名 + on_BufferChanged は廃止＝Codex PR #136 P1）。
     property var _buffers: [[]]
-
-    // 単系列後方互換：系列 0 のバッファを従来の _buffer 名でも公開（既存 unit / E2E が
-    // 直接代入してリセットするため writable な別名で残す）。read は系列 0、write は系列 0 へ反映。
-    property var _buffer: []
-    on_BufferChanged: {
-        // テスト等が _buffer = [] のように直接代入したら系列 0 のバッファへ同期する。
-        // _buffers 経由の内部更新では _syncingBuffer ガードで再入を防ぐ。
-        if (root._syncingBuffer) {
-            return;
-        }
-        root._syncingBuffer = true;
-        var bufs = root._buffers ? root._buffers.slice() : [];
-        if (bufs.length === 0) {
-            bufs = [[]];
-        }
-        bufs[0] = (root._buffer ? root._buffer.slice() : []);
-        root._buffers = bufs;
-        root._syncingBuffer = false;
-        canvas.requestPaint();
-    }
-    property bool _syncingBuffer: false
 
     // テスト用公開プロパティ（read-only）。Canvas のピクセルは E2E / unit から不可視なので、
     // これらの公開 API を観測して「サンプル取り込み」を検証する（plan §Task D）。
@@ -167,11 +148,9 @@ Rectangle {
         if (bufs.length > n) bufs = bufs.slice(0, n);
         if (counts.length > n) counts = counts.slice(0, n);
         if (lasts.length > n) lasts = lasts.slice(0, n);
-        root._syncingBuffer = true;
         root._buffers = bufs;
         root.sampleCounts = counts;
         root.lastValues = lasts;
-        root._syncingBuffer = false;
     }
 
     // 系列 i のリングバッファへ 1 点 push する。数値でない値は無視する。満杯
@@ -194,9 +173,7 @@ Rectangle {
             buf.shift();
         }
         bufs[i] = buf;
-        root._syncingBuffer = true;
         root._buffers = bufs;
-        root._syncingBuffer = false;
 
         var lasts = root.lastValues ? root.lastValues.slice() : [];
         while (lasts.length <= i) lasts.push(0);
@@ -277,9 +254,7 @@ Rectangle {
         for (var i = 0; i < n; ++i) {
             bufs.push([]);
         }
-        root._syncingBuffer = true;
         root._buffers = bufs;
-        root._syncingBuffer = false;
         root._lastSampledSeriesValues = [];
         root.resetStats();
         canvas.requestPaint();
@@ -321,9 +296,7 @@ Rectangle {
             }
         }
         if (changed) {
-            root._syncingBuffer = true;
             root._buffers = bufs;
-            root._syncingBuffer = false;
             canvas.requestPaint();
         }
     }
@@ -514,9 +487,7 @@ Rectangle {
             }
             bufs.push(buf);
         }
-        root._syncingBuffer = true;
         root._buffers = bufs;
-        root._syncingBuffer = false;
         canvas.requestPaint();
     }
 
