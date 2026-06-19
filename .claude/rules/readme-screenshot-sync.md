@@ -19,8 +19,10 @@ Editor / Simulator の**見た目が変わる**変更（QML レイアウト・�
 
 | 固定ファイル | 対応アプリ | 参照元 |
 |---|---|---|
-| `Docs/screenshots/editor.png` | Editor | [README.md](../../README.md)「スクリーンショット」節 |
-| `Docs/screenshots/simulator.png` | Simulator | 同上 |
+| `Docs/screenshots/editor.gif` | Editor ヒーロー（組み上げアニメ。`python3 scripts/web/build-hero-gif.py` で再生成。[hero-demo](../skills/hero-demo/SKILL.md)）。**README が表示する正本＝Stop hook はこの gif の更新を必須判定** | [README.md](../../README.md) 冒頭ヒーロー |
+| `Docs/screenshots/simulator.png` | Simulator | README「スクリーンショット」節 |
+
+> 旧 `editor.png`（静止スクショ）は README 非参照になった。撮り直しても README には反映されないため、Editor ヒーロー同期は `editor.gif` のみを正とする。
 
 - `task-<N>-<短い名>.png`（SHA 固定の時系列証跡）を撮るのと**両方**やる。`editor.png` / `simulator.png` は README から相対パス参照される「現状を見せる」用途なので、見た目が変わったら上書きで撮り直す。
 - **キャプションの文言も更新する**：README のスクショ説明が「Task 25〜31」「色・ボーダー」止まりのように古いと、画像だけ新しくても齟齬が残る。追加した UI（フォント詳細 / 配置 / opacity / グリッドスナップ / 複数選択 / コピペ / undo-redo / 変数・アクションのインスペクタ等）を反映する。

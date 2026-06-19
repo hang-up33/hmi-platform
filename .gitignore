@@ -38,3 +38,6 @@ __pycache__/
 
 # aqtinstall (Web setup) のログ
 aqtinstall.log
+
+# ヒーロー GIF の中間フレーム（scripts/web/build-hero-gif.py で再生成可能）
+Docs/screenshots/hero-frames/
