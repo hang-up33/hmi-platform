@@ -54,15 +54,16 @@ sim_ui=$(printf '%s\n' "$ui_files" | grep -E '^(Simulator/|Runtime/|Shared/Widge
 # 影響するアプリのヒーロースクショが「同じ変更集合に」含まれているか個別に確認する。
 # CodeRabbit PR #86 指摘(Major): 片方だけ更新で通過すると、もう片方の未同期を見逃す。
 # よって editor / simulator を 2 ファイル個別に存在確認し、AND で同期済み判定する。
-has_editor_png=0
+has_editor_gif=0
 has_sim_png=0
-# Editor ヒーローは「組み上げる様子」のアニメ GIF(editor.gif、build-hero-gif.py で再生成)に
-# 差し替え済み。editor.gif / editor.png のどちらの更新でも同期済みとみなす(README 参照先に追従)。
-printf '%s\n' "$changed" | grep -Eq '^Docs/screenshots/editor\.(gif|png)$' && has_editor_png=1
+# Editor ヒーローは README が表示する「組み上げる様子」のアニメ GIF(editor.gif、
+# build-hero-gif.py で再生成)。README 参照先に合わせ editor.gif を必須にする
+# (旧静止 editor.png は README 非参照＝撮り直しても GIF は古いままなので同期済みにしない。Codex PR #135 指摘)。
+printf '%s\n' "$changed" | grep -Eq '^Docs/screenshots/editor\.gif$' && has_editor_gif=1
 printf '%s\n' "$changed" | grep -Eq '^Docs/screenshots/simulator\.png$' && has_sim_png=1
 
 missing=""
-[ -n "$editor_ui" ] && [ "$has_editor_png" -eq 0 ] && missing="${missing} Docs/screenshots/editor.gif"
+[ -n "$editor_ui" ] && [ "$has_editor_gif" -eq 0 ] && missing="${missing} Docs/screenshots/editor.gif"
 [ -n "$sim_ui" ] && [ "$has_sim_png" -eq 0 ] && missing="${missing} Docs/screenshots/simulator.png"
 
 # 影響する全スクショが更新済みなら同期済みとみなす
