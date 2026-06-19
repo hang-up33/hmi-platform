@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
 """ヒーロー GIF 生成: atlas-dashboard-demo.json を段階的に組み上げる中間 JSON を作り、
-各段を Editor（offscreen）で撮影 → Pillow で 1 本の GIF に合成する。
+各段を Editor (offscreen) で撮影 -> Pillow で 1 本の GIF に合成する。
 
-「デモ画面を Editor で作っていく様子」を README ヒーローとして見せるためのツール。
+"デモ画面を Editor で作っていく様子" を README ヒーローとして見せるためのツール。
 
 前提:
-  - Qt 導入済み + cmake --build build 済み（scripts/web/setup.sh）
+  - Qt 導入済み + cmake --build build 済み (scripts/web/setup.sh)
   - pip install Pillow
 使い方:
   python3 scripts/web/build-hero-gif.py
 出力:
-  Docs/screenshots/hero-frames/frame_NN.png（中間フレーム）
-  Docs/screenshots/editor.gif（ヒーロー GIF）
+  Docs/screenshots/hero-frames/frame_NN.png (中間フレーム)
+  Docs/screenshots/editor.gif (ヒーロー GIF)
 """
 import json
 import os
+import shutil
 import subprocess
 import sys
+
+from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DEMO = os.path.join(ROOT, "Docs/samples/atlas-dashboard-demo.json")
@@ -24,13 +27,15 @@ FRAME_DIR = os.path.join(ROOT, "Docs/screenshots/hero-frames")
 OUT_GIF = os.path.join(ROOT, "Docs/screenshots/editor.gif")
 CAPTURE = os.path.join(ROOT, "scripts/capture-app-screenshot-linux.sh")
 
-# 各マイルストーンで「ここまで widget を置いた」状態を見せる累積カット数。
-# atlas-dashboard-demo.json の widgets 配列は組み上げ順（ヘッダ→ステータス→
-# KPI タイル→機械ステータス盤→操作→トレンド）に並んでいるので前方スライスで段階を作る。
+# 各マイルストーンで "ここまで widget を置いた" 状態を見せる累積カット数。
+# atlas-dashboard-demo.json の widgets 配列は組み上げ順 (ヘッダ -> ステータス ->
+# KPI タイル -> 機械ステータス盤 -> 操作 -> トレンド) に並んでいるので前方スライスで段階を作る。
 MILESTONES = [1, 3, 6, 9, 12, 15, 18, 21, 33, 35, 38, 40]
 
 
 def main():
+    """中間フレームを撮影し editor.gif に合成する。"""
+    bash = shutil.which("bash") or "/bin/bash"
     with open(DEMO, encoding="utf-8") as f:
         demo = json.load(f)
     widgets = demo["screens"][0]["widgets"]
@@ -46,14 +51,13 @@ def main():
             json.dump(frame, f, ensure_ascii=False, indent=2)
         print(f"[{i+1}/{len(MILESTONES)}] widgets={count} 撮影 -> {frame_png}")
         subprocess.run(
-            ["bash", CAPTURE, "-a", "editor", "-o", frame_png, "-j", frame_json, "-d", "700"],
+            [bash, CAPTURE, "-a", "editor", "-o", frame_png, "-j", frame_json, "-d", "700"],
             check=True, cwd=ROOT,
         )
         png_paths.append(frame_png)
 
-    from PIL import Image
     frames = [Image.open(p).convert("RGB") for p in png_paths]
-    # 各フレーム 700ms、完成（最終）は 2500ms 保持して余韻を残す。
+    # 各フレーム 700ms、完成 (最終) は 2500ms 保持して余韻を残す。
     durations = [700] * (len(frames) - 1) + [2500]
     frames[0].save(
         OUT_GIF, save_all=True, append_images=frames[1:],
