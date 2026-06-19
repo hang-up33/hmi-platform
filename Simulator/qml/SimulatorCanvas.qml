@@ -379,13 +379,33 @@ Item {
                         // Simulator/Runtime はライブ実行＝live:true。value 変化 / 周期で
                         // リングバッファへ取り込む。Runtime は本ソース共有で自動継承。
                         live: true
-                        // サンプル源：binding {property:"value"} の指す変数の現在値へ追従する
-                        // （Label の text 追従と同じ boundValue 経路＝読みのみ。書きはしない）。
-                        // 無 bind 時は modelData.value（無ければ 0）。
+                        // サンプル源（単系列後方互換）：binding {property:"value"} の指す変数の
+                        // 現在値へ追従する（Label の text 追従と同じ boundValue 経路＝読みのみ。
+                        // 書きはしない）。無 bind 時は modelData.value（無ければ 0）。series 非空時は
+                        // value は使われず seriesValues が源になる。
                         value: {
                             const v = wrapper.boundValue("value")
                             return v !== undefined ? Number(v)
                                 : (wrapper.modelData.value !== undefined ? Number(wrapper.modelData.value) : 0)
+                        }
+                        // Task 8B-B: 複数系列モデルを素通しで流す（[{variable, color, label}]）。
+                        series: wrapper.modelData.series !== undefined && wrapper.modelData.series !== null ? wrapper.modelData.series : []
+                        // 各系列の現在値を VariableStore から供給する。**関数評価中に
+                        // VariableStore.values を読むことで依存追跡が効き**、変数更新で式が
+                        // 再評価され seriesValues が更新→ HmiTrend が取り込む（boundValue 同型）。
+                        seriesValues: {
+                            const ss = wrapper.modelData.series
+                            if (ss === undefined || ss === null || ss.length === 0) {
+                                return []
+                            }
+                            const out = []
+                            for (let i = 0; i < ss.length; ++i) {
+                                const varName = ss[i] ? ss[i].variable : ""
+                                const raw = (varName !== undefined && varName !== "")
+                                    ? VariableStore.values[varName] : undefined
+                                out.push(raw !== undefined ? Number(raw) : 0)
+                            }
+                            return out
                         }
                         // Trend 固有フィールド（未指定は 0 / 空 / presence false）。
                         pointCount: wrapper.modelData.pointCount !== undefined ? wrapper.modelData.pointCount : 0

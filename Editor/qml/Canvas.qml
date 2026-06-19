@@ -1006,6 +1006,10 @@ Item {
                             // pointCount / 線色 / 背景はプレビューに反映する（Y 範囲 / 周期は
                             // 流すだけで描画形状に影響＝プレビューでも一貫させる）。Trend は
                             // text / フォント / トグルを持たないので渡さない。
+                            // Task 8B-B: series を流すと HmiTrend が系列数ぶんダミー波形を
+                            // 色違いで描く（プレビュー）。Editor はライブ値が無いので seriesValues
+                            // は流さない（live:false でサンプリングしないため）。
+                            series: wrapper.widgetSeries
                             pointCount: wrapper.widgetPointCount
                             yMin: wrapper.widgetYMin
                             yMax: wrapper.widgetYMax
