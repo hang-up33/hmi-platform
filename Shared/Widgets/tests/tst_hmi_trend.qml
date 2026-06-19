@@ -302,10 +302,13 @@ TestCase {
         compare(trend.seriesCount, 3);
         trend.seriesValues = [1, 2, 3];
         compare(trend.sampleCountAt(2), 1);
-        // 1 系列へ縮小しても破綻しない。
+        // 1 系列へ縮小すると、削除された系列インデックス（1, 2）は安全値 0 を返す。
         trend.series = [{ variable: "a", color: "", label: "" }];
         compare(trend.seriesCount, 1);
-        compare(trend.bufferSizeAt(0) >= 0, true);
+        compare(trend.sampleCountAt(1), 0);
+        compare(trend.bufferSizeAt(1), 0);
+        compare(trend.sampleCountAt(2), 0);
+        compare(trend.bufferSizeAt(2), 0);
     }
 
     // Task 8B-B: 範囲外インデックスのアクセサは安全な既定値（0）を返す。
