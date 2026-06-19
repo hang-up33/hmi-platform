@@ -73,6 +73,15 @@ scripts/capture-app-screenshot-linux.sh -a simulator -o Docs/screenshots/simulat
 - **撮影後は必ず Read ツールで両 PNG を目視**：黒画面・崩れ・文字化け □（日本語フォント未導入）・widget の見切れが無いか。demo のラベルは ASCII 中心なので豆腐は出にくいが、フォントは `setup.sh` の `fonts-noto-cjk` で担保する。
 - macOS / Windows のウィンドウキャプチャ経路でも撮れる（[screenshot-capture](../screenshot-capture/SKILL.md)）。その場合はアプリを `--open "$DEMO"` で起動してから window キャプチャする。
 
+## ヒーローを GIF にする（デモを組み上げる様子・ユーザー要望 2026-06-19）
+
+README 冒頭のヒーローは静止 PNG（`editor.png`）の代わりに、**Editor でショーケースを段階的に組み上げていくアニメ GIF（`Docs/screenshots/editor.gif`）** にできる。「実際にこのツールで画面を作れる」が一目で伝わる。
+
+- 生成スクリプト：**`scripts/web/build-hero-gif.py`**（Pillow 使用＝`pip install Pillow`）。`atlas-dashboard-demo.json` の `widgets` 配列を前方スライスして「ここまで置いた」中間 JSON を複数作り、各段を `capture-app-screenshot-linux.sh -a editor` で offscreen 撮影 → 1 本の GIF に合成する。
+- フレーム区切りは `MILESTONES`（累積 widget 数）で制御。demo の widgets 配列が組み上げ順（ヘッダ → 状態ピル → KPI タイル → 機械ステータス盤 → 設定値入力 + 操作 → トレンド）に並んでいることを利用する。**新 Widget を demo 末尾に足したら最終マイルストーン（= 総数）を更新**する。
+- 中間フレーム（`Docs/screenshots/hero-frames/`）は再生成可能なので **`.gitignore` 済み**。コミットするのは `editor.gif` のみ。
+- 撮り直し：Qt ビルド済み環境で `python3 scripts/web/build-hero-gif.py` を実行 → `editor.gif` を上書き → README キャプションを見直す。
+
 ## README 同期
 
 ヒーローを撮り直したら、同じコミットで README のキャプションも見直す（[readme-screenshot-sync](../../rules/readme-screenshot-sync.md) と Stop hook の二段構えで強制される）。ファイル名（`editor.png` / `simulator.png`）はリネームしない（README が相対参照しているため）。
