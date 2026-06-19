@@ -162,20 +162,22 @@ Phase 8 の `HmiTrend` を N 系列へ一般化する。要点：
 
 | Task | 状態 | PR |
 |---|---|---|
-| 8B-A Schema 拡張（TrendSeriesData + series + 軸/凡例フラグ round-trip） | 実装済み（レビュー中） | #132 |
-| 8B-B HmiTrend 複数系列描画 + delegate 値供給 | 実装済み（レビュー中） | — |
-| 8B-C 軸目盛り/凡例描画 | 未着手 | — |
+| 8B-A Schema 拡張（TrendSeriesData + series + 軸/凡例フラグ round-trip） | 完了（マージ済み） | #132 |
+| 8B-B HmiTrend 複数系列描画 + delegate 値供給 | 完了（マージ済み） | #136 |
+| 8B-C 軸目盛り/凡例描画 | 実装済み（レビュー中） | — |
 | 8B-D Editor 系列エディタ + 軸/凡例トグル | 未着手 | — |
 | 8B-E cross-app E2E（系列ごと独立サンプリング）+ スクショ | 未着手 | — |
 
-**次タスク = 8B-C（軸目盛り/凡例描画）。** 8B-A（PR #132）で Schema 層
-（子型 `TrendSeriesData` + `series`/`showGrid`/`showLegend`/`yTickCount`）+ Editor 保存の素通し保持を実装済み。
-8B-B で `HmiTrend.qml` を N 系列対応（`_buffers` 配列 + `series`/`seriesValues` 入力 + 系列ごと色分け
-N 本 strokePath、`series` 空は暗黙 1 系列で後方互換）にし、Simulator delegate が `seriesValues` を
-`VariableStore.values[...]` から依存追跡式で供給、Editor プレビューは系列数ぶんダミー波形を色違いで描画。
-公開 `seriesCount`/`sampleCountAt(i)`/`lastValueAt(i)`/`bufferSizeAt(i)` を追加（`sampleCount`/`lastValue`/
-`bufferSize` は系列 0 互換維持）。`tst_hmi_trend.qml` に N 系列独立取り込み/巻き取り/後方互換を追加。
-**軸/凡例描画はまだ無し（8B-C）。** 横展開テンプレの機械適用（Schema 4 メソッド → delegate → メタ →
+**次タスク = 8B-D（Editor 系列エディタ + 軸/凡例トグル）。** 8B-C で `HmiTrend.qml` の
+`Canvas.onPaint` にグリッド線 + Y 軸目盛りラベル + 凡例描画を追加した（`showGrid`/`showLegend` で
+描画分岐・既定 OFF＝後方互換、いずれも `Canvas` 自描画＝新 Qt 依存ゼロ維持）。レイアウトは派生
+プロパティに集約：プロット域 `_plotX`/`_plotY`/`_plotWidth`/`_plotHeight`、目盛りラベル域幅
+`_axisLabelWidth`（showGrid 時 34px）、凡例域高さ `_legendHeight`（showLegend 時 18px）、目盛り本数
+`resolvedYTickCount`（`0`/負値 → 既定 4）。凡例ラベルは `series[i].label` 空 → 変数名 → `S<i+1>` の
+フォールバック（実機に和文フォント無＝既定 ASCII）。`tst_hmi_trend.qml` に **ピクセルを見ず**派生
+プロパティ/フラグを assert する 6 テストを追加（既定 OFF・tick 解決・grid/legend 各レイアウト・両 ON・
+単/複数系列とも凡例 ON）。**delegate がフラグを流すのは 8B-D**（既定 OFF なので Editor/Simulator の
+見た目は不変＝スクショ更新不要）。横展開テンプレの機械適用（Schema 4 メソッド → delegate → メタ →
 HmiTrend → インスペクタ → E2E）。
 
 ## 非スコープ（別承認）

@@ -69,6 +69,15 @@ Rectangle {
     // `>0` で Timer 駆動（方式 B）。
     property int sampleMs: 0
 
+    // Task 8B-C: 軸目盛り/凡例の表示フラグ（既定 OFF＝後方互換）。WidgetData の
+    // showGrid / showLegend 由来（8B-A で追加済み）。delegate が流す（8B-D）。
+    property bool showGrid: false
+    property bool showLegend: false
+
+    // Task 8B-C: Y 軸目盛り本数。`0`（/負値）= 未指定＝既定本数（4）へ解決
+    // （pointCount と同じ `0` センチネル。WidgetData の yTickCount 由来）。
+    property int yTickCount: 0
+
     // ライブ実行か（Simulator/Runtime=true サンプリング / Editor=false プレビュー）。
     property bool live: false
 
@@ -97,6 +106,34 @@ Rectangle {
 
     // 未指定（`< 0`）のとき不透明度 1.0（完全不透明）にフォールバック。
     readonly property real resolvedOpacity: widgetOpacity >= 0 ? widgetOpacity : 1.0
+
+    // Task 8B-C: Y 軸目盛り本数の解決値（`0`/負値 → 既定 4）。グリッド線・目盛りラベルの
+    // 等分本数。Trend の既定値はここ 1 箇所に集約（resolvedPointCount と同じパターン）。
+    readonly property int resolvedYTickCount: yTickCount > 0 ? yTickCount : 4
+
+    // Task 8B-C: 軸/凡例レイアウト派生プロパティ（テストはピクセルでなくこれらを assert）。
+    // Canvas は anchors.margins:2 で root から 2px 内側。下記は **Canvas 内座標系**での
+    // 余白・描画域を表す（折れ線・グリッド・目盛り・凡例の配置を 1 箇所で計算）。
+    //
+    //   - 目盛りラベル域：showGrid ON のとき左側に Y 軸数値ラベルぶんの幅を空ける。
+    //   - 凡例域：showLegend ON のとき上側に系列スウォッチ + ラベルの 1 行ぶんを空ける。
+    //   - プロット域：上記を引いた残りが折れ線・グリッドの描画域。
+    readonly property int _axisLabelWidth: showGrid ? 34 : 0   // Y 軸数値ラベルの確保幅[px]
+    readonly property int _legendHeight: showLegend ? 18 : 0   // 凡例 1 行の高さ[px]
+    readonly property int _axisTickLabelFontPx: 9
+    readonly property int _legendFontPx: 10
+
+    // プロット域（Canvas 内座標）。Canvas サイズは root.width/height - 4（margins:2 両側）。
+    readonly property int _canvasW: Math.max(0, width - 4)
+    readonly property int _canvasH: Math.max(0, height - 4)
+    readonly property int _plotX: _axisLabelWidth
+    readonly property int _plotY: _legendHeight
+    readonly property int _plotWidth: Math.max(0, _canvasW - _axisLabelWidth)
+    readonly property int _plotHeight: Math.max(0, _canvasH - _legendHeight)
+
+    // テスト公開：凡例域・目盛りラベル域が有効か（ピクセルを見ない検証用）。
+    readonly property bool legendVisible: showLegend
+    readonly property bool gridVisible: showGrid
 
     // 選択中継用 clicked（Editor の選択に使う。modifiers は複数選択の加除用）。
     // HmiButton / HmiLabel / HmiNumericField の clicked(int modifiers) と同形。
@@ -357,6 +394,9 @@ Rectangle {
             function onYMinChanged() { canvas.requestPaint() }
             function onYMaxChanged() { canvas.requestPaint() }
             function onSeriesChanged() { canvas.requestPaint() }
+            function onShowGridChanged() { canvas.requestPaint() }
+            function onShowLegendChanged() { canvas.requestPaint() }
+            function onResolvedYTickCountChanged() { canvas.requestPaint() }
         }
         onWidthChanged: requestPaint()
         onHeightChanged: requestPaint()
@@ -375,6 +415,30 @@ Rectangle {
             return root.resolvedLineColor;
         }
 
+        // Task 8B-C: 系列 i の凡例ラベルを解決する（series[i].label 空 → 変数名 variable に
+        // フォールバック、それも無ければ "S<i+1>"）。実機 image に和文フォントが無いので
+        // 既定フォールバックは ASCII（plan リスク 2。ユーザー指定ラベルは尊重する）。
+        function _seriesLabel(i) {
+            if (root.series && root.series.length > 0 && root.series[i]) {
+                var lab = root.series[i].label;
+                if (lab !== undefined && lab !== null && lab !== "") {
+                    return String(lab);
+                }
+                var v = root.series[i].variable;
+                if (v !== undefined && v !== null && v !== "") {
+                    return String(v);
+                }
+            }
+            return "S" + (i + 1);
+        }
+
+        // Task 8B-C: 目盛りラベルの小数桁を Y 範囲幅から決める（範囲が広いほど粗く）。
+        function _tickDecimals(span) {
+            if (span >= 10) return 0;
+            if (span >= 1) return 1;
+            return 2;
+        }
+
         onPaint: {
             var ctx = getContext("2d");
             ctx.reset();
@@ -385,6 +449,17 @@ Rectangle {
             }
             var bufs = root._buffers ? root._buffers : [];
             var seriesN = root.effectiveSeriesCount;
+
+            // Task 8B-C: 折れ線・グリッドの描画域（プロット域）。showGrid で左に目盛り
+            // ラベル幅、showLegend で上に凡例 1 行ぶんの余白を確保する（レイアウト派生
+            // プロパティと一致＝テストはこれら派生値を assert）。
+            var plotX = root._plotX;
+            var plotY = root._plotY;
+            var plotW = root._plotWidth;
+            var plotH = root._plotHeight;
+            if (plotW <= 0 || plotH <= 0) {
+                return;
+            }
 
             // 実効 Y 範囲：presence 指定があればそれ、無ければ全系列横断の min/max 自動スケール。
             var lo, hi;
@@ -402,7 +477,7 @@ Rectangle {
                     }
                 }
                 if (isNaN(dataMin)) {
-                    return;  // 全系列が空＝描画不可
+                    return;  // 全系列が空＝描画不可（固定 Y 範囲なら下の分岐でグリッドは出る）
                 }
                 lo = root.hasYMin ? root.yMin : dataMin;
                 hi = root.hasYMax ? root.yMax : dataMax;
@@ -416,9 +491,41 @@ Rectangle {
             if (span <= 0) {
                 span = 1;
                 lo = lo - 0.5;
+                hi = lo + span;
             }
 
-            // 系列ごとに N 本の折れ線を描く（系列色で色分け）。
+            // Task 8B-C: グリッド線 + Y 軸目盛りラベル（showGrid ON）。実効 Y 範囲を
+            // resolvedYTickCount 等分し、各レベルに水平線（プロット域横断）と数値ラベル
+            // （目盛りラベル域＝プロット左）を描く。左端に縦の軸線も引く。
+            if (root.showGrid) {
+                var ticks = root.resolvedYTickCount;
+                var dec = canvas._tickDecimals(span);
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = "#2a3f50";
+                ctx.fillStyle = "#9aa5b1";
+                ctx.font = root._axisTickLabelFontPx + "px sans-serif";
+                ctx.textAlign = "right";
+                ctx.textBaseline = "middle";
+                for (var ti = 0; ti <= ticks; ++ti) {
+                    var frac = ti / ticks;
+                    var val = hi - frac * (hi - lo);   // 上端 = hi
+                    var gy = plotY + frac * plotH;
+                    ctx.beginPath();
+                    ctx.moveTo(plotX, gy);
+                    ctx.lineTo(plotX + plotW, gy);
+                    ctx.stroke();
+                    if (root._axisLabelWidth > 0) {
+                        ctx.fillText(val.toFixed(dec), plotX - 3, gy);
+                    }
+                }
+                // 左端の縦軸線。
+                ctx.beginPath();
+                ctx.moveTo(plotX, plotY);
+                ctx.lineTo(plotX, plotY + plotH);
+                ctx.stroke();
+            }
+
+            // 系列ごとに N 本の折れ線を描く（系列色で色分け・プロット域内にマップ）。
             ctx.lineWidth = 2;
             for (var si = 0; si < seriesN; ++si) {
                 var buf = (si < bufs.length && bufs[si]) ? bufs[si] : [];
@@ -426,13 +533,13 @@ Rectangle {
                 if (n < 2) {
                     continue;  // 1 点以下は線を引けない（系列ごとに判定）
                 }
-                var stepX = w / (n - 1);
+                var stepX = plotW / (n - 1);
                 ctx.strokeStyle = canvas._seriesColor(si);
                 ctx.beginPath();
                 for (var i = 0; i < n; ++i) {
-                    var x = i * stepX;
-                    // Y 上下反転（高い値が上 = 小さい y ピクセル）。
-                    var y = h - ((buf[i] - lo) / span) * h;
+                    var x = plotX + i * stepX;
+                    // Y 上下反転（高い値が上 = 小さい y ピクセル）。プロット域内へマップ。
+                    var y = plotY + plotH - ((buf[i] - lo) / span) * plotH;
                     if (i === 0) {
                         ctx.moveTo(x, y);
                     } else {
@@ -440,6 +547,28 @@ Rectangle {
                     }
                 }
                 ctx.stroke();
+            }
+
+            // Task 8B-C: 凡例（showLegend ON）。凡例域（プロット上の帯）に系列色スウォッチ +
+            // ラベルを左から横並びに描く。幅を超えたら打ち切る（はみ出し防止）。
+            if (root.showLegend) {
+                var lx = plotX + 4;
+                var midY = root._legendHeight / 2;
+                var swatch = 10;
+                ctx.font = root._legendFontPx + "px sans-serif";
+                ctx.textAlign = "left";
+                ctx.textBaseline = "middle";
+                for (var li = 0; li < seriesN; ++li) {
+                    if (lx > w - 16) {
+                        break;  // 残り幅が無い＝以降は省略
+                    }
+                    ctx.fillStyle = canvas._seriesColor(li);
+                    ctx.fillRect(lx, midY - swatch / 2, swatch, swatch);
+                    ctx.fillStyle = "#e6edf3";
+                    var label = canvas._seriesLabel(li);
+                    ctx.fillText(label, lx + swatch + 4, midY);
+                    lx += swatch + 4 + ctx.measureText(label).width + 12;
+                }
             }
         }
     }
