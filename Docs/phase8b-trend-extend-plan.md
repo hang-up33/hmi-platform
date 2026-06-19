@@ -163,14 +163,20 @@ Phase 8 の `HmiTrend` を N 系列へ一般化する。要点：
 | Task | 状態 | PR |
 |---|---|---|
 | 8B-A Schema 拡張（TrendSeriesData + series + 軸/凡例フラグ round-trip） | 実装済み（レビュー中） | #132 |
-| 8B-B HmiTrend 複数系列描画 + delegate 値供給 | 未着手 | — |
+| 8B-B HmiTrend 複数系列描画 + delegate 値供給 | 実装済み（レビュー中） | — |
 | 8B-C 軸目盛り/凡例描画 | 未着手 | — |
 | 8B-D Editor 系列エディタ + 軸/凡例トグル | 未着手 | — |
 | 8B-E cross-app E2E（系列ごと独立サンプリング）+ スクショ | 未着手 | — |
 
-**次タスク = 8B-B（HmiTrend 複数系列描画 + delegate 値供給）。** 8B-A（PR #132）で Schema 層
+**次タスク = 8B-C（軸目盛り/凡例描画）。** 8B-A（PR #132）で Schema 層
 （子型 `TrendSeriesData` + `series`/`showGrid`/`showLegend`/`yTickCount`）+ Editor 保存の素通し保持を実装済み。
-横展開テンプレの機械適用（Schema 4 メソッド → delegate → メタ → HmiTrend → インスペクタ → E2E）。
+8B-B で `HmiTrend.qml` を N 系列対応（`_buffers` 配列 + `series`/`seriesValues` 入力 + 系列ごと色分け
+N 本 strokePath、`series` 空は暗黙 1 系列で後方互換）にし、Simulator delegate が `seriesValues` を
+`VariableStore.values[...]` から依存追跡式で供給、Editor プレビューは系列数ぶんダミー波形を色違いで描画。
+公開 `seriesCount`/`sampleCountAt(i)`/`lastValueAt(i)`/`bufferSizeAt(i)` を追加（`sampleCount`/`lastValue`/
+`bufferSize` は系列 0 互換維持）。`tst_hmi_trend.qml` に N 系列独立取り込み/巻き取り/後方互換を追加。
+**軸/凡例描画はまだ無し（8B-C）。** 横展開テンプレの機械適用（Schema 4 メソッド → delegate → メタ →
+HmiTrend → インスペクタ → E2E）。
 
 ## 非スコープ（別承認）
 

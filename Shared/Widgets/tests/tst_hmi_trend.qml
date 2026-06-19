@@ -48,10 +48,12 @@ TestCase {
 
     function init() {
         // 各 test_* 実行前にプロパティ・バッファをリセット。
-        // _buffer / sampleCount / lastValue を初期化するため、いったん live を切ってから
-        // 設定し直す（value 代入で意図せず push されないように）。
+        // _buffers / sampleCounts / lastValues を初期化するため、いったん live を切ってから
+        // 設定し直す（値代入で意図せず push されないように）。
         trend.live = false;
         trend.value = 0;
+        trend.series = [];          // 単系列（暗黙 1 系列）へ戻す
+        trend.seriesValues = [];
         trend.pointCount = 0;
         trend.lineColor = "";
         trend.backgroundColor = "";
@@ -60,8 +62,8 @@ TestCase {
         trend.hasYMin = false;
         trend.hasYMax = false;
         trend.sampleMs = 0;
-        trend._buffer = [];
-        trend.resetStats();  // sampleCount / lastValue をまとめてリセット（公開 API）
+        trend._buffers = [[]];      // 全系列バッファをクリア（系列 0 互換 _buffer 同期）
+        trend.resetStats();         // sampleCounts / lastValues をまとめてリセット（公開 API）
         trend.live = true;
         clickedSpy.clear();
     }
@@ -157,6 +159,98 @@ TestCase {
 
         mouseClick(trend, trend.width / 2, trend.height / 2);
         compare(clickedSpy.count, 2);
+    }
+
+    // Task 8B-B: series が空のとき seriesCount は暗黙 1 系列。
+    function test_series_count_defaults_to_one_when_empty() {
+        compare(trend.series.length, 0);
+        compare(trend.seriesCount, 1);
+        compare(trend.effectiveSeriesCount, 1);
+    }
+
+    // Task 8B-B: series を 2 本設定すると seriesCount=2、各系列が独立にサンプリングされる。
+    // seriesValues を変えるたび全系列が 1 点ずつ取り込まれ、系列ごとの sampleCountAt /
+    // lastValueAt / bufferSizeAt が独立に追従する。
+    function test_two_series_track_independently() {
+        trend.series = [
+            { variable: "a", color: "#ff0000", label: "A" },
+            { variable: "b", color: "#00ff00", label: "B" }
+        ];
+        compare(trend.seriesCount, 2);
+        // 系列追加直後はバッファ空・統計 0。
+        compare(trend.sampleCountAt(0), 0);
+        compare(trend.sampleCountAt(1), 0);
+        compare(trend.bufferSizeAt(0), 0);
+        compare(trend.bufferSizeAt(1), 0);
+
+        // 1 回目の更新：系列 0=10, 系列 1=100。
+        trend.seriesValues = [10, 100];
+        compare(trend.sampleCountAt(0), 1);
+        compare(trend.sampleCountAt(1), 1);
+        compare(trend.lastValueAt(0), 10);
+        compare(trend.lastValueAt(1), 100);
+        compare(trend.bufferSizeAt(0), 1);
+        compare(trend.bufferSizeAt(1), 1);
+
+        // 2 回目：系列 0=20, 系列 1=200。各系列が独立に伸びる。
+        trend.seriesValues = [20, 200];
+        compare(trend.sampleCountAt(0), 2);
+        compare(trend.sampleCountAt(1), 2);
+        compare(trend.lastValueAt(0), 20);
+        compare(trend.lastValueAt(1), 200);
+        compare(trend.bufferSizeAt(0), 2);
+        compare(trend.bufferSizeAt(1), 2);
+
+        // 系列 0 互換の sampleCount / lastValue / bufferSize は系列 0 を映す。
+        compare(trend.sampleCount, 2);
+        compare(trend.lastValue, 20);
+        compare(trend.bufferSize, 2);
+    }
+
+    // Task 8B-B: 多系列でもリングバッファが系列ごとに独立して巻き取られる。
+    function test_two_series_ring_buffer_wraps_independently() {
+        trend.series = [
+            { variable: "a", color: "", label: "" },
+            { variable: "b", color: "", label: "" }
+        ];
+        trend.pointCount = 4;  // resolvedPointCount=4
+        compare(trend.resolvedPointCount, 4);
+
+        const total = 4 + 3;  // cap を超える 7 回更新
+        for (let i = 1; i <= total; ++i) {
+            trend.seriesValues = [i, i * 10];
+        }
+
+        // 総 push 数は各系列とも total。
+        compare(trend.sampleCountAt(0), total);
+        compare(trend.sampleCountAt(1), total);
+        // バッファ長は系列ごとに cap で頭打ち。
+        compare(trend.bufferSizeAt(0), 4);
+        compare(trend.bufferSizeAt(1), 4);
+        // 最新値に独立追従。
+        compare(trend.lastValueAt(0), total);
+        compare(trend.lastValueAt(1), total * 10);
+    }
+
+    // Task 8B-B: 後方互換＝series 空のときは従来どおり value 変化で系列 0 が取り込まれる。
+    function test_backward_compat_single_series_value_path() {
+        compare(trend.series.length, 0);
+        // value 変化で系列 0 が push される（従来単系列パス）。
+        trend.value = 42;
+        compare(trend.sampleCountAt(0), 1);
+        compare(trend.lastValueAt(0), 42);
+        compare(trend.bufferSizeAt(0), 1);
+        // 系列 0 互換プロパティも一致。
+        compare(trend.sampleCount, 1);
+        compare(trend.lastValue, 42);
+    }
+
+    // Task 8B-B: series 非空時は value 変化では取り込まない（seriesValues が源）。
+    function test_value_path_inactive_when_series_present() {
+        trend.series = [{ variable: "a", color: "", label: "" }];
+        const before = trend.sampleCountAt(0);
+        trend.value = 999;  // series 非空なので無視されるはず
+        compare(trend.sampleCountAt(0), before);
     }
 
     // live:false（Editor プレビュー）ではサンプリングしない＝value 変化で push されない。
