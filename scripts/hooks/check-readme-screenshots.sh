@@ -56,11 +56,13 @@ sim_ui=$(printf '%s\n' "$ui_files" | grep -E '^(Simulator/|Runtime/|Shared/Widge
 # よって editor / simulator を 2 ファイル個別に存在確認し、AND で同期済み判定する。
 has_editor_png=0
 has_sim_png=0
-printf '%s\n' "$changed" | grep -Eq '^Docs/screenshots/editor\.png$' && has_editor_png=1
+# Editor ヒーローは「組み上げる様子」のアニメ GIF(editor.gif、build-hero-gif.py で再生成)に
+# 差し替え済み。editor.gif / editor.png のどちらの更新でも同期済みとみなす(README 参照先に追従)。
+printf '%s\n' "$changed" | grep -Eq '^Docs/screenshots/editor\.(gif|png)$' && has_editor_png=1
 printf '%s\n' "$changed" | grep -Eq '^Docs/screenshots/simulator\.png$' && has_sim_png=1
 
 missing=""
-[ -n "$editor_ui" ] && [ "$has_editor_png" -eq 0 ] && missing="${missing} Docs/screenshots/editor.png"
+[ -n "$editor_ui" ] && [ "$has_editor_png" -eq 0 ] && missing="${missing} Docs/screenshots/editor.gif"
 [ -n "$sim_ui" ] && [ "$has_sim_png" -eq 0 ] && missing="${missing} Docs/screenshots/simulator.png"
 
 # 影響する全スクショが更新済みなら同期済みとみなす
@@ -72,8 +74,9 @@ missing=""
   for f in $missing; do echo "  - $f"; done
   cat <<'MSG'
 
-- 見た目が変わるなら: screenshot-capture スキルで上記スクショを撮り直し、
-  同じコミットに含めてください(詳細は .claude/rules/readme-screenshot-sync.md)。
+- 見た目が変わるなら: 上記を撮り直して同じコミットに含めてください
+  (editor.gif は python3 scripts/web/build-hero-gif.py、simulator.png は
+   screenshot-capture スキル。詳細は .claude/rules/readme-screenshot-sync.md)。
 - 見た目が変わらない(内部ロジック/リファクタのみ)、または撮影不能な環境なら:
   その旨を一言述べてそのまま終了して構いません(この注意は一度きりで、次の停止はブロックしません)。
 MSG

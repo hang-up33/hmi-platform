@@ -19,7 +19,8 @@ Editor / Simulator の**見た目が変わる**変更（QML レイアウト・�
 
 | 固定ファイル | 対応アプリ | 参照元 |
 |---|---|---|
-| `Docs/screenshots/editor.png` | Editor | [README.md](../../README.md)「スクリーンショット」節 |
+| `Docs/screenshots/editor.gif` | Editor ヒーロー（組み上げアニメ。`python3 scripts/web/build-hero-gif.py` で再生成。[hero-demo](../skills/hero-demo/SKILL.md)） | [README.md](../../README.md) 冒頭ヒーロー |
+| `Docs/screenshots/editor.png` | Editor 静止スクショ（残置。Stop hook は editor.gif / editor.png のどちらの更新でも同期済みと判定） | README「スクリーンショット」節 |
 | `Docs/screenshots/simulator.png` | Simulator | 同上 |
 
 - `task-<N>-<短い名>.png`（SHA 固定の時系列証跡）を撮るのと**両方**やる。`editor.png` / `simulator.png` は README から相対パス参照される「現状を見せる」用途なので、見た目が変わったら上書きで撮り直す。
