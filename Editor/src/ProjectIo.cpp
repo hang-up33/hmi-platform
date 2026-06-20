@@ -38,10 +38,11 @@ bool ProjectIo::save(const QUrl &fileUrl,
     ProjectData proj;
     proj.project = projectName;
     // Task 39: Project レベルの変数定義（optional。空可）。
-    // Phase 7 / MB-1: QML 側の variable.source は接続詳細（connection / host / port / unitId /
-    // reg / address / poll）をインラインで持つ。ここで connections[] へ dedup 集約し、
-    // variable.source からは接続詳細（host/port/unitId）を落として {connection,reg,address,poll}
-    // に絞る（計画書の正準＝connections[] 参照方式の JSON に round-trip する）。
+    // Phase 7 / MB-1 + Phase 9 / OP-1: QML 側の variable.source は接続詳細（connection / proto /
+    // host / port / unitId / endpoint）と写像（reg / address / poll / nodeId）をインラインで持つ。
+    // ここで接続詳細を connections[] へ dedup 集約し、variable.source からは接続詳細を落として
+    // {connection, reg, address, poll, nodeId} に絞る（計画書の正準＝connections[] 参照方式の
+    // JSON に round-trip する）。endpoint は OPC-UA 接続、host/port/unitId は Modbus 接続用。
     proj.variables.reserve(variables.size());
     QHash<QString, int> connIndexById;  // connection id → proj.connections の index
     for (const QVariant &v : variables) {
@@ -64,6 +65,9 @@ bool ProjectIo::save(const QUrl &fileUrl,
                 conn.host = smap.value(QStringLiteral("host")).toString();
                 conn.port = smap.value(QStringLiteral("port"), 502).toInt();
                 conn.unitId = smap.value(QStringLiteral("unitId"), 1).toInt();
+                // Phase 9 / OP-1: OPC-UA エンドポイント（接続単位の詳細。host/port/unitId と同じく
+                // connections[] へ集約する。Modbus 接続では空）。
+                conn.endpoint = smap.value(QStringLiteral("endpoint")).toString();
                 // 同一 id は **最初の定義を採用**（connections[] は id で一意）。MB-1 は
                 // 接続 id を "plc1" 固定なので実際には 1 件だが、将来複数変数が同 id で
                 // 異なる host/port/unitId を持つ source を定義しうる。その場合は最初の定義を
@@ -74,7 +78,8 @@ bool ProjectIo::save(const QUrl &fileUrl,
                 } else {
                     const ConnectionData &existing = proj.connections.at(connIndexById.value(conn.id));
                     if (existing.host != conn.host || existing.port != conn.port
-                        || existing.unitId != conn.unitId || existing.proto != conn.proto) {
+                        || existing.unitId != conn.unitId || existing.proto != conn.proto
+                        || existing.endpoint != conn.endpoint) {
                         qWarning() << "ProjectIo::save: connection id" << conn.id
                                    << "に異なる接続詳細が複数定義されています。最初の定義を採用します。";
                     }
@@ -180,6 +185,8 @@ QVariantMap ProjectIo::load(const QUrl &fileUrl)
                 smap.insert(QStringLiteral("port"), it->port);
                 smap.insert(QStringLiteral("unitId"), it->unitId);
                 smap.insert(QStringLiteral("proto"), it->proto);
+                // Phase 9 / OP-1: OPC-UA エンドポイントも source へ戻し Editor UI が再表示できる。
+                smap.insert(QStringLiteral("endpoint"), it->endpoint);
             } else {
                 // connections[] に対応 id が無い（壊れた JSON 等）。host/port/unitId は
                 // 補完できず Editor では既定表示になる。診断のため警告する（CodeRabbit PR #119）。

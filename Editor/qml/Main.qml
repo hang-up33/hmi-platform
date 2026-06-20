@@ -93,10 +93,11 @@ Window {
         }
         return false
     }
-    // Phase 7 / MB-1: 変数ソース（PLC 接続写像）の編集ヘルパー。実通信はしない＝入力値を
-    // variable.source（{connection, host, port, unitId, reg, address, poll}）に保存するだけ。
-    // 接続詳細はインラインで持ち、保存（ProjectIo.save）時に connections[] へ集約される。
-    // MB-1 は最小：接続 id は "plc1" 固定（複数 PLC は別タスク）。
+    // Phase 7 / MB-1 + Phase 9 / OP-1: 変数ソース（接続写像）の編集ヘルパー。実通信はしない＝
+    // 入力値を variable.source（{connection, proto, host/port/unitId, endpoint, reg/address/poll,
+    // nodeId}）に保存するだけ。接続詳細はインラインで持ち、保存（ProjectIo.save）時に
+    // connections[] へ集約される。proto で Modbus（host/port/unitId/reg/address）と
+    // OPC-UA（endpoint/nodeId）を出し分ける。MB-1 は最小：接続 id は "plc1" 固定（複数 PLC は別タスク）。
     function setVariableSourceEnabled(index, enabled) {
         if (index < 0 || index >= projectVariables.length) {
             return
@@ -104,10 +105,13 @@ Window {
         const next = projectVariables.slice()
         const v = Object.assign({}, next[index])
         if (enabled) {
-            // 既定の source（holding / 0 番地 / 1000ms / plc1 / 502 / unitId 1）。
+            // 既定の source（modbusTcp / holding / 0 番地 / 1000ms / plc1 / 502 / unitId 1）。
+            // OPC-UA 用 endpoint / nodeId は proto を opcua に切り替えたとき使う。
             v.source = {
-                connection: "plc1", host: "", port: 502, unitId: 1,
-                reg: "holding", address: 0, poll: 1000
+                connection: "plc1", proto: "modbusTcp",
+                host: "", port: 502, unitId: 1,
+                reg: "holding", address: 0, poll: 1000,
+                endpoint: "", nodeId: ""
             }
         } else {
             delete v.source
@@ -730,6 +734,10 @@ Window {
                                 //（接続先 + レジスタ）の編集欄を展開する。
                                 readonly property var rowSource:
                                     varRow.modelData.source !== undefined ? varRow.modelData.source : null
+                                // Phase 9 / OP-1: 接続 proto（"modbusTcp" / "opcua"）。欠落時は modbusTcp。
+                                readonly property string rowProto:
+                                    (varRow.rowSource && varRow.rowSource.proto !== undefined
+                                     && varRow.rowSource.proto !== "") ? varRow.rowSource.proto : "modbusTcp"
                                 width: parent.width
                                 spacing: 4
 
@@ -802,9 +810,25 @@ Window {
                                     columnSpacing: 6
                                     leftPadding: 12
 
-                                    Label { text: qsTr("ホスト") }
+                                    // Phase 9 / OP-1: プロトコル選択。modbusTcp（host/port/unitId/reg/
+                                    // address）と opcua（endpoint/nodeId）で下の入力欄を出し分ける。
+                                    Label { text: qsTr("プロトコル") }
+                                    ComboBox {
+                                        objectName: "variableSourceProto_" + varRow.index
+                                        width: 120
+                                        model: ["modbusTcp", "opcua"]
+                                        currentIndex: Math.max(0, model.indexOf(varRow.rowProto))
+                                        onActivated: rootWindow.updateVariableSource(varRow.index, "proto", currentText)
+                                    }
+
+                                    // --- Modbus 用フィールド（proto === "modbusTcp" のとき表示） ---
+                                    Label {
+                                        text: qsTr("ホスト")
+                                        visible: varRow.rowProto === "modbusTcp"
+                                    }
                                     TextField {
                                         objectName: "variableSourceHost_" + varRow.index
+                                        visible: varRow.rowProto === "modbusTcp"
                                         width: 120
                                         text: varRow.rowSource ? (varRow.rowSource.host !== undefined ? varRow.rowSource.host : "") : ""
                                         placeholderText: qsTr("192.168.0.10")
@@ -812,9 +836,13 @@ Window {
                                         onActiveFocusChanged: rootWindow.variableFieldFocusCount += activeFocus ? 1 : -1
                                     }
 
-                                    Label { text: qsTr("ポート") }
+                                    Label {
+                                        text: qsTr("ポート")
+                                        visible: varRow.rowProto === "modbusTcp"
+                                    }
                                     TextField {
                                         objectName: "variableSourcePort_" + varRow.index
+                                        visible: varRow.rowProto === "modbusTcp"
                                         width: 80
                                         inputMethodHints: Qt.ImhDigitsOnly
                                         validator: IntValidator { bottom: 1; top: 65535 }
@@ -824,9 +852,13 @@ Window {
                                         onActiveFocusChanged: rootWindow.variableFieldFocusCount += activeFocus ? 1 : -1
                                     }
 
-                                    Label { text: qsTr("Unit ID") }
+                                    Label {
+                                        text: qsTr("Unit ID")
+                                        visible: varRow.rowProto === "modbusTcp"
+                                    }
                                     TextField {
                                         objectName: "variableSourceUnitId_" + varRow.index
+                                        visible: varRow.rowProto === "modbusTcp"
                                         width: 80
                                         inputMethodHints: Qt.ImhDigitsOnly
                                         validator: IntValidator { bottom: 0; top: 255 }
@@ -836,9 +868,13 @@ Window {
                                         onActiveFocusChanged: rootWindow.variableFieldFocusCount += activeFocus ? 1 : -1
                                     }
 
-                                    Label { text: qsTr("レジスタ") }
+                                    Label {
+                                        text: qsTr("レジスタ")
+                                        visible: varRow.rowProto === "modbusTcp"
+                                    }
                                     ComboBox {
                                         objectName: "variableSourceReg_" + varRow.index
+                                        visible: varRow.rowProto === "modbusTcp"
                                         width: 120
                                         model: ["coil", "discrete", "input", "holding"]
                                         currentIndex: Math.max(0, model.indexOf(varRow.rowSource ? varRow.rowSource.reg : "holding"))
@@ -846,9 +882,13 @@ Window {
                                     }
 
                                     // address は 0 始まりのプロトコル番地（JSON / 内部の正準は 0 ベース）。
-                                    Label { text: qsTr("アドレス") }
+                                    Label {
+                                        text: qsTr("アドレス")
+                                        visible: varRow.rowProto === "modbusTcp"
+                                    }
                                     TextField {
                                         objectName: "variableSourceAddress_" + varRow.index
+                                        visible: varRow.rowProto === "modbusTcp"
                                         width: 80
                                         inputMethodHints: Qt.ImhDigitsOnly
                                         validator: IntValidator { bottom: 0; top: 65535 }
@@ -858,6 +898,36 @@ Window {
                                         onActiveFocusChanged: rootWindow.variableFieldFocusCount += activeFocus ? 1 : -1
                                     }
 
+                                    // --- OPC-UA 用フィールド（proto === "opcua" のとき表示） ---
+                                    Label {
+                                        text: qsTr("エンドポイント")
+                                        visible: varRow.rowProto === "opcua"
+                                    }
+                                    TextField {
+                                        objectName: "variableSourceEndpoint_" + varRow.index
+                                        visible: varRow.rowProto === "opcua"
+                                        width: 180
+                                        text: varRow.rowSource ? (varRow.rowSource.endpoint !== undefined ? varRow.rowSource.endpoint : "") : ""
+                                        placeholderText: qsTr("opc.tcp://192.168.0.20:4840")
+                                        onEditingFinished: rootWindow.updateVariableSource(varRow.index, "endpoint", text)
+                                        onActiveFocusChanged: rootWindow.variableFieldFocusCount += activeFocus ? 1 : -1
+                                    }
+
+                                    Label {
+                                        text: qsTr("ノード ID")
+                                        visible: varRow.rowProto === "opcua"
+                                    }
+                                    TextField {
+                                        objectName: "variableSourceNodeId_" + varRow.index
+                                        visible: varRow.rowProto === "opcua"
+                                        width: 180
+                                        text: varRow.rowSource ? (varRow.rowSource.nodeId !== undefined ? varRow.rowSource.nodeId : "") : ""
+                                        placeholderText: qsTr("ns=2;s=Spindle.Temp")
+                                        onEditingFinished: rootWindow.updateVariableSource(varRow.index, "nodeId", text)
+                                        onActiveFocusChanged: rootWindow.variableFieldFocusCount += activeFocus ? 1 : -1
+                                    }
+
+                                    // ポーリング周期は両プロトコル共通（OPC-UA は購読不可時のフォールバック）。
                                     Label { text: qsTr("ポーリング(ms)") }
                                     TextField {
                                         objectName: "variableSourcePoll_" + varRow.index
