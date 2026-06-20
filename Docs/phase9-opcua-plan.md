@@ -5,7 +5,7 @@
 > **本書は計画のみ**（実装は別 PR でタスク 1 つずつ）。要求の倉庫は [requirements.md](requirements.md)、結線規約は [.claude/rules/qml-module-conventions.md](../.claude/rules/qml-module-conventions.md)、Schema 規約は [.claude/rules/schema-conventions.md](../.claude/rules/schema-conventions.md)、実機/SDK 事情は [.claude/rules/dev-environment.md](../.claude/rules/dev-environment.md)。Modbus 実装の前例は [phase7-modbus-plan.md](phase7-modbus-plan.md)。
 > **進捗の正本は本ファイル「進捗」表**。
 >
-> **承認状態**：**スコープ承認（2026-06-20 ユーザー選択）。本タスクは「計画書の起票」のみ。実装着手は別承認。** 直近完了は Phase 8-B（Trend 拡張・PR #138 でクローズ）。
+> **承認状態**：**着手済み（2026-06-20 ユーザー選択）。OP-1〔変数ソース Schema + Editor UI〕完了（PR #140・Web ctest 25/25 緑）。** 次は OP-2 以降＝ローカル専用（Qt OpcUa kit が要る＝下記🔴ゲート）。直近完了は Phase 8-B（Trend 拡張・PR #138 でクローズ）。
 > **🔴 最重要ゲート（Web 不可）**：**Qt OPC-UA（`qtopcua`）は aqtinstall のバイナリ addon モジュールに含まれない**（2026-06-20 実証：Web の Qt 6.10.0 linux で `aqt list-qt linux desktop --modules 6.10.0 linux_gcc_64` に `qtserialbus` 等はあるが `qtopcua` は出ず、`/opt/Qt/.../lib/cmake` にも `Qt6OpcUa` 無し）。よって **この Web セッションでは OP-2 以降（OpcUa リンクを伴う実装・E2E）はビルド・テスト不可**。Qt OPC-UA はバックエンド（open62541 等）込みのソースビルド/別途配布が要るのが通例。**実装はローカル（Qt OpcUa を入れた kit）＋実機（rootfs に qtopcua）で行う**。詳細は §依存・要調査。
 
 ---
@@ -151,11 +151,11 @@ flowchart TD
 
 | Task | 状態 | PR |
 |---|---|---|
-| OP-1 変数ソース Schema 拡張（proto 2 本目）+ Editor UI | 未着手（Web 可・実装は別承認） | — |
+| OP-1 変数ソース Schema 拡張（proto 2 本目）+ Editor UI | 完了（Web ctest 25/25 緑） | #140 |
 | OP-2 PC 読込/購読（asyncua E2E） | 未着手（ローカル・Web 不可） | — |
 | OP-3 実 OPC-UA サーバ読込確認 | 未着手（ローカル） | — |
 | OP-4 書込 + 接続状態 + 再接続 | 未着手（ローカル・Web 不可） | — |
 | OP-5 実サーバ書込確認 | 未着手（ローカル） | — |
 | OP-6 実機 Runtime 展開（WSL2+実機） | 未着手（ローカル・Web 不可） | — |
 
-> **本 PR は計画書の起票のみ**。実装着手は別承認 + ローカル環境（Qt OpcUa kit）が要る。承認・着手でステータスが動いたら常駐文書（CLAUDE.md / AGENTS.md / README / mvp-task-runner / development-history）を同期する（[feedback-phase-status-sync](../.claude/rules/feedback-phase-status-sync.md)）。
+> **OP-1（Schema + Editor UI・Web 可）完了（#140）。次は OP-2〔PC 読込/購読〕＝ローカル専用（Web 不可。Qt OpcUa kit が要る＝§依存「Qt OpcUa 入手性」ゲートを先に解決する）。** 着手でステータスが動いたら常駐文書（CLAUDE.md / AGENTS.md / README / mvp-task-runner / development-history）を同期する（[feedback-phase-status-sync](../.claude/rules/feedback-phase-status-sync.md)）。
