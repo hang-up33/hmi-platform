@@ -378,6 +378,16 @@ timeline
 
 ---
 
+## Phase 9: OPC-UA クライアント（計画起票）
+
+**計画書**：[Docs/phase9-opcua-plan.md](phase9-opcua-plan.md)（OP-1〜OP-6。2026-06-20 スコープ選択＝Phase 8-B クローズ後の候補から OPC-UA をユーザー選択。**本タスクは計画書の起票のみ**）
+
+- 📋 計画起票済み（実装は別承認 + ローカル環境）。Modbus（Phase 7）で導入した「変数ソース」抽象（`connections[]` + `VariableData.source`）に **proto 2 本目（`opcua`）** を足し、`OpcUaController`（`QOpcUaClient` + MonitoredItem 購読）を Simulator 共有ソースに置く（→Runtime 継承・Editor は `Qt6::OpcUa` 非リンク）。読込/購読値は `VariableStore.setValue`、書込は MB-4 の二経路分離を流用。
+  - **🔴 最重要ゲート（Web 不可）**：**Qt OPC-UA（`qtopcua`）は aqtinstall のバイナリ addon に含まれない**（2026-06-20 実証：Web の Qt 6.10.0 linux で `aqt list-qt ... --modules` に `qtopcua` 無し・`qtserialbus` はある）。よって OP-2 以降（OpcUa リンク）は Web でビルド・テスト不可。実装はローカル kit（Qt OpcUa を自前ビルド/別配布でマージ）+ 実機 rootfs（`qtopcua` + open62541 backend）が要る。**OP-1（Schema + Editor UI）のみ OpcUa 非依存で Web 可。**
+  - **タスク**：OP-1（変数ソース Schema 拡張〔`endpoint`/`nodeId`/`proto`〕+ Editor UI・Web 可）/ OP-2（PC 読込/購読・asyncua ソフトサーバ E2E・ローカル）/ OP-3（実サーバ読込確認・ローカル）/ OP-4（書込 + 接続状態 + 再接続・ローカル）/ OP-5（実サーバ書込確認・ローカル）/ OP-6（実機 Runtime 展開・WSL2+実機）。
+
+---
+
 ## 番外: 開発コードネーム「Atlas」決定（2026-05-30）
 
 フェーズタスクとは別に、プロジェクト全体の**開発時の通称（ブランド別名）**を決めた経緯。
