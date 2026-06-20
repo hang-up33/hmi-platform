@@ -70,6 +70,15 @@ bool ConnectionData::isValidJson(const QJsonObject &obj)
     if (!obj.value("id").isString() || obj.value("id").toString().isEmpty()) {
         return false;
     }
+    // proto は存在する場合のみ既知値（modbusTcp / opcua）を検証（欠落時は fromJson が
+    // modbusTcp を補う＝後方互換）。OP-2 以降で proto を見てディスパッチするため、
+    // 外部 JSON の不正 proto 素通りを防ぐ（CodeRabbit PR #140）。
+    if (obj.contains("proto")) {
+        const QString proto = obj.value("proto").toString();
+        if (proto != QStringLiteral("modbusTcp") && proto != QStringLiteral("opcua")) {
+            return false;
+        }
+    }
     // port は存在する場合のみ範囲検証（欠落時は fromJson が 502 を補う）。外部 JSON を
     // fromJson 経由で読む際の不正値素通りを防ぐ（CodeRabbit PR #119）。
     if (obj.contains("port")) {

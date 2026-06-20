@@ -161,6 +161,10 @@ Window {
             ns.poll = 0  // OPC-UA 既定は購読のみ（0 = フォールバックなし）
         } else {
             ns.connection = "plc1"
+            // opcua で reg/address をクリアしているため、modbusTcp へ戻す時は既定値へ復元する
+            //（さもないと reg 空のまま save → isValidJson 不正で割当が丸ごと落ちる。Codex PR #140）。
+            ns.reg = "holding"
+            ns.address = 0
             ns.endpoint = ""
             ns.nodeId = ""
             ns.poll = 1000  // Modbus 既定ポーリング

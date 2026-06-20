@@ -81,6 +81,10 @@ bool SourceData::isValidJson(const QJsonObject &obj)
     if (obj.contains("address") && obj.value("address").toInt(0) < 0) {
         return false;
     }
+    // poll も非負（0 = OPC-UA の購読のみ）。address と対称に不正値素通りを防ぐ（CodeRabbit PR #140）。
+    if (obj.contains("poll") && obj.value("poll").toInt(1000) < 0) {
+        return false;
+    }
     return true;
 }
 

@@ -481,7 +481,7 @@ void VariableDataTest::sourceProtoIsValidJson_data()
     QTest::newRow("modbus holding") << "plc1" << "holding" << "" << true;
     // OPC-UA：reg 無し・nodeId 有り → 有効。
     QTest::newRow("opcua nodeId") << "opc1" << "" << "ns=2;s=Temp" << true;
-    // 両方有り（混在）→ 有効（reg が有効なら通る）。
+    // 両方有り（混在）→ 有効（reg または nodeId のいずれかが有効なら通る OR 条件）。
     QTest::newRow("both reg+nodeId") << "plc1" << "holding" << "ns=2;s=Temp" << true;
     // reg 不正・nodeId 有り → nodeId 側で有効。
     QTest::newRow("bad reg but nodeId") << "opc1" << "register" << "ns=2;s=Temp" << true;
