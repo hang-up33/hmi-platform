@@ -62,6 +62,9 @@ TestCase {
         trend.hasYMin = false;
         trend.hasYMax = false;
         trend.sampleMs = 0;
+        trend.showGrid = false;     // Task 8B-C: 軸/凡例フラグも既定 OFF へ戻す
+        trend.showLegend = false;
+        trend.yTickCount = 0;
         trend.clearBuffers();       // 全系列バッファ・統計・サンプル済みスナップショットを公開 API でクリア
         trend.live = true;
         clickedSpy.clear();
@@ -320,5 +323,88 @@ TestCase {
         compare(trend.lastValueAt(99), 0);
         compare(trend.bufferSizeAt(-1), 0);
         compare(trend.bufferSizeAt(99), 0);
+    }
+
+    // ===== Task 8B-C: 軸目盛り/凡例（公開状態・レイアウト派生プロパティを assert。
+    // Canvas ピクセルは見ない） =====
+
+    // 既定（フラグ OFF）：軸/凡例は無効、プロット域は Canvas 全面（左/上余白ゼロ）。
+    function test_axis_legend_default_off() {
+        compare(trend.showGrid, false);
+        compare(trend.showLegend, false);
+        compare(trend.gridVisible, false);
+        compare(trend.legendVisible, false);
+        // 余白ゼロ＝プロット域は Canvas 全面（width/height - 4）。
+        compare(trend._axisLabelWidth, 0);
+        compare(trend._legendHeight, 0);
+        compare(trend._canvasW, trend.width - 4);
+        compare(trend._canvasH, trend.height - 4);
+        compare(trend._plotX, 0);
+        compare(trend._plotY, 0);
+        compare(trend._plotWidth, trend._canvasW);
+        compare(trend._plotHeight, trend._canvasH);
+    }
+
+    // yTickCount の解決：0 / 負値 → 既定 4、正値はそのまま。
+    function test_resolved_y_tick_count() {
+        compare(trend.resolvedYTickCount, 4);   // 既定（0）
+        trend.yTickCount = 6;
+        compare(trend.resolvedYTickCount, 6);
+        trend.yTickCount = -3;
+        compare(trend.resolvedYTickCount, 4);   // 負値も既定へ
+    }
+
+    // showGrid ON：gridVisible が立ち、左に目盛りラベル域が確保されてプロット域が縮む。
+    function test_show_grid_reserves_axis_label_area() {
+        trend.showGrid = true;
+        compare(trend.gridVisible, true);
+        verify(trend._axisLabelWidth > 0);
+        // プロット左端 = 目盛りラベル幅、プロット幅 = Canvas 幅 - 目盛りラベル幅。
+        compare(trend._plotX, trend._axisLabelWidth);
+        compare(trend._plotWidth, trend._canvasW - trend._axisLabelWidth);
+        // 上方向（凡例）は未確保なのでプロット高さは Canvas 高さのまま。
+        compare(trend._plotY, 0);
+        compare(trend._plotHeight, trend._canvasH);
+    }
+
+    // showLegend ON：legendVisible が立ち、上に凡例域が確保されてプロット域が縮む。
+    function test_show_legend_reserves_top_area() {
+        trend.showLegend = true;
+        compare(trend.legendVisible, true);
+        verify(trend._legendHeight > 0);
+        // プロット上端 = 凡例高さ、プロット高さ = Canvas 高さ - 凡例高さ。
+        compare(trend._plotY, trend._legendHeight);
+        compare(trend._plotHeight, trend._canvasH - trend._legendHeight);
+        // 左方向（目盛り）は未確保なのでプロット幅は Canvas 幅のまま。
+        compare(trend._plotX, 0);
+        compare(trend._plotWidth, trend._canvasW);
+    }
+
+    // グリッド + 凡例の両 ON：左と上の両方が確保され、プロット域は両方ぶん縮む。
+    function test_grid_and_legend_layout_combined() {
+        trend.showGrid = true;
+        trend.showLegend = true;
+        verify(trend._axisLabelWidth > 0);
+        verify(trend._legendHeight > 0);
+        compare(trend._plotX, trend._axisLabelWidth);
+        compare(trend._plotY, trend._legendHeight);
+        compare(trend._plotWidth, trend._canvasW - trend._axisLabelWidth);
+        compare(trend._plotHeight, trend._canvasH - trend._legendHeight);
+    }
+
+    // 凡例は単系列（series 空＝暗黙 1 系列）でも複数系列でも有効になる。
+    function test_legend_visible_for_single_and_multi_series() {
+        // 単系列（series 空）。
+        compare(trend.series.length, 0);
+        compare(trend.seriesCount, 1);
+        trend.showLegend = true;
+        compare(trend.legendVisible, true);
+        // 複数系列。
+        trend.series = [
+            { variable: "a", color: "#ff0000", label: "A" },
+            { variable: "b", color: "#00ff00", label: "B" }
+        ];
+        compare(trend.seriesCount, 2);
+        compare(trend.legendVisible, true);
     }
 }

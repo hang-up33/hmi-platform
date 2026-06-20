@@ -603,10 +603,10 @@
           "id": "trendCap",
           "type": "Label",
           "x": 20,
-          "y": 522,
-          "width": 300,
+          "y": 514,
+          "width": 400,
           "height": 18,
-          "text": "TARGET RATE  —  LIVE TREND",
+          "text": "OUTPUT vs TARGET  —  MULTI-SERIES TREND",
           "textColor": "#1d3557",
           "fontSize": 12,
           "fontBold": true,
@@ -617,15 +617,30 @@
           "id": "trendSp",
           "type": "Trend",
           "x": 20,
-          "y": 544,
+          "y": 536,
           "width": 760,
-          "height": 50,
+          "height": 58,
           "backgroundColor": "#14213d",
           "borderColor": "#415a77",
           "borderWidth": 1,
           "radius": 8,
           "pointCount": 60,
           "lineColor": "#4cc9f0",
+          "showGrid": true,
+          "showLegend": true,
+          "yTickCount": 4,
+          "series": [
+            {
+              "variable": "output",
+              "color": "#4cc9f0",
+              "label": "OUTPUT"
+            },
+            {
+              "variable": "targetRate",
+              "color": "#f72585",
+              "label": "TARGET"
+            }
+          ],
           "bindings": [
             {
               "property": "value",
