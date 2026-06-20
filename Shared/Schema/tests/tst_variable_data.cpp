@@ -33,6 +33,14 @@ private slots:
     void connectionIsValidJson_data();
     void connectionIsValidJson();
 
+    // Phase 9 / OP-1: OPC-UA proto 2 本目（endpoint + nodeId）
+    void opcuaConnectionRoundTrip();
+    void opcuaSourceRoundTrip();
+    void sourceProtoIsValidJson_data();
+    void sourceProtoIsValidJson();
+    void sourceNodeIdTypeValidation();
+    void modbusConnectionBackwardCompat();
+
     void actionRoundTrip();
     void actionIsValidJson_data();
     void actionIsValidJson();
@@ -392,6 +400,170 @@ void VariableDataTest::connectionIsValidJson()
     QJsonObject obj;
     obj["id"] = id;
     QCOMPARE(ConnectionData::isValidJson(obj), valid);
+}
+
+// Phase 9 / OP-1: OPC-UA 接続（endpoint 有り）の round-trip。endpoint が保持され、
+// Modbus フィールド（host/port/unitId）は既定のまま素通る。
+void VariableDataTest::opcuaConnectionRoundTrip()
+{
+    ConnectionData src;
+    src.id = "opc1";
+    src.proto = "opcua";
+    src.endpoint = "opc.tcp://192.168.0.20:4840";
+
+    {
+        const QJsonObject json = src.toJson();
+        QVERIFY(json.contains("endpoint"));  // 非空なので書き出す
+        const ConnectionData r = ConnectionData::fromJson(json);
+        QCOMPARE(r.id, src.id);
+        QCOMPARE(r.proto, QStringLiteral("opcua"));
+        QCOMPARE(r.endpoint, src.endpoint);
+    }
+    {
+        const ConnectionData r = ConnectionData::fromVariantMap(src.toVariantMap());
+        QCOMPARE(r.id, src.id);
+        QCOMPARE(r.proto, QStringLiteral("opcua"));
+        QCOMPARE(r.endpoint, src.endpoint);
+    }
+    // opcua 接続も id 非空なら isValidJson を通る（endpoint は optional）。
+    QVERIFY(ConnectionData::isValidJson(src.toJson()));
+}
+
+// Phase 9 / OP-1: OPC-UA source（reg 無し・nodeId 有り）の round-trip。nodeId が保持され、
+// isValidJson を通る（reg 無しでも nodeId 非空なら有効）。
+void VariableDataTest::opcuaSourceRoundTrip()
+{
+    VariableData src;
+    src.name = "spindleTemp";
+    src.type = "real";
+    src.initial = "0";
+    SourceData s;
+    s.connection = "opc1";
+    s.nodeId = "ns=2;s=Spindle.Temp";
+    s.poll = 0;  // 0 = 購読のみ（フォールバック無し）
+    src.source = s;
+
+    // JSON round-trip：reg は空のまま、nodeId が保持される。
+    {
+        const QJsonObject json = src.toJson();
+        const QJsonObject sjson = json.value("source").toObject();
+        QVERIFY(sjson.contains("nodeId"));  // 非空なので書き出す
+        const VariableData r = VariableData::fromJson(json);
+        QVERIFY(r.source.has_value());
+        QCOMPARE(r.source->connection, QStringLiteral("opc1"));
+        QCOMPARE(r.source->nodeId, QStringLiteral("ns=2;s=Spindle.Temp"));
+        QVERIFY(r.source->reg.isEmpty());
+        QCOMPARE(r.source->poll, 0);
+    }
+    // QVariantMap round-trip
+    {
+        const VariableData r = VariableData::fromVariantMap(src.toVariantMap());
+        QVERIFY(r.source.has_value());
+        QCOMPARE(r.source->connection, QStringLiteral("opc1"));
+        QCOMPARE(r.source->nodeId, QStringLiteral("ns=2;s=Spindle.Temp"));
+    }
+    // OPC-UA source（reg 無し・nodeId 有り）が isValidJson を通る。
+    QVERIFY(SourceData::isValidJson(src.source->toJson()));
+    // 変数全体としても isValidJson を通る（source の検証も連動）。
+    QVERIFY(VariableData::isValidJson(src.toJson()));
+}
+
+// Phase 9 / OP-1: proto 種別を弁別する isValidJson。Modbus（reg 有効）/ OPC-UA（nodeId 非空）の
+// いずれかを満たせば有効、双方欠落は不正。
+void VariableDataTest::sourceProtoIsValidJson_data()
+{
+    QTest::addColumn<QString>("connection");
+    QTest::addColumn<QString>("reg");
+    QTest::addColumn<QString>("nodeId");
+    QTest::addColumn<bool>("valid");
+
+    // Modbus：reg 有効・nodeId 無し → 有効（従来どおり）。
+    QTest::newRow("modbus holding") << "plc1" << "holding" << "" << true;
+    // OPC-UA：reg 無し・nodeId 有り → 有効。
+    QTest::newRow("opcua nodeId") << "opc1" << "" << "ns=2;s=Temp" << true;
+    // 両方有り（混在）→ 有効（reg または nodeId のいずれかが有効なら通る OR 条件）。
+    QTest::newRow("both reg+nodeId") << "plc1" << "holding" << "ns=2;s=Temp" << true;
+    // reg 不正・nodeId 有り → nodeId 側で有効。
+    QTest::newRow("bad reg but nodeId") << "opc1" << "register" << "ns=2;s=Temp" << true;
+    // reg も nodeId も無い → 不正。
+    QTest::newRow("neither reg nor nodeId") << "plc1" << "" << "" << false;
+    // reg 不正・nodeId 無し → 不正。
+    QTest::newRow("bad reg no nodeId") << "plc1" << "register" << "" << false;
+    // connection 空・nodeId 有り → 不正（connection は必須）。
+    QTest::newRow("empty connection opcua") << "" << "" << "ns=2;s=Temp" << false;
+}
+
+void VariableDataTest::sourceProtoIsValidJson()
+{
+    QFETCH(QString, connection);
+    QFETCH(QString, reg);
+    QFETCH(QString, nodeId);
+    QFETCH(bool, valid);
+
+    QJsonObject obj;
+    obj["connection"] = connection;
+    if (!reg.isEmpty()) {
+        obj["reg"] = reg;
+    }
+    if (!nodeId.isEmpty()) {
+        obj["nodeId"] = nodeId;
+    }
+    QCOMPARE(SourceData::isValidJson(obj), valid);
+}
+
+// Phase 9 / OP-1（Codex/CodeRabbit PR #140）：nodeId の型 / presence 検証。
+//  ①nodeId が非文字列（JSON number 等）→ OPC-UA source として無効（reg も無いので弾く）。
+//  ②reg 無し・nodeId 有り（文字列）→ 有効。
+//  ③reg 無し・nodeId 空文字 → 無効。
+void VariableDataTest::sourceNodeIdTypeValidation()
+{
+    // ①nodeId が数値（型不正）・reg 無し → 弾く。
+    {
+        QJsonObject obj;
+        obj["connection"] = "opc1";
+        obj["nodeId"] = 123;  // 文字列でない
+        QVERIFY(!SourceData::isValidJson(obj));
+    }
+    // ②reg 無し・nodeId 文字列 → 有効。
+    {
+        QJsonObject obj;
+        obj["connection"] = "opc1";
+        obj["nodeId"] = "ns=2;s=Temp";
+        QVERIFY(SourceData::isValidJson(obj));
+    }
+    // ③reg 無し・nodeId 空文字 → 無効。
+    {
+        QJsonObject obj;
+        obj["connection"] = "opc1";
+        obj["nodeId"] = "";
+        QVERIFY(!SourceData::isValidJson(obj));
+    }
+}
+
+// Phase 9 / OP-1: Modbus 既存 JSON（endpoint / nodeId を持たない）が無改変で動く。
+// endpoint 無しは toJson で省略され、Modbus source は従来どおり有効。
+void VariableDataTest::modbusConnectionBackwardCompat()
+{
+    // endpoint を設定しない Modbus 接続。
+    ConnectionData c;
+    c.id = "plc1";
+    c.proto = "modbusTcp";
+    c.host = "192.168.0.10";
+    const QJsonObject cjson = c.toJson();
+    QVERIFY(!cjson.contains("endpoint"));  // 空 endpoint は省略
+
+    // nodeId を設定しない Modbus source。
+    SourceData s;
+    s.connection = "plc1";
+    s.reg = "holding";
+    s.address = 0;
+    const QJsonObject sjson = s.toJson();
+    QVERIFY(!sjson.contains("nodeId"));  // 空 nodeId は省略
+    QVERIFY(SourceData::isValidJson(sjson));  // 従来どおり有効
+
+    // round-trip で nodeId / endpoint は空のまま。
+    QVERIFY(ConnectionData::fromJson(cjson).endpoint.isEmpty());
+    QVERIFY(SourceData::fromJson(sjson).nodeId.isEmpty());
 }
 
 void VariableDataTest::actionRoundTrip()

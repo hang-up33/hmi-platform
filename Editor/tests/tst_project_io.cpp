@@ -86,6 +86,9 @@ private slots:
     void variableSourceRoundTripsThroughBridge();
     void saveAggregatesConnectionsFromSources();
     void variableWithoutSourceStaysInternal();
+    // Phase 9 / OP-1
+    void opcuaSourceRoundTripsThroughBridge();
+    void opcuaSourceWithoutNodeIdDropped();
 };
 
 void ProjectIoTest::saveThenLoadRoundTrip()
@@ -474,6 +477,110 @@ void ProjectIoTest::saveAggregatesConnectionsFromSources()
         QVERIFY(!srcObj.contains("port"));
         QVERIFY(!srcObj.contains("unitId"));
     }
+}
+
+// Phase 9 / OP-1: OPC-UA 変数 source（proto=opcua / endpoint / nodeId・reg 無し）が C++ ブリッジ
+// を往復して再現される。endpoint は connections[] へ集約され、nodeId は source に残る。
+void ProjectIoTest::opcuaSourceRoundTripsThroughBridge()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+
+    // QML 側の編集モデルを模す：OPC-UA source（reg/address は既定のまま・endpoint/nodeId を持つ）。
+    QVariantMap source;
+    source.insert("connection", "opc1");
+    source.insert("proto", "opcua");
+    source.insert("endpoint", "opc.tcp://192.168.0.20:4840");
+    source.insert("nodeId", "ns=2;s=Spindle.Temp");
+    source.insert("poll", 0);
+
+    QVariantMap var;
+    var.insert("name", "spindleTemp");
+    var.insert("type", "real");
+    var.insert("initial", "0");
+    var.insert("source", source);
+
+    ProjectIo io;
+    const QString path = dir.filePath("opcua.json");
+    QVERIFY(io.save(QUrl::fromLocalFile(path), "Sample", "Main", QVariantList{},
+                    QVariantList{ var }));
+
+    // ディスク JSON：connections[] へ endpoint が集約され、proto=opcua。source は nodeId を残す。
+    QFile file(path);
+    QVERIFY(file.open(QIODevice::ReadOnly | QIODevice::Text));
+    const QByteArray bytes = file.readAll();
+    file.close();
+    const QJsonDocument doc = QJsonDocument::fromJson(bytes);
+    QVERIFY(doc.isObject());
+    const QJsonObject root = doc.object();
+    const QJsonArray conns = root.value("connections").toArray();
+    QCOMPARE(conns.size(), 1);
+    QCOMPARE(conns.at(0).toObject().value("id").toString(), QStringLiteral("opc1"));
+    QCOMPARE(conns.at(0).toObject().value("proto").toString(), QStringLiteral("opcua"));
+    QCOMPARE(conns.at(0).toObject().value("endpoint").toString(),
+             QStringLiteral("opc.tcp://192.168.0.20:4840"));
+    const QJsonObject srcObj =
+        root.value("variables").toArray().at(0).toObject().value("source").toObject();
+    QCOMPARE(srcObj.value("nodeId").toString(), QStringLiteral("ns=2;s=Spindle.Temp"));
+    QVERIFY(!srcObj.contains("endpoint"));  // endpoint は connections[] へ集約
+
+    // load：source へ endpoint / nodeId が戻り Editor UI が再表示できる。
+    const QVariantMap result = io.load(QUrl::fromLocalFile(path));
+    QCOMPARE(result.value("ok").toBool(), true);
+    const QVariantList vars = result.value("variables").toList();
+    QCOMPARE(vars.size(), 1);
+    const QVariantMap loadedSource = vars.at(0).toMap().value("source").toMap();
+    QCOMPARE(loadedSource.value("connection").toString(), QStringLiteral("opc1"));
+    QCOMPARE(loadedSource.value("proto").toString(), QStringLiteral("opcua"));
+    QCOMPARE(loadedSource.value("endpoint").toString(),
+             QStringLiteral("opc.tcp://192.168.0.20:4840"));
+    QCOMPARE(loadedSource.value("nodeId").toString(), QStringLiteral("ns=2;s=Spindle.Temp"));
+}
+
+// Phase 9 / OP-1（Codex/CodeRabbit PR #140）：proto を opcua に切替えた直後の source
+//（QML 側が reg/address をクリア済み・nodeId は未入力で空）は不正（reg も nodeId も無い）。
+// save は SourceData::isValidJson で弾いて source を落とす（内部変数へ戻す）ため、再読込で
+// source キーが付かない。これにより「opcua なのに nodeId 空」の壊れた接続が保存されない。
+void ProjectIoTest::opcuaSourceWithoutNodeIdDropped()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+
+    // proto=opcua に切替え後・nodeId 未入力の状態を模す（reg/address はクリア済み＝空）。
+    QVariantMap source;
+    source.insert("connection", "opc1");
+    source.insert("proto", "opcua");
+    source.insert("endpoint", "opc.tcp://192.168.0.20:4840");
+    source.insert("nodeId", "");   // 未入力
+    source.insert("reg", "");      // opcua 切替でクリア済み
+    source.insert("poll", 0);
+
+    QVariantMap var;
+    var.insert("name", "spindleTemp");
+    var.insert("type", "real");
+    var.insert("initial", "0");
+    var.insert("source", source);
+
+    ProjectIo io;
+    const QString path = dir.filePath("opcua_no_nodeid.json");
+    QVERIFY(io.save(QUrl::fromLocalFile(path), "Sample", "Main", QVariantList{},
+                    QVariantList{ var }));
+
+    // ディスク JSON：不正 source は落ちて書き出されない（connections[] も生成されない）。
+    QFile file(path);
+    QVERIFY(file.open(QIODevice::ReadOnly | QIODevice::Text));
+    const QByteArray bytes = file.readAll();
+    file.close();
+    const QJsonObject root = QJsonDocument::fromJson(bytes).object();
+    QVERIFY(!root.contains("connections"));
+    QVERIFY(!root.value("variables").toArray().at(0).toObject().contains("source"));
+
+    // load：source の付かない内部変数として復元される。
+    const QVariantMap result = io.load(QUrl::fromLocalFile(path));
+    QCOMPARE(result.value("ok").toBool(), true);
+    const QVariantList vars = result.value("variables").toList();
+    QCOMPARE(vars.size(), 1);
+    QVERIFY(!vars.at(0).toMap().contains("source"));
 }
 
 // Phase 7 / MB-1: source を持たない変数は内部変数のまま（後方互換）。

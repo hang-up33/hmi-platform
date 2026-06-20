@@ -12,6 +12,10 @@ QJsonObject ConnectionData::toJson() const
     obj["host"] = host;
     obj["port"] = port;
     obj["unitId"] = unitId;
+    // Phase 9 / OP-1: OPC-UA エンドポイントは optional。空のときは省略（Modbus 既存 JSON 無改変）。
+    if (!endpoint.isEmpty()) {
+        obj["endpoint"] = endpoint;
+    }
     return obj;
 }
 
@@ -27,6 +31,8 @@ ConnectionData ConnectionData::fromJson(const QJsonObject &obj)
     c.host = obj.value("host").toString();
     c.port = obj.value("port").toInt(502);
     c.unitId = obj.value("unitId").toInt(1);
+    // Phase 9 / OP-1: endpoint は欠落時空（OPC-UA でなければ未使用）。
+    c.endpoint = obj.value("endpoint").toString();
     return c;
 }
 
@@ -38,6 +44,9 @@ QVariantMap ConnectionData::toVariantMap() const
     m.insert(QStringLiteral("host"), host);
     m.insert(QStringLiteral("port"), port);
     m.insert(QStringLiteral("unitId"), unitId);
+    // Phase 9 / OP-1: endpoint は optional。QVariantMap は QML 往復用なので空でも入れておく
+    // （QML 側は空文字で「未設定」を判定でき、JSON 省略と挙動を分けない）。
+    m.insert(QStringLiteral("endpoint"), endpoint);
     return m;
 }
 
@@ -52,6 +61,7 @@ ConnectionData ConnectionData::fromVariantMap(const QVariantMap &map)
     c.host = map.value(QStringLiteral("host")).toString();
     c.port = map.value(QStringLiteral("port"), 502).toInt();
     c.unitId = map.value(QStringLiteral("unitId"), 1).toInt();
+    c.endpoint = map.value(QStringLiteral("endpoint")).toString();
     return c;
 }
 
@@ -59,6 +69,15 @@ bool ConnectionData::isValidJson(const QJsonObject &obj)
 {
     if (!obj.value("id").isString() || obj.value("id").toString().isEmpty()) {
         return false;
+    }
+    // proto は存在する場合のみ既知値（modbusTcp / opcua）を検証（欠落時は fromJson が
+    // modbusTcp を補う＝後方互換）。OP-2 以降で proto を見てディスパッチするため、
+    // 外部 JSON の不正 proto 素通りを防ぐ（CodeRabbit PR #140）。
+    if (obj.contains("proto")) {
+        const QString proto = obj.value("proto").toString();
+        if (proto != QStringLiteral("modbusTcp") && proto != QStringLiteral("opcua")) {
+            return false;
+        }
     }
     // port は存在する場合のみ範囲検証（欠落時は fromJson が 502 を補う）。外部 JSON を
     // fromJson 経由で読む際の不正値素通りを防ぐ（CodeRabbit PR #119）。
