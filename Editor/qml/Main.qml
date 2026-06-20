@@ -26,6 +26,12 @@ Window {
     // Delete ショートカットの抑止に使う（各行が onActiveFocusChanged で増減する）。
     property int variableFieldFocusCount: 0
 
+    // Task 8B-D: Trend 系列パネルの動的 TextField（色 / 凡例ラベル、Repeater 由来で
+    // id 固定できない）の編集中フラグ。変数定義（widget undo に載せない）と違い、系列は
+    // widget 内データなので widget undo 境界（widgetEditFieldFocused）にも含める。
+    // Delete ショートカット抑止（inspectorFieldFocused）にも入れる。
+    property int seriesFieldFocusCount: 0
+
     // Task 40: 変数定義の編集ヘルパー。projectVariables は var 配列なので、編集は必ず
     // 新しい配列を再代入してバインディング（ComboBox model 等）へ通知する。
     function addVariable() {
@@ -196,6 +202,72 @@ Window {
             ? Math.max(0, names.indexOf(b.variable)) : 0
     }
 
+    // Task 8B-D: Trend 系列エディタ。系列は選択中 live Item の widgetSeries
+    //（[{variable, color, label}] 配列）を真実とし、**配列を丸ごと置換**して編集する
+    // （アクション / バインディングと同じ流儀＝in-place 変更しないので参照共有でも安全）。
+    // 系列の追加 / 削除は構造変更なので pushUndo() で 1 件積む（CheckBox と同じ離散操作。
+    // 連続編集〔色 hex 手入力 / ラベル入力〕は各 TextField のフォーカス境界が
+    // beginEdit/commitEdit を拾うため明示しない）。
+    function currentSeries() {
+        const it = canvas.selectedItem
+        if (!it || it.widgetSeries === undefined || it.widgetSeries === null) {
+            return []
+        }
+        return it.widgetSeries
+    }
+    function addSeries() {
+        if (!canvas.selectedItem) {
+            return
+        }
+        canvas.pushUndo()
+        const next = currentSeries().slice()
+        next.push({ variable: "", color: "", label: "" })
+        canvas.selectedItem.widgetSeries = next
+    }
+    function removeSeries(index) {
+        if (!canvas.selectedItem) {
+            return
+        }
+        const next = currentSeries().slice()
+        if (index < 0 || index >= next.length) {
+            return
+        }
+        canvas.pushUndo()
+        next.splice(index, 1)
+        canvas.selectedItem.widgetSeries = next
+    }
+    function updateSeries(index, key, value) {
+        if (!canvas.selectedItem) {
+            return
+        }
+        const next = currentSeries().slice()
+        if (index < 0 || index >= next.length) {
+            return
+        }
+        // 行オブジェクトを複製してから書き換える（live/undo の参照共有を切る）。
+        const row = {
+            variable: next[index].variable !== undefined ? next[index].variable : "",
+            color: next[index].color !== undefined ? next[index].color : "",
+            label: next[index].label !== undefined ? next[index].label : ""
+        }
+        row[key] = value
+        next[index] = row
+        canvas.selectedItem.widgetSeries = next
+    }
+
+    // Task 8B-D: 系列の線色を選ぶ専用 ColorDialog 起動。背景色等の openColorDialog は
+    // 「選択中 Item の単一プロパティ名」へ書き戻す方式だが、系列色は配列内 index への
+    // 書き戻しが要るため別ダイアログ（seriesColorDialog）を使う。
+    function openSeriesColorDialog(index, currentHex) {
+        if (!canvas.selectedItem) {
+            return
+        }
+        seriesColorDialog.targetIndex = index
+        seriesColorDialog.selectedColor =
+            (currentHex && /^#[0-9A-Fa-f]{6}$/.test(currentHex)) ? currentHex : "#4cc9f0"
+        seriesColorDialog.open()
+    }
+
     // Task 26: 選択中の live な EditableWidget はインスペクタの編集対象。
     // 解決ロジックと所有は Canvas に集約した（canvas.selectedItem）。Repeater
     // 再生成後も同一 id の新しい live Item に解決し直される（Codex PR #52 P2 指摘
@@ -354,6 +426,11 @@ Window {
         || inspectorYMaxField.activeFocus
         || inspectorLineColorField.activeFocus
         || inspectorSampleMsSpin.activeFocus
+        // Task 8B-D: 軸/凡例（Y 目盛り本数）と系列パネルの動的入力欄も undo 境界に含める。
+        // 系列の色 / 凡例ラベル TextField はフォーカス取得 → editingFinished（配列置換）→
+        // フォーカス喪失（commitEdit）の順なので 1 編集 = 1 undo になる。
+        || inspectorYTickCountSpin.activeFocus
+        || rootWindow.seriesFieldFocusCount > 0
         || fieldX.activeFocus || fieldY.activeFocus
         || fieldW.activeFocus || fieldH.activeFocus
 
@@ -1631,6 +1708,200 @@ Window {
                                     }
                                 }
                             }
+
+                            // ── 軸 / 凡例（Task 8B-D） ──
+                            // グリッド線 / 凡例の表示トグルと Y 目盛り本数。いずれも既定 OFF /
+                            // 既定本数（HmiTrend が 0/負値 → 4 に解決）。CheckBox は離散操作なので
+                            // 明示 beginEdit/commitEdit、SpinBox は onValueModified の 2 本立て。
+                            Rectangle { width: parent.width; height: 1; color: "#dddddd" }
+                            Label { text: qsTr("軸 / 凡例"); font.bold: true; color: "#555555" }
+
+                            CheckBox {
+                                id: inspectorShowGridCheck
+                                objectName: "inspectorShowGridCheck"
+                                text: qsTr("グリッド線を表示")
+                                ToolTip.text: qsTr("水平グリッド線と Y 軸目盛りラベルを描画します")
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
+                                onToggled: {
+                                    if (canvas.selectedItem) {
+                                        canvas.beginEdit()
+                                        canvas.selectedItem.widgetShowGrid = checked
+                                        canvas.commitEdit()
+                                    }
+                                }
+                                Connections {
+                                    target: canvas
+                                    function onSelectedItemChanged() {
+                                        inspectorShowGridCheck.checked = canvas.selectedItem
+                                            ? canvas.selectedItem.widgetShowGrid : false
+                                    }
+                                }
+                            }
+
+                            CheckBox {
+                                id: inspectorShowLegendCheck
+                                objectName: "inspectorShowLegendCheck"
+                                text: qsTr("凡例を表示")
+                                ToolTip.text: qsTr("系列の色スウォッチとラベルを凡例として描画します")
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
+                                onToggled: {
+                                    if (canvas.selectedItem) {
+                                        canvas.beginEdit()
+                                        canvas.selectedItem.widgetShowLegend = checked
+                                        canvas.commitEdit()
+                                    }
+                                }
+                                Connections {
+                                    target: canvas
+                                    function onSelectedItemChanged() {
+                                        inspectorShowLegendCheck.checked = canvas.selectedItem
+                                            ? canvas.selectedItem.widgetShowLegend : false
+                                    }
+                                }
+                            }
+
+                            // Y 目盛り本数。0/未指定は HmiTrend 側で既定 4 へ解決。
+                            // SpinBox（editable なし）で from を 0（=既定）にする。
+                            Label { text: qsTr("Y 目盛り本数") }
+                            SpinBox {
+                                id: inspectorYTickCountSpin
+                                objectName: "inspectorYTickCountSpin"
+                                from: 0
+                                to: 20
+                                value: 0
+                                ToolTip.text: qsTr("Y 軸の目盛り本数。0 で既定（4 本）。グリッド線表示時に効きます")
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
+                                onValueModified: {
+                                    if (canvas.selectedItem) {
+                                        canvas.selectedItem.widgetYTickCount = value
+                                    }
+                                }
+                                Connections {
+                                    target: canvas
+                                    function onSelectedItemChanged() {
+                                        const it = canvas.selectedItem
+                                        inspectorYTickCountSpin.value = (it && it.widgetYTickCount > 0)
+                                            ? it.widgetYTickCount : 0
+                                    }
+                                }
+                            }
+
+                            // ── 系列（Task 8B-D） ──
+                            // 複数系列の編集。各行 = 変数 ComboBox + 線色（hex TextField + スウォッチ）
+                            // + 凡例ラベル TextField + 削除ボタン。系列は selectedItem.widgetSeries を
+                            // 配列丸ごと置換で編集する（updateSeries/addSeries/removeSeries）。系列 0 件
+                            // でも単系列パス（線色 / value バインド）が後方互換で描く。
+                            Rectangle { width: parent.width; height: 1; color: "#dddddd" }
+                            Label { text: qsTr("系列"); font.bold: true; color: "#555555" }
+
+                            // 系列行の Repeater。model は live Item の widgetSeries。選択切替・
+                            // 配列置換のたびに widgetSeries が変わり Repeater が再構築される。
+                            Repeater {
+                                id: inspectorSeriesRepeater
+                                objectName: "inspectorSeriesRepeater"
+                                model: rootWindow.selectedIsTrend && canvas.selectedItem
+                                    ? canvas.selectedItem.widgetSeries : []
+                                delegate: Column {
+                                    id: seriesRow
+                                    required property var modelData
+                                    required property int index
+                                    width: parent ? parent.width : 0
+                                    spacing: 4
+
+                                    Row {
+                                        width: parent.width
+                                        spacing: 4
+
+                                        // 変数 ComboBox（凡例ラベル空のときの既定表示にも使われる）。
+                                        ComboBox {
+                                            objectName: "seriesVariable_" + seriesRow.index
+                                            width: 100
+                                            model: rootWindow.variableNameModel()
+                                            currentIndex: {
+                                                const v = seriesRow.modelData
+                                                    && seriesRow.modelData.variable !== undefined
+                                                    ? seriesRow.modelData.variable : ""
+                                                return Math.max(0, model.indexOf(v))
+                                            }
+                                            // "(未選択)" は空文字へ畳む（variableNameModel の先頭）。
+                                            onActivated: rootWindow.updateSeries(
+                                                seriesRow.index, "variable",
+                                                currentIndex === 0 ? "" : currentText)
+                                        }
+                                        Button {
+                                            objectName: "seriesDelete_" + seriesRow.index
+                                            text: qsTr("×")
+                                            onClicked: rootWindow.removeSeries(seriesRow.index)
+                                        }
+                                    }
+
+                                    Row {
+                                        width: parent.width
+                                        spacing: 6
+
+                                        TextField {
+                                            id: seriesColorField
+                                            objectName: "seriesColor_" + seriesRow.index
+                                            width: 100
+                                            text: seriesRow.modelData
+                                                && seriesRow.modelData.color !== undefined
+                                                ? seriesRow.modelData.color : ""
+                                            placeholderText: qsTr("(既定色)")
+                                            validator: RegularExpressionValidator {
+                                                regularExpression: /^(#[0-9A-Fa-f]{6})?$/
+                                            }
+                                            onEditingFinished: if (acceptableInput)
+                                                rootWindow.updateSeries(seriesRow.index, "color", text)
+                                            onActiveFocusChanged:
+                                                rootWindow.seriesFieldFocusCount += activeFocus ? 1 : -1
+                                        }
+                                        // 色スウォッチ（クリックで系列専用 ColorDialog）。
+                                        Rectangle {
+                                            objectName: "seriesColorSwatch_" + seriesRow.index
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            width: rootWindow.colorSwatchSize
+                                            height: rootWindow.colorSwatchSize
+                                            radius: 4
+                                            border.color: "#999999"
+                                            border.width: 1
+                                            color: (seriesColorField.text !== ""
+                                                    && seriesColorField.acceptableInput)
+                                                ? seriesColorField.text : "#4cc9f0"
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: rootWindow.openSeriesColorDialog(
+                                                    seriesRow.index, seriesColorField.text)
+                                            }
+                                        }
+                                    }
+
+                                    // 凡例ラベル（空 = 変数名へフォールバック）。
+                                    TextField {
+                                        objectName: "seriesLabel_" + seriesRow.index
+                                        width: parent.width
+                                        text: seriesRow.modelData
+                                            && seriesRow.modelData.label !== undefined
+                                            ? seriesRow.modelData.label : ""
+                                        placeholderText: qsTr("凡例ラベル（空=変数名）")
+                                        onEditingFinished:
+                                            rootWindow.updateSeries(seriesRow.index, "label", text)
+                                        onActiveFocusChanged:
+                                            rootWindow.seriesFieldFocusCount += activeFocus ? 1 : -1
+                                    }
+
+                                    Rectangle { width: parent.width; height: 1; color: "#eeeeee" }
+                                }
+                            }
+
+                            Button {
+                                objectName: "addSeriesButton"
+                                text: qsTr("系列を追加")
+                                onClicked: rootWindow.addSeries()
+                            }
                         }
 
                         // ── 状態 : 有効 / チェック可能 / チェック状態 ──
@@ -2007,6 +2278,23 @@ Window {
             canvas.selectedItem[targetProperty] = hex
             canvas.commitEdit()
             targetField.text = hex
+        }
+    }
+
+    // Task 8B-D: Trend 系列の線色を選ぶ共有 ColorDialog（series 配列の index へ書き戻す）。
+    // 色変更は離散操作なので明示 beginEdit/commitEdit で 1 件 undo へ積む（CheckBox と同型）。
+    ColorDialog {
+        id: seriesColorDialog
+        title: qsTr("系列の線色を選択")
+        property int targetIndex: -1
+        onAccepted: {
+            if (!canvas.selectedItem || targetIndex < 0) {
+                return
+            }
+            const hex = rootWindow.colorToHex(selectedColor)
+            canvas.beginEdit()
+            rootWindow.updateSeries(targetIndex, "color", hex)
+            canvas.commitEdit()
         }
     }
 

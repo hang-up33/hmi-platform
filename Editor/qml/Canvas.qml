@@ -1017,6 +1017,10 @@ Item {
                             hasYMax: wrapper.widgetHasYMax
                             lineColor: wrapper.widgetLineColor
                             sampleMs: wrapper.widgetSampleMs
+                            // Task 8B-D: 軸/凡例フラグを流す（既定 OFF＝後方互換）。
+                            showGrid: wrapper.widgetShowGrid
+                            showLegend: wrapper.widgetShowLegend
+                            yTickCount: wrapper.widgetYTickCount
                             backgroundColor: wrapper.widgetBackgroundColor
                             borderColor: wrapper.widgetBorderColor
                             borderWidth: wrapper.widgetBorderWidth

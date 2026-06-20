@@ -415,6 +415,10 @@ Item {
                         hasYMax: wrapper.modelData.hasYMax !== undefined ? wrapper.modelData.hasYMax : false
                         lineColor: wrapper.modelData.lineColor !== undefined ? wrapper.modelData.lineColor : ""
                         sampleMs: wrapper.modelData.sampleMs !== undefined ? wrapper.modelData.sampleMs : 0
+                        // Task 8B-D: 軸/凡例フラグを流す（既定 OFF＝後方互換）。
+                        showGrid: wrapper.modelData.showGrid !== undefined ? wrapper.modelData.showGrid : false
+                        showLegend: wrapper.modelData.showLegend !== undefined ? wrapper.modelData.showLegend : false
+                        yTickCount: wrapper.modelData.yTickCount !== undefined ? wrapper.modelData.yTickCount : 0
                         // 背景・枠スタイル（Editor delegate と対）。
                         backgroundColor: wrapper.modelData.backgroundColor !== undefined ? wrapper.modelData.backgroundColor : ""
                         borderColor: wrapper.modelData.borderColor !== undefined ? wrapper.modelData.borderColor : ""
