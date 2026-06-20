@@ -164,21 +164,20 @@ Phase 8 の `HmiTrend` を N 系列へ一般化する。要点：
 |---|---|---|
 | 8B-A Schema 拡張（TrendSeriesData + series + 軸/凡例フラグ round-trip） | 完了（マージ済み） | #132 |
 | 8B-B HmiTrend 複数系列描画 + delegate 値供給 | 完了（マージ済み） | #136 |
-| 8B-C 軸目盛り/凡例描画 | 実装済み（レビュー中） | — |
-| 8B-D Editor 系列エディタ + 軸/凡例トグル | 未着手 | — |
+| 8B-C 軸目盛り/凡例描画 | 完了（コミット 63e1d2d） | — |
+| 8B-D Editor 系列エディタ + 軸/凡例トグル | 実装済み（レビュー中） | — |
 | 8B-E cross-app E2E（系列ごと独立サンプリング）+ スクショ | 未着手 | — |
 
-**次タスク = 8B-D（Editor 系列エディタ + 軸/凡例トグル）。** 8B-C で `HmiTrend.qml` の
-`Canvas.onPaint` にグリッド線 + Y 軸目盛りラベル + 凡例描画を追加した（`showGrid`/`showLegend` で
-描画分岐・既定 OFF＝後方互換、いずれも `Canvas` 自描画＝新 Qt 依存ゼロ維持）。レイアウトは派生
-プロパティに集約：プロット域 `_plotX`/`_plotY`/`_plotWidth`/`_plotHeight`、目盛りラベル域幅
-`_axisLabelWidth`（showGrid 時 34px）、凡例域高さ `_legendHeight`（showLegend 時 18px）、目盛り本数
-`resolvedYTickCount`（`0`/負値 → 既定 4）。凡例ラベルは `series[i].label` 空 → 変数名 → `S<i+1>` の
-フォールバック（実機に和文フォント無＝既定 ASCII）。`tst_hmi_trend.qml` に **ピクセルを見ず**派生
-プロパティ/フラグを assert する 6 テストを追加（既定 OFF・tick 解決・grid/legend 各レイアウト・両 ON・
-単/複数系列とも凡例 ON）。**delegate がフラグを流すのは 8B-D**（既定 OFF なので Editor/Simulator の
-見た目は不変＝スクショ更新不要）。横展開テンプレの機械適用（Schema 4 メソッド → delegate → メタ →
-HmiTrend → インスペクタ → E2E）。
+**次タスク = 8B-E（cross-app E2E + 最終スクショ）。** 8B-D で trendComponent（Editor/Simulator 両 delegate）
+が `showGrid`/`showLegend`/`yTickCount` を HmiTrend へ供給するようにし（8B-A 配線の素通し穴埋め）、
+Editor インスペクタ「Trend 詳細」に**系列エディタ**（系列行 = 変数 ComboBox + 線色〔専用 `seriesColorDialog`〕
++ 凡例ラベル、追加/削除）と**軸/凡例トグル**（`showGrid`/`showLegend` チェック + `yTickCount` 入力）を追加。
+系列は `selectedItem.widgetSeries`（live 配列）を真実に**配列丸ごと置換**で編集（`addSeries`/`removeSeries`/
+`updateSeries`）。undo 境界は追加/削除=`pushUndo()`・色/ラベル連続編集=フォーカス境界 `beginEdit`/
+`commitEdit`、系列の動的 TextField は新カウンタ `seriesFieldFocusCount` で undo 算入 + Delete ガード。
+objectName・編集ロジック・Schema 不変。ショーケース demo を 2 系列 + グリッド + 凡例に拡張し
+`editor.gif`/`simulator.png` を再撮影。残るは 8B-E（cross-app E2E `test_trend_multi.py` で系列ごと独立
+サンプリングを公開プロパティ観測 + 最終スクショ）。
 
 ## 非スコープ（別承認）
 
