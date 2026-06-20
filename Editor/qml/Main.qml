@@ -135,6 +135,40 @@ Window {
         next[index] = nv
         projectVariables = next
     }
+    // Phase 9 / OP-1: proto 切替（modbusTcp ↔ opcua）。proto あたり単一接続の制約
+    //（Phase 7 と同じ）を維持しつつ、Modbus と OPC-UA を混在させたとき connections[] の
+    // id 衝突（両 proto が同じ "plc1" に集約され save が最初の接続だけ採用→後続を捨て、
+    // 再読込で壊れる）を防ぐため、proto 由来の既定 connection id を入れる（modbusTcp→"plc1"
+    // / opcua→"opc1"）。さらに非アクティブ proto のフィールドをクリアして、opcua 切替後も残る
+    // reg のせいで isValidJson が「nodeId 空でも reg 経由で有効」と誤判定するのを防ぐ
+    //（opcua へ→reg/address クリア、modbusTcp へ→endpoint/nodeId クリア）。Codex/CodeRabbit PR #140。
+    function updateVariableSourceProto(index, proto) {
+        if (index < 0 || index >= projectVariables.length) {
+            return
+        }
+        const v = projectVariables[index]
+        if (!v.source) {
+            return
+        }
+        const next = projectVariables.slice()
+        const nv = Object.assign({}, next[index])
+        const ns = Object.assign({}, nv.source)
+        ns.proto = proto
+        if (proto === "opcua") {
+            ns.connection = "opc1"
+            ns.reg = ""
+            ns.address = 0
+            ns.poll = 0  // OPC-UA 既定は購読のみ（0 = フォールバックなし）
+        } else {
+            ns.connection = "plc1"
+            ns.endpoint = ""
+            ns.nodeId = ""
+            ns.poll = 1000  // Modbus 既定ポーリング
+        }
+        nv.source = ns
+        next[index] = nv
+        projectVariables = next
+    }
 
     // ComboBox（アクション target / バインディング variable）の選択肢：先頭に "(未選択)"。
     function variableNameModel() {
@@ -818,7 +852,7 @@ Window {
                                         width: 120
                                         model: ["modbusTcp", "opcua"]
                                         currentIndex: Math.max(0, model.indexOf(varRow.rowProto))
-                                        onActivated: rootWindow.updateVariableSource(varRow.index, "proto", currentText)
+                                        onActivated: rootWindow.updateVariableSourceProto(varRow.index, currentText)
                                     }
 
                                     // --- Modbus 用フィールド（proto === "modbusTcp" のとき表示） ---
@@ -927,15 +961,24 @@ Window {
                                         onActiveFocusChanged: rootWindow.variableFieldFocusCount += activeFocus ? 1 : -1
                                     }
 
-                                    // ポーリング周期は両プロトコル共通（OPC-UA は購読不可時のフォールバック）。
+                                    // ポーリング周期は両プロトコル共通。OPC-UA は購読が主なので poll=0
+                                    //（購読のみ）を許す＝下限を proto で切替える（opcua→0 / modbusTcp→1）。
+                                    // Codex/CodeRabbit PR #140。
                                     Label { text: qsTr("ポーリング(ms)") }
                                     TextField {
                                         objectName: "variableSourcePoll_" + varRow.index
                                         width: 80
                                         inputMethodHints: Qt.ImhDigitsOnly
-                                        validator: IntValidator { bottom: 1; top: 600000 }
-                                        text: varRow.rowSource ? String(varRow.rowSource.poll !== undefined ? varRow.rowSource.poll : 1000) : ""
-                                        placeholderText: qsTr("1000")
+                                        validator: IntValidator {
+                                            bottom: varRow.rowProto === "opcua" ? 0 : 1
+                                            top: 600000
+                                        }
+                                        text: varRow.rowSource
+                                            ? String(varRow.rowSource.poll !== undefined
+                                                     ? varRow.rowSource.poll
+                                                     : (varRow.rowProto === "opcua" ? 0 : 1000))
+                                            : ""
+                                        placeholderText: varRow.rowProto === "opcua" ? qsTr("0") : qsTr("1000")
                                         onEditingFinished: if (acceptableInput) rootWindow.updateVariableSource(varRow.index, "poll", parseInt(text, 10))
                                         onActiveFocusChanged: rootWindow.variableFieldFocusCount += activeFocus ? 1 : -1
                                     }

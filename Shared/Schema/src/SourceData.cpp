@@ -68,7 +68,10 @@ bool SourceData::isValidJson(const QJsonObject &obj)
         || reg == QStringLiteral("discrete")
         || reg == QStringLiteral("input")
         || reg == QStringLiteral("holding");
-    const bool nodeIdValid = !obj.value("nodeId").toString().isEmpty();
+    // nodeId は文字列型 + 非空のときのみ OPC-UA source として有効（数値等の型不正は弾く。
+    // Codex / CodeRabbit PR #140）。
+    const QJsonValue nodeIdVal = obj.value("nodeId");
+    const bool nodeIdValid = nodeIdVal.isString() && !nodeIdVal.toString().isEmpty();
     if (!regValid && !nodeIdValid) {
         return false;
     }

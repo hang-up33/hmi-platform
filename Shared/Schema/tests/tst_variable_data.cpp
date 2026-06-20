@@ -38,6 +38,7 @@ private slots:
     void opcuaSourceRoundTrip();
     void sourceProtoIsValidJson_data();
     void sourceProtoIsValidJson();
+    void sourceNodeIdTypeValidation();
     void modbusConnectionBackwardCompat();
 
     void actionRoundTrip();
@@ -508,6 +509,35 @@ void VariableDataTest::sourceProtoIsValidJson()
         obj["nodeId"] = nodeId;
     }
     QCOMPARE(SourceData::isValidJson(obj), valid);
+}
+
+// Phase 9 / OP-1（Codex/CodeRabbit PR #140）：nodeId の型 / presence 検証。
+//  ①nodeId が非文字列（JSON number 等）→ OPC-UA source として無効（reg も無いので弾く）。
+//  ②reg 無し・nodeId 有り（文字列）→ 有効。
+//  ③reg 無し・nodeId 空文字 → 無効。
+void VariableDataTest::sourceNodeIdTypeValidation()
+{
+    // ①nodeId が数値（型不正）・reg 無し → 弾く。
+    {
+        QJsonObject obj;
+        obj["connection"] = "opc1";
+        obj["nodeId"] = 123;  // 文字列でない
+        QVERIFY(!SourceData::isValidJson(obj));
+    }
+    // ②reg 無し・nodeId 文字列 → 有効。
+    {
+        QJsonObject obj;
+        obj["connection"] = "opc1";
+        obj["nodeId"] = "ns=2;s=Temp";
+        QVERIFY(SourceData::isValidJson(obj));
+    }
+    // ③reg 無し・nodeId 空文字 → 無効。
+    {
+        QJsonObject obj;
+        obj["connection"] = "opc1";
+        obj["nodeId"] = "";
+        QVERIFY(!SourceData::isValidJson(obj));
+    }
 }
 
 // Phase 9 / OP-1: Modbus 既存 JSON（endpoint / nodeId を持たない）が無改変で動く。
