@@ -165,19 +165,23 @@ Phase 8 の `HmiTrend` を N 系列へ一般化する。要点：
 | 8B-A Schema 拡張（TrendSeriesData + series + 軸/凡例フラグ round-trip） | 完了（マージ済み） | #132 |
 | 8B-B HmiTrend 複数系列描画 + delegate 値供給 | 完了（マージ済み） | #136 |
 | 8B-C 軸目盛り/凡例描画 | 完了（コミット 63e1d2d） | — |
-| 8B-D Editor 系列エディタ + 軸/凡例トグル | 実装済み（レビュー中） | — |
-| 8B-E cross-app E2E（系列ごと独立サンプリング）+ スクショ | 未着手 | — |
+| 8B-D Editor 系列エディタ + 軸/凡例トグル | 完了（コミット 7fba17c） | — |
+| 8B-E cross-app E2E（系列ごと独立サンプリング）+ スクショ | 完了（コミット 5a149b6） | — |
 
-**次タスク = 8B-E（cross-app E2E + 最終スクショ）。** 8B-D で trendComponent（Editor/Simulator 両 delegate）
-が `showGrid`/`showLegend`/`yTickCount` を HmiTrend へ供給するようにし（8B-A 配線の素通し穴埋め）、
-Editor インスペクタ「Trend 詳細」に**系列エディタ**（系列行 = 変数 ComboBox + 線色〔専用 `seriesColorDialog`〕
-+ 凡例ラベル、追加/削除）と**軸/凡例トグル**（`showGrid`/`showLegend` チェック + `yTickCount` 入力）を追加。
-系列は `selectedItem.widgetSeries`（live 配列）を真実に**配列丸ごと置換**で編集（`addSeries`/`removeSeries`/
-`updateSeries`）。undo 境界は追加/削除=`pushUndo()`・色/ラベル連続編集=フォーカス境界 `beginEdit`/
-`commitEdit`、系列の動的 TextField は新カウンタ `seriesFieldFocusCount` で undo 算入 + Delete ガード。
-objectName・編集ロジック・Schema 不変。ショーケース demo を 2 系列 + グリッド + 凡例に拡張し
-`editor.gif`/`simulator.png` を再撮影。残るは 8B-E（cross-app E2E `test_trend_multi.py` で系列ごと独立
-サンプリングを公開プロパティ観測 + 最終スクショ）。
+**Phase 8-B クローズ（全タスク完了）。** 8B-E で `tests/e2e/test_trend_multi.py`（`e2e_trend_multi`）を
+新設：Editor 段で 2 系列 + 凡例 ON の Trend を round-trip 保存し保存 JSON を直接 assert（`series` 2 件・
+各 variable/color/label・`showGrid`/`showLegend`/`yTickCount`）、Simulator 段で A/B の NumericField を
+交互確定して各系列変数を独立操作し `sampleCountAt(i)`/`lastValueAt(i)` の独立追従を観測（系列取り違え
+無しを期待表で担保）。**Web `ctest` 25/25 緑**（unit 12 + e2e 13）。スクショは 8B-D で 2 系列 + グリッド +
+凡例へ更新済み（8B-E は E2E のみ＝見た目不変で再撮影なし）。
+
+> 罠（8B-E）：`sampleCountAt`/`lastValueAt` は `getStringProperty`（string）でなく `invokeMethod` の
+> 返り値で観測する必要があり、AnyRPC が `<value><i4>1</i4></value>` と型タグ付きで返す。既存 E2E の
+> string 専用正規表現では float 変換できず FAIL → `<i4>`/`<int>`/`<double>`/`<boolean>`/`<string>` を
+> 剥がすよう値抽出を一般化して解消（同型の typed 返り値観測を足す後続 E2E はこの抽出を流用する）。
+
+**次フェーズ＝未確定。** 残る候補（履歴永続化〔historian〕・Gauge / Toggle・NumericField の
+step/decimals/unit・OPC-UA）は未承認＝自動着手せず先にユーザーとスコープ確定する。
 
 ## 非スコープ（別承認）
 
