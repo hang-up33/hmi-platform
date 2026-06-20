@@ -25,8 +25,7 @@ model: opus
 - **Phase 8 / トレンドグラフ（Trend・ライブ折れ線）**：✅ **完了（2026-06-16 承認）**。新 Widget 種別「Trend」を横展開テンプレに乗せた。**描画は QML `Canvas` 自描画で新 Qt モジュール依存ゼロ**（QtCharts 不使用＝実機にそのまま載る）。サンプル源は既存 `bindings` の「読み」を再利用（Schema/C++ ブリッジ無改変）。**T-A〔Schema 拡張〕/ T-B〔HmiTrend 描画 + 型分岐〕/ T-C〔Editor 追加 UI/インスペクタ〕/ T-D〔ライブ E2E `e2e_trend_live` + simulator.png スクショ〕完了**（Web `ctest` 23/23 緑）。分割・進捗の正本は `Docs/phase8-trend-plan.md`「進捗」表。
 - **Phase 8-B / Trend 拡張（複数系列 + 軸目盛り/凡例）**：✅ **完了（2026-06-20 クローズ）**。単系列 Trend を ①複数系列（子型 `TrendSeriesData {variable, color, label}` の `series` 配列で N 本の折れ線・色分け）②軸目盛り/凡例（グリッド線・Y 軸目盛りラベル・系列名凡例）へ拡張。**Phase 8 の「新 Qt モジュール依存ゼロ（QML `Canvas` 自描画のみ）」を維持**し**単系列 JSON は無改変で動く**（`series` 空＝暗黙 1 系列で後方互換）。**8B-A〔Schema 拡張〕#132 ／8B-B〔HmiTrend N 系列描画〕#136 ／8B-C〔軸/凡例描画（既定 OFF）〕／8B-D〔Editor 系列エディタ + 軸/凡例トグル〕／8B-E〔cross-app E2E `e2e_trend_multi` + スクショ〕すべて完了（Web ctest 25/25 緑）**。分割・進捗の正本は `Docs/phase8b-trend-extend-plan.md`「進捗」表。
 - **Phase 9 / OPC-UA クライアント**：📋 **計画起票済み（2026-06-20 スコープ選択）。実装は別承認 + ローカル環境が要る**。Modbus（Phase 7）と同じ「変数ソース」抽象に proto 2 本目を足し、`OpcUaController`（`QOpcUaClient` + MonitoredItem 購読）を Simulator 共有ソースに置く。🔴 **Qt OpcUa は aqt 非同梱＝Web 不可**（2026-06-20 実証）。OP-1（Schema + Editor UI）のみ Web 可、OP-2 以降はローカル kit + 実機。分割・進捗の正本は `Docs/phase9-opcua-plan.md`「進捗」表。
-- **残る未承認候補**：履歴永続化（historian）・Gauge / Toggle・NumericField の step/decimals/unit。**自動着手せず先にユーザーとスコープ確定する。**
-- **その他の次候補**：⛔ **未承認**。履歴永続化、step / decimals / unit、後続入力 Widget（Gauge / Toggle）、OPC-UA 等はいずれも候補段階。**自動着手せず、先にユーザーとスコープを確定する**（CLAUDE.md「Must Always」）。
+- **残る未承認候補**：⛔ **未承認**。履歴永続化（historian）・後続入力 Widget（Gauge / Toggle）・NumericField の step/decimals/unit はいずれも候補段階。**自動着手せず、先にユーザーとスコープを確定する**（CLAUDE.md「Must Always」）。
 
 ## 実行手順
 
