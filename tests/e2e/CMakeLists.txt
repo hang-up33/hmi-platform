@@ -188,6 +188,27 @@ set_tests_properties(e2e_trend_live PROPERTIES
     LABELS e2e
 )
 
+# Task 8B-E (Phase 8-B): Trend 複数系列の「系列ごと独立サンプリング」cross-app E2E。
+# Editor で 2 系列（sensorTemp/sensorPressure）+ 凡例 ON（showGrid/showLegend/yTickCount）の
+# Trend + 各変数の操作用 NumericField を `--open` → saveTo で round-trip → 保存 JSON を
+# 直接検証（type:"Trend" / series 2 件 / 各 variable・color / showLegend）→ Simulator を
+# `--open` で起動し、操作用 NumericField A/B を交互に setStringProperty + commitValue() で
+# 確定して各系列の変数を独立に変化させ、Trend（objectName "hmiTrend"）の公開
+# sampleCountAt(i) が増加し lastValueAt(i) がその系列へ書いた値へ追従する（系列を取り
+# 違えない）のを invokeMethod 返り値で観測する。test_trend_live の複数系列版。
+# 2 プロセス起動のため TIMEOUT は他の cross-app と同等。
+add_test(
+    NAME e2e_trend_multi
+    COMMAND ${Python3_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_trend_multi.py
+        --editor-binary $<TARGET_FILE:hmi_editor>
+        --simulator-binary $<TARGET_FILE:hmi_simulator>
+)
+set_tests_properties(e2e_trend_multi PROPERTIES
+    TIMEOUT 60
+    LABELS e2e
+)
+
 # MB-2: Modbus TCP 読込ポーリングの cross-app E2E。
 # pymodbus ソフトスレーブ（modbus_slave.py をサブプロセス起動）の holding register を
 # Simulator（ModbusController）が周期ポーリング → 変数 → text binding 追従で Label に反映
