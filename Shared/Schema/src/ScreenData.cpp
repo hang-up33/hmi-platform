@@ -1,12 +1,17 @@
 #include "hmi/schema/ScreenData.h"
 
+#include "SchemaJsonIo_p.h"
+
 #include <QJsonArray>
 #include <QJsonValue>
 
 namespace hmi::schema {
 
+using namespace hmi::schema::detail;
+
 QJsonObject ScreenData::toJson() const
 {
+    // widgets は（空でも）必須キーとして常に書き出す（後方互換・読込側の前提）。
     QJsonArray arr;
     for (const auto &w : widgets) {
         arr.append(w.toJson());
@@ -21,11 +26,7 @@ ScreenData ScreenData::fromJson(const QJsonObject &obj)
 {
     ScreenData s;
     s.name = obj.value("name").toString();
-    const QJsonArray arr = obj.value("widgets").toArray();
-    s.widgets.reserve(arr.size());
-    for (const QJsonValue &v : arr) {
-        s.widgets.append(WidgetData::fromJson(v.toObject()));
-    }
+    s.widgets = jsonArrayToList<WidgetData>(obj.value("widgets"));
     return s;
 }
 

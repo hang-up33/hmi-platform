@@ -1,5 +1,7 @@
 #include "hmi/schema/ProjectData.h"
 
+#include "SchemaJsonIo_p.h"
+
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonParseError>
@@ -7,8 +9,12 @@
 
 namespace hmi::schema {
 
+using namespace hmi::schema::detail;
+
 QJsonObject ProjectData::toJson() const
 {
+    // screens は（空でも）必須キーとして常に書き出す。variables / connections は
+    // optional ＝空のとき省略（putJsonArray が後方互換の省略規則を担う）。
     QJsonArray arr;
     for (const auto &s : screens) {
         arr.append(s.toJson());
@@ -16,22 +22,8 @@ QJsonObject ProjectData::toJson() const
     QJsonObject obj;
     obj["project"] = project;
     obj["screens"] = arr;
-    // Task 39: 変数定義は optional。空のとき省略（後方互換）。
-    if (!variables.isEmpty()) {
-        QJsonArray varsArr;
-        for (const VariableData &v : variables) {
-            varsArr.append(v.toJson());
-        }
-        obj["variables"] = varsArr;
-    }
-    // Phase 7 / MB-1: 接続定義も optional。空のとき省略（後方互換）。
-    if (!connections.isEmpty()) {
-        QJsonArray connArr;
-        for (const ConnectionData &c : connections) {
-            connArr.append(c.toJson());
-        }
-        obj["connections"] = connArr;
-    }
+    putJsonArray(obj, "variables", variables);   // Task 39
+    putJsonArray(obj, "connections", connections); // Phase 7 / MB-1
     return obj;
 }
 
@@ -39,21 +31,10 @@ ProjectData ProjectData::fromJson(const QJsonObject &obj)
 {
     ProjectData p;
     p.project = obj.value("project").toString();
-    const QJsonArray arr = obj.value("screens").toArray();
-    p.screens.reserve(arr.size());
-    for (const QJsonValue &v : arr) {
-        p.screens.append(ScreenData::fromJson(v.toObject()));
-    }
-    // Task 39: 変数定義配列（欠落時は空配列）。
-    const QJsonArray varsArr = obj.value("variables").toArray();
-    for (const QJsonValue &v : varsArr) {
-        p.variables.append(VariableData::fromJson(v.toObject()));
-    }
-    // Phase 7 / MB-1: 接続定義配列（欠落時は空配列）。
-    const QJsonArray connArr = obj.value("connections").toArray();
-    for (const QJsonValue &c : connArr) {
-        p.connections.append(ConnectionData::fromJson(c.toObject()));
-    }
+    p.screens = jsonArrayToList<ScreenData>(obj.value("screens"));
+    // Task 39 / MB-1: 変数定義・接続定義配列（欠落時は空配列）。
+    p.variables = jsonArrayToList<VariableData>(obj.value("variables"));
+    p.connections = jsonArrayToList<ConnectionData>(obj.value("connections"));
     return p;
 }
 
@@ -71,34 +52,11 @@ bool ProjectData::isValidJson(const QJsonObject &obj)
             return false;
         }
     }
-    // Task 39（Codex PR #78 [P2]）：variables は optional だが、**存在する場合は**配列で
-    // 各要素が VariableData として有効であることを要求する（不在は後方互換で許容）。
-    // これで type:"float" や非 object の変数を含む JSON を load の入口で弾ける。
-    if (obj.contains("variables")) {
-        if (!obj.value("variables").isArray()) {
-            return false;
-        }
-        const QJsonArray vars = obj.value("variables").toArray();
-        for (const QJsonValue &v : vars) {
-            if (!v.isObject() || !VariableData::isValidJson(v.toObject())) {
-                return false;
-            }
-        }
-    }
-    // Phase 7 / MB-1: connections も optional。存在する場合は配列で各要素が
-    // ConnectionData として有効（id 非空）であることを要求する（不在は後方互換で許容）。
-    if (obj.contains("connections")) {
-        if (!obj.value("connections").isArray()) {
-            return false;
-        }
-        const QJsonArray conns = obj.value("connections").toArray();
-        for (const QJsonValue &c : conns) {
-            if (!c.isObject() || !ConnectionData::isValidJson(c.toObject())) {
-                return false;
-            }
-        }
-    }
-    return true;
+    // Task 39 / MB-1（Codex PR #78 [P2]）：variables / connections は optional だが、
+    // **存在する場合は**配列で各要素が子型として有効であることを要求する（不在は後方互換で
+    // 許容）。これで type:"float" の変数や id 欠落の接続を含む JSON を load の入口で弾ける。
+    return isValidOptionalArray<VariableData>(obj, "variables")
+        && isValidOptionalArray<ConnectionData>(obj, "connections");
 }
 
 std::optional<ProjectData> ProjectData::parseValidated(const QByteArray &json)

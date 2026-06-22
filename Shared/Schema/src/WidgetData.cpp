@@ -1,12 +1,16 @@
 #include "hmi/schema/WidgetData.h"
 
-#include <QJsonArray>
-#include <QVariantList>
+#include "SchemaJsonIo_p.h"
 
 namespace hmi::schema {
 
+using namespace hmi::schema::detail;
+
 QJsonObject WidgetData::toJson() const
 {
+    // 必須フィールドは常に書き出す。optional フィールドの「未指定なら省略」規則
+    //（センチネル / presence フラグ / bool 既定値）は put* ヘルパーに集約済み
+    //（設計の正本は .claude/rules/schema-conventions.md・各 phase plan）。
     QJsonObject obj;
     obj["id"] = id;
     obj["type"] = type;
@@ -14,135 +18,42 @@ QJsonObject WidgetData::toJson() const
     obj["y"] = y;
     obj["width"] = width;
     obj["height"] = height;
-    if (!text.isEmpty()) {
-        obj["text"] = text;
-    }
-    if (!tag.isEmpty()) {
-        obj["tag"] = tag;
-    }
-    // Task 28: スタイルは既定値（空 / 0 = 未指定）のとき省略して書き出す。
-    // これにより Phase 1〜3-B で保存した旧 JSON と同形を保ち、後方互換になる。
-    if (!backgroundColor.isEmpty()) {
-        obj["backgroundColor"] = backgroundColor;
-    }
-    if (!textColor.isEmpty()) {
-        obj["textColor"] = textColor;
-    }
-    if (fontSize > 0) {
-        obj["fontSize"] = fontSize;
-    }
-    // Task 31: ボーダー＋角丸。色は空のとき省略。数値は **`>= 0`** で書き出す
-    // （fontSize の `> 0` と違い `0` も明示的な値〔ボーダーなし / 角丸なし〕として保存する）。
-    // 未指定のセンチネル `-1` のときだけ省略し、旧 JSON と後方互換を保つ。
-    if (!borderColor.isEmpty()) {
-        obj["borderColor"] = borderColor;
-    }
-    if (borderWidth >= 0) {
-        obj["borderWidth"] = borderWidth;
-    }
-    if (radius >= 0) {
-        obj["radius"] = radius;
-    }
-    // Task 33: フォント詳細。bool は **既定値（false）と異なる時だけ書く**（true のみ書き、
-    // false は省略）。一律 true 書き出しでも本フィールドは既定 false なので等価だが、
-    // 既定 true のフラグ（後続 Task の enabled 等）と規則を揃えるためこの形にする。
-    // fontFamily は空（= 未指定）のとき省略し、旧 JSON と後方互換を保つ。
-    if (fontBold) {
-        obj["fontBold"] = fontBold;
-    }
-    if (fontItalic) {
-        obj["fontItalic"] = fontItalic;
-    }
-    if (!fontFamily.isEmpty()) {
-        obj["fontFamily"] = fontFamily;
-    }
-    // Task 34: 配置は空（= 未指定）のとき省略。opacity は **`>= 0.0`** で書き出す
-    // （borderWidth の int センチネルと同型の real 版。`0.0` = 完全透明も明示値として
-    // 保存し、未指定の `-1.0` のときだけ省略する）。後方互換のため旧 JSON は据え置き。
-    if (!hAlign.isEmpty()) {
-        obj["hAlign"] = hAlign;
-    }
-    if (!vAlign.isEmpty()) {
-        obj["vAlign"] = vAlign;
-    }
-    if (opacity >= 0.0) {
-        obj["opacity"] = opacity;
-    }
-    // Task 42: 状態別スタイル。**enabled は既定 true なので false のとき書く**（一律 true
-    // 書き出しだと false が保存されず disabled の round-trip が壊れる）。checkable / checked は
-    // 既定 false なので true のとき書く。いずれも未指定（既定値）のとき省略し後方互換を保つ。
-    if (!enabled) {
-        obj["enabled"] = enabled;
-    }
-    if (checkable) {
-        obj["checkable"] = checkable;
-    }
-    if (checked) {
-        obj["checked"] = checked;
-    }
-    // Task 54: 数値範囲（NumericField の clamp 用）。**負値が正当**なのでセンチネル不可、
-    // presence フラグ方式で表す：hasMinValue / hasMaxValue が true のときだけ minValue /
-    // maxValue を書く（未指定はキー省略＝後方互換。旧 JSON は min/max キーを持たない）。
-    if (hasMinValue) {
-        obj["minValue"] = minValue;
-    }
-    if (hasMaxValue) {
-        obj["maxValue"] = maxValue;
-    }
-    // Task T-A（Phase 8）: Trend 固有フィールド。pointCount / sampleMs は **`> 0`** で書く
-    // （fontSize と同型の `0` センチネル＝0 は未指定）。yMin / yMax は **負値が正当**なので
-    // presence フラグ方式：hasYMin / hasYMax が true のときだけ書く（未指定はキー省略＝
-    // 後方互換。minValue/maxValue と同じ）。lineColor は空（= 未指定）のとき省略。
-    // **hasYMin / hasYMax という JSON キーは作らない**（presence は yMin/yMax キーの有無で表す）。
-    if (pointCount > 0) {
-        obj["pointCount"] = pointCount;
-    }
-    if (hasYMin) {
-        obj["yMin"] = yMin;
-    }
-    if (hasYMax) {
-        obj["yMax"] = yMax;
-    }
-    if (!lineColor.isEmpty()) {
-        obj["lineColor"] = lineColor;
-    }
-    if (sampleMs > 0) {
-        obj["sampleMs"] = sampleMs;
-    }
-    // Task 8B-A（Phase 8-B）: Trend 拡張。series は空のとき省略（actions/bindings 同型）。
-    // showGrid / showLegend は **true のときだけ書く**（既定 false ＝ bool optional の規則）。
-    // yTickCount は **`> 0`** で書く（`0` センチネル＝pointCount 同型）。
-    if (!series.isEmpty()) {
-        QJsonArray seriesArr;
-        for (const TrendSeriesData &s : series) {
-            seriesArr.append(s.toJson());
-        }
-        obj["series"] = seriesArr;
-    }
-    if (showGrid) {
-        obj["showGrid"] = showGrid;
-    }
-    if (showLegend) {
-        obj["showLegend"] = showLegend;
-    }
-    if (yTickCount > 0) {
-        obj["yTickCount"] = yTickCount;
-    }
-    // Task 39: アクション / バインディングは optional 配列。空のとき省略（後方互換）。
-    if (!actions.isEmpty()) {
-        QJsonArray actionsArr;
-        for (const ActionData &a : actions) {
-            actionsArr.append(a.toJson());
-        }
-        obj["actions"] = actionsArr;
-    }
-    if (!bindings.isEmpty()) {
-        QJsonArray bindingsArr;
-        for (const BindingData &b : bindings) {
-            bindingsArr.append(b.toJson());
-        }
-        obj["bindings"] = bindingsArr;
-    }
+    putString(obj, "text", text);
+    putString(obj, "tag", tag);
+    // Task 28/31/33/34: 静的スタイル（色・フォント・ボーダー・配置・不透明度）。
+    putString(obj, "backgroundColor", backgroundColor);
+    putString(obj, "textColor", textColor);
+    putPositiveInt(obj, "fontSize", fontSize);
+    putString(obj, "borderColor", borderColor);
+    putSentinelInt(obj, "borderWidth", borderWidth);
+    putSentinelInt(obj, "radius", radius);
+    putFlag(obj, "fontBold", fontBold, false);
+    putFlag(obj, "fontItalic", fontItalic, false);
+    putString(obj, "fontFamily", fontFamily);
+    putString(obj, "hAlign", hAlign);
+    putString(obj, "vAlign", vAlign);
+    putSentinelReal(obj, "opacity", opacity);
+    // Task 42: 状態別スタイル（enabled は既定 true ＝ false のとき書く）。
+    putFlag(obj, "enabled", enabled, true);
+    putFlag(obj, "checkable", checkable, false);
+    putFlag(obj, "checked", checked, false);
+    // Task 54: 数値範囲（presence フラグ方式＝負値が正当なのでセンチネル不可）。
+    putPresentReal(obj, "minValue", minValue, hasMinValue);
+    putPresentReal(obj, "maxValue", maxValue, hasMaxValue);
+    // Task T-A / 8B-A（Phase 8 / 8-B）: Trend 固有フィールド。yMin/yMax は presence フラグ方式
+    //（**hasYMin/hasYMax という JSON キーは作らず** yMin/yMax キーの有無で presence を表す）。
+    putPositiveInt(obj, "pointCount", pointCount);
+    putPresentReal(obj, "yMin", yMin, hasYMin);
+    putPresentReal(obj, "yMax", yMax, hasYMax);
+    putString(obj, "lineColor", lineColor);
+    putPositiveInt(obj, "sampleMs", sampleMs);
+    putJsonArray(obj, "series", series);
+    putFlag(obj, "showGrid", showGrid, false);
+    putFlag(obj, "showLegend", showLegend, false);
+    putPositiveInt(obj, "yTickCount", yTickCount);
+    // Task 39: アクション（書き手）/ バインディング（読み手）。空のとき省略（後方互換）。
+    putJsonArray(obj, "actions", actions);
+    putJsonArray(obj, "bindings", bindings);
     return obj;
 }
 
@@ -203,22 +114,13 @@ WidgetData WidgetData::fromJson(const QJsonObject &obj)
     // Task 8B-A（Phase 8-B）: Trend 拡張。series 配列（欠落時は空配列＝暗黙単系列）。
     // showGrid / showLegend は欠落時 false（toBool() の既定）。yTickCount は **`toInt(0)`**
     // （欠落時 0 = 未指定。`0` センチネル）。
-    const QJsonArray seriesArr = obj.value("series").toArray();
-    for (const QJsonValue &v : seriesArr) {
-        w.series.append(TrendSeriesData::fromJson(v.toObject()));
-    }
+    w.series = jsonArrayToList<TrendSeriesData>(obj.value("series"));
     w.showGrid = obj.value("showGrid").toBool();
     w.showLegend = obj.value("showLegend").toBool();
     w.yTickCount = obj.value("yTickCount").toInt(0);
     // Task 39: アクション / バインディング配列（欠落時は空配列）。
-    const QJsonArray actionsArr = obj.value("actions").toArray();
-    for (const QJsonValue &v : actionsArr) {
-        w.actions.append(ActionData::fromJson(v.toObject()));
-    }
-    const QJsonArray bindingsArr = obj.value("bindings").toArray();
-    for (const QJsonValue &v : bindingsArr) {
-        w.bindings.append(BindingData::fromJson(v.toObject()));
-    }
+    w.actions = jsonArrayToList<ActionData>(obj.value("actions"));
+    w.bindings = jsonArrayToList<BindingData>(obj.value("bindings"));
     return w;
 }
 
@@ -272,27 +174,12 @@ QVariantMap WidgetData::toVariantMap() const
     m.insert(QStringLiteral("hasYMax"), hasYMax);
     // Task 8B-A（Phase 8-B）: Trend 拡張。series は QVariantList of QVariantMap で往復
     // （actions/bindings 同型）。showGrid/showLegend/yTickCount は素通し。
-    QVariantList seriesVar;
-    seriesVar.reserve(series.size());
-    for (const TrendSeriesData &s : series) {
-        seriesVar.append(s.toVariantMap());
-    }
-    m.insert(QStringLiteral("series"), seriesVar);
+    m.insert(QStringLiteral("series"), listToVariantList(series));
     m.insert(QStringLiteral("showGrid"), showGrid);
     m.insert(QStringLiteral("showLegend"), showLegend);
     m.insert(QStringLiteral("yTickCount"), yTickCount);
-    QVariantList actionsVar;
-    actionsVar.reserve(actions.size());
-    for (const ActionData &a : actions) {
-        actionsVar.append(a.toVariantMap());
-    }
-    m.insert(QStringLiteral("actions"), actionsVar);
-    QVariantList bindingsVar;
-    bindingsVar.reserve(bindings.size());
-    for (const BindingData &b : bindings) {
-        bindingsVar.append(b.toVariantMap());
-    }
-    m.insert(QStringLiteral("bindings"), bindingsVar);
+    m.insert(QStringLiteral("actions"), listToVariantList(actions));
+    m.insert(QStringLiteral("bindings"), listToVariantList(bindings));
     return m;
 }
 
@@ -346,21 +233,12 @@ WidgetData WidgetData::fromVariantMap(const QVariantMap &map)
     w.sampleMs = map.value(QStringLiteral("sampleMs")).toInt();
     // Task 8B-A（Phase 8-B）: Trend 拡張。series はリストから子型を読む。
     // showGrid/showLegend は欠落時 false、yTickCount は欠落時 0（= 未指定）。
-    const QVariantList seriesVar = map.value(QStringLiteral("series")).toList();
-    for (const QVariant &v : seriesVar) {
-        w.series.append(TrendSeriesData::fromVariantMap(v.toMap()));
-    }
+    w.series = variantListToList<TrendSeriesData>(map.value(QStringLiteral("series")));
     w.showGrid = map.value(QStringLiteral("showGrid")).toBool();
     w.showLegend = map.value(QStringLiteral("showLegend")).toBool();
     w.yTickCount = map.value(QStringLiteral("yTickCount")).toInt();
-    const QVariantList actionsVar = map.value(QStringLiteral("actions")).toList();
-    for (const QVariant &v : actionsVar) {
-        w.actions.append(ActionData::fromVariantMap(v.toMap()));
-    }
-    const QVariantList bindingsVar = map.value(QStringLiteral("bindings")).toList();
-    for (const QVariant &v : bindingsVar) {
-        w.bindings.append(BindingData::fromVariantMap(v.toMap()));
-    }
+    w.actions = variantListToList<ActionData>(map.value(QStringLiteral("actions")));
+    w.bindings = variantListToList<BindingData>(map.value(QStringLiteral("bindings")));
     return w;
 }
 
@@ -372,45 +250,12 @@ bool WidgetData::isValidJson(const QJsonObject &obj)
         || !obj.value("height").isDouble()) {
         return false;
     }
-    // Task 39（Codex PR #78 [P2]）：actions / bindings は optional だが、**存在する場合は**
-    // 配列で各要素が子型として有効であることを要求する（不在は後方互換で許容）。これで
-    // target / variable 欠落の不正アクション・バインディングを load の入口で弾ける。
-    if (obj.contains("actions")) {
-        if (!obj.value("actions").isArray()) {
-            return false;
-        }
-        const QJsonArray actionsArr = obj.value("actions").toArray();
-        for (const QJsonValue &v : actionsArr) {
-            if (!v.isObject() || !ActionData::isValidJson(v.toObject())) {
-                return false;
-            }
-        }
-    }
-    if (obj.contains("bindings")) {
-        if (!obj.value("bindings").isArray()) {
-            return false;
-        }
-        const QJsonArray bindingsArr = obj.value("bindings").toArray();
-        for (const QJsonValue &v : bindingsArr) {
-            if (!v.isObject() || !BindingData::isValidJson(v.toObject())) {
-                return false;
-            }
-        }
-    }
-    // Task 8B-A（Phase 8-B）: series も optional だが、存在する場合は配列で各要素が
-    // 子型として有効（variable 非空）であることを要求する（不在は後方互換で許容）。
-    if (obj.contains("series")) {
-        if (!obj.value("series").isArray()) {
-            return false;
-        }
-        const QJsonArray seriesArr = obj.value("series").toArray();
-        for (const QJsonValue &v : seriesArr) {
-            if (!v.isObject() || !TrendSeriesData::isValidJson(v.toObject())) {
-                return false;
-            }
-        }
-    }
-    return true;
+    // Task 39 / 8B-A（Codex PR #78 [P2]）：actions / bindings / series は optional だが、
+    // **存在する場合は**配列で各要素が子型として有効であることを要求する（不在は後方互換で
+    // 許容）。これで target / variable 欠落の不正な要素を load の入口で弾ける。
+    return isValidOptionalArray<ActionData>(obj, "actions")
+        && isValidOptionalArray<BindingData>(obj, "bindings")
+        && isValidOptionalArray<TrendSeriesData>(obj, "series");
 }
 
 } // namespace hmi::schema
