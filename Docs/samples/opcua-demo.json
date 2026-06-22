@@ -1,0 +1,38 @@
+{
+  "project": "OPC-UA demo (scripts/opcua/test_server.py)",
+  "connections": [
+    { "id": "demo", "proto": "opcua", "endpoint": "opc.tcp://127.0.0.1:4840" }
+  ],
+  "variables": [
+    { "name": "counter", "type": "int",
+      "source": { "connection": "demo", "nodeId": "ns=2;s=Demo.Counter", "poll": 0 } },
+    { "name": "temperature", "type": "real",
+      "source": { "connection": "demo", "nodeId": "ns=2;s=Demo.Temperature", "poll": 0 } },
+    { "name": "running", "type": "bool",
+      "source": { "connection": "demo", "nodeId": "ns=2;s=Demo.Running", "poll": 0 } },
+    { "name": "setpoint", "type": "real",
+      "source": { "connection": "demo", "nodeId": "ns=2;s=Demo.Setpoint", "poll": 0 } }
+  ],
+  "screens": [
+    {
+      "name": "Main",
+      "widgets": [
+        { "id": "lblCounterCap", "type": "Label", "x": 40, "y": 40, "width": 160, "height": 32, "text": "Counter" },
+        { "id": "lblCounter", "type": "Label", "x": 210, "y": 40, "width": 180, "height": 32,
+          "text": "?", "bindings": [{ "property": "text", "variable": "counter" }] },
+
+        { "id": "lblTempCap", "type": "Label", "x": 40, "y": 84, "width": 160, "height": 32, "text": "Temperature" },
+        { "id": "lblTemp", "type": "Label", "x": 210, "y": 84, "width": 180, "height": 32,
+          "text": "?", "bindings": [{ "property": "text", "variable": "temperature" }] },
+
+        { "id": "lblRunCap", "type": "Label", "x": 40, "y": 128, "width": 160, "height": 32, "text": "Running" },
+        { "id": "lblRun", "type": "Label", "x": 210, "y": 128, "width": 180, "height": 32,
+          "text": "?", "bindings": [{ "property": "text", "variable": "running" }] },
+
+        { "id": "lblSetCap", "type": "Label", "x": 40, "y": 172, "width": 160, "height": 32, "text": "Setpoint" },
+        { "id": "lblSet", "type": "Label", "x": 210, "y": 172, "width": 180, "height": 32,
+          "text": "?", "bindings": [{ "property": "text", "variable": "setpoint" }] }
+      ]
+    }
+  ]
+}
