@@ -264,6 +264,13 @@ Window {
                 result.connections !== undefined ? result.connections : [],
                 result.variables !== undefined ? result.variables : [])
         }
+        // Phase 9 / OP-2: OPC-UA 接続を（再）構成。Modbus と同じ list を渡し、proto=="opcua" の
+        // 接続だけを OpcUaController が拾う（両者は互いの proto を無視するので排他に動く）。
+        if (typeof opcuaController !== "undefined" && opcuaController !== null) {
+            opcuaController.configure(
+                result.connections !== undefined ? result.connections : [],
+                result.variables !== undefined ? result.variables : [])
+        }
     }
 
     // Phase 7 / MB-2: Modbus マスタが PLC レジスタを読むたびに変数現在値を更新する。
@@ -271,6 +278,15 @@ Window {
     // 自動再評価され UI（Label / NumericField 等）が PLC の値に追従する。
     Connections {
         target: typeof modbusController !== "undefined" ? modbusController : null
+        function onVariableUpdated(name, value) {
+            VariableStore.setValue(name, value)
+        }
+    }
+
+    // Phase 9 / OP-2: OPC-UA クライアントがノード値の変化通知を受けるたびに変数現在値を更新する。
+    // Modbus と同経路（VariableStore.setValue → boundValue 再評価）で UI が値に追従する。
+    Connections {
+        target: typeof opcuaController !== "undefined" ? opcuaController : null
         function onVariableUpdated(name, value) {
             VariableStore.setValue(name, value)
         }

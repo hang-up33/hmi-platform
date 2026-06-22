@@ -43,6 +43,18 @@ function(hmi_add_simulator_like_executable target)
             hmi_simulator_qmlplugin
     )
 
+    # Phase 9 / OP-2: Qt OPC-UA があるときだけ OpcUaController を組み込む（無い環境＝
+    # Web/CI では OPC-UA 機能を除いてビルド。Main.qml は opcuaController context property の
+    # 不在を typeof で許容するので QML 側は無改変で degrade する）。
+    if(HMI_HAS_OPCUA)
+        target_sources(${target} PRIVATE
+            "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/src/OpcUaController.cpp"
+            "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/src/OpcUaController.h"
+        )
+        target_link_libraries(${target} PRIVATE Qt6::OpcUa)
+        target_compile_definitions(${target} PRIVATE HMI_HAS_OPCUA)
+    endif()
+
     # Task 16: E2E テスト用 Spix エンドポイント。`--e2e` 起動時のみ
     # 実際にネットワークを開くため、リンクしても通常起動には影響しない。
     # Windows MinGW では AnyRPC の libstdc++ 衝突により無効化される

@@ -5,8 +5,8 @@
 > **本書は計画のみ**（実装は別 PR でタスク 1 つずつ）。要求の倉庫は [requirements.md](requirements.md)、結線規約は [.claude/rules/qml-module-conventions.md](../.claude/rules/qml-module-conventions.md)、Schema 規約は [.claude/rules/schema-conventions.md](../.claude/rules/schema-conventions.md)、実機/SDK 事情は [.claude/rules/dev-environment.md](../.claude/rules/dev-environment.md)。Modbus 実装の前例は [phase7-modbus-plan.md](phase7-modbus-plan.md)。
 > **進捗の正本は本ファイル「進捗」表**。
 >
-> **承認状態**：**着手済み（2026-06-20 ユーザー選択）。OP-1〔変数ソース Schema + Editor UI〕完了（PR #140・Web ctest 25/25 緑）。** 次は OP-2 以降＝ローカル専用（Qt OpcUa kit が要る＝下記🔴ゲート）。直近完了は Phase 8-B（Trend 拡張・PR #138 でクローズ）。
-> **🔴 最重要ゲート（Web 不可）**：**Qt OPC-UA（`qtopcua`）は aqtinstall のバイナリ addon モジュールに含まれない**（2026-06-20 実証：Web の Qt 6.10.0 linux で `aqt list-qt linux desktop --modules 6.10.0 linux_gcc_64` に `qtserialbus` 等はあるが `qtopcua` は出ず、`/opt/Qt/.../lib/cmake` にも `Qt6OpcUa` 無し）。よって **この Web セッションでは OP-2 以降（OpcUa リンクを伴う実装・E2E）はビルド・テスト不可**。Qt OPC-UA はバックエンド（open62541 等）込みのソースビルド/別途配布が要るのが通例。**実装はローカル（Qt OpcUa を入れた kit）＋実機（rootfs に qtopcua）で行う**。詳細は §依存・要調査。
+> **承認状態**：**着手済み（2026-06-20 ユーザー選択）。OP-1〔変数ソース Schema + Editor UI〕完了（PR #140）＋ OP-2〔PC 読込/購読〕完了（macOS ローカル：unit 13/13 + asyncua E2E `e2e_opcua_read` 緑）。** 次は OP-3〔実 OPC-UA サーバ読込確認〕＝ローカル（実サーバ要）。直近完了は Phase 8-B（Trend 拡張・PR #138 でクローズ）。
+> **🔴 最重要ゲート（Web 不可）→ macOS ローカルで解消済み（2026-06-22）**：**Qt OPC-UA（`qtopcua`）は aqtinstall のバイナリ addon に含まれない**（2026-06-20 実証）ので Web/CI ではビルド不可。OP-2 着手時に **macOS で qtopcua を Qt 6.11.1 ソースから open62541 backend 付きでビルドし Homebrew Qt にマージ**して解消した（手順・罠の正本は [dev-environment.md](../.claude/rules/dev-environment.md)「Qt OPC-UA を Homebrew Qt にマージ」。`QOpcUaProvider::availableBackends()` が `("open62541")` を返すことを確認）。**Web セッションでは依然 OpcUa リンクを伴う OP-2 以降はビルド不可**（aqt 非同梱は不変）。**Windows 母艦 / Yocto 実機 rootfs は別途未導入**（plan §依存 option ①③・OP-6 で対応）。
 
 ---
 
@@ -138,7 +138,7 @@ flowchart TD
 
 | 項目 | 内容 |
 |---|---|
-| **Qt OpcUa 入手性（OP-2 着手前ゲート・最優先）** | **2026-06-20 実証：aqtinstall の Qt 6.10.0 linux desktop に `qtopcua` モジュールは無い**（`qtserialbus`/`qtserialport` はある）。よって Web/CI（aqt 経由）では OpcUa を入れられず OP-2 以降ビルド不可。要調査：①**ローカル Windows kit**（公式オンラインインストーラに Qt OPC-UA があるか。歴史的にデスクトップ向けは backend 付きソースビルドが要る場合がある＝Phase 7 の SerialBus 同梱漏れより重い可能性）②**自前ビルド**（`qtopcua` を Qt ソースから open62541 backend 付きでビルドして kit にマージ。dev-environment.md の SerialBus 7z マージと同様の手順になる見込み）③**実機 rootfs**（scarthgap image に `qtopcua` + backend plugin が入るか。`meta-qt6` の `qtopcua` レシピ確認）。結果を本書 + dev-environment.md に記録。 |
+| **Qt OpcUa 入手性（OP-2 着手前ゲート）→ macOS は解消済み（2026-06-22）** | **2026-06-20 実証：aqtinstall の Qt 6.10.0 linux desktop に `qtopcua` モジュールは無い**（`qtserialbus`/`qtserialport` はある）→ Web/CI 不可。**macOS は option ②（自前ビルド）で解消**：`brew install open62541 ninja` → qtopcua v6.11.1 を `qt-cmake`（`-DQT_NO_XCODE_MIN_VERSION_CHECK=ON` で CLT のみでも通す）でビルド → `/opt/homebrew/opt/qt` にマージ。`QOpcUaProvider::availableBackends()`=`("open62541")` 確認済み（手順・罠は [dev-environment.md](../.claude/rules/dev-environment.md)）。残：①**Windows 母艦 kit**（未導入。公式インストーラ or 同手順の自前ビルド）③**実機 rootfs**（`meta-qt6` の `qtopcua` + backend を scarthgap image へ＝OP-6）。 |
 | **自動検証サーバ** | 実サーバは CI/Web から不達 → E2E は **`asyncua`（opcua-asyncio）ソフトサーバ**で固定（Modbus の pymodbus に相当）。dev 依存に閉じ製品コードに持ち込まない。**ただし OpcUa が Web で入らない以上、この E2E もローカルでしか緑にできない**（OP-2 以降）。 |
 | **バックエンド plugin** | Qt OPC-UA は backend（open62541 等）plugin が無いと購読が動かない。kit / rootfs 双方で plugin の同梱を確認（起動時 `availableBackends()` チェックを実装）。 |
 | **NodeId の人間表現** | `ns=2;s=Tag` 形式を JSON/内部の正準にする（Editor は素の文字列入力で開始。ブラウズ UI は P2）。off-by-one 系の罠は Modbus の address より少ない（文字列指定のため）。 |
@@ -152,10 +152,10 @@ flowchart TD
 | Task | 状態 | PR |
 |---|---|---|
 | OP-1 変数ソース Schema 拡張（proto 2 本目）+ Editor UI | 完了（Web ctest 25/25 緑） | #140 |
-| OP-2 PC 読込/購読（asyncua E2E） | 未着手（ローカル・Web 不可） | — |
+| OP-2 PC 読込/購読（asyncua E2E） | 完了（macOS local：unit 13/13 緑 + asyncua E2E `e2e_opcua_read` round-trip 緑） | — |
 | OP-3 実 OPC-UA サーバ読込確認 | 未着手（ローカル） | — |
 | OP-4 書込 + 接続状態 + 再接続 | 未着手（ローカル・Web 不可） | — |
 | OP-5 実サーバ書込確認 | 未着手（ローカル） | — |
 | OP-6 実機 Runtime 展開（WSL2+実機） | 未着手（ローカル・Web 不可） | — |
 
-> **OP-1（Schema + Editor UI・Web 可）完了（#140）。次は OP-2〔PC 読込/購読〕＝ローカル専用（Web 不可。Qt OpcUa kit が要る＝§依存「Qt OpcUa 入手性」ゲートを先に解決する）。** 着手でステータスが動いたら常駐文書（CLAUDE.md / AGENTS.md / README / mvp-task-runner / development-history）を同期する（[feedback-phase-status-sync](../.claude/rules/feedback-phase-status-sync.md)）。
+> **OP-1（#140）+ OP-2 完了。** OP-2＝`Simulator/src/OpcUaController`（`QOpcUaClient` + MonitoredItem 購読）を追加し、接続→ノード値購読→`variableUpdated`→`VariableStore.setValue` で UI 追従。root に `find_package(Qt6 ... OpcUa)`・Simulator function 内で `Qt6::OpcUa` リンク（Editor 非リンクは `otool -L` で確認済み）。unit `tst_opcua_controller`（backend 存在 / proto 排他 / 到達不能の安全性 / 再 configure・stop）+ cross-app E2E `e2e_opcua_read`（asyncua ソフトサーバ `tests/e2e/opcua_server.py` の `ns=2;s=Temp`=1234 を購読→Label text 追従）。**🔴 Web 不可ゲートは macOS ローカルで解消済み**（qtopcua を Homebrew Qt にソースビルドでマージ。手順は [dev-environment.md](../.claude/rules/dev-environment.md)「Qt OPC-UA を Homebrew Qt にマージ」）。**次は OP-3〔実 OPC-UA サーバ読込確認〕＝ローカル（実サーバ要・自動検証不可）。** ステータスが動いたら常駐文書（CLAUDE.md / AGENTS.md / README / mvp-task-runner / development-history）を同期する（[feedback-phase-status-sync](../.claude/rules/feedback-phase-status-sync.md)）。

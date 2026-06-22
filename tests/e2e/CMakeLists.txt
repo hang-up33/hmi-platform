@@ -245,3 +245,26 @@ set_tests_properties(e2e_modbus_write PROPERTIES
     LABELS e2e
     SKIP_RETURN_CODE 77
 )
+
+# OP-2: OPC-UA 購読読込の cross-app E2E。
+# asyncua ソフトサーバ（opcua_server.py をサブプロセス起動）の ns=2;s=Temp ノードを
+# Simulator（OpcUaController）が MonitoredItem 購読 → 変数 → text binding 追従で Label に反映
+# されることを観測する。外部デバイス（OPC-UA）由来の値が UI へ流れる Modbus 読込の OPC-UA 版。
+# Qt OPC-UA はサーバ機能を持たず C++ ユニットでは実購読を回せないため、購読 round-trip は
+# 本 E2E が担う。Editor は不要（fixture JSON を手書きし Simulator に --open）。asyncua 不在 /
+# サーバ起動失敗時は exit 77 で SKIP。接続 discovery + 購読作成のため TIMEOUT は長めに取る。
+# Simulator が OPC-UA 機能込みでビルドされた環境（HMI_HAS_OPCUA）でのみ登録する。OPC-UA 無しで
+# ビルドされた Simulator では購読が起きず FAIL になるため、テスト自体を登録しない。
+if(HMI_HAS_OPCUA)
+    add_test(
+        NAME e2e_opcua_read
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_opcua_read.py
+            --simulator-binary $<TARGET_FILE:hmi_simulator>
+    )
+    set_tests_properties(e2e_opcua_read PROPERTIES
+        TIMEOUT 120
+        LABELS e2e
+        SKIP_RETURN_CODE 77
+    )
+endif()

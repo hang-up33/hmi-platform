@@ -40,6 +40,32 @@ target_link_libraries(tst_modbus_controller
 
 add_test(NAME tst_modbus_controller COMMAND tst_modbus_controller)
 
+# Phase 9 / OP-2: OpcUaController の Signal/Slot ユニットテスト。Qt OPC-UA は
+# この構成でサーバ機能を持たない（in-process サーバを立てられない）ため、ここでは
+# backend plugin の存在・OPC-UA でない source の無視・到達不能エンドポイントの安全性・
+# 再 configure/stop の健全性を検証する。実サーバ相手の購読 round-trip は E2E
+# （tests/e2e/test_opcua_read.py：asyncua ソフトサーバ）が担う。
+# Qt OPC-UA がある環境でのみビルド・登録する（Web/CI＝qtopcua 非同梱では丸ごとスキップ）。
+if(HMI_HAS_OPCUA)
+    add_executable(tst_opcua_controller
+        tst_opcua_controller.cpp
+        ../src/OpcUaController.cpp
+        ../src/OpcUaController.h
+    )
+
+    target_include_directories(tst_opcua_controller PRIVATE ../src)
+
+    target_link_libraries(tst_opcua_controller
+        PRIVATE
+            Qt6::Test
+            Qt6::Core
+            Qt6::Network
+            Qt6::OpcUa
+    )
+
+    add_test(NAME tst_opcua_controller COMMAND tst_opcua_controller)
+endif()
+
 # Task 41: Simulator QML テスト（Qt Quick Test）。
 # SimulatorCanvas を Loader 経由でロードし、アクション実行（setVariable /
 # toggleVariable）と binding 追従（visible / text）を検証する。SimulatorCanvas は

@@ -53,6 +53,14 @@
 - 構成：`cmake -S . -B build -DCMAKE_PREFIX_PATH=/opt/homebrew/opt/qt`。
 - **AGL 罠**：同梱の `~/Qt/6.7.0/macos` は macOS 14+ でリンク不可（`-framework AGL` が削除済み）。**Homebrew Qt 6.11.x または Qt 6.8+ を使う**。詳細は qt6-build スキル。
 - 動作証跡スクショ：`scripts/capture-app-window.sh <proc> <out.png>`（画面収録権限が必要）。Windows 版キャプチャは未整備（Phase 3-C 候補）。
+- **Qt OPC-UA（qtopcua）を Homebrew Qt にマージ済み（2026-06-22 / Phase 9 OP-2 着手前ゲート解消）**：Homebrew の `qt` 6.11.1 ボトルは **qtopcua を含まない**（`find /opt/homebrew -iname '*opcua*'` が空）。aqtinstall も qtopcua 非同梱（Web/CI 不可）なので、**qtopcua モジュールを Qt ソースから自前ビルドして Homebrew Qt にマージ**して OP-2 以降をローカルで回せるようにした（plan §依存 option ②）。手順（実証済み）：
+  - `brew install open62541 ninja`（open62541 はバックエンド・ninja は生成器）。
+  - `git clone --depth 1 --branch v6.11.1 https://code.qt.io/qt/qtopcua.git`。
+  - `qt-cmake <src> -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/homebrew/opt/qt -DQT_NO_XCODE_MIN_VERSION_CHECK=ON -DQT_NO_APPLE_SDK_MIN_VERSION_CHECK=ON` → `cmake --build . && cmake --install .`。
+  - **罠：full Xcode 不在（CLT のみ）だと Qt モジュールビルドが「Can't determine Xcode version」で FATAL 停止**する。`-DQT_NO_XCODE_MIN_VERSION_CHECK=ON`（+ `-DQT_NO_APPLE_SDK_MIN_VERSION_CHECK=ON`）で版数チェックブロックごとスキップすれば CLT で通る（CLT で実ビルドは問題なし）。
+  - 検証：`lib/cmake/Qt6OpcUa/` と `lib/QtOpcUa.framework` が入り、`share/qt/plugins/opcua/libopen62541_backend.dylib` が同梱され、最小プログラムで `QOpcUaProvider::availableBackends()` が `("open62541")` を返せば OK。`find_package(Qt6 ... OpcUa)` がこれで通る。
+  - これは **Homebrew Qt の現物（`/opt/homebrew/opt/qt`）を書き換える**ので、`brew reinstall qt` すると消える（その時は再ビルドが要る）。**Windows 母艦 / Yocto 実機 rootfs は別途**（plan §依存 option ①③・SerialBus と同様にそれぞれ未導入＝OP-6 等で対応）。
+  - asyncua E2E は **Homebrew python3.14 の pyexpat が壊れていて asyncua を import/install できない**（`Symbol not found: _XML_SetAllocTrackerActivationThreshold`）。**self-check スクリプト `bash scripts/opcua/run-local-check.sh` が、expat の健全な Python を自動選択して venv（既定 `build/opcua-venv`）に asyncua を入れ、OPC-UA 込みの hmi_simulator を探して `tests/e2e/test_opcua_read.py`（asyncua ソフトサーバ → 購読 → Label 追従）を回す**＝Claude/開発者/将来 CI が 1 コマンドで再現テストできる（exit 0=OK / 77=SKIP / 1=FAIL。OP-2 で緑を確認済み）。ctest 既定の python3.14 では asyncua import 失敗で `e2e_opcua_read` が SKIP（exit 77）になる＝緑は妨げないので、購読 round-trip を実際に見るには本スクリプトを使う。手動で値を動かして見たいときは `scripts/opcua/test_server.py`（ライブ値サーバ）+ `Docs/samples/opcua-demo.json`。
 
 ---
 

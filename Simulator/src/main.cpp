@@ -2,6 +2,12 @@
 #include "ProjectLoader.h"
 #include "ScreenshotGrabber.h"
 
+// Phase 9 / OP-2: Qt OPC-UA が無い環境（Web/CI＝qtopcua 非同梱）では HMI_HAS_OPCUA が
+// 未定義になり、OPC-UA 機能を除いてビルドする（Main.qml は opcuaController 不在を許容）。
+#ifdef HMI_HAS_OPCUA
+#include "OpcUaController.h"
+#endif
+
 #include <QCommandLineOption>
 #include <QCommandLineParser>
 #include <QDebug>
@@ -86,11 +92,23 @@ int main(int argc, char *argv[])
     // variableUpdated シグナルを VariableStore.setValue へ接続する（Main.qml）。
     ModbusController modbusController;
 
+    // Phase 9 / OP-2: OPC-UA クライアント。Modbus と同じく engine より前に宣言（LIFO で
+    // engine が先に破棄されることを保証）。QML から configure/stop を呼び、variableUpdated を
+    // VariableStore.setValue へ接続する（Main.qml）。Modbus と同じ connections/variables を
+    // 渡してよく、proto=="opcua" の接続だけを OpcUaController が拾う。
+#ifdef HMI_HAS_OPCUA
+    OpcUaController opcuaController;
+#endif
+
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty(QStringLiteral("projectLoader"),
                                              &projectLoader);
     engine.rootContext()->setContextProperty(QStringLiteral("modbusController"),
                                              &modbusController);
+#ifdef HMI_HAS_OPCUA
+    engine.rootContext()->setContextProperty(QStringLiteral("opcuaController"),
+                                             &opcuaController);
+#endif
     engine.rootContext()->setContextProperty(QStringLiteral("initialJsonUrl"),
                                              startupUrl);
 
