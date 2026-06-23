@@ -14,8 +14,10 @@ Python の ``asyncua``（opcua-asyncio）で立てる（C++ ユニットテス�
 使い方::
 
     python3 opcua_server.py --port 14840 --ident Temp --value 1234
+    python3 opcua_server.py --port 14841 --ident Setpoint --value 0 --writable
 
 ``--ns`` は名前空間 index（既定 2＝register_namespace 後の最初のユーザ ns）。
+``--writable`` を付けるとクライアント（HMI）からの書込を許可する（OP-4 書込 E2E 用）。
 SIGTERM / SIGINT で停止する。
 """
 
@@ -27,7 +29,8 @@ import signal
 import sys
 
 
-async def _serve(port: int, ns_index: int, ident: str, value: int) -> None:
+async def _serve(port: int, ns_index: int, ident: str, value: int,
+                 writable: bool) -> None:
     # 遅延 import：asyncua 不在環境ではテスト側が SKIP（exit 77）を返す。
     from asyncua import Server, ua
 
@@ -51,11 +54,18 @@ async def _serve(port: int, ns_index: int, ident: str, value: int) -> None:
     objects = server.nodes.objects
     # ns=<idx>;s=<ident> の Int32 ノードを固定値で公開する。MonitoredItem 購読作成時に
     # open62541 クライアントが初期値を読むため、固定値でも変化通知（初回）として届く。
-    await objects.add_variable(
+    node = await objects.add_variable(
         ua.NodeId(ident, idx),
         ident,
         ua.Variant(value, ua.VariantType.Int32),
     )
+    if writable:
+        # OP-4（書込 E2E）：クライアント（HMI）からの writeAttribute(Value) を許可する。
+        # add_variable は既定で AccessLevel に CurrentWrite を含めない（読取専用）ため、
+        # set_writable() で書込可能にしないと open62541 クライアントの書込が BadNotWritable で
+        # 拒否される。test_opcua_write.py はこのノードを HMI 操作で書き換え、サーバ側で
+        # 値が変わったことを検証する。
+        await node.set_writable(True)
 
     loop = asyncio.get_running_loop()
     stop = asyncio.Event()
@@ -75,9 +85,14 @@ def main() -> int:
     parser.add_argument("--ns", type=int, default=2)
     parser.add_argument("--ident", default="Temp")
     parser.add_argument("--value", type=int, default=1234)
+    parser.add_argument(
+        "--writable",
+        action="store_true",
+        help="クライアント（HMI）からの書込を許可する（OP-4 書込 E2E 用）",
+    )
     args = parser.parse_args()
     try:
-        asyncio.run(_serve(args.port, args.ns, args.ident, args.value))
+        asyncio.run(_serve(args.port, args.ns, args.ident, args.value, args.writable))
     except KeyboardInterrupt:
         pass
     except Exception as exc:  # noqa: BLE001

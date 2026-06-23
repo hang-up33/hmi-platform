@@ -267,4 +267,24 @@ if(HMI_HAS_OPCUA)
         LABELS e2e
         SKIP_RETURN_CODE 77
     )
+
+    # OP-4: OPC-UA 書込 + 接続状態の cross-app E2E。
+    # asyncua 書込可能ソフトサーバ（opcua_server.py --writable）の ns=2;s=Setpoint ノードへ、
+    # Simulator で NumericField の入力確定（commitValue を invokeMethod で模す）→
+    # writeBoundValue → OpcUaController.writeVariable → サーバ側ノードが書き換わることを、別の
+    # asyncua client で読み返して観測する。OP-2 の読み（サーバ→HMI）に対し逆向きの書き（HMI→
+    # サーバ）を見る。Editor は不要（fixture JSON を手書きし Simulator に --open）。asyncua 不在 /
+    # サーバ起動失敗時は exit 77 で SKIP。接続 discovery + 購読作成のため TIMEOUT は長めに取る。
+    # Simulator が OPC-UA 機能込みでビルドされた環境（HMI_HAS_OPCUA）でのみ登録する。
+    add_test(
+        NAME e2e_opcua_write
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_opcua_write.py
+            --simulator-binary $<TARGET_FILE:hmi_simulator>
+    )
+    set_tests_properties(e2e_opcua_write PROPERTIES
+        TIMEOUT 120
+        LABELS e2e
+        SKIP_RETURN_CODE 77
+    )
 endif()

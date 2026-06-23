@@ -19,6 +19,29 @@ Window {
     // 変数デバッグパネルの表示状態（既定は非表示）。ツールバーの「変数」トグルで切替える。
     property bool showVarPanel: false
 
+    // Phase 7 / MB-4 + Phase 9 / OP-4: Modbus / OPC-UA 両 controller の接続状態（id→状態文字列）
+    // をマージして返す。接続状態セクションは proto を問わず全接続を一覧表示する。
+    // controller が再代入する connectionStates を依存にするため両プロパティを参照する。
+    function mergedConnectionStates() {
+        var merged = ({})
+        if (typeof modbusController !== "undefined" && modbusController !== null) {
+            var ms = modbusController.connectionStates
+            for (var k in ms) {
+                merged[k] = ms[k]
+            }
+        }
+        if (typeof opcuaController !== "undefined" && opcuaController !== null) {
+            var os = opcuaController.connectionStates
+            for (var k2 in os) {
+                merged[k2] = os[k2]
+            }
+        }
+        return merged
+    }
+    // connectionStatesChanged のたびに再評価させるためのバージョンカウンタ
+    // （関数の戻り値は依存追跡されないので、各 controller の変更通知で明示的に bump する）。
+    property var connectionStatesAll: mergedConnectionStates()
+
     // 薄いグレーの余白背景
     Rectangle {
         anchors.fill: parent
@@ -73,6 +96,9 @@ Window {
             // writeVariable を呼ばないので書戻しループ無し）。canvas 側の受け口は
             // self-reference を避けるため別名 plcController にしている。
             plcController: (typeof modbusController !== "undefined") ? modbusController : null
+            // Phase 9 / OP-4: ユーザー操作由来の変数更新を OPC-UA ノードへも書き戻す。
+            // Modbus と同じく対応 source を持たない変数では no-op なので両方渡してよい。
+            opcController: (typeof opcuaController !== "undefined") ? opcuaController : null
         }
 
         // ── 変数（タグ）デバッグパネル ──────────────────────────────
@@ -123,11 +149,12 @@ Window {
                 color: "#333333"
             }
 
-            // ── 接続状態（Phase 7 / MB-4）─────────────────────────────────
-            // Modbus 接続の状態（connected / connecting / disconnected / error）を最小表示する。
-            // connectionStatesChanged で再代入されるので各行は自動更新される。接続定義が無ければ
-            // 何も出さない（後方互換）。専用の状態表示 Widget までは作らない（MB-4 の主眼は
-            // write と再接続。状態は最小可視化に留める）。
+            // ── 接続状態（Phase 7 / MB-4 + Phase 9 / OP-4）───────────────────
+            // Modbus / OPC-UA 接続の状態（connected / connecting / disconnected / error）を
+            // proto を問わず一覧で最小表示する。各 controller の connectionStatesChanged で
+            // rootWindow.connectionStatesAll が再評価されるので各行は自動更新される。接続定義が
+            // 無ければ何も出さない（後方互換）。専用の状態表示 Widget までは作らない（状態は最小
+            // 可視化に留める）。
             Column {
                 id: connStatusBox
                 objectName: "connStatusBox"
@@ -150,9 +177,8 @@ Window {
 
                 Repeater {
                     id: connStatusRepeater
-                    // connectionStates（id→状態文字列）のキー配列。modbusController 不在時は空。
-                    model: (typeof modbusController !== "undefined" && modbusController !== null)
-                           ? Object.keys(modbusController.connectionStates) : []
+                    // Modbus / OPC-UA をマージした connectionStates（id→状態文字列）のキー配列。
+                    model: Object.keys(rootWindow.connectionStatesAll)
                     delegate: Row {
                         required property var modelData
                         objectName: "connStatusRow_" + modelData
@@ -172,7 +198,8 @@ Window {
                             elide: Text.ElideRight
                             font.pixelSize: 11
                             font.bold: true
-                            text: modbusController.connectionStates[modelData]
+                            text: rootWindow.connectionStatesAll[modelData] !== undefined
+                                  ? rootWindow.connectionStatesAll[modelData] : ""
                             color: text === "connected" ? "#2a9d8f"
                                  : text === "error" ? "#e63946"
                                  : "#888888"
@@ -281,6 +308,11 @@ Window {
         function onVariableUpdated(name, value) {
             VariableStore.setValue(name, value)
         }
+        // Phase 9 / OP-4: 接続状態が変わったらマージ済みの状態マップを再評価する（関数の戻り値は
+        // 依存追跡されないので、変更通知で明示的に再代入して接続状態セクションを更新する）。
+        function onConnectionStatesChanged() {
+            rootWindow.connectionStatesAll = rootWindow.mergedConnectionStates()
+        }
     }
 
     // Phase 9 / OP-2: OPC-UA クライアントがノード値の変化通知を受けるたびに変数現在値を更新する。
@@ -289,6 +321,10 @@ Window {
         target: typeof opcuaController !== "undefined" ? opcuaController : null
         function onVariableUpdated(name, value) {
             VariableStore.setValue(name, value)
+        }
+        // Phase 9 / OP-4: OPC-UA 接続状態の変化でマージ済みの状態マップを再評価する。
+        function onConnectionStatesChanged() {
+            rootWindow.connectionStatesAll = rootWindow.mergedConnectionStates()
         }
     }
 

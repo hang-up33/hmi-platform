@@ -45,6 +45,10 @@ private slots:
     void configureWithoutOpcuaSourceEmitsNothing();
     void unreachableEndpointDoesNotCrashOrEmit();
     void reconfigureAndStopAreSafe();
+    // OP-4: 接続状態の公開と、書込・再接続の安全性。
+    void connectionStateExposedForOpcuaConnection();
+    void writeVariableIsSafeWhenUnknownOrDisconnected();
+    void stopClearsConnectionStates();
 };
 
 void TestOpcUaController::backendAvailable()
@@ -154,6 +158,121 @@ void TestOpcUaController::reconfigureAndStopAreSafe()
     controller.stop(); // 二重 stop も安全。
 
     QVERIFY(true); // ここまで到達＝クラッシュしていない。
+}
+
+void TestOpcUaController::connectionStateExposedForOpcuaConnection()
+{
+    // OP-4: opcua 接続を configure すると、接続 id が connectionStates に現れる
+    //（discovery 開始で "connecting"、到達不能なので最終的に "disconnected"/"error"）。
+    // 専用の状態表示 Widget は作らず、QML が読む Q_PROPERTY を最小担保する。
+    const quint16 deadPort = unusedLoopbackPort();
+    if (deadPort == 0) {
+        QSKIP("Could not reserve an unused loopback port");
+    }
+    const QString deadEndpoint =
+        QStringLiteral("opc.tcp://127.0.0.1:%1").arg(deadPort);
+
+    OpcUaController controller;
+    QSignalSpy stateSpy(&controller, &OpcUaController::connectionStatesChanged);
+
+    QVariantList connections;
+    connections.append(QVariantMap{
+        {"id", "srv1"}, {"proto", "opcua"}, {"endpoint", deadEndpoint}});
+    QVariantList variables;
+    variables.append(QVariantMap{
+        {"name", "temp"},
+        {"type", "real"},
+        {"source", QVariantMap{{"connection", "srv1"}, {"nodeId", "ns=2;s=Temp"}}}});
+
+    controller.configure(connections, variables);
+    // discovery 開始で connecting 状態へ → connectionStatesChanged が出る。
+    QVERIFY2(stateSpy.count() > 0, "configure did not emit connectionStatesChanged");
+
+    const QVariantMap states = controller.connectionStates();
+    QVERIFY2(states.contains(QStringLiteral("srv1")),
+             "connectionStates missing the configured opcua connection id");
+
+    // 到達不能なので接続失敗の非同期処理が一巡するのを待ち、最終的に未接続系の状態に落ち着く。
+    QTest::qWait(1500);
+    const QString finalState = controller.connectionStates()
+                                   .value(QStringLiteral("srv1"))
+                                   .toString();
+    QVERIFY2(finalState == QStringLiteral("disconnected")
+                 || finalState == QStringLiteral("error")
+                 || finalState == QStringLiteral("connecting"),
+             qPrintable(QStringLiteral("unexpected connection state: %1").arg(finalState)));
+
+    controller.stop();
+}
+
+void TestOpcUaController::writeVariableIsSafeWhenUnknownOrDisconnected()
+{
+    // OP-4: 書込写像が無い変数（内部変数 / OPC-UA 以外の source）への writeVariable は no-op で
+    // 落ちない。OPC-UA source を持つが未接続の変数への writeVariable も落ちない（接続前に書けない
+    // だけで致命にしない）。emit は起きない。
+    const quint16 deadPort = unusedLoopbackPort();
+    if (deadPort == 0) {
+        QSKIP("Could not reserve an unused loopback port");
+    }
+    const QString deadEndpoint =
+        QStringLiteral("opc.tcp://127.0.0.1:%1").arg(deadPort);
+
+    OpcUaController controller;
+    QSignalSpy spy(&controller, &OpcUaController::variableUpdated);
+
+    // configure 前：未知変数への書込は安全。
+    controller.writeVariable(QStringLiteral("nope"), 1);
+
+    QVariantList connections;
+    connections.append(QVariantMap{
+        {"id", "srv1"}, {"proto", "opcua"}, {"endpoint", deadEndpoint}});
+    QVariantList variables;
+    variables.append(QVariantMap{
+        {"name", "setpoint"},
+        {"type", "int"},
+        {"source", QVariantMap{{"connection", "srv1"}, {"nodeId", "ns=2;s=Setpoint"}}}});
+    controller.configure(connections, variables);
+
+    // OPC-UA source を持つが（到達不能で）未接続の変数への書込：no-op で落ちない。
+    controller.writeVariable(QStringLiteral("setpoint"), 4242);
+    // 書込写像が無い変数への書込も no-op。
+    controller.writeVariable(QStringLiteral("internalOnly"), 7);
+
+    QTest::qWait(300);
+    QCOMPARE(spy.count(), 0); // 書込は読込シグナルを発火しない。
+
+    controller.stop();
+    // stop 後の書込も安全（写像クリア済み）。
+    controller.writeVariable(QStringLiteral("setpoint"), 1);
+    QVERIFY(true);
+}
+
+void TestOpcUaController::stopClearsConnectionStates()
+{
+    // OP-4: stop() で接続状態がクリアされ、再 configure 時の stale 表示を防ぐ。
+    const quint16 deadPort = unusedLoopbackPort();
+    if (deadPort == 0) {
+        QSKIP("Could not reserve an unused loopback port");
+    }
+    const QString deadEndpoint =
+        QStringLiteral("opc.tcp://127.0.0.1:%1").arg(deadPort);
+
+    OpcUaController controller;
+    QVariantList connections;
+    connections.append(QVariantMap{
+        {"id", "srv1"}, {"proto", "opcua"}, {"endpoint", deadEndpoint}});
+    QVariantList variables;
+    variables.append(QVariantMap{
+        {"name", "temp"},
+        {"type", "real"},
+        {"source", QVariantMap{{"connection", "srv1"}, {"nodeId", "ns=2;s=Temp"}}}});
+
+    controller.configure(connections, variables);
+    QVERIFY(!controller.connectionStates().isEmpty());
+
+    controller.stop();
+    QVERIFY2(controller.connectionStates().isEmpty(),
+             "stop() did not clear connectionStates");
 }
 
 QTEST_MAIN(TestOpcUaController)

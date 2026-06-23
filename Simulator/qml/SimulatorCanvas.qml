@@ -30,11 +30,21 @@ Item {
     // 常に null を指す（バインドが自分自身を見る）。別名にして Main.qml から context property を渡す。
     property var plcController: null
 
-    // Phase 7 / MB-4: 変数を VariableStore 更新と同じ操作で PLC へも書く共通ヘルパー。
-    // ユーザー操作経路（writeBoundValue / runClickActions）からのみ呼ぶ。
+    // Phase 9 / OP-4: OPC-UA クライアント（Main.qml から渡す。テスト等では null のまま）。
+    // plcController（Modbus）と同じく self-reference を避けるため context property
+    // "opcuaController" とは別名で受ける。ユーザー操作由来の変数更新を OPC-UA ノードへ書き戻す。
+    property var opcController: null
+
+    // Phase 7 / MB-4 + Phase 9 / OP-4: 変数を VariableStore 更新と同じ操作で外部機器へも書く
+    // 共通ヘルパー。ユーザー操作経路（writeBoundValue / runClickActions）からのみ呼ぶ。
+    // writeVariable は対応 source を持たない変数では no-op なので、Modbus / OPC-UA の両 controller に
+    // 一律に投げてよい（変数が片方の source を持てばその controller だけが書く＝排他に動く）。
     function writeToPlc(name, value) {
         if (plcController !== null) {
             plcController.writeVariable(name, value)
+        }
+        if (opcController !== null) {
+            opcController.writeVariable(name, value)
         }
     }
 
