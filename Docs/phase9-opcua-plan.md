@@ -153,9 +153,9 @@ flowchart TD
 |---|---|---|
 | OP-1 変数ソース Schema 拡張（proto 2 本目）+ Editor UI | 完了（Web ctest 25/25 緑） | #140 |
 | OP-2 PC 読込/購読（asyncua E2E） | 完了（macOS local：unit 13/13 緑 + asyncua E2E `e2e_opcua_read` round-trip 緑） | — |
-| OP-3 実 OPC-UA サーバ読込確認 | 未着手（ローカル） | — |
+| OP-3 実 OPC-UA サーバ読込確認 | 完了（macOS local：`scripts/opcua/test_server.py` 起動→Counter/Temperature/Running/Setpoint の購読追従を証跡スクショ 2 枚で確認） | — |
 | OP-4 書込 + 接続状態 + 再接続 | 完了（macOS local：unit 13/13 緑 + asyncua 書込 E2E `e2e_opcua_write` round-trip 緑 + read `e2e_opcua_read` 緑維持） | — |
 | OP-5 実サーバ書込確認 | 未着手（ローカル） | — |
 | OP-6 実機 Runtime 展開（WSL2+実機） | 未着手（ローカル・Web 不可） | — |
 
-> **OP-1（#140）+ OP-2 + OP-4 完了。** OP-4＝`OpcUaController` を MB-4 と同型で拡張：①書込（`writeVariable`→`QOpcUaNode::writeAttribute(Value)`。変数定義型〔int/real/bool/string〕に合わせて OPC-UA 型〔Int32/Double/Boolean/String〕へ明示変換＝QML 由来の double 値がサーバの Int32 ノードと型不一致で拒否される罠を回避）②接続状態（`Q_PROPERTY QVariantMap connectionStates` + NOTIFY。Main.qml は Modbus と OPC-UA をマージして接続状態セクションに一覧表示）③自動再接続（discovery を `startDiscovery` に切出し、Disconnected で `scheduleReconnect`、世代カウンタで configure/stop 後の旧接続・旧タイマを弾く）。`writeToPlc` は両 controller に投げ、対応 source を持たない変数では no-op（経路で読込ループ回避）。unit `tst_opcua_controller` に接続状態公開 / write 安全性 / stop クリアを追加 + cross-app E2E `e2e_opcua_write`（asyncua `--writable` ソフトサーバの `ns=2;s=Setpoint` へ HMI commit→書込→asyncua client で読み返し検証）。検証は `bash scripts/opcua/run-local-check.sh`（read + write E2E を回す）。Editor 非リンクは `otool -L` で確認済み。**🔴 Web 不可ゲートは macOS ローカルで解消済み**（qtopcua を Homebrew Qt にソースビルドでマージ。手順は [dev-environment.md](../.claude/rules/dev-environment.md)）。**次は OP-3〔実 OPC-UA サーバ読込確認〕/ OP-5〔実サーバ書込確認〕＝ローカル（実サーバ要）。** ステータスが動いたら常駐文書（CLAUDE.md / AGENTS.md / README / mvp-task-runner / development-history）を同期する（[feedback-phase-status-sync](../.claude/rules/feedback-phase-status-sync.md)）。
+> **OP-1（#140）+ OP-2 + OP-3 + OP-4 完了。** OP-3＝`scripts/opcua/test_server.py`（asyncua ライブ値サーバ）を実サーバ代用として起動し、`Docs/samples/opcua-demo.json` を `hmi_simulator` で開いて Counter/Temperature/Running/Setpoint の購読追従を証跡スクショ 2 枚（4 秒差で Counter 68→98・Temperature 27.47→23.17 の値変化を確認）で実証した。**次は OP-5〔実サーバ書込確認〕＝ローカル（実サーバ + 書込可ノード要）。**
