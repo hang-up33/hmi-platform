@@ -61,6 +61,12 @@
   - 検証：`lib/cmake/Qt6OpcUa/` と `lib/QtOpcUa.framework` が入り、`share/qt/plugins/opcua/libopen62541_backend.dylib` が同梱され、最小プログラムで `QOpcUaProvider::availableBackends()` が `("open62541")` を返せば OK。`find_package(Qt6 ... OpcUa)` がこれで通る。
   - これは **Homebrew Qt の現物（`/opt/homebrew/opt/qt`）を書き換える**ので、`brew reinstall qt` すると消える（その時は再ビルドが要る）。**Windows 母艦 / Yocto 実機 rootfs は別途**（plan §依存 option ①③・SerialBus と同様にそれぞれ未導入＝OP-6 等で対応）。
   - asyncua E2E は **Homebrew python3.14 の pyexpat が壊れていて asyncua を import/install できない**（`Symbol not found: _XML_SetAllocTrackerActivationThreshold`）。**self-check スクリプト `bash scripts/opcua/run-local-check.sh` が、expat の健全な Python を自動選択して venv（既定 `build/opcua-venv`）に asyncua を入れ、OPC-UA 込みの hmi_simulator を探して `tests/e2e/test_opcua_read.py`（asyncua ソフトサーバ → 購読 → Label 追従）を回す**＝Claude/開発者/将来 CI が 1 コマンドで再現テストできる（exit 0=OK / 77=SKIP / 1=FAIL。OP-2 で緑を確認済み）。ctest 既定の python3.14 では asyncua import 失敗で `e2e_opcua_read` が SKIP（exit 77）になる＝緑は妨げないので、購読 round-trip を実際に見るには本スクリプトを使う。手動で値を動かして見たいときは `scripts/opcua/test_server.py`（ライブ値サーバ）+ `Docs/samples/opcua-demo.json`。
+- **Qt OPC-UA（qtopcua）を Windows 母艦（Qt 6.11.0 MinGW）に導入する手順**：`scripts/windows/build-opcua.ps1` を実行する（plan §依存 option ①）。スクリプトは **2 段階**で動く：
+  - **Stage A**：Qt サーバから `qt.qt6.6110.addons.qtopcua.win64_mingw` の 7z を取得して `C:\Qt\6.11.0\mingw_64\` にマージ（SerialBus と同じ方法）。open62541 backend plugin（`plugins\opcua\open62541_backend.dll`）が含まれれば完了。
+  - **Stage B（自動フォールバック）**：**qtopcua を MinGW でソースビルドして Qt にマージする**。qtopcua のタグは `$QtDir` パスから自動導出（例: `C:\Qt\6.11.0\mingw_64` → `v6.11.0`）。open62541 は qtopcua に同梱されているため別途ビルド不要（`-DCMAKE_PREFIX_PATH=$QtDir` のみ指定し、同梱版の open62541 が backend plugin として組み込まれる）。初回は 10〜30 分かかる。
+  - 検証：`plugins\opcua\*open62541*` が存在し、`lib\cmake\Qt6OpcUa\` と `include\QtOpcUa\` が入ること（スクリプトが最後に自動確認）。
+  - 完了後：`.\scripts\windows\build.ps1 -Reconfigure` で hmi_simulator が OpcUa 込みでビルドできる。
+  - **罠・ポイント**：`qt-cmake.bat` は `.bat` なので PowerShell から直接呼ぶと引数渡しが不安定。スクリプト内では `cmake -DCMAKE_PREFIX_PATH=$QtDir` を直接呼ぶ（`qt-cmake.bat` をラップしない）ことで回避済み。`windeployqt`（deploy.ps1）を使う際は `Qt6OpcUa.dll` と `open62541.dll`・`plugins\opcua\` が hmi_simulator.exe の隣に配置されることを確認。
 
 ---
 
