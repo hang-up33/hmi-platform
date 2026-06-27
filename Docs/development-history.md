@@ -378,7 +378,7 @@ timeline
 
 ---
 
-## Phase 9: OPC-UA クライアント（計画起票）
+## Phase 9: OPC-UA クライアント（完了・OP-1〜OP-6）
 
 **計画書**：[Docs/phase9-opcua-plan.md](phase9-opcua-plan.md)（OP-1〜OP-6。2026-06-20 スコープ選択＝Phase 8-B クローズ後の候補から OPC-UA をユーザー選択。**本タスクは計画書の起票のみ**）
 
@@ -392,6 +392,17 @@ timeline
   - **タスク**：OP-1（変数ソース Schema 拡張〔`endpoint`/`nodeId`/`proto`〕+ Editor UI・Web 可）/ OP-2（PC 読込/購読・asyncua ソフトサーバ E2E・ローカル）/ OP-3（実サーバ読込確認・ローカル）/ OP-4（書込 + 接続状態 + 再接続・ローカル）/ OP-5（実サーバ書込確認・ローカル）/ OP-6（実機 Runtime 展開・WSL2+実機）。
   - **OP-5 完了（Windows 母艦：`test_server.py` + `opcua-demo.json` の NumericField で Setpoint 書込確認。2026-06-27）**：Windows 母艦（Qt 6.11.0 MinGW）に `scripts/windows/build-opcua.ps1` で qtopcua を導入し `hmi_simulator` をリビルド。`scripts/opcua/test_server.py` をソフトサーバとして起動し `Docs/samples/opcua-demo.json` を開いて NumericField で Setpoint を書き込み asyncua クライアント（別ターミナル）で読み返し確認。macOS に続き Windows でも OP-3（読込追従）と OP-5（書込）を実証。
   - **OP-6 完了（2026-06-27：i.MX8MP 実機で OPC-UA 読込購読を VNC キャプチャで確認）**：`meta-toolchain-qt6` SDK に qtopcua が既包含（SDK 再ビルド不要）→ WSL2 で `HMI_BUILD_DIR=/home/ubuntu/build-yocto-op6 HMI_SRC_DIR=/mnt/c/repo/hmi-platform bash scripts/yocto/cross-build.sh` → 実機 scp（Windows 母艦から `scp -O -o StrictHostKeyChecking=no`）→ 実機に `libsocketcan2` / `libqt6serialport6` / `libqt6serialbus6` の deb を転送 + `dpkg -i`（この順で依存解決）→ 実機の eth0 に `ip addr add 192.168.1.211/24 dev eth0` で静的 IP 付与 → Windows 母艦で `python test_server.py --host 192.168.1.210`（全 IF バインド）起動 → `QT_QPA_PLATFORM='vnc:size=1280x720'` で hmi_runtime 起動 → `python scripts/yocto/vnc-capture.py 192.168.1.211 5900 out.png 192.168.1.210` でキャプチャ。証跡：`Docs/screenshots/op6-runtime.png`（Counter=234・Temperature=20.065・Running=false・Setpoint=50 のライブ値が i.MX8MP 実機で表示）。踏んだ罠と手順の正本は [.claude/rules/dev-environment.md](../.claude/rules/dev-environment.md)「OPC-UA 実機展開」に追記済み。**Phase 9 OPC-UA クライアント対応クローズ（OP-1〜OP-6 全完了）。**
+
+---
+
+## Phase 10: メーター（Meter・車のスピードメーター風／計画起票）
+
+**計画書**：[Docs/phase10-meter-plan.md](phase10-meter-plan.md)（M-A〜M-D。2026-06-27 スコープ選択＝Phase 9 クローズ後の候補からユーザーが「メーター」を選択し、形状を「車のスピードメーター風＝円弧＋針」に確定。**本タスクは計画書の起票のみ**）
+
+- 📋 計画起票。新 Widget 種別「Meter」を Phase 5（Label）/ 6（NumericField）/ 8（Trend）で確立した横展開テンプレ（resolved\* フォールバック + Schema 4 メソッド + delegate 型分岐 + インスペクタ型対応 + cross-app E2E）に乗せる。**描画は円弧（アーク）＋針の QML `Canvas` 自描画で新 Qt モジュール依存ゼロ**（Trend と同じく i.MX8MP rootfs にそのまま載る）。読み取り専用表示で値源は既存 `bindings` の「読み」を再利用＝**Schema 4 メソッド追加のみで C++ ブリッジ無改変**。
+  - **Schema 新規フィールド（Meter 固有・全 optional）**：`meterMin`/`hasMeterMin`・`meterMax`/`hasMeterMax`（スケール範囲＝値→角度マッピング定義域。負値正当 → presence フラグ方式。NumericField の `minValue`/`maxValue`・Trend の `yMin`/`yMax` の前例踏襲で**独立フィールド**）、`arcColor`/`needleColor`（`""` センチネル）、`tickCount`（`0` センチネル）、`unit`（`""` センチネル）。`isValidJson` 必須集合（id/type/width/height）は不変＝後方互換。
+  - **タスク**：M-A（Schema 拡張・round-trip）/ M-B（型分岐の足場 5 分岐目 + HmiMeter 描画〔値→針角度 + Canvas 自描画。テスト用公開 `displayValue`/`needleAngle`〕）/ M-C（Editor「メーター追加」+ インスペクタ「Meter 詳細」型対応）/ M-D（cross-app E2E `e2e_meter_live`〔針追従を公開プロパティで観測〕+ スクショ）。
+  - **非スコープ（別承認）**：複数メータースタイル（半円のみ・360°リング・縦横バー）・色帯（緑/黄/赤ゾーン）・中央数値の decimals 指定・後続入力 Widget（Toggle）・履歴永続化。
 
 ---
 
@@ -417,5 +428,6 @@ timeline
 - [Docs/phase3-e2e-plan.md](phase3-e2e-plan.md) — Phase 3-A 計画書
 - [Docs/phase3b-runtime-plan.md](phase3b-runtime-plan.md) — Phase 3-B 計画書 v2
 - [Docs/phase4-button-slice-plan.md](phase4-button-slice-plan.md) — Phase 4 計画書（コア縦スライス + 拡張）
+- [Docs/phase10-meter-plan.md](phase10-meter-plan.md) — Phase 10 計画書（メーター / 円弧＋針）
 - [Docs/phase3b-runtime-journey.md](phase3b-runtime-journey.md) — Phase 3-B 奮闘記（Task 23/24 をどう乗り越えたか・心境の記録）
 - [Docs/qml-canvas-structure.md](qml-canvas-structure.md) — Canvas.qml の構造解説
