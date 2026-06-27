@@ -5,8 +5,8 @@
 > **本書は計画のみ**（実装は別 PR でタスク 1 つずつ）。要求の倉庫は [requirements.md](requirements.md)、結線規約は [.claude/rules/qml-module-conventions.md](../.claude/rules/qml-module-conventions.md)、Schema 規約は [.claude/rules/schema-conventions.md](../.claude/rules/schema-conventions.md)、実機/SDK 事情は [.claude/rules/dev-environment.md](../.claude/rules/dev-environment.md)。Modbus 実装の前例は [phase7-modbus-plan.md](phase7-modbus-plan.md)。
 > **進捗の正本は本ファイル「進捗」表**。
 >
-> **承認状態**：**着手済み（2026-06-20 ユーザー選択）。OP-1〔Schema + Editor UI〕#140 ＋ OP-2〔PC 読込/購読〕＋ OP-4〔書込 + 接続状態 + 自動再接続〕完了（macOS ローカル：unit 13/13 + asyncua E2E `e2e_opcua_read` / `e2e_opcua_write` round-trip 緑）。** 残は OP-3〔実サーバ読込確認〕/ OP-5〔実サーバ書込確認〕/ OP-6〔実機 Runtime 展開〕＝いずれもローカル（実サーバ / 実機要）。直近完了は Phase 8-B（Trend 拡張・PR #138 でクローズ）。
-> **🔴 最重要ゲート（Web 不可）→ macOS ローカルで解消済み（2026-06-22）**：**Qt OPC-UA（`qtopcua`）は aqtinstall のバイナリ addon に含まれない**（2026-06-20 実証）ので Web/CI ではビルド不可。OP-2 着手時に **macOS で qtopcua を Qt 6.11.1 ソースから open62541 backend 付きでビルドし Homebrew Qt にマージ**して解消した（手順・罠の正本は [dev-environment.md](../.claude/rules/dev-environment.md)「Qt OPC-UA を Homebrew Qt にマージ」。`QOpcUaProvider::availableBackends()` が `("open62541")` を返すことを確認）。**Web セッションでは依然 OpcUa リンクを伴う OP-2 以降はビルド不可**（aqt 非同梱は不変）。**Windows 母艦 / Yocto 実機 rootfs は別途未導入**（plan §依存 option ①③・OP-6 で対応）。
+> **承認状態**：**完了（2026-06-27 OP-6 クローズ）。OP-1〔Schema + Editor UI〕#140 ／OP-2〔PC 読込/購読〕／OP-3〔実サーバ読込確認〕／OP-4〔書込 + 接続状態 + 自動再接続〕／OP-5〔実サーバ書込確認〕／OP-6〔実機 Runtime 展開〕すべて完了。** 直近完了は Phase 8-B（Trend 拡張・PR #138 でクローズ）。
+> **🔴 最重要ゲート（Web 不可）→ macOS / Windows / 実機すべて解消済み**：**Qt OPC-UA（`qtopcua`）は aqtinstall のバイナリ addon に含まれない**（2026-06-20 実証）ので Web/CI ではビルド不可（この点は不変）。macOS は OP-2 着手時に qtopcua を Homebrew Qt にマージして解消（2026-06-22）。**Windows 母艦は `scripts/windows/build-opcua.ps1` で解消済み（OP-5・2026-06-27）**。**実機 rootfs は `meta-toolchain-qt6` SDK に既包含（OP-6・2026-06-27）**。手順・罠の正本は [dev-environment.md](../.claude/rules/dev-environment.md)。
 
 ---
 
@@ -138,7 +138,7 @@ flowchart TD
 
 | 項目 | 内容 |
 |---|---|
-| **Qt OpcUa 入手性（OP-2 着手前ゲート）→ macOS は解消済み（2026-06-22）** | **2026-06-20 実証：aqtinstall の Qt 6.10.0 linux desktop に `qtopcua` モジュールは無い**（`qtserialbus`/`qtserialport` はある）→ Web/CI 不可。**macOS は option ②（自前ビルド）で解消**：`brew install open62541 ninja` → qtopcua v6.11.1 を `qt-cmake`（`-DQT_NO_XCODE_MIN_VERSION_CHECK=ON` で CLT のみでも通す）でビルド → `/opt/homebrew/opt/qt` にマージ。`QOpcUaProvider::availableBackends()`=`("open62541")` 確認済み（手順・罠は [dev-environment.md](../.claude/rules/dev-environment.md)）。残：①**Windows 母艦 kit**（未導入。公式インストーラ or 同手順の自前ビルド）③**実機 rootfs**（`meta-qt6` の `qtopcua` + backend を scarthgap image へ＝OP-6）。 |
+| **Qt OpcUa 入手性（OP-2 着手前ゲート）→ macOS / Windows / 実機すべて解消済み** | **2026-06-20 実証：aqtinstall の Qt 6.10.0 linux desktop に `qtopcua` モジュールは無い**（`qtserialbus`/`qtserialport` はある）→ Web/CI 不可。**macOS は option ②（自前ビルド）で解消（2026-06-22）**：`brew install open62541 ninja` → qtopcua v6.11.1 を `qt-cmake`（`-DQT_NO_XCODE_MIN_VERSION_CHECK=ON`）でビルド → `/opt/homebrew/opt/qt` にマージ。`QOpcUaProvider::availableBackends()`=`("open62541")` 確認済み。**Windows 母艦 kit は `scripts/windows/build-opcua.ps1` で解消（2026-06-27）**（Stage A で 7z 取得・Stage B でソースビルドフォールバック）。**実機 rootfs は `meta-toolchain-qt6` SDK に既包含（OP-6 で確認・2026-06-27）**。3 環境すべて導入済み（手順・罠は [dev-environment.md](../.claude/rules/dev-environment.md)）。Web/CI（aqt 非同梱）は依然不可。 |
 | **自動検証サーバ** | 実サーバは CI/Web から不達 → E2E は **`asyncua`（opcua-asyncio）ソフトサーバ**で固定（Modbus の pymodbus に相当）。dev 依存に閉じ製品コードに持ち込まない。**ただし OpcUa が Web で入らない以上、この E2E もローカルでしか緑にできない**（OP-2 以降）。 |
 | **バックエンド plugin** | Qt OPC-UA は backend（open62541 等）plugin が無いと購読が動かない。kit / rootfs 双方で plugin の同梱を確認（起動時 `availableBackends()` チェックを実装）。 |
 | **NodeId の人間表現** | `ns=2;s=Tag` 形式を JSON/内部の正準にする（Editor は素の文字列入力で開始。ブラウズ UI は P2）。off-by-one 系の罠は Modbus の address より少ない（文字列指定のため）。 |
@@ -156,6 +156,6 @@ flowchart TD
 | OP-3 実 OPC-UA サーバ読込確認 | 完了（macOS local：`scripts/opcua/test_server.py` 起動→Counter/Temperature/Running/Setpoint の購読追従を証跡スクショ 2 枚で確認。Windows でも 2026-06-27 に同手順で追従確認） | — |
 | OP-4 書込 + 接続状態 + 再接続 | 完了（macOS local：unit 13/13 緑 + asyncua 書込 E2E `e2e_opcua_write` round-trip 緑 + read `e2e_opcua_read` 緑維持） | — |
 | OP-5 実サーバ書込確認 | 完了（Windows local：`test_server.py` + `opcua-demo.json` の NumericField で Setpoint 書込 → asyncua クライアント読み返し確認。2026-06-27） | — |
-| OP-6 実機 Runtime 展開（WSL2+実機） | 未着手（ローカル・Web 不可） | — |
+| OP-6 実機 Runtime 展開（WSL2+実機） | 完了（2026-06-27：i.MX8MP 実機で OPC-UA 読込購読を VNC キャプチャで確認。証跡：`Docs/screenshots/op6-runtime.png`） | — |
 
-> **OP-1（#140）+ OP-2 + OP-3 + OP-4 完了。** OP-3＝`scripts/opcua/test_server.py`（asyncua ライブ値サーバ）を実サーバ代用として起動し、`Docs/samples/opcua-demo.json` を `hmi_simulator` で開いて Counter/Temperature/Running/Setpoint の購読追従を証跡スクショ 2 枚（4 秒差で Counter 68→98・Temperature 27.47→23.17 の値変化を確認）で実証した。**次は OP-5〔実サーバ書込確認〕＝ローカル（実サーバ + 書込可ノード要）。**
+> **OP-1（#140）〜OP-6 すべて完了。Phase 9 OPC-UA クライアント対応クローズ。** OP-6：`meta-toolchain-qt6` SDK に qtopcua が既包含（SDK 再ビルド不要）→ WSL2 クロスビルド → 実機 i.MX8MP への deb 転送（libsocketcan2 / libqt6serialport6 / libqt6serialbus6）→ `QT_QPA_PLATFORM=vnc:size=1280x720` で起動 → test_server.py（`--host` で全 IF バインド）に OPC-UA 接続 → Counter/Temperature/Running/Setpoint の購読追従を VNC キャプチャで実証。手順・罠は [dev-environment.md](../.claude/rules/dev-environment.md)「OPC-UA 実機展開」に追記済み。
