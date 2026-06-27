@@ -31,7 +31,11 @@
 
         { "id": "lblSetCap", "type": "Label", "x": 40, "y": 172, "width": 160, "height": 32, "text": "Setpoint" },
         { "id": "lblSet", "type": "Label", "x": 210, "y": 172, "width": 180, "height": 32,
-          "text": "?", "bindings": [{ "property": "text", "variable": "setpoint" }] }
+          "text": "?", "bindings": [{ "property": "text", "variable": "setpoint" }] },
+
+        { "id": "lblWriteCap", "type": "Label", "x": 40, "y": 220, "width": 160, "height": 32, "text": "Write Setpoint" },
+        { "id": "numSetpoint", "type": "NumericField", "x": 210, "y": 220, "width": 180, "height": 40,
+          "bindings": [{ "property": "value", "variable": "setpoint" }] }
       ]
     }
   ]

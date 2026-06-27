@@ -67,6 +67,7 @@
   - 検証：`plugins\opcua\*open62541*` が存在し、`lib\cmake\Qt6OpcUa\` と `include\QtOpcUa\` が入ること（スクリプトが最後に自動確認）。
   - 完了後：`.\scripts\windows\build.ps1 -Reconfigure` で hmi_simulator が OpcUa 込みでビルドできる。
   - **罠・ポイント**：`qt-cmake.bat` は `.bat` なので PowerShell から直接呼ぶと引数渡しが不安定。スクリプト内では `cmake -DCMAKE_PREFIX_PATH=$QtDir` を直接呼ぶ（`qt-cmake.bat` をラップしない）ことで回避済み。`windeployqt`（deploy.ps1）を使う際は `Qt6OpcUa.dll` と `open62541.dll`・`plugins\opcua\` が hmi_simulator.exe の隣に配置されることを確認。
+  - **導入完了・動作確認済み（2026-06-27）**：Stage A で `open62541_backend.dll` を取得し hmi_simulator が `Qt6OpcUa` リンク済みで再ビルド成功。`pip install asyncua` → `scripts/opcua/test_server.py` 起動 → `Docs/samples/opcua-demo.json`（NumericField 付き）で読込追従（OP-3）・Setpoint 書込（OP-5）を確認。
 
 ---
 

@@ -153,9 +153,9 @@ flowchart TD
 |---|---|---|
 | OP-1 変数ソース Schema 拡張（proto 2 本目）+ Editor UI | 完了（Web ctest 25/25 緑） | #140 |
 | OP-2 PC 読込/購読（asyncua E2E） | 完了（macOS local：unit 13/13 緑 + asyncua E2E `e2e_opcua_read` round-trip 緑） | — |
-| OP-3 実 OPC-UA サーバ読込確認 | 完了（macOS local：`scripts/opcua/test_server.py` 起動→Counter/Temperature/Running/Setpoint の購読追従を証跡スクショ 2 枚で確認） | — |
+| OP-3 実 OPC-UA サーバ読込確認 | 完了（macOS local：`scripts/opcua/test_server.py` 起動→Counter/Temperature/Running/Setpoint の購読追従を証跡スクショ 2 枚で確認。Windows でも 2026-06-27 に同手順で追従確認） | — |
 | OP-4 書込 + 接続状態 + 再接続 | 完了（macOS local：unit 13/13 緑 + asyncua 書込 E2E `e2e_opcua_write` round-trip 緑 + read `e2e_opcua_read` 緑維持） | — |
-| OP-5 実サーバ書込確認 | 未着手（ローカル） | — |
+| OP-5 実サーバ書込確認 | 完了（Windows local：`test_server.py` + `opcua-demo.json` の NumericField で Setpoint 書込 → asyncua クライアント読み返し確認。2026-06-27） | — |
 | OP-6 実機 Runtime 展開（WSL2+実機） | 未着手（ローカル・Web 不可） | — |
 
 > **OP-1（#140）+ OP-2 + OP-3 + OP-4 完了。** OP-3＝`scripts/opcua/test_server.py`（asyncua ライブ値サーバ）を実サーバ代用として起動し、`Docs/samples/opcua-demo.json` を `hmi_simulator` で開いて Counter/Temperature/Running/Setpoint の購読追従を証跡スクショ 2 枚（4 秒差で Counter 68→98・Temperature 27.47→23.17 の値変化を確認）で実証した。**次は OP-5〔実サーバ書込確認〕＝ローカル（実サーバ + 書込可ノード要）。**
