@@ -114,7 +114,8 @@ flowchart LR
 |---|---|---|
 | 実機デプロイ自動化 | P1 | クロスビルド → scp → 起動の半自動化（現状は手順書 + ヘルパー） |
 | JSON バリデーション強化 / マイグレーション | P1 | スキーマ版数管理と旧 JSON の自動移行 |
-| 大量 Widget のパフォーマンス | P2 | `var` 配列モデルの限界が見えたら `QAbstractListModel` 化（[project-widgetmodel-refactor-deferred](../.claude/rules/project-widgetmodel-refactor-deferred.md)） |
+| **パフォーマンス計測を CI に追加** | **P1** | Widget 描画・JSON ロード・変数更新〜binding 反映などの主要処理時間（+ 起動時間・大量 Widget 時の FPS/フレーム時間）を CI で自動計測し、しきい値超過や回帰を検知する。**目的：今後 Widget や機能を足したときに「載るが実用的な速度で動かない」退行を、実機に載せる前に自動で捕まえる**（本末転倒の防止）。まずは offscreen で計測可能な指標（JSON parse / 描画構築 / N 個 Widget での更新レイテンシ）をベンチ化し self-hosted linux ジョブに載せる。実機側 FPS は後続で検討。指標の切り出し先は `Docs/phase*-plan.md` で起票 |
+| 大量 Widget のパフォーマンス | P2 | `var` 配列モデルの限界が見えたら `QAbstractListModel` 化（[project-widgetmodel-refactor-deferred](../.claude/rules/project-widgetmodel-refactor-deferred.md)）。↑の CI 計測が限界検知のトリガになる |
 | アクセシビリティ | P2 | フォーカス順・スクリーンリーダ対応 |
 | ブート画面 → HMI シームレス遷移 | P2 | 起動時のブートスプラッシュから `hmi_runtime` へ黒フレームゼロで切替え、起動体感を製品品質にする。参考：[組み込み Linux のブート画面を黒フレームゼロで Qt アプリに繋ぐ](https://zenn.dev/tasuku/articles/7bdcb880495a91)（同じ i.MX8MP + Qt6。ただし記事は eglfs_kms / Torizon 前提で、本リポの weston/Wayland 構成にはそのまま適用不可＝要再設計） |
 
