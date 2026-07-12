@@ -894,6 +894,7 @@ Item {
                         sourceComponent: wrapper.widgetType === "Label" ? labelComponent
                                        : wrapper.widgetType === "NumericField" ? numericComponent
                                        : wrapper.widgetType === "Trend" ? trendComponent
+                                       : wrapper.widgetType === "Meter" ? meterComponent
                                                                         : buttonComponent
                     }
 
@@ -1050,6 +1051,39 @@ Item {
                             widgetOpacity: wrapper.widgetOpacity
                             widgetEnabled: wrapper.widgetEnabled
                             // Task T-B: 選択中継は他 Widget と同形。
+                            onClicked: function(modifiers) {
+                                wrapper.selectRequested(wrapper.widgetId, modifiers)
+                            }
+                        }
+                    }
+
+                    Component {
+                        id: meterComponent
+                        HmiMeter {
+                            // Task M-B: 型分岐の観察用 objectName（他 Widget と対。
+                            // E2E / unit は hmiMeter で参照）。
+                            objectName: "hmiMeter"
+                            anchors.fill: parent
+                            // Editor キャンバスは設計面＝ライブ値が無い。live:false にして
+                            // 中間値（(min+max)/2）プレビューを描く（value は流さない）。
+                            live: false
+                            // Meter 固有フィールドを流す（未指定は 0 / 空 / presence false）。
+                            // Meter は text / フォント / トグルを持たないので渡さない。
+                            meterMin: wrapper.widgetMeterMin
+                            meterMax: wrapper.widgetMeterMax
+                            hasMeterMin: wrapper.widgetHasMeterMin
+                            hasMeterMax: wrapper.widgetHasMeterMax
+                            arcColor: wrapper.widgetArcColor
+                            needleColor: wrapper.widgetNeedleColor
+                            tickCount: wrapper.widgetTickCount
+                            unit: wrapper.widgetUnit
+                            backgroundColor: wrapper.widgetBackgroundColor
+                            borderColor: wrapper.widgetBorderColor
+                            borderWidth: wrapper.widgetBorderWidth
+                            cornerRadius: wrapper.widgetRadius
+                            widgetOpacity: wrapper.widgetOpacity
+                            widgetEnabled: wrapper.widgetEnabled
+                            // Task M-B: 選択中継は他 Widget と同形。
                             onClicked: function(modifiers) {
                                 wrapper.selectRequested(wrapper.widgetId, modifiers)
                             }

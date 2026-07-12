@@ -395,7 +395,7 @@ timeline
 
 ---
 
-## Phase 10: メーター（Meter・車のスピードメーター風／進行中 — M-A 完了）
+## Phase 10: メーター（Meter・車のスピードメーター風／進行中 — M-B 完了）
 
 **計画書**：[Docs/phase10-meter-plan.md](phase10-meter-plan.md)（M-A〜M-D。2026-06-27 スコープ選択＝Phase 9 クローズ後の候補からユーザーが「メーター」を選択し、形状を「車のスピードメーター風＝円弧＋針」に確定。**本タスクは計画書の起票のみ**）
 
@@ -404,6 +404,7 @@ timeline
   - **タスク**：M-A（Schema 拡張・round-trip）/ M-B（型分岐の足場 5 分岐目 + HmiMeter 描画〔値→針角度 + Canvas 自描画。テスト用公開 `displayValue`/`needleAngle`〕）/ M-C（Editor「メーター追加」+ インスペクタ「Meter 詳細」型対応）/ M-D（cross-app E2E `e2e_meter_live`〔針追従を公開プロパティで観測〕+ スクショ）。
   - **非スコープ（別承認）**：複数メータースタイル（半円のみ・360°リング・縦横バー）・色帯（緑/黄/赤ゾーン）・中央数値の decimals 指定・後続入力 Widget（Toggle）・履歴永続化。
 - ✅ **M-A（Schema 拡張）完了**。`WidgetData` に Meter 固有フィールド（`meterMin`/`hasMeterMin`・`meterMax`/`hasMeterMax`〔presence フラグ方式・負値正当〕・`arcColor`/`needleColor`〔`""` センチネル〕・`tickCount`〔`0` センチネル〕・`unit`〔`""` センチネル〕）を追加し、`toJson`/`fromJson`/`toVariantMap`/`fromVariantMap` の 4 メソッドを Trend（`yMin`/`yMax`/`lineColor`）の前例どおり揃えた。**C++ ブリッジ（ProjectIo / ProjectLoader）無改変**（`git diff` は Schema 2 ファイル + test のみ）。`isValidJson` 必須集合は不変＝後方互換。`tst_widget_data.cpp` に round-trip 3 本（`meterFieldsRoundTrip`〔presence true + 空/`0` センチネル〕/ `meterRangeOmittedWhenUnspecified`〔未指定時キー省略〕/ `negativeMeterRangeRoundTrip`〔負値〕）を追加。**描画 HmiMeter・追加 UI・インスペクタは M-B 以降**。ただし **Editor 保存経路の round-trip 保全は M-A に前倒し**（Codex PR #152 [P2]）：`EditableWidget` の Meter メタ + `Canvas.qml` delegate 流し込み + `snapshotModel()` 書き戻しを追加し、Meter JSON を Editor で開いて保存しても範囲・色・目盛り・単位を失わないようにした（Task 8B-A の Trend `series` 素通しと同型。全スカラ＝変数参照/入れ子なしなので deep copy・rename 追従は不要）。`tst_canvas.qml` に snapshot 保全テスト追加。Web `ctest` 25/25 緑。
+- ✅ **M-B（型分岐の足場 5 分岐目 + HmiMeter 描画）完了**。`Shared/Widgets/qml/HmiMeter.qml` を新設（背景・枠を持つ `Rectangle` + 弧/目盛り/針/中央数値を自描画する `Canvas` + 選択用 `MouseArea`。**`import QtQuick` のみ＝新 Qt モジュール依存ゼロ**。Trend と同じ resolved\* フォールバック方式で既定値〔`meterMin`→0 / `meterMax`→100 / 弧色 #4cc9f0 / 針色 #ff595e / 目盛り 10 / 背景 #0b1d2a〕を HmiMeter 1 箇所へ集約）。**値→針角度**は `startAngle=135`・`spanAngle=270`（下側 90° を開けたスピードメーター既定・実装時確定）で線形マッピング + clamp（min→startAngle / 中点→startAngle+span/2 / max→endAngle）。**不正範囲（max<=min）は 0 除算せず下限へ退避**（plan リスク 3）。Canvas はピクセル不可視のためテスト用に `displayValue`/`needleAngle` を公開。`Shared/Widgets/CMakeLists.txt` の `QML_FILES` に登録。Editor `Canvas.qml` / Simulator `SimulatorCanvas.qml` の delegate に **5 分岐目** `meterComponent`（objectName `hmiMeter`）を追加（Editor=live:false で中間値〔(min+max)/2〕プレビュー / Simulator=live:true で `boundValue("value")` 追従＝Trend の value 追従と同じ boundValue 経路）。単体 `tst_hmi_meter.qml`（resolved 既定・値→角度・負値範囲・clamp・不正範囲退避・displayValue 追従・プレビュー中間値・clicked＝11 本）+ Editor/Simulator の delegate 生成 unit を追加。Web `ctest` 25/25 緑。**実機 Canvas 描画の VNC 確認は作業 TODO**（ローカル実機が要るため Web で満たせない＝完了条件外。plan リスク 1）。**追加 UI（ツールバー / インスペクタ）は M-C**＝本タスクは手書き JSON で検証。
 
 ---
 

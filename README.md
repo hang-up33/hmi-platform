@@ -113,7 +113,7 @@ SDK 生成・実機 scp・起動（weston）・キャプチャの全手順と罠
 
 ## ステータスとドキュメント
 
-- **現在地**: **Phase 10 / メーター（Meter・車のスピードメーター風）着手**（2026-06-27 承認・計画起票）。新 Widget 種別「Meter」を横展開テンプレ（Phase 5/6/8）に乗せる。**円弧（アーク）＋針の QML `Canvas` 自描画で新 Qt モジュール依存ゼロ**（Trend と同じく実機 rootfs にそのまま載る）。読み取り専用表示で値源は既存 `bindings` の「読み」を再利用＝**Schema 4 メソッド追加のみで C++ ブリッジ無改変**。M-A〜M-D に分割。**M-A（Schema 拡張・round-trip）完了、次＝M-B（HmiMeter 描画）**。進捗の正本は [Docs/phase10-meter-plan.md](Docs/phase10-meter-plan.md)。
+- **現在地**: **Phase 10 / メーター（Meter・車のスピードメーター風）着手**（2026-06-27 承認・計画起票）。新 Widget 種別「Meter」を横展開テンプレ（Phase 5/6/8）に乗せる。**円弧（アーク）＋針の QML `Canvas` 自描画で新 Qt モジュール依存ゼロ**（Trend と同じく実機 rootfs にそのまま載る）。読み取り専用表示で値源は既存 `bindings` の「読み」を再利用＝**Schema 4 メソッド追加のみで C++ ブリッジ無改変**。M-A〜M-D に分割。**M-A（Schema 拡張）・M-B（HmiMeter 描画 + 型分岐 5 分岐目）完了、次＝M-C（Editor 追加 UI + インスペクタ型対応）**。進捗の正本は [Docs/phase10-meter-plan.md](Docs/phase10-meter-plan.md)。
   - **Phase 9 / OPC-UA クライアント完了**（2026-06-27 OP-6 クローズ）。**OP-1〜OP-6 すべて完了**：OP-1〔Schema + Editor UI〕／OP-2〔PC 読込/購読〕／OP-3〔実サーバ読込確認〕／OP-4〔書込 + 接続状態 + 自動再接続〕／OP-5〔実サーバ書込確認〕／OP-6〔実機 Runtime 展開（i.MX8MP で OPC-UA ライブ値を VNC キャプチャで確認）〕。**🔴 Qt OpcUa は aqtinstall 非同梱＝Web/CI 不可。macOS / Windows / 実機（SDK 包含）ともに導入済み**（手順は [.claude/rules/dev-environment.md](.claude/rules/dev-environment.md)）。進捗の正本は [Docs/phase9-opcua-plan.md](Docs/phase9-opcua-plan.md)。
   - **Phase 8 / トレンドグラフ（単系列ライブ折れ線）完了**（2026-06-16 承認・PR #127〜#131）。新 Widget 種別「Trend」を横展開テンプレに乗せ、`Canvas` 自描画で実機にそのまま載る。進捗の正本は [Docs/phase8-trend-plan.md](Docs/phase8-trend-plan.md)。
   - **Phase 7 / Modbus TCP** は MB-1〜MB-4（書込 + 接続状態 + 自動再接続・PR #119/#121/#122）完了。残る MB-5〔実 PLC 書込確認〕/ MB-6〔実機 Yocto〕はローカル専用で Web 不可。進捗の正本は [Docs/phase7-modbus-plan.md](Docs/phase7-modbus-plan.md)。

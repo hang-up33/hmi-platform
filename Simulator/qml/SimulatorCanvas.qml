@@ -220,6 +220,7 @@ Item {
                     sourceComponent: wrapper.modelData.type === "Label" ? labelComponent
                                    : wrapper.modelData.type === "NumericField" ? numericComponent
                                    : wrapper.modelData.type === "Trend" ? trendComponent
+                                   : wrapper.modelData.type === "Meter" ? meterComponent
                                                                         : buttonComponent
                 }
 
@@ -437,6 +438,44 @@ Item {
                         widgetOpacity: wrapper.modelData.opacity !== undefined ? wrapper.modelData.opacity : -1
                         widgetEnabled: wrapper.modelData.enabled !== undefined ? wrapper.modelData.enabled : true
                         // Trend は表示専用＝clicked を action へ結線しない。
+                    }
+                }
+
+                Component {
+                    id: meterComponent
+                    HmiMeter {
+                        // Task M-B: 型分岐の観察用 objectName（他 Widget と対。
+                        // E2E / unit は hmiMeter で参照）。
+                        objectName: "hmiMeter"
+                        anchors.fill: parent
+                        // Simulator/Runtime はライブ実行＝live:true。value 変化で針が追従する。
+                        // Runtime は本ソース共有で自動継承。
+                        live: true
+                        // 値源：binding {property:"value"} の指す変数の現在値へ追従する（Label の
+                        // text 追従と同じ boundValue 経路＝読みのみ。書きはしない）。無 bind 時は
+                        // modelData.value（無ければ 0）。
+                        value: {
+                            const v = wrapper.boundValue("value")
+                            return v !== undefined ? Number(v)
+                                : (wrapper.modelData.value !== undefined ? Number(wrapper.modelData.value) : 0)
+                        }
+                        // Meter 固有フィールド（未指定は 0 / 空 / presence false）。
+                        meterMin: wrapper.modelData.meterMin !== undefined ? wrapper.modelData.meterMin : 0
+                        meterMax: wrapper.modelData.meterMax !== undefined ? wrapper.modelData.meterMax : 0
+                        hasMeterMin: wrapper.modelData.hasMeterMin !== undefined ? wrapper.modelData.hasMeterMin : false
+                        hasMeterMax: wrapper.modelData.hasMeterMax !== undefined ? wrapper.modelData.hasMeterMax : false
+                        arcColor: wrapper.modelData.arcColor !== undefined ? wrapper.modelData.arcColor : ""
+                        needleColor: wrapper.modelData.needleColor !== undefined ? wrapper.modelData.needleColor : ""
+                        tickCount: wrapper.modelData.tickCount !== undefined ? wrapper.modelData.tickCount : 0
+                        unit: wrapper.modelData.unit !== undefined ? wrapper.modelData.unit : ""
+                        // 背景・枠スタイル（Editor delegate と対）。
+                        backgroundColor: wrapper.modelData.backgroundColor !== undefined ? wrapper.modelData.backgroundColor : ""
+                        borderColor: wrapper.modelData.borderColor !== undefined ? wrapper.modelData.borderColor : ""
+                        borderWidth: wrapper.modelData.borderWidth !== undefined ? wrapper.modelData.borderWidth : -1
+                        cornerRadius: wrapper.modelData.radius !== undefined ? wrapper.modelData.radius : -1
+                        widgetOpacity: wrapper.modelData.opacity !== undefined ? wrapper.modelData.opacity : -1
+                        widgetEnabled: wrapper.modelData.enabled !== undefined ? wrapper.modelData.enabled : true
+                        // Meter は表示専用＝clicked を action へ結線しない。
                     }
                 }
             }

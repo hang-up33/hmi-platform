@@ -447,4 +447,53 @@ TestCase {
         compare(trend.sampleCount, baseCount + 2);
         compare(trend.lastValue, 35);
     }
+
+    // Task M-B（Phase 10）: type:"Meter" の delegate は HmiMeter を描き（他種別は描かない）、
+    // live:true で binding {property:"value"} の指す変数へ針が追従する。変数を更新すると
+    // 公開 displayValue / needleAngle が追従する（Canvas ピクセルは見ない）。
+    function test_delegate_renders_meter_and_follows_value_binding() {
+        canvas.variableModel = [{ name: "vehicleSpeed", type: "int", initial: 0 }];
+        canvas.widgetModel = [{
+            id: "m1", type: "Meter", x: 0, y: 0, width: 200, height: 200,
+            meterMin: 0, hasMeterMin: true, meterMax: 100, hasMeterMax: true,
+            bindings: [{ property: "value", variable: "vehicleSpeed" }]
+        }];
+
+        var wrapper = null;
+        tryVerify(function() {
+            wrapper = findByObjectName(canvas, "widget_m1");
+            return wrapper !== null;
+        }, 1000, "Meter delegate widget_m1 が生成されない");
+
+        var meter = null;
+        tryVerify(function() {
+            meter = findByObjectName(wrapper, "hmiMeter");
+            return meter !== null;
+        }, 1000, "Meter type で HmiMeter が描かれない");
+        // 型分岐：他種別の Widget は生成されない。
+        verify(findByObjectName(wrapper, "hmiButton") === null,
+               "Meter type なのに HmiButton も生成された");
+        verify(findByObjectName(wrapper, "hmiLabel") === null,
+               "Meter type なのに HmiLabel も生成された");
+        verify(findByObjectName(wrapper, "hmiTrend") === null,
+               "Meter type なのに HmiTrend も生成された");
+
+        // Simulator はライブ実行＝live:true。
+        compare(meter.live, true);
+        compare(meter.resolvedMeterMin, 0);
+        compare(meter.resolvedMeterMax, 100);
+
+        // 変数を更新すると displayValue / needleAngle が追従する。
+        VariableStore.setValue("vehicleSpeed", 50);
+        compare(meter.displayValue, 50);
+        fuzzyCompare(meter.needleAngle, meter.startAngle + meter.spanAngle / 2, 0.001);
+
+        VariableStore.setValue("vehicleSpeed", 100);
+        compare(meter.displayValue, 100);
+        fuzzyCompare(meter.needleAngle, meter.endAngle, 0.001);
+
+        // 範囲外は clamp される。
+        VariableStore.setValue("vehicleSpeed", 200);
+        compare(meter.displayValue, 100);
+    }
 }

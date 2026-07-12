@@ -14,6 +14,7 @@ qt_add_qml_module(hmi_widgets STATIC
         qml/HmiLabel.qml
         qml/HmiNumericField.qml
         qml/HmiTrend.qml
+        qml/HmiMeter.qml
         qml/VariableStore.qml
 )
 

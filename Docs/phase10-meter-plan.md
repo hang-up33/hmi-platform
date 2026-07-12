@@ -171,20 +171,24 @@ M-C は delegate の HmiMeter 結線（M-B の描画コンポーネントへ `wi
 
 | Task | 状態 | PR |
 |---|---|---|
-| M-A Schema 拡張（meter フィールド round-trip） | ✅ 完了 | — |
-| M-B 型分岐の足場 + HmiMeter 描画（Canvas） | 未着手 | — |
+| M-A Schema 拡張（meter フィールド round-trip） | ✅ 完了 | #152 |
+| M-B 型分岐の足場 + HmiMeter 描画（Canvas） | ✅ 完了 | — |
 | M-C Editor 追加 UI + インスペクタ型対応 | 未着手（メタ/snapshot 素通しは M-A へ前倒し済み） | — |
 | M-D cross-app E2E（針追従）+ スクショ | 未着手 | — |
 
-**M-A 完了**：`WidgetData` に Meter 固有フィールド（`meterMin`/`hasMeterMin`・`meterMax`/`hasMeterMax`・
-`arcColor`・`needleColor`・`tickCount`・`unit`）を追加し、`toJson`/`fromJson`/`toVariantMap`/`fromVariantMap`
-の 4 メソッドを揃えた（C++ ブリッジ無改変）。`isValidJson` 必須集合は不変＝後方互換。
-`tst_widget_data.cpp` に round-trip（presence true/false 両方・負値）を追加。
-**Editor 保存経路の round-trip 保全を M-A に前倒し**（Codex PR #152 [P2]）：`EditableWidget` の
-Meter メタ + `Canvas.qml` delegate 流し込み + `snapshotModel()` 書き戻しを追加し、**Meter JSON を
-Editor で開いて保存しても範囲・色・目盛り・単位を失わない**ようにした（Task 8B-A の series 素通しと同型。
-描画 HmiMeter・追加 UI・インスペクタは引き続き M-B/M-C）。`tst_canvas.qml` に snapshot 保全テストを追加。
-Web `ctest` 25/25 緑。**次＝M-B**（HmiMeter 描画 + 型分岐 5 分岐目）。各 Task 完了時に本表と常駐文書を同期する。
+**M-B 完了**：`Shared/Widgets/qml/HmiMeter.qml` を新設（背景・枠を持つ `Rectangle` + 弧/目盛り/針/
+中央数値を自描画する `Canvas` + 選択用 `MouseArea`。`import QtQuick` のみ＝新 Qt 依存ゼロ）。
+resolved\* フォールバック（`meterMin`→0 / `meterMax`→100 / 弧色 #4cc9f0 / 針色 #ff595e / 目盛り 10 /
+背景 #0b1d2a）を HmiMeter 1 箇所へ集約。**値→針角度**は `startAngle=135`・`spanAngle=270`（下側 90°
+開き＝スピードメーター既定・実装時確定）で線形マッピング + clamp（min→startAngle / 中点→+span/2 /
+max→endAngle）。不正範囲（max<=min）は 0 除算せず下限へ退避。テスト用に `displayValue`/`needleAngle`
+を公開（Canvas 不可視のため）。`Shared/Widgets/CMakeLists.txt` の `QML_FILES` に登録。Editor `Canvas.qml` /
+Simulator `SimulatorCanvas.qml` の delegate に **5 分岐目** `meterComponent`（objectName `hmiMeter`）を追加
+（Editor=live:false 中間値プレビュー / Simulator=live:true で `boundValue("value")` 追従）。単体
+（`tst_hmi_meter.qml`）+ 両 delegate 生成 unit を追加。Web `ctest` 25/25 緑（HmiMeter 11 / Editor delegate /
+Simulator delegate すべて PASS）。**実機 Canvas 描画の VNC 確認は作業 TODO**（ローカル実機が要るため Web で
+満たせない＝完了条件外。plan リスク 1）。**追加 UI（ツールバー / インスペクタ）はまだ無し＝手書き JSON で検証**。
+**次＝M-C**（Editor 追加 UI + インスペクタ型対応）。各 Task 完了時に本表と常駐文書を同期する。
 
 ## 非スコープ（別承認）
 

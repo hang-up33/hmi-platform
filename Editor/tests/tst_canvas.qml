@@ -1013,6 +1013,42 @@ TestCase {
         compare(trend.resolvedLineColor, Qt.color("#ff0000"));
     }
 
+    // Task M-B（Phase 10）: type:"Meter" の delegate は HmiMeter を描き、他種別は生成しない。
+    // EditableWidget でラップされるため Meter でも選択枠・リサイズハンドルが効く。Editor は
+    // 設計面なので live:false（中間値プレビュー）。range / 色 / 目盛りがプレビューへ伝播する。
+    function test_delegate_renders_meter_for_meter_type() {
+        canvas.widgetModel = [
+            { id: "m1", type: "Meter", x: 0, y: 0, width: 200, height: 200,
+              meterMin: 0, hasMeterMin: true, meterMax: 180, hasMeterMax: true,
+              arcColor: "#00ff00", needleColor: "#0000ff", tickCount: 6 }
+        ];
+        tryVerify(function() { return editableChildren().length === 1; }, 1000,
+                  "Meter モデルが反映されない");
+        const wrapper = editableChildren()[0];
+        compare(wrapper.widgetType, "Meter");
+        var meter = null;
+        tryVerify(function() {
+            meter = findByObjectName(wrapper, "hmiMeter");
+            return meter !== null;
+        }, 1000, "Meter type で HmiMeter が描かれない");
+        verify(findByObjectName(wrapper, "hmiButton") === null,
+               "Meter type なのに HmiButton も生成された");
+        verify(findByObjectName(wrapper, "hmiLabel") === null,
+               "Meter type なのに HmiLabel も生成された");
+        verify(findByObjectName(wrapper, "hmiTrend") === null,
+               "Meter type なのに HmiTrend も生成された");
+        // Editor キャンバスは設計面＝live:false（中間値プレビュー）。
+        compare(meter.live, false);
+        // range / 色 / 目盛りが Meter へ伝播する。
+        compare(meter.resolvedMeterMin, 0);
+        compare(meter.resolvedMeterMax, 180);
+        compare(meter.resolvedArcColor, Qt.color("#00ff00"));
+        compare(meter.resolvedNeedleColor, Qt.color("#0000ff"));
+        compare(meter.resolvedTickCount, 6);
+        // live:false は中間値（(0+180)/2 = 90）をプレビュー表示する。
+        compare(meter.displayValue, 90);
+    }
+
     // Task 48: 追加した Widget の id だけが btn001 と異なるものを返すヘルパ。
     function addedWidget() {
         const ch = editableChildren();
