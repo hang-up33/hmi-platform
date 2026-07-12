@@ -174,7 +174,7 @@ M-C は delegate の HmiMeter 結線（M-B の描画コンポーネントへ `wi
 | M-A Schema 拡張（meter フィールド round-trip） | ✅ 完了 | #152 |
 | M-B 型分岐の足場 + HmiMeter 描画（Canvas） | ✅ 完了 | — |
 | M-C Editor 追加 UI + インスペクタ型対応 | ✅ 完了 | — |
-| M-D cross-app E2E（針追従）+ スクショ | 未着手 | — |
+| M-D cross-app E2E（針追従）+ スクショ | ✅ 完了 | — |
 
 **M-B 完了**：`Shared/Widgets/qml/HmiMeter.qml` を新設（背景・枠を持つ `Rectangle` + 弧/目盛り/針/
 中央数値を自描画する `Canvas` + 選択用 `MouseArea`。`import QtQuick` のみ＝新 Qt 依存ゼロ）。
@@ -202,6 +202,24 @@ Trend の Y 軸 min/max を手本〕/ 弧色・針色〔hex TextField + 色ス�
 unit（`tst_canvas.qml`）に `addWidget("Meter")` の型・既定サイズ・undo 回帰を追加。`editor.png` を
 Meter 追加ボタン + インスペクタ反映で撮り直し同期。**次＝M-D**（cross-app E2E `e2e_meter_live` +
 スクショ）。各 Task 完了時に本表と常駐文書を同期する。
+
+**M-D 完了**：Meter の「変数変化 → 針追従」を観測する cross-app E2E
+（`tests/e2e/test_meter_live.py`）を新設し `tests/e2e/CMakeLists.txt` に `e2e_meter_live` を
+登録した（Schema・C++ ブリッジ・QML・描画は不変＝テスト追加のみ）。①Editor 段：`vehicleSpeed`
+（int）変数 + それに `value` binding で結ばれた Meter（`meter001`, meterMin 0 / meterMax 180 /
+tickCount 12 / unit "km/h"）+ 同変数を操作する NumericField（`speeder001`）を持つ JSON を
+`--open` → `saveTo` で round-trip 保存し、保存 JSON を直接 assert（`type:"Meter"` / value
+binding / `meterMin`・`meterMax` の presence round-trip）。②Simulator 段（主眼）：操作用
+NumericField を `setStringProperty` + `commitValue()` invoke で `["60","120","200"]` と順に確定
+して同変数を変化させ、Meter（objectName `hmiMeter`）の公開 `displayValue` が書いた値（範囲外
+"200" は max=180 へ clamp）へ、`needleAngle` が弧の角度域へマッピングした期待値へ追従するのを
+`getStringProperty` で観測する。**期待角度は実行時に読んだ公開 `startAngle`/`spanAngle`/
+`resolvedMeterMin`/`resolvedMeterMax` から計算**し、既定角度の定数（135°/270°）へテストを結合
+しない（plan リスク 2「角度既定は変わりうる」）。Canvas はピクセル不可視なので公開 real
+プロパティのみで針追従を見る（`test_trend_live` の Meter 版）。Web `ctest` 26/26 緑
+（`e2e_meter_live` 含む）。**UI は M-C から不変＝ヒーロー / スクショ再撮影は不要**（M-C で
+Meter 追加後に同期済み）。**これで Phase 10（Meter）クローズ**。次フェーズは未承認＝先に
+ユーザーとスコープ確定する。
 
 ## 非スコープ（別承認）
 

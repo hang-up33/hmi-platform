@@ -209,6 +209,28 @@ set_tests_properties(e2e_trend_multi PROPERTIES
     LABELS e2e
 )
 
+# Task M-D (Phase 10): Meter の針追従 cross-app E2E。
+# Editor で vehicleSpeed(int) 変数 + Meter(value binding, meterMin/meterMax) + 操作用
+# NumericField(同変数 value binding) を `--open` → saveTo で round-trip → 保存 JSON を直接検証
+# （type:"Meter" / value binding / meterMin・meterMax）→ Simulator を `--open` で起動し、操作用
+# NumericField を setStringProperty + commitValue() で複数回確定して同変数を変化させ、
+# Meter（objectName "hmiMeter"）の公開 displayValue が書いた値（範囲外は端へ clamp）へ、
+# needleAngle が弧の角度域（実行時に読む startAngle/spanAngle から計算した期待値）へ追従する
+# のを getStringProperty で観測する。Canvas はピクセル不可視なので公開プロパティのみで
+# 「変数変化 → 針追従」を見る（test_trend_live の Meter 版）。2 プロセス起動のため TIMEOUT は
+# 他の cross-app と同等。
+add_test(
+    NAME e2e_meter_live
+    COMMAND ${Python3_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_meter_live.py
+        --editor-binary $<TARGET_FILE:hmi_editor>
+        --simulator-binary $<TARGET_FILE:hmi_simulator>
+)
+set_tests_properties(e2e_meter_live PROPERTIES
+    TIMEOUT 60
+    LABELS e2e
+)
+
 # MB-2: Modbus TCP 読込ポーリングの cross-app E2E。
 # pymodbus ソフトスレーブ（modbus_slave.py をサブプロセス起動）の holding register を
 # Simulator（ModbusController）が周期ポーリング → 変数 → text binding 追従で Label に反映
