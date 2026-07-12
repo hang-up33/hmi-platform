@@ -51,6 +51,14 @@ QJsonObject WidgetData::toJson() const
     putFlag(obj, "showGrid", showGrid, false);
     putFlag(obj, "showLegend", showLegend, false);
     putPositiveInt(obj, "yTickCount", yTickCount);
+    // Task M-A（Phase 10）: Meter 固有フィールド。meterMin/meterMax は presence フラグ方式
+    //（**hasMeterMin/hasMeterMax という JSON キーは作らず** meterMin/meterMax キーの有無で presence を表す）。
+    putPresentReal(obj, "meterMin", meterMin, hasMeterMin);
+    putPresentReal(obj, "meterMax", meterMax, hasMeterMax);
+    putString(obj, "arcColor", arcColor);
+    putString(obj, "needleColor", needleColor);
+    putPositiveInt(obj, "tickCount", tickCount);
+    putString(obj, "unit", unit);
     // Task 39: アクション（書き手）/ バインディング（読み手）。空のとき省略（後方互換）。
     putJsonArray(obj, "actions", actions);
     putJsonArray(obj, "bindings", bindings);
@@ -118,6 +126,18 @@ WidgetData WidgetData::fromJson(const QJsonObject &obj)
     w.showGrid = obj.value("showGrid").toBool();
     w.showLegend = obj.value("showLegend").toBool();
     w.yTickCount = obj.value("yTickCount").toInt(0);
+    // Task M-A（Phase 10）: Meter 固有フィールド。meterMin / meterMax は **presence を `obj.contains()`
+    // で判定**（数値センチネル不可：負値が正当なので「キーの有無」が唯一の未指定判定。yMin/yMax と同じ）。
+    // 値はキーがある時のみ toDouble() で読む。arcColor / needleColor / unit は欠落時 空文字（= 未指定）。
+    // tickCount は **`toInt(0)`**（欠落時 0 = 未指定。`0` センチネル）。
+    w.hasMeterMin = obj.contains("meterMin");
+    w.meterMin = obj.value("meterMin").toDouble();
+    w.hasMeterMax = obj.contains("meterMax");
+    w.meterMax = obj.value("meterMax").toDouble();
+    w.arcColor = obj.value("arcColor").toString();
+    w.needleColor = obj.value("needleColor").toString();
+    w.tickCount = obj.value("tickCount").toInt(0);
+    w.unit = obj.value("unit").toString();
     // Task 39: アクション / バインディング配列（欠落時は空配列）。
     w.actions = jsonArrayToList<ActionData>(obj.value("actions"));
     w.bindings = jsonArrayToList<BindingData>(obj.value("bindings"));
@@ -178,6 +198,17 @@ QVariantMap WidgetData::toVariantMap() const
     m.insert(QStringLiteral("showGrid"), showGrid);
     m.insert(QStringLiteral("showLegend"), showLegend);
     m.insert(QStringLiteral("yTickCount"), yTickCount);
+    // Task M-A（Phase 10）: Meter 固有フィールド。meterMin / meterMax は **min/max・yMin/yMax と同じく
+    // 値 + presence（hasMeterMin/hasMeterMax）を対で転写**する。QML 側は hasMeterMin を見て未指定を判定する。
+    // arcColor / needleColor / tickCount / unit は素通し。
+    m.insert(QStringLiteral("meterMin"), meterMin);
+    m.insert(QStringLiteral("meterMax"), meterMax);
+    m.insert(QStringLiteral("hasMeterMin"), hasMeterMin);
+    m.insert(QStringLiteral("hasMeterMax"), hasMeterMax);
+    m.insert(QStringLiteral("arcColor"), arcColor);
+    m.insert(QStringLiteral("needleColor"), needleColor);
+    m.insert(QStringLiteral("tickCount"), tickCount);
+    m.insert(QStringLiteral("unit"), unit);
     m.insert(QStringLiteral("actions"), listToVariantList(actions));
     m.insert(QStringLiteral("bindings"), listToVariantList(bindings));
     return m;
@@ -237,6 +268,17 @@ WidgetData WidgetData::fromVariantMap(const QVariantMap &map)
     w.showGrid = map.value(QStringLiteral("showGrid")).toBool();
     w.showLegend = map.value(QStringLiteral("showLegend")).toBool();
     w.yTickCount = map.value(QStringLiteral("yTickCount")).toInt();
+    // Task M-A（Phase 10）: Meter 固有フィールド。meterMin / meterMax は **min/max・yMin/yMax と同じく
+    // presence（hasMeterMin/hasMeterMax）と値を対で読む**（presence はキー欠落時 false）。
+    // arcColor / needleColor / unit は欠落時 空文字（= 未指定）。tickCount は欠落時 0（= 未指定）。
+    w.hasMeterMin = map.value(QStringLiteral("hasMeterMin")).toBool();
+    w.meterMin = map.value(QStringLiteral("meterMin")).toDouble();
+    w.hasMeterMax = map.value(QStringLiteral("hasMeterMax")).toBool();
+    w.meterMax = map.value(QStringLiteral("meterMax")).toDouble();
+    w.arcColor = map.value(QStringLiteral("arcColor")).toString();
+    w.needleColor = map.value(QStringLiteral("needleColor")).toString();
+    w.tickCount = map.value(QStringLiteral("tickCount")).toInt();
+    w.unit = map.value(QStringLiteral("unit")).toString();
     w.actions = variantListToList<ActionData>(map.value(QStringLiteral("actions")));
     w.bindings = variantListToList<BindingData>(map.value(QStringLiteral("bindings")));
     return w;

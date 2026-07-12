@@ -179,6 +179,18 @@ Item {
                 showGrid: item.widgetShowGrid,
                 showLegend: item.widgetShowLegend,
                 yTickCount: item.widgetYTickCount,
+                // Task M-A: Meter 固有も保存スナップショットへ含める（Meter JSON を Editor で
+                // 開いて保存しても範囲・色・目盛り・単位を失わないため。Codex PR #152 [P2]）。
+                // min/max と同じく明示 bool キー hasMeterMin/hasMeterMax を含める（QML↔C++ ブリッジの
+                // presence 表現。JSON へ書き出す段で C++ が meterMin/meterMax キーの有無へ畳む）。
+                meterMin: item.widgetMeterMin,
+                meterMax: item.widgetMeterMax,
+                hasMeterMin: item.widgetHasMeterMin,
+                hasMeterMax: item.widgetHasMeterMax,
+                arcColor: item.widgetArcColor,
+                needleColor: item.widgetNeedleColor,
+                tickCount: item.widgetTickCount,
+                unit: item.widgetUnit,
                 // Task 39: アクション / バインディングも保存スナップショットへ含める
                 //（読み込んだ定義を Editor の保存で失わないため。Codex PR #78 [P1]）。
                 // 注：series と違い deep copy しないのは、actions/bindings はインスペクタで
@@ -802,6 +814,16 @@ Item {
                     widgetShowGrid: modelData.showGrid !== undefined ? modelData.showGrid : false
                     widgetShowLegend: modelData.showLegend !== undefined ? modelData.showLegend : false
                     widgetYTickCount: modelData.yTickCount !== undefined ? modelData.yTickCount : 0
+                    // Task M-A: Meter 固有フィールドを素通し保持（描画 / 追加 UI / インスペクタは
+                    // M-B〜M-C だが、Meter JSON を開いて保存しても失わないため。Codex PR #152 [P2]）。
+                    widgetMeterMin: modelData.meterMin !== undefined ? modelData.meterMin : 0
+                    widgetMeterMax: modelData.meterMax !== undefined ? modelData.meterMax : 0
+                    widgetHasMeterMin: modelData.hasMeterMin !== undefined ? modelData.hasMeterMin : false
+                    widgetHasMeterMax: modelData.hasMeterMax !== undefined ? modelData.hasMeterMax : false
+                    widgetArcColor: modelData.arcColor !== undefined ? modelData.arcColor : ""
+                    widgetNeedleColor: modelData.needleColor !== undefined ? modelData.needleColor : ""
+                    widgetTickCount: modelData.tickCount !== undefined ? modelData.tickCount : 0
+                    widgetUnit: modelData.unit !== undefined ? modelData.unit : ""
                     // Task 39: アクション / バインディングを素通し保持（保存で失わないため）。
                     widgetActions: modelData.actions !== undefined ? modelData.actions : []
                     widgetBindings: modelData.bindings !== undefined ? modelData.bindings : []

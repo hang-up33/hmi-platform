@@ -110,6 +110,20 @@ Item {
     property bool widgetShowLegend: false
     property int widgetYTickCount: 0
 
+    // Task M-A（Phase 10）: Meter（スピードメーター）固有のメタ。描画 / 追加 UI / インスペクタは
+    // 後続タスク（M-B〜M-C）だが、**Meter JSON を Editor で開いて保存しても範囲・色・目盛り・単位を
+    // 失わない**ため、ここで素通し保持する（delegate が modelData から流し込み、snapshotModel が
+    // JSON キー meterMin/meterMax/arcColor/needleColor/tickCount/unit へ書き戻す。Codex PR #152 [P2]）。
+    // スケール範囲は presence フラグ方式（widgetHasMeterMin/Max）、色/単位は空センチネル、目盛り数は 0 センチネル。
+    property real widgetMeterMin: 0
+    property real widgetMeterMax: 0
+    property bool widgetHasMeterMin: false
+    property bool widgetHasMeterMax: false
+    property string widgetArcColor: ""
+    property string widgetNeedleColor: ""
+    property int widgetTickCount: 0
+    property string widgetUnit: ""
+
     // Task 39: アクション / バインディングのメタ。Editor は T40 まで編集 UI を持たないが、
     // **読み込んだ定義を保存で失わない**ため、ここで素通し保持する（delegate が modelData
     // から流し込み、snapshotModel が保存へ書き戻す。Codex PR #78 [P1]）。配列をそのまま持つ。

@@ -136,8 +136,10 @@ HmiButton/HmiLabel/HmiNumericField/HmiTrend と同じ **resolved\* フォール�
 
 delegate は Loader 三項 + inline Component に **5 分岐目** `meterComponent` を足すだけ
 （Trend の Component が手本、`live:false`）。Simulator は `value: boundValue("value")` 結線。
-`snapshotModel` と EditableWidget メタ流し込みに新フィールド（`widgetMeterMin` 等）を追加
-（「Schema 4 メソッド + delegate + メタ + HmiXxx の入力/resolved を揃える」確立手順の機械適用）。
+`snapshotModel` と EditableWidget メタ流し込みへの新フィールド（`widgetMeterMin` 等）追加は
+**M-A に前倒し済み**（Meter JSON の Editor 開閉保存でのデータ落ちを防ぐため。Codex PR #152 [P2]）。
+M-C は delegate の HmiMeter 結線（M-B の描画コンポーネントへ `widgetMeterMin` 等を渡す）+ 追加 UI +
+インスペクタ型対応が残る（「Schema 4 メソッド + delegate + メタ + HmiXxx の入力/resolved を揃える」確立手順の機械適用）。
 
 インスペクタ型出し分け（`visible` のみ・objectName/Schema 不変）：
 
@@ -169,12 +171,20 @@ delegate は Loader 三項 + inline Component に **5 分岐目** `meterComponen
 
 | Task | 状態 | PR |
 |---|---|---|
-| M-A Schema 拡張（meter フィールド round-trip） | 未着手 | — |
+| M-A Schema 拡張（meter フィールド round-trip） | ✅ 完了 | — |
 | M-B 型分岐の足場 + HmiMeter 描画（Canvas） | 未着手 | — |
-| M-C Editor 追加 UI + インスペクタ型対応 | 未着手 | — |
+| M-C Editor 追加 UI + インスペクタ型対応 | 未着手（メタ/snapshot 素通しは M-A へ前倒し済み） | — |
 | M-D cross-app E2E（針追従）+ スクショ | 未着手 | — |
 
-**本計画起票時点では未着手**（計画書のみ）。各 Task 完了時に本表と常駐文書を同期する。
+**M-A 完了**：`WidgetData` に Meter 固有フィールド（`meterMin`/`hasMeterMin`・`meterMax`/`hasMeterMax`・
+`arcColor`・`needleColor`・`tickCount`・`unit`）を追加し、`toJson`/`fromJson`/`toVariantMap`/`fromVariantMap`
+の 4 メソッドを揃えた（C++ ブリッジ無改変）。`isValidJson` 必須集合は不変＝後方互換。
+`tst_widget_data.cpp` に round-trip（presence true/false 両方・負値）を追加。
+**Editor 保存経路の round-trip 保全を M-A に前倒し**（Codex PR #152 [P2]）：`EditableWidget` の
+Meter メタ + `Canvas.qml` delegate 流し込み + `snapshotModel()` 書き戻しを追加し、**Meter JSON を
+Editor で開いて保存しても範囲・色・目盛り・単位を失わない**ようにした（Task 8B-A の series 素通しと同型。
+描画 HmiMeter・追加 UI・インスペクタは引き続き M-B/M-C）。`tst_canvas.qml` に snapshot 保全テストを追加。
+Web `ctest` 25/25 緑。**次＝M-B**（HmiMeter 描画 + 型分岐 5 分岐目）。各 Task 完了時に本表と常駐文書を同期する。
 
 ## 非スコープ（別承認）
 

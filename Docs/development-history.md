@@ -395,7 +395,7 @@ timeline
 
 ---
 
-## Phase 10: メーター（Meter・車のスピードメーター風／計画起票）
+## Phase 10: メーター（Meter・車のスピードメーター風／進行中 — M-A 完了）
 
 **計画書**：[Docs/phase10-meter-plan.md](phase10-meter-plan.md)（M-A〜M-D。2026-06-27 スコープ選択＝Phase 9 クローズ後の候補からユーザーが「メーター」を選択し、形状を「車のスピードメーター風＝円弧＋針」に確定。**本タスクは計画書の起票のみ**）
 
@@ -403,6 +403,7 @@ timeline
   - **Schema 新規フィールド（Meter 固有・全 optional）**：`meterMin`/`hasMeterMin`・`meterMax`/`hasMeterMax`（スケール範囲＝値→角度マッピング定義域。負値正当 → presence フラグ方式。NumericField の `minValue`/`maxValue`・Trend の `yMin`/`yMax` の前例踏襲で**独立フィールド**）、`arcColor`/`needleColor`（`""` センチネル）、`tickCount`（`0` センチネル）、`unit`（`""` センチネル）。`isValidJson` 必須集合（id/type/width/height）は不変＝後方互換。
   - **タスク**：M-A（Schema 拡張・round-trip）/ M-B（型分岐の足場 5 分岐目 + HmiMeter 描画〔値→針角度 + Canvas 自描画。テスト用公開 `displayValue`/`needleAngle`〕）/ M-C（Editor「メーター追加」+ インスペクタ「Meter 詳細」型対応）/ M-D（cross-app E2E `e2e_meter_live`〔針追従を公開プロパティで観測〕+ スクショ）。
   - **非スコープ（別承認）**：複数メータースタイル（半円のみ・360°リング・縦横バー）・色帯（緑/黄/赤ゾーン）・中央数値の decimals 指定・後続入力 Widget（Toggle）・履歴永続化。
+- ✅ **M-A（Schema 拡張）完了**。`WidgetData` に Meter 固有フィールド（`meterMin`/`hasMeterMin`・`meterMax`/`hasMeterMax`〔presence フラグ方式・負値正当〕・`arcColor`/`needleColor`〔`""` センチネル〕・`tickCount`〔`0` センチネル〕・`unit`〔`""` センチネル〕）を追加し、`toJson`/`fromJson`/`toVariantMap`/`fromVariantMap` の 4 メソッドを Trend（`yMin`/`yMax`/`lineColor`）の前例どおり揃えた。**C++ ブリッジ（ProjectIo / ProjectLoader）無改変**（`git diff` は Schema 2 ファイル + test のみ）。`isValidJson` 必須集合は不変＝後方互換。`tst_widget_data.cpp` に round-trip 3 本（`meterFieldsRoundTrip`〔presence true + 空/`0` センチネル〕/ `meterRangeOmittedWhenUnspecified`〔未指定時キー省略〕/ `negativeMeterRangeRoundTrip`〔負値〕）を追加。**描画 HmiMeter・追加 UI・インスペクタは M-B 以降**。ただし **Editor 保存経路の round-trip 保全は M-A に前倒し**（Codex PR #152 [P2]）：`EditableWidget` の Meter メタ + `Canvas.qml` delegate 流し込み + `snapshotModel()` 書き戻しを追加し、Meter JSON を Editor で開いて保存しても範囲・色・目盛り・単位を失わないようにした（Task 8B-A の Trend `series` 素通しと同型。全スカラ＝変数参照/入れ子なしなので deep copy・rename 追従は不要）。`tst_canvas.qml` に snapshot 保全テスト追加。Web `ctest` 25/25 緑。
 
 ---
 

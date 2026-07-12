@@ -60,6 +60,12 @@ private slots:
     void trendSeriesAndFlagsRoundTrip();
     void trendSeriesAndFlagsOmittedWhenEmpty();
     void isValidJsonRejectsInvalidSeries();
+    // Task M-A（Phase 10）: Meter 固有フィールドの round-trip。meterMin/meterMax（presence
+    // フラグ方式・負値含む）と arcColor/needleColor/tickCount/unit（空/`0` センチネル）の往復、
+    // presence false 時に meterMin/meterMax キーが現れない（後方互換）ことを固定する。
+    void meterFieldsRoundTrip();
+    void meterRangeOmittedWhenUnspecified();
+    void negativeMeterRangeRoundTrip();
     void actionsAndBindingsRoundTrip();
     void omitsEmptyActionsAndBindings();
     void isValidJsonRejectsInvalidActionsBindings();
@@ -519,6 +525,130 @@ void WidgetDataTest::negativeTrendYAxisRoundTrip()
     QCOMPARE(r.hasYMax, true);
     QCOMPARE(r.yMin, -50.0);
     QCOMPARE(r.yMax, -1.0);
+}
+
+// Task M-A（Phase 10）: Meter 固有フィールドの round-trip（presence フラグ true 側 + 空/`0`
+// センチネル）。meterMin/meterMax（値 + presence）と arcColor/needleColor/tickCount/unit が
+// JSON / QVariantMap 両方で往復し、JSON は presence をキーの有無で表す（hasMeter* キー無し）
+// ことを固定する。
+void WidgetDataTest::meterFieldsRoundTrip()
+{
+    WidgetData src;
+    src.id = "meter001";
+    src.type = "Meter";
+    src.width = 200;
+    src.height = 200;
+    src.meterMin = 0.0;     // 0 も正当値（has* で指定済みなので書かれる）
+    src.meterMax = 180.0;
+    src.hasMeterMin = true;
+    src.hasMeterMax = true;
+    src.arcColor = "#4cc9f0";
+    src.needleColor = "#ff595e";
+    src.tickCount = 10;
+    src.unit = "km/h";
+
+    // JSON round-trip
+    const QJsonObject obj = src.toJson();
+    QVERIFY(obj.contains("meterMin"));
+    QVERIFY(obj.contains("meterMax"));
+    QVERIFY(obj.contains("arcColor"));
+    QVERIFY(obj.contains("needleColor"));
+    QVERIFY(obj.contains("tickCount"));
+    QVERIFY(obj.contains("unit"));
+    // presence は meterMin/meterMax キーの有無で表す → hasMeter* という JSON キーは存在しない。
+    QVERIFY(!obj.contains("hasMeterMin"));
+    QVERIFY(!obj.contains("hasMeterMax"));
+
+    const WidgetData restored = WidgetData::fromJson(obj);
+    QCOMPARE(restored.hasMeterMin, true);
+    QCOMPARE(restored.hasMeterMax, true);
+    QCOMPARE(restored.meterMin, 0.0);
+    QCOMPARE(restored.meterMax, 180.0);
+    QCOMPARE(restored.arcColor, QStringLiteral("#4cc9f0"));
+    QCOMPARE(restored.needleColor, QStringLiteral("#ff595e"));
+    QCOMPARE(restored.tickCount, 10);
+    QCOMPARE(restored.unit, QStringLiteral("km/h"));
+
+    // QVariantMap round-trip。C++↔QML ブリッジでは min/max・yMin/yMax と同じく明示 bool キー
+    // hasMeterMin/hasMeterMax を持つ（QML 側が presence 判定に使う）。
+    const QVariantMap m = src.toVariantMap();
+    QCOMPARE(m.value("hasMeterMin").toBool(), true);
+    QCOMPARE(m.value("hasMeterMax").toBool(), true);
+    const WidgetData r = WidgetData::fromVariantMap(m);
+    QCOMPARE(r.hasMeterMin, true);
+    QCOMPARE(r.hasMeterMax, true);
+    QCOMPARE(r.meterMin, 0.0);
+    QCOMPARE(r.meterMax, 180.0);
+    QCOMPARE(r.arcColor, QStringLiteral("#4cc9f0"));
+    QCOMPARE(r.needleColor, QStringLiteral("#ff595e"));
+    QCOMPARE(r.tickCount, 10);
+    QCOMPARE(r.unit, QStringLiteral("km/h"));
+}
+
+// Task M-A（Phase 10）: Meter の未指定（hasMeter*=false、arcColor/needleColor/unit=空、
+// tickCount=0）のとき、meterMin/meterMax/arcColor/needleColor/tickCount/unit キーが JSON で
+// 省略され（後方互換）、QVariantMap では presence bool（hasMeter*）が false になることを固定する。
+void WidgetDataTest::meterRangeOmittedWhenUnspecified()
+{
+    WidgetData src;
+    src.id = "meter002";
+    src.type = "Meter";
+    src.width = 200;
+    src.height = 200;
+    // meterMin/meterMax は既定 presence false、arcColor/needleColor/unit は空、tickCount は 0。
+
+    const QJsonObject obj = src.toJson();
+    QVERIFY(!obj.contains("meterMin"));
+    QVERIFY(!obj.contains("meterMax"));
+    QVERIFY(!obj.contains("arcColor"));
+    QVERIFY(!obj.contains("needleColor"));
+    QVERIFY(!obj.contains("tickCount"));
+    QVERIFY(!obj.contains("unit"));
+
+    const WidgetData restored = WidgetData::fromJson(obj);
+    QCOMPARE(restored.hasMeterMin, false);
+    QCOMPARE(restored.hasMeterMax, false);
+    QVERIFY(restored.arcColor.isEmpty());
+    QVERIFY(restored.needleColor.isEmpty());
+    QCOMPARE(restored.tickCount, 0);
+    QVERIFY(restored.unit.isEmpty());
+
+    // QVariantMap では presence bool が false（min/max と同じ。値キーは常に入るが has*=false）。
+    const QVariantMap m = src.toVariantMap();
+    QCOMPARE(m.value("hasMeterMin").toBool(), false);
+    QCOMPARE(m.value("hasMeterMax").toBool(), false);
+    const WidgetData r = WidgetData::fromVariantMap(m);
+    QCOMPARE(r.hasMeterMin, false);
+    QCOMPARE(r.hasMeterMax, false);
+}
+
+// Task M-A（Phase 10）: 負値の meterMin/meterMax が round-trip する（presence フラグ方式なので
+// `-20` 等の負値も正当値として保存・復元できる。yMin/yMax の前例と同じ）。
+void WidgetDataTest::negativeMeterRangeRoundTrip()
+{
+    WidgetData src;
+    src.id = "meter003";
+    src.type = "Meter";
+    src.width = 200;
+    src.height = 200;
+    src.meterMin = -20.0;   // 負の下限（センチネルでは表せない）
+    src.meterMax = -1.0;    // -1 も正当値（presence フラグなので未指定と区別される）
+    src.hasMeterMin = true;
+    src.hasMeterMax = true;
+
+    const QJsonObject obj = src.toJson();
+    const WidgetData restored = WidgetData::fromJson(obj);
+    QCOMPARE(restored.hasMeterMin, true);
+    QCOMPARE(restored.hasMeterMax, true);
+    QCOMPARE(restored.meterMin, -20.0);
+    QCOMPARE(restored.meterMax, -1.0);
+
+    const QVariantMap m = src.toVariantMap();
+    const WidgetData r = WidgetData::fromVariantMap(m);
+    QCOMPARE(r.hasMeterMin, true);
+    QCOMPARE(r.hasMeterMax, true);
+    QCOMPARE(r.meterMin, -20.0);
+    QCOMPARE(r.meterMax, -1.0);
 }
 
 // Task 8B-A（Phase 8-B）: 複数系列（series）+ 軸目盛り/凡例フラグの round-trip（JSON / QVariantMap 両方）。

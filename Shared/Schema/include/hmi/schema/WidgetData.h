@@ -120,6 +120,28 @@ struct WidgetData {
     bool showLegend = false;
     int yTickCount = 0;
 
+    // Task M-A（Phase 10）: Meter（スピードメーター風＝円弧＋針）固有フィールド。設計の正本は
+    // Docs/phase10-meter-plan.md「§Task M-A」。すべて optional ＝ isValidJson 必須集合に含めない（後方互換）。
+    //   meterMin/hasMeterMin・meterMax/hasMeterMax : スケール範囲（値→角度マッピングの定義域）。
+    //     **負値が正当**（例 -20℃）なのでセンチネル不可 → presence フラグ方式（minValue/yMin の前例踏襲）。
+    //     **JSON は hasMeterMin キーを作らず meterMin キーの有無で presence を表す**が、
+    //     **C++↔QML ブリッジの QVariantMap は既存 min/max・yMin/yMax に倣い明示 bool キーを持つ**。
+    //     NumericField の入力 clamp 用 minValue/maxValue とは意味が異なる（Trend が yMin/yMax を
+    //     独立に持ったのと同じく Meter は独立した meterMin/meterMax を持つ）。
+    //   arcColor / needleColor : 弧色 / 針色。`""` センチネル（= 未指定）。非空のときだけ書く（lineColor 同型）。
+    //   tickCount : 目盛りの本数。`0` センチネル（= 未指定。`0` は「目盛り 0 本」の正当値を持たない
+    //     ＝pointCount/yTickCount 同型）。toJson は `> 0` のときだけ書く。
+    //   unit : 中央数値の単位（例 "km/h"）。`""` センチネル（= 未指定＝単位表示なし）。非空のときだけ書く。
+    // 既定外観（既定範囲 0..100 / 既定弧色 / 既定針色 / 既定目盛り数）は描画の唯一の真実である HmiMeter 側に集約する。
+    double meterMin = 0.0;
+    double meterMax = 0.0;
+    bool hasMeterMin = false;
+    bool hasMeterMax = false;
+    QString arcColor;
+    QString needleColor;
+    int tickCount = 0;
+    QString unit;
+
     // Task 39: アクション（書き手）/ バインディング（読み手）。いずれも optional 配列で、
     // 空のとき toJson で省略（後方互換）。実行 / 描画への反映は T41 以降で、本タスクでは
     // 型と保存（round-trip）のみ。isValidJson の必須集合には含めない（後方互換）。
