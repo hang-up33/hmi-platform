@@ -173,7 +173,7 @@ M-C は delegate の HmiMeter 結線（M-B の描画コンポーネントへ `wi
 |---|---|---|
 | M-A Schema 拡張（meter フィールド round-trip） | ✅ 完了 | #152 |
 | M-B 型分岐の足場 + HmiMeter 描画（Canvas） | ✅ 完了 | — |
-| M-C Editor 追加 UI + インスペクタ型対応 | 未着手（メタ/snapshot 素通しは M-A へ前倒し済み） | — |
+| M-C Editor 追加 UI + インスペクタ型対応 | ✅ 完了 | — |
 | M-D cross-app E2E（針追従）+ スクショ | 未着手 | — |
 
 **M-B 完了**：`Shared/Widgets/qml/HmiMeter.qml` を新設（背景・枠を持つ `Rectangle` + 弧/目盛り/針/
@@ -188,7 +188,20 @@ Simulator `SimulatorCanvas.qml` の delegate に **5 分岐目** `meterComponent
 （`tst_hmi_meter.qml`）+ 両 delegate 生成 unit を追加。Web `ctest` 25/25 緑（HmiMeter 11 / Editor delegate /
 Simulator delegate すべて PASS）。**実機 Canvas 描画の VNC 確認は作業 TODO**（ローカル実機が要るため Web で
 満たせない＝完了条件外。plan リスク 1）。**追加 UI（ツールバー / インスペクタ）はまだ無し＝手書き JSON で検証**。
-**次＝M-C**（Editor 追加 UI + インスペクタ型対応）。各 Task 完了時に本表と常駐文書を同期する。
+
+**M-C 完了**：Editor に Meter の追加 UI とインスペクタ型対応を足した（Schema・C++ ブリッジ・
+描画は不変。M-B の delegate/メタ/snapshot 素通しへ「編集 UI」だけを上積み）。①`Canvas.qml` の
+`addWidget` ホワイトリストに `"Meter"` を追加（既定サイズ 200×200・`text:""`）。②ツールバーに
+「メーター追加」ボタン（objectName `addMeterButton`）。③`Main.qml` に `selectedIsMeter` を追加し
+`selectedSupportsClickAction` に `&& !selectedIsMeter` を連結（Meter はクリックアクション非対応）。
+④基本セクションの Text 欄・文字セクションを Meter でも隠す（`&& !selectedIsMeter`）。⑤新設
+「Meter 詳細」セクション（`visible: selectedIsMeter`）に 範囲 min/max〔presence チェック方式・
+Trend の Y 軸 min/max を手本〕/ 弧色・針色〔hex TextField + 色スウォッチ + ColorDialog〕/
+目盛り数〔SpinBox・0=既定 10〕/ 単位〔TextField〕を配置（すべて 2 本立て編集＋undo 境界へ登録）。
+⑥背景色・ボーダー色スウォッチの fallback に Meter の resolved 既定（背景 #0b1d2a / 枠 #9aa5b1）を追加。
+unit（`tst_canvas.qml`）に `addWidget("Meter")` の型・既定サイズ・undo 回帰を追加。`editor.png` を
+Meter 追加ボタン + インスペクタ反映で撮り直し同期。**次＝M-D**（cross-app E2E `e2e_meter_live` +
+スクショ）。各 Task 完了時に本表と常駐文書を同期する。
 
 ## 非スコープ（別承認）
 

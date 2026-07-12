@@ -20,6 +20,11 @@
       "name": "targetRate",
       "type": "int",
       "initial": "1200"
+    },
+    {
+      "name": "spindleTemp",
+      "type": "int",
+      "initial": "68"
     }
   ],
   "screens": [
@@ -200,46 +205,6 @@
           "height": 28,
           "text": "CYCLE TIME",
           "textColor": "#7a4a18",
-          "fontSize": 15,
-          "fontBold": true,
-          "hAlign": "center",
-          "vAlign": "top"
-        },
-        {
-          "id": "tile4Body",
-          "type": "Button",
-          "x": 602,
-          "y": 96,
-          "width": 178,
-          "height": 116,
-          "text": "",
-          "backgroundColor": "#ef476f",
-          "borderWidth": 0,
-          "radius": 14
-        },
-        {
-          "id": "tile4Val",
-          "type": "Label",
-          "x": 602,
-          "y": 128,
-          "width": 178,
-          "height": 76,
-          "text": "68C",
-          "textColor": "#ffffff",
-          "fontSize": 44,
-          "fontBold": true,
-          "hAlign": "center",
-          "vAlign": "bottom"
-        },
-        {
-          "id": "tile4Cap",
-          "type": "Label",
-          "x": 602,
-          "y": 104,
-          "width": 178,
-          "height": 28,
-          "text": "SPINDLE TEMP",
-          "textColor": "#ffd6e0",
           "fontSize": 15,
           "fontBold": true,
           "hAlign": "center",
@@ -645,6 +610,30 @@
             {
               "property": "value",
               "variable": "targetRate"
+            }
+          ]
+        },
+        {
+          "id": "spindleMeter",
+          "type": "Meter",
+          "x": 602,
+          "y": 96,
+          "width": 178,
+          "height": 116,
+          "backgroundColor": "#14213d",
+          "borderColor": "#415a77",
+          "borderWidth": 1,
+          "radius": 14,
+          "meterMin": 0,
+          "meterMax": 120,
+          "arcColor": "#2a9d8f",
+          "needleColor": "#ef476f",
+          "tickCount": 6,
+          "unit": "C",
+          "bindings": [
+            {
+              "property": "value",
+              "variable": "spindleTemp"
             }
           ]
         }

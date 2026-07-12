@@ -10,11 +10,11 @@ GUI で HMI 画面を作図 → JSON で保存 → PC でも組込み実機で�
 
 ![HMI Editor でライン監視ダッシュボードを組み上げる様子](Docs/screenshots/editor.gif)
 
-Editor でライン監視ダッシュボードのショーケースを 1 画面に組み上げていく様子（ヘッダ → 状態ピル → KPI タイル → 機械ステータス盤 → 設定値入力 + 操作ボタン → ライブトレンド）。ツールバーで Widget 追加（ボタン / ラベル / 数値入力 / トレンド）・JSON 開く / 保存・編集補助（スナップ・コピペ・undo / redo）、右のインスペクタでスタイル・配置・アクション・バインディングを編集できる。**Phase 8（トレンドグラフ）でトレンド Widget（ライブ折れ線）を追加**：選択するとインスペクタに「Trend 詳細」セクションが現れ、表示点数（N）・Y 軸範囲（最小値 / 最大値・空欄で自動スケール）・線色・サンプル周期（ms）を編集できる（描画は QML Canvas 自描画で新 Qt モジュール依存なし。Editor では濃紺背景＋ダミー波形のプレビュー、実行時〔Simulator / Runtime〕は bind した変数の値をサンプルして折れ線描画。図はライン監視ダッシュボードのショーケース〔KPI タイル・機械ステータス・操作ボタン・設定値入力 + 下部に targetRate のライブトレンド〕で全 Widget 種別を 1 画面に同居させた例）。数値入力（NumericField）は変数の型（int / real）を引き継ぎ、インスペクタ「詳細」の範囲（最小値 / 最大値）で入力 clamp の境界を指定できる。**Phase 7（Modbus TCP）の変数パネル（ツールバー「変数」トグル）では各変数に「PLC レジスタに割当」を追加**：チェックすると接続先（ホスト / ポート / Unit ID）とレジスタ写像（レジスタ種別 coil/discrete/input/holding・アドレス・ポーリング間隔 ms）を編集でき、JSON に保存される。
+Editor でライン監視ダッシュボードのショーケースを 1 画面に組み上げていく様子（ヘッダ → 状態ピル → KPI タイル → 機械ステータス盤 → 設定値入力 + 操作ボタン → ライブトレンド）。ツールバーで Widget 追加（ボタン / ラベル / 数値入力 / トレンド / メーター）・JSON 開く / 保存・編集補助（スナップ・コピペ・undo / redo）、右のインスペクタでスタイル・配置・アクション・バインディングを編集できる。**Phase 10（メーター）でメーター Widget（車のスピードメーター風＝円弧＋針）を追加**：選択するとインスペクタに「Meter 詳細」セクションが現れ、範囲（最小値 / 最大値）・弧色・針色・目盛り数・単位を編集できる（Trend と同じく QML `Canvas` 自描画で新 Qt モジュール依存なし。Editor では中間値プレビュー、実行時〔Simulator / Runtime〕は bind した変数の「読み」を針角度に反映。図では右上 KPI 列にスピンドル温度計として同居）。**Phase 8（トレンドグラフ）でトレンド Widget（ライブ折れ線）を追加**：選択するとインスペクタに「Trend 詳細」セクションが現れ、表示点数（N）・Y 軸範囲（最小値 / 最大値・空欄で自動スケール）・線色・サンプル周期（ms）を編集できる（描画は QML Canvas 自描画で新 Qt モジュール依存なし。Editor では濃紺背景＋ダミー波形のプレビュー、実行時〔Simulator / Runtime〕は bind した変数の値をサンプルして折れ線描画。図はライン監視ダッシュボードのショーケース〔KPI タイル・機械ステータス・操作ボタン・設定値入力 + 下部に targetRate のライブトレンド〕で全 Widget 種別を 1 画面に同居させた例）。数値入力（NumericField）は変数の型（int / real）を引き継ぎ、インスペクタ「詳細」の範囲（最小値 / 最大値）で入力 clamp の境界を指定できる。**Phase 7（Modbus TCP）の変数パネル（ツールバー「変数」トグル）では各変数に「PLC レジスタに割当」を追加**：チェックすると接続先（ホスト / ポート / Unit ID）とレジスタ写像（レジスタ種別 coil/discrete/input/holding・アドレス・ポーリング間隔 ms）を編集でき、JSON に保存される。
 
 ![HMI Simulator](Docs/screenshots/simulator.png)
 
-Simulator（読み取り専用）。同じ JSON を描画し、変数・クリックアクション・バインディングも動く（ボタン操作や数値入力で変数が変わると、それを参照する Widget が追従）。図はライン監視ダッシュボードのショーケースで、下部の **トレンド Widget（ライブ折れ線）** が bind した変数 `targetRate` の値変化をライブサンプリングして折れ線描画している様子（NumericField〔TARGET RATE〕で値を変えると Trend が即追従する）。ツールバーの「変数」トグルで、実行時のタグ（変数）現在値をライブ表示するデバッグパネルを開ける。
+Simulator（読み取り専用）。同じ JSON を描画し、変数・クリックアクション・バインディングも動く（ボタン操作や数値入力で変数が変わると、それを参照する Widget が追従）。図はライン監視ダッシュボードのショーケースで、下部の **トレンド Widget（ライブ折れ線）** が bind した変数 `targetRate` の値変化をライブサンプリングして折れ線描画している様子（NumericField〔TARGET RATE〕で値を変えると Trend が即追従する）。右上 KPI 列の **メーター Widget（スピードメーター風＝円弧＋針）** は変数 `spindleTemp` を bind し、その「読み」を針角度に反映している。ツールバーの「変数」トグルで、実行時のタグ（変数）現在値をライブ表示するデバッグパネルを開ける。
 
 ## できること
 
@@ -113,7 +113,7 @@ SDK 生成・実機 scp・起動（weston）・キャプチャの全手順と罠
 
 ## ステータスとドキュメント
 
-- **現在地**: **Phase 10 / メーター（Meter・車のスピードメーター風）着手**（2026-06-27 承認・計画起票）。新 Widget 種別「Meter」を横展開テンプレ（Phase 5/6/8）に乗せる。**円弧（アーク）＋針の QML `Canvas` 自描画で新 Qt モジュール依存ゼロ**（Trend と同じく実機 rootfs にそのまま載る）。読み取り専用表示で値源は既存 `bindings` の「読み」を再利用＝**Schema 4 メソッド追加のみで C++ ブリッジ無改変**。M-A〜M-D に分割。**M-A（Schema 拡張）・M-B（HmiMeter 描画 + 型分岐 5 分岐目）完了、次＝M-C（Editor 追加 UI + インスペクタ型対応）**。進捗の正本は [Docs/phase10-meter-plan.md](Docs/phase10-meter-plan.md)。
+- **現在地**: **Phase 10 / メーター（Meter・車のスピードメーター風）着手**（2026-06-27 承認・計画起票）。新 Widget 種別「Meter」を横展開テンプレ（Phase 5/6/8）に乗せる。**円弧（アーク）＋針の QML `Canvas` 自描画で新 Qt モジュール依存ゼロ**（Trend と同じく実機 rootfs にそのまま載る）。読み取り専用表示で値源は既存 `bindings` の「読み」を再利用＝**Schema 4 メソッド追加のみで C++ ブリッジ無改変**。M-A〜M-D に分割。**M-A（Schema 拡張）・M-B（HmiMeter 描画 + 型分岐 5 分岐目）・M-C（Editor 追加 UI + インスペクタ型対応）完了、次＝M-D（cross-app E2E + スクショ）**。進捗の正本は [Docs/phase10-meter-plan.md](Docs/phase10-meter-plan.md)。
   - **Phase 9 / OPC-UA クライアント完了**（2026-06-27 OP-6 クローズ）。**OP-1〜OP-6 すべて完了**：OP-1〔Schema + Editor UI〕／OP-2〔PC 読込/購読〕／OP-3〔実サーバ読込確認〕／OP-4〔書込 + 接続状態 + 自動再接続〕／OP-5〔実サーバ書込確認〕／OP-6〔実機 Runtime 展開（i.MX8MP で OPC-UA ライブ値を VNC キャプチャで確認）〕。**🔴 Qt OpcUa は aqtinstall 非同梱＝Web/CI 不可。macOS / Windows / 実機（SDK 包含）ともに導入済み**（手順は [.claude/rules/dev-environment.md](.claude/rules/dev-environment.md)）。進捗の正本は [Docs/phase9-opcua-plan.md](Docs/phase9-opcua-plan.md)。
   - **Phase 8 / トレンドグラフ（単系列ライブ折れ線）完了**（2026-06-16 承認・PR #127〜#131）。新 Widget 種別「Trend」を横展開テンプレに乗せ、`Canvas` 自描画で実機にそのまま載る。進捗の正本は [Docs/phase8-trend-plan.md](Docs/phase8-trend-plan.md)。
   - **Phase 7 / Modbus TCP** は MB-1〜MB-4（書込 + 接続状態 + 自動再接続・PR #119/#121/#122）完了。残る MB-5〔実 PLC 書込確認〕/ MB-6〔実機 Yocto〕はローカル専用で Web 不可。進捗の正本は [Docs/phase7-modbus-plan.md](Docs/phase7-modbus-plan.md)。

@@ -1141,4 +1141,33 @@ TestCase {
         tryVerify(function() { return editableChildren().length === 1; }, 1000,
                   "undo で Label 追加が取り消されない");
     }
+
+    // Task M-C: addWidget("Meter") は Meter 型 Widget を追加し HmiMeter で描かれる。
+    // 文字を持たないので text は ""、既定サイズはスピードメーターらしい正方形 200×200。
+    function test_add_widget_meter_type() {
+        canvas.addWidget("Meter");
+        tryVerify(function() { return editableChildren().length === 2; }, 1000,
+                  "Meter が追加されない");
+        const added = addedWidget();
+        verify(added !== null, "新規 Meter widget が見つからない");
+        compare(added.widgetType, "Meter");
+        compare(added.widgetText, "");
+        compare(added.width, 200);
+        compare(added.height, 200);
+        tryVerify(function() { return findByObjectName(added, "hmiMeter") !== null; }, 1000,
+                  "追加 Meter が HmiMeter で描かれない");
+        verify(findByObjectName(added, "hmiButton") === null,
+               "Meter なのに HmiButton も生成された");
+    }
+
+    // Task M-C: addWidget("Meter") も undo で元に戻せる（構造変更 = pushUndo 経路）。
+    function test_add_meter_is_undoable() {
+        compare(canvas.canUndo, false);
+        canvas.addWidget("Meter");
+        tryVerify(function() { return editableChildren().length === 2; }, 1000, "Meter が追加されない");
+        compare(canvas.canUndo, true);
+        canvas.undo();
+        tryVerify(function() { return editableChildren().length === 1; }, 1000,
+                  "undo で Meter 追加が取り消されない");
+    }
 }

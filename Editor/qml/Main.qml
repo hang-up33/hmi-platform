@@ -473,6 +473,13 @@ Window {
         // フォーカス喪失（commitEdit）の順なので 1 編集 = 1 undo になる。
         || inspectorYTickCountSpin.activeFocus
         || rootWindow.seriesFieldFocusCount > 0
+        // Task M-C: Meter 詳細欄（範囲 min/max / 弧色 / 針色 / 目盛り数 / 単位）も undo の操作境界に含める。
+        || inspectorMeterMinField.activeFocus
+        || inspectorMeterMaxField.activeFocus
+        || inspectorArcColorField.activeFocus
+        || inspectorNeedleColorField.activeFocus
+        || inspectorTickCountSpin.activeFocus
+        || inspectorUnitField.activeFocus
         || fieldX.activeFocus || fieldY.activeFocus
         || fieldW.activeFocus || fieldH.activeFocus
 
@@ -508,13 +515,20 @@ Window {
     readonly property bool selectedIsTrend:
         canvas.selectedItem !== null && canvas.selectedItem.widgetType === "Trend"
 
-    // Task 51 / T-C: クリックアクション（onClick）を扱える Widget か（= Button のみ）。Label /
-    // NumericField / Trend はクリックアクションを持たないため、`!selectedIsLabel && …`
+    // Task M-C: 選択中 Widget が Meter 型か。Meter は表示専用（車のスピードメーター風＝
+    // 円弧 + 針）で、状態（トグル/初期オン）・クリックアクション・文字（フォント）を持たない。
+    // 背景・枠（メーター枠）・不透明度・有効・バインディング（表示対象変数 = value 読み）は持つ。
+    // Meter 詳細（範囲 min/max / 弧色 / 針色 / 目盛り数 / 単位）は selectedIsMeter で出し分ける。
+    readonly property bool selectedIsMeter:
+        canvas.selectedItem !== null && canvas.selectedItem.widgetType === "Meter"
+
+    // Task 51 / T-C / M-C: クリックアクション（onClick）を扱える Widget か（= Button のみ）。Label /
+    // NumericField / Trend / Meter はクリックアクションを持たないため、`!selectedIsLabel && …`
     // を毎回連結せず派生プロパティへまとめる（今後の入力 / 表示 Widget 追加で破綻しにくい。
-    // 新たに「クリックアクション非対応」種別が増えたらここだけ直せばよい）。Trend は
+    // 新たに「クリックアクション非対応」種別が増えたらここだけ直せばよい）。Trend / Meter は
     // Label の既存抑制（selectedIsLabel）と独立に AND するだけで競合しない（派生 1 本に集約）。
     readonly property bool selectedSupportsClickAction:
-        !selectedIsLabel && !selectedIsNumericField && !selectedIsTrend
+        !selectedIsLabel && !selectedIsNumericField && !selectedIsTrend && !selectedIsMeter
 
     // Task 38: インスペクタの Widget 編集を undo の 1 操作境界にする。どれかの入力欄が
     // フォーカスを得た時に前状態を保留（beginEdit）し、全フィールドからフォーカスが
@@ -652,6 +666,14 @@ Window {
                 objectName: "addTrendButton"
                 text: qsTr("トレンド追加")
                 onClicked: canvas.addWidget("Trend")
+            }
+
+            // Task M-C: メーター（Meter）追加。Phase 10 の表示 Widget（車のスピードメーター風＝
+            // 円弧 + 針）。同じ addWidget を type 違いで呼ぶ（ホワイトリストに "Meter" を追加済み）。
+            Button {
+                objectName: "addMeterButton"
+                text: qsTr("メーター追加")
+                onClicked: canvas.addWidget("Meter")
             }
 
             Button {
@@ -1072,12 +1094,12 @@ Window {
                         InspectorSection {
                             title: qsTr("基本")
 
-                            // Task T-C: Trend は文字を持たないため Text 入力（ラベル + 欄）を隠す。
-                            Label { text: qsTr("Text"); visible: !rootWindow.selectedIsTrend }
+                            // Task T-C / M-C: Trend / Meter は文字を持たないため Text 入力（ラベル + 欄）を隠す。
+                            Label { text: qsTr("Text"); visible: !rootWindow.selectedIsTrend && !rootWindow.selectedIsMeter }
                             TextField {
                                 id: inspectorTextField
                                 objectName: "inspectorTextField"
-                                visible: !rootWindow.selectedIsTrend
+                                visible: !rootWindow.selectedIsTrend && !rootWindow.selectedIsMeter
                                 width: parent.width
                                 // ユーザー入力のみ選択中 Item へ書き戻す
                                 // （textEdited はプログラム変更では発火しない）。
@@ -1232,11 +1254,11 @@ Window {
                         }
 
                         // ── 文字 : フォント / 文字サイズ / 太字 / 斜体 / 文字色 / 配置 ──
-                        // Task T-C: Trend は文字を持たない（表示専用の折れ線グラフ）ため
-                        // 文字セクションを丸ごと隠す（型出し分けは visible のみ）。
+                        // Task T-C / M-C: Trend / Meter は文字を持たない（表示専用の折れ線グラフ /
+                        // メーター）ため文字セクションを丸ごと隠す（型出し分けは visible のみ）。
                         InspectorSection {
                             title: qsTr("文字")
-                            visible: !rootWindow.selectedIsTrend
+                            visible: !rootWindow.selectedIsTrend && !rootWindow.selectedIsMeter
 
                             // フォント family は ComboBox。model 先頭に「(既定フォント)」を置き、
                             // index 0 = 未指定（空文字 = システム既定）にマップする。残りは
@@ -1495,14 +1517,18 @@ Window {
                                     field: inspectorBgColorField
                                     targetProperty: "widgetBackgroundColor"
                                     // 未指定時の既定色は Widget 種別の resolved* と揃える
-                                    //（HmiButton=#4cc9f0 / HmiLabel=transparent / HmiNumericField=#ffffff）。
-                                    // Task 51: NumericField は入力欄らしい白背景（#ffffff）が既定。
+                                    //（HmiButton=#4cc9f0 / HmiLabel=transparent / HmiNumericField=#ffffff /
+                                    // HmiMeter=#0b1d2a）。Task 51: NumericField は入力欄らしい白背景。
+                                    // Task M-C: Meter はスピードメーターらしい濃紺背景（#0b1d2a）が既定。
                                     fallback: (canvas.selectedItem
                                                && canvas.selectedItem.widgetType === "Label")
                                         ? "transparent"
                                         : (canvas.selectedItem
                                            && canvas.selectedItem.widgetType === "NumericField")
-                                            ? "#ffffff" : "#4cc9f0"
+                                            ? "#ffffff"
+                                        : (canvas.selectedItem
+                                           && canvas.selectedItem.widgetType === "Meter")
+                                            ? "#0b1d2a" : "#4cc9f0"
                                 }
                             }
 
@@ -1553,8 +1579,11 @@ Window {
                                     anchors.verticalCenter: parent.verticalCenter
                                     field: inspectorBorderColorField
                                     targetProperty: "widgetBorderColor"
-                                    // HmiButton.resolvedBorderColor の既定と揃える。
-                                    fallback: "#1d3557"
+                                    // 既定色は Widget 種別の resolvedBorderColor と揃える
+                                    //（HmiButton=#1d3557 / HmiMeter=#9aa5b1）。
+                                    fallback: (canvas.selectedItem
+                                               && canvas.selectedItem.widgetType === "Meter")
+                                        ? "#9aa5b1" : "#1d3557"
                                 }
                             }
 
@@ -2018,6 +2047,219 @@ Window {
                                 objectName: "addSeriesButton"
                                 text: qsTr("系列を追加")
                                 onClicked: rootWindow.addSeries()
+                            }
+                        }
+
+                        // ── Meter 詳細（Meter 選択時のみ）: 範囲 min/max / 弧色 / 針色 / 目盛り数 / 単位 ──
+                        // Task M-C: Meter 固有の編集 UI。型出し分けは visible のみ（objectName・
+                        // 編集ロジック・Schema 不変）。範囲 min/max は double で **負値も正当なので
+                        // presence チェック方式**（Trend の Y 軸 min/max・NumericField の min/max を手本）。
+                        // 弧色 / 針色は色スウォッチ + ColorDialog（Task 46 の色入力を手本）。目盛り数は
+                        // int（SpinBox）、単位は素の TextField。すべて 2 本立て（onValueModified/
+                        // onTextEdited で live Item へ書き戻し、Connections.onSelectedItemChanged で表示同期）。
+                        InspectorSection {
+                            objectName: "inspectorMeterSection"
+                            title: qsTr("Meter 詳細")
+                            visible: rootWindow.selectedIsMeter
+
+                            // 範囲 最小値（presence 方式）。空欄 = 未指定（hasMeterMin=false → 既定 0）、
+                            // 値を入れると hasMeterMin=true。負値・小数も許す（Trend Y 軸 min と同型の
+                            // RegularExpressionValidator＝空 または 数値）。
+                            Label { text: qsTr("範囲 最小値") }
+                            TextField {
+                                id: inspectorMeterMinField
+                                objectName: "inspectorMeterMinField"
+                                width: parent.width
+                                placeholderText: qsTr("(既定 0)")
+                                onActiveFocusChanged: if (activeFocus) selectAll()
+                                validator: RegularExpressionValidator {
+                                    regularExpression: /^(-?\d*\.?\d*)$/
+                                }
+                                ToolTip.text: qsTr("メーターの下限値（針が振れ始める値）。空欄で既定 0")
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
+                                onTextEdited: {
+                                    if (canvas.selectedItem && acceptableInput) {
+                                        var t = text.trim()
+                                        var nv = Number(t)
+                                        if (t === "" || t === "-" || t === "." || isNaN(nv)) {
+                                            canvas.selectedItem.widgetHasMeterMin = false
+                                        } else {
+                                            canvas.selectedItem.widgetMeterMin = nv
+                                            canvas.selectedItem.widgetHasMeterMin = true
+                                        }
+                                    }
+                                }
+                                Connections {
+                                    target: canvas
+                                    function onSelectedItemChanged() {
+                                        inspectorMeterMinField.text =
+                                            (canvas.selectedItem && canvas.selectedItem.widgetHasMeterMin)
+                                                ? String(canvas.selectedItem.widgetMeterMin) : ""
+                                    }
+                                }
+                            }
+
+                            Label { text: qsTr("範囲 最大値") }
+                            TextField {
+                                id: inspectorMeterMaxField
+                                objectName: "inspectorMeterMaxField"
+                                width: parent.width
+                                placeholderText: qsTr("(既定 100)")
+                                onActiveFocusChanged: if (activeFocus) selectAll()
+                                validator: RegularExpressionValidator {
+                                    regularExpression: /^(-?\d*\.?\d*)$/
+                                }
+                                ToolTip.text: qsTr("メーターの上限値（針が振り切る値）。空欄で既定 100")
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
+                                onTextEdited: {
+                                    if (canvas.selectedItem && acceptableInput) {
+                                        var t = text.trim()
+                                        var nv = Number(t)
+                                        if (t === "" || t === "-" || t === "." || isNaN(nv)) {
+                                            canvas.selectedItem.widgetHasMeterMax = false
+                                        } else {
+                                            canvas.selectedItem.widgetMeterMax = nv
+                                            canvas.selectedItem.widgetHasMeterMax = true
+                                        }
+                                    }
+                                }
+                                Connections {
+                                    target: canvas
+                                    function onSelectedItemChanged() {
+                                        inspectorMeterMaxField.text =
+                                            (canvas.selectedItem && canvas.selectedItem.widgetHasMeterMax)
+                                                ? String(canvas.selectedItem.widgetMeterMax) : ""
+                                    }
+                                }
+                            }
+
+                            // 弧色（"#RRGGBB" hex の TextField + 色スウォッチ）。背景色等と同じ
+                            // 2 本立て + ColorDialog 起動（Task 46）。空 = 未指定＝既定弧色 #4cc9f0。
+                            Label { text: qsTr("弧色 (#RRGGBB)") }
+                            Row {
+                                width: parent.width - parent.leftPadding
+                                spacing: 6
+
+                                TextField {
+                                    id: inspectorArcColorField
+                                    objectName: "inspectorArcColorField"
+                                    width: parent.width - rootWindow.colorSwatchReserve
+                                    placeholderText: qsTr("#4cc9f0")
+                                    validator: RegularExpressionValidator {
+                                        regularExpression: /^(#[0-9A-Fa-f]{6})?$/
+                                    }
+                                    onTextEdited: {
+                                        if (canvas.selectedItem && acceptableInput) {
+                                            canvas.selectedItem.widgetArcColor = text
+                                        }
+                                    }
+                                    Connections {
+                                        target: canvas
+                                        function onSelectedItemChanged() {
+                                            inspectorArcColorField.text = canvas.selectedItem
+                                                ? canvas.selectedItem.widgetArcColor : ""
+                                        }
+                                    }
+                                }
+                                ColorSwatch {
+                                    objectName: "inspectorArcColorSwatch"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    field: inspectorArcColorField
+                                    targetProperty: "widgetArcColor"
+                                    // HmiMeter.resolvedArcColor の既定と揃える。
+                                    fallback: "#4cc9f0"
+                                }
+                            }
+
+                            // 針色（"#RRGGBB" hex の TextField + 色スウォッチ）。空 = 既定針色 #ff595e。
+                            Label { text: qsTr("針色 (#RRGGBB)") }
+                            Row {
+                                width: parent.width - parent.leftPadding
+                                spacing: 6
+
+                                TextField {
+                                    id: inspectorNeedleColorField
+                                    objectName: "inspectorNeedleColorField"
+                                    width: parent.width - rootWindow.colorSwatchReserve
+                                    placeholderText: qsTr("#ff595e")
+                                    validator: RegularExpressionValidator {
+                                        regularExpression: /^(#[0-9A-Fa-f]{6})?$/
+                                    }
+                                    onTextEdited: {
+                                        if (canvas.selectedItem && acceptableInput) {
+                                            canvas.selectedItem.widgetNeedleColor = text
+                                        }
+                                    }
+                                    Connections {
+                                        target: canvas
+                                        function onSelectedItemChanged() {
+                                            inspectorNeedleColorField.text = canvas.selectedItem
+                                                ? canvas.selectedItem.widgetNeedleColor : ""
+                                        }
+                                    }
+                                }
+                                ColorSwatch {
+                                    objectName: "inspectorNeedleColorSwatch"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    field: inspectorNeedleColorField
+                                    targetProperty: "widgetNeedleColor"
+                                    // HmiMeter.resolvedNeedleColor の既定と揃える。
+                                    fallback: "#ff595e"
+                                }
+                            }
+
+                            // 目盛り数。0/未指定は HmiMeter 側で既定 10 へ解決。SpinBox（editable なし）で
+                            // from を 0（=既定）にする。
+                            Label { text: qsTr("目盛り数") }
+                            SpinBox {
+                                id: inspectorTickCountSpin
+                                objectName: "inspectorTickCountSpin"
+                                from: 0
+                                to: 50
+                                value: 0
+                                ToolTip.text: qsTr("弧上の目盛り本数。0 で既定（10 本）")
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
+                                onValueModified: {
+                                    if (canvas.selectedItem) {
+                                        canvas.selectedItem.widgetTickCount = value
+                                    }
+                                }
+                                Connections {
+                                    target: canvas
+                                    function onSelectedItemChanged() {
+                                        const it = canvas.selectedItem
+                                        // 0/未指定はそのまま 0（＝既定 10 本）を表示する。
+                                        inspectorTickCountSpin.value = (it && it.widgetTickCount > 0)
+                                            ? it.widgetTickCount : 0
+                                    }
+                                }
+                            }
+
+                            // 単位（中央数値に付く。例 "km/h"）。空 = 単位表示なし。素の TextField。
+                            Label { text: qsTr("単位") }
+                            TextField {
+                                id: inspectorUnitField
+                                objectName: "inspectorUnitField"
+                                width: parent.width
+                                placeholderText: qsTr("例: km/h（任意）")
+                                ToolTip.text: qsTr("中央の数値に付く単位ラベル。空欄で単位表示なし")
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
+                                onTextEdited: {
+                                    if (canvas.selectedItem) {
+                                        canvas.selectedItem.widgetUnit = text
+                                    }
+                                }
+                                Connections {
+                                    target: canvas
+                                    function onSelectedItemChanged() {
+                                        inspectorUnitField.text = canvas.selectedItem
+                                            ? canvas.selectedItem.widgetUnit : ""
+                                    }
+                                }
                             }
                         }
 

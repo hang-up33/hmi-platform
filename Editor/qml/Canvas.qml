@@ -244,29 +244,31 @@ Item {
         pushUndo()  // Task 38: 追加の直前状態を undo へ
         const snapshot = snapshotModel()
         const id = nextWidgetId(snapshot)
-        // Task 48 / 51 / T-C: 既知の種別（"Button" / "Label" / "NumericField" / "Trend"）
-        // だけを採用し、未知値 / 空 / undefined は "Button" にフォールバックする
-        //（ホワイトリスト正規化）。描画フォールバックと保存値が乖離して JSON の型契約が壊れる
-        // のを防ぐ（CodeRabbit PR #98 指摘）。新種別を足す時はここの許可リストに追加する
-        //（Task 51 で "NumericField"、Task T-C で "Trend" を追加）。
+        // Task 48 / 51 / T-C / M-C: 既知の種別（"Button" / "Label" / "NumericField" /
+        // "Trend" / "Meter"）だけを採用し、未知値 / 空 / undefined は "Button" にフォールバック
+        // する（ホワイトリスト正規化）。描画フォールバックと保存値が乖離して JSON の型契約が
+        // 壊れるのを防ぐ（CodeRabbit PR #98 指摘）。新種別を足す時はここの許可リストに追加する
+        //（Task 51 で "NumericField"、Task T-C で "Trend"、Task M-C で "Meter" を追加）。
         const widgetType = (type === "Label" || type === "Button"
-                || type === "NumericField" || type === "Trend")
+                || type === "NumericField" || type === "Trend" || type === "Meter")
             ? type : "Button"
         // Task T-C: Trend はグラフらしく大きめの既定サイズ（240×120 = HmiTrend の既定実寸）。
+        // Task M-C: Meter はスピードメーターらしく正方形の既定サイズ（200×200 = HmiMeter の既定実寸）。
         // 他種別は従来どおり 120×40。
         const isTrend = widgetType === "Trend"
+        const isMeter = widgetType === "Meter"
         const newWidget = {
             id: id,
             type: widgetType,
             x: 50, y: 200,
-            width: isTrend ? 240 : 120,
-            height: isTrend ? 120 : 40,
+            width: isTrend ? 240 : isMeter ? 200 : 120,
+            height: isTrend ? 120 : isMeter ? 200 : 40,
             // Label は既定文字 "Label"・透明背景（背景は未指定のままで HmiLabel が
             // transparent にフォールバック）。NumericField は数値慣習で初期値 "0"。
-            // Trend は文字を持たないので "" 固定。Button は従来どおり "New"。
+            // Trend / Meter は文字を持たないので "" 固定。Button は従来どおり "New"。
             text: widgetType === "Label" ? "Label"
                 : widgetType === "NumericField" ? "0"
-                : isTrend ? "" : "New", tag: ""
+                : (isTrend || isMeter) ? "" : "New", tag: ""
         }
         snapshot.push(newWidget)
         // 新しい配列を代入することで Repeater に確実にモデル変更を通知する。
