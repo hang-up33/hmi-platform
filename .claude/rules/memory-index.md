@@ -31,6 +31,7 @@
 ### reference
 
 - [Context7 MCP](reference-context7-mcp.md) — ユーザースコープで導入済み、最新ライブラリドキュメント参照に使える（Qt6/QML 等）
+- [Claude Code plugins](reference-claude-code-plugins.md) — clangd-lsp / qt-development-skills / skill-creator / claude-md-management を導入。理由・期待効果・レビュー機能不使用の注意
 
 ### project（CLAUDE.md / Docs に要約しか無い保留事項）
 

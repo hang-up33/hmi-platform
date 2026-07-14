@@ -1,5 +1,11 @@
 {
   "autoCompactEnabled": true,
+  "enabledPlugins": {
+    "clangd-lsp@claude-plugins-official": true,
+    "qt-development-skills@claude-plugins-official": true,
+    "skill-creator@claude-plugins-official": true,
+    "claude-md-management@claude-plugins-official": true
+  },
   "hooks": {
     "SessionStart": [
       {
