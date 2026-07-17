@@ -109,6 +109,7 @@ JSON 入出力は `QJsonDocument`（外部依存なし）。Editor / Simulator �
 | [hero-demo](.claude/skills/hero-demo/SKILL.md) | README ヒーローをリッチな HMI ダッシュボードに保つ（ショーケース demo の組み立て技法 + 撮影）。新 Widget 種別追加時にデモを育てる |
 | [kaizen-close](.claude/skills/kaizen-close/SKILL.md) | タスク完了直前に学びをドキュメントに反映する手順 |
 | [progress-summary](.claude/skills/progress-summary/SKILL.md) | 指定期間の実装状況を PR / タスクごとに列挙する（既定は機能だけの簡潔版） |
+| [code-comprehension-drill](.claude/skills/code-comprehension-drill/SKILL.md) | PR / コミット / 差分を、アクティブリコールで自分が 100% 理解し切るための能動的学習ループ（理解度表を Obsidian に保存し再開）。「この PR を完全に理解したい」等で発火 |
 
 ---
 
