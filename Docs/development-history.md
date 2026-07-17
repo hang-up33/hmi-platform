@@ -410,6 +410,18 @@ timeline
 
 ---
 
+## Phase 11: Widget サンプルパレット（D&D 追加）＋ 初号「シンプルボタン」（着手中）
+
+**計画書**：[Docs/phase11-widget-palette-plan.md](phase11-widget-palette-plan.md)（W-A〜W-E。2026-07-12 承認）
+
+- 📋 計画起票 + 見た目プロトタイプ。issue #155「シンプル・イズ・ベスト版 HMI ボタン（ベゼル無し）」を QML の実 Widget として忠実再現し、さらに**見た目そのままの Widget サンプルをインスペクタに並べてキャンバスへ D&D で追加する汎用パレット UX** を新設する（初号＝シンプルボタン。将来他 Widget もパレット化）。
+  - **設計方針**：ランプ・進捗リング・円形など既存 HmiButton（Rectangle+Text）で描けない造形のため**新 Widget 種別 `SimpleButton`（`HmiSimpleButton.qml`）** として横展開テンプレに乗せる。**描画は Canvas 自描画で新 Qt モジュール依存ゼロ**（`import QtQuick` のみ＝Meter/Trend 同方針で i.MX8MP rootfs にそのまま載る）。issue の `oklch()`/`color-mix()` は Qt Quick 非対応のため hex 換算。効果音は非スコープ。
+  - **タスク**：W-A（Schema 拡張＝`shape`/`theme`/`accentColor`/`holdMs` + `checked` 再利用）/ W-B（HmiSimpleButton 描画 + delegate 6 分岐目・長押し確定リング/バー）/ W-C（サンプルパレット・パネル＝実 Widget を縮小レンダリング）/ W-D（パレット→キャンバス D&D 追加）/ W-E（インスペクタ型対応 + cross-app E2E + スクショ）。
+  - **見た目プロトタイプ先行（本エントリ）**：見た目確定のため `HmiSimpleButton.qml` を W-A/W-B に先行して作成し、ユーザーレビューで反復調整（ランプを右上へ・TEST を大きな主ラベル/ON・OFF を小さな従に・文字サイズは面短辺比でリサイズ耐性）→ 承認。`Shared/Widgets/CMakeLists.txt` の `QML_FILES` に登録（ビルド検証済み・Web `ctest` 26/26 緑）。**まだ Schema 型・delegate・パレットには未接続**＝単体プレビュー用コンポーネント。正式な横展開は W-A（Schema）以降。
+  - **非スコープ（別承認）**：効果音・複数アクセントテーマの動的追加・WARN/ERR/LOCK 状態モード・他 Widget 種別のプリセット拡充・リッチ版ボタン（retro/juicy/temperate）移植。
+
+---
+
 ## 番外: 開発コードネーム「Atlas」決定（2026-05-30）
 
 フェーズタスクとは別に、プロジェクト全体の**開発時の通称（ブランド別名）**を決めた経緯。
