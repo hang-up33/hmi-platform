@@ -9,11 +9,15 @@
 
 ## プロジェクト概要
 
-Yocto / i.MX8M Plus 向け Qt6 HMI ランタイムを対象に、HMI 作画ツール（Editor）・PC 試験環境（Simulator）・実機ランタイム（Runtime）・JSON スキーマ（Shared/Schema）・共有 Widget（Shared/Widgets）を統合した開発基盤。詳細は [README.md](README.md)。タスクごとの時系列まとめ（目的 / PR / 成果物 / 学び）は [Docs/development-history.md](Docs/development-history.md) — 第三者説明用で、タスク完了時に当該 Task のエントリを追記する運用候補。**苦労の多かったタスク／フェーズでは、事実だけでなく「奮闘記」（postmortem）も残す**：障害の連鎖を「どう乗り越えたか・その時の判断と心境」まで物語として `Docs/<phase>-journey.md` に記録する（役割分担＝事実・罠は development-history / dev-environment.md、"どう抜けたか・心境" は奮闘記。初出は [Docs/phase3b-runtime-journey.md](Docs/phase3b-runtime-journey.md)）。**開発環境の現状（ホスト構成・ディスク事情・WSL/Yocto ビルド環境・実機 i.MX8MP の状態）は [.claude/rules/dev-environment.md](.claude/rules/dev-environment.md) に集約**（`.claude/rules/` は git 管理＋毎セッション自動読込される Claude Code のメモリ機構。Claude の自動メモリ `~/.claude/projects/.../memory/` はマシンローカルで Windows ↔ Mac を跨がないため、マシン横断の環境知識はこちらを正とする）。
+Yocto / i.MX8M Plus 向け Qt6 HMI ランタイムの統合開発基盤。5 モジュール = 作画ツール（Editor）・PC 試験環境（Simulator）・実機ランタイム（Runtime）・JSON スキーマ（Shared/Schema）・共有 Widget（Shared/Widgets）。詳細は [README.md](README.md)。
 
-**現在のフェーズ**：**Phase 11 / Widget サンプルパレット（ドラッグ&ドロップ追加）＋ 初号「シンプルボタン」着手中。** issue #155「シンプル・イズ・ベスト版 HMI ボタン（ベゼル無し）」を新 Widget 種別 `SimpleButton`（`HmiSimpleButton.qml`）として QML で忠実再現し、さらに**見た目そのままの Widget サンプルをインスペクタに並べてキャンバスへ D&D で追加する**汎用パレット UX を新設する（将来他 Widget もパレット化）。**Canvas 自描画で新 Qt 依存ゼロ**（Meter/Trend 同方針）。**見た目プロトタイプ（`HmiSimpleButton.qml`）をユーザー確認 → 承認済み**（QML モジュール登録のみ・Schema/delegate/パレット未接続）。次＝W-A（Schema 拡張）。進捗の正本は [Docs/phase11-widget-palette-plan.md](Docs/phase11-widget-palette-plan.md)「進捗」表。**Phase 10 / メーター（Meter）** は M-A〜M-D 完了（[Docs/phase10-meter-plan.md](Docs/phase10-meter-plan.md)）。**Phase 9 / OPC-UA** は OP-1〜OP-6 完了（[Docs/phase9-opcua-plan.md](Docs/phase9-opcua-plan.md)）。**Phase 7 / Modbus TCP** は MB-1〜MB-4 完了（残る MB-5/MB-6 はローカル専用。[Docs/phase7-modbus-plan.md](Docs/phase7-modbus-plan.md)）。
+情報の正本（役割分担）：**経緯 / PR / 学び** = [Docs/development-history.md](Docs/development-history.md)、**苦労したフェーズの「どう抜けたか・心境」（奮闘記）** = `Docs/<phase>-journey.md`（初出 [phase3b-runtime-journey.md](Docs/phase3b-runtime-journey.md)）、**開発環境の現状（ホスト / ディスク / WSL・Yocto / 実機）** = [.claude/rules/dev-environment.md](.claude/rules/dev-environment.md)（git 管理＋自動読込でマシン横断共有）、**各フェーズの設計判断・進捗** = 該当 `Docs/phase*-plan.md`「進捗」表。
 
-- **完了済み**：Phase 1〜3-B（MVP / テスト基盤 / E2E / Runtime・i.MX8MP 実機描画）、Phase 4 / Button 縦スライス + 拡張（「Widget 追加テンプレ」確立）、インスペクタ UX 改善、Phase 5（Label）、Phase 6・6-B（NumericField・int + real 型 + min/max）、Phase 7（Modbus TCP・MB-1〜4）、Phase 8・8-B（Trend・単系列 + 複数系列/軸/凡例）、Phase 9（OPC-UA）。**タスクごとの経緯・PR・学びは [development-history.md](Docs/development-history.md) に集約**、各フェーズの設計判断・進捗表は該当 `Docs/phase*-plan.md` が正本（**この「現在のフェーズ」には最新ステータスのみ残し、完了タスクの詳細は積まない**。[memory](https://code.claude.com/docs/en/memory) のベストプラクティス）。
+**現在のフェーズ**：**Phase 11 / Widget サンプルパレット（D&D 追加）＋ 初号「シンプルボタン」着手中。**
+
+- **やること**：issue #155 のボタンを新 Widget 種別 `SimpleButton`（`HmiSimpleButton.qml`）で QML 再現し、見た目そのままのサンプルをインスペクタに並べてキャンバスへ D&D 追加する汎用パレットを新設（Canvas 自描画・新 Qt 依存ゼロ、Meter/Trend と同方針）。
+- **現在地**：見た目プロトタイプ承認済み（QML モジュール登録のみ・Schema/delegate/パレット未接続）。**次 = W-A（Schema 拡張）**。正本は [Docs/phase11-widget-palette-plan.md](Docs/phase11-widget-palette-plan.md)「進捗」表。
+- **完了済み**：Phase 1〜3-B（MVP / テスト基盤 / E2E / Runtime・実機描画）、Phase 4（Button + 拡張）、Phase 5（Label）、Phase 6・6-B（NumericField）、Phase 7（Modbus TCP・MB-1〜4、残 MB-5/6 はローカル専用）、Phase 8・8-B（Trend）、Phase 9（OPC-UA・OP-1〜6）、Phase 10（Meter・M-A〜D）。この節は**最新ステータスのみ**（完了タスクの詳細は積まず development-history / 各 plan へ）。
 
 ---
 
