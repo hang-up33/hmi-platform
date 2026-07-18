@@ -142,6 +142,22 @@ struct WidgetData {
     int tickCount = 0;
     QString unit;
 
+    // Task W-A（Phase 11）: SimpleButton（ベゼル無しシンプルボタン）固有フィールド。設計の正本は
+    // Docs/phase11-widget-palette-plan.md「§Schema 拡張」。すべて optional ＝ isValidJson 必須集合に
+    // 含めない（後方互換）。ON/OFF 状態は既存 checked を再利用する（新規フィールドではない）。
+    //   shape / theme : 人間可読な **文字列**（hAlign 同型）。`""` センチネル（= 未指定）。
+    //     shape="circle"/"square"（既定 circle へ解決）、theme="light"/"dark"（既定 light へ解決）。
+    //     不正値・空は下流（HmiSimpleButton）が既定へフォールバックする。非空のときだけ書く。
+    //   accentColor : 差し色。`""` センチネル（= 未指定＝既定の緑へ解決）。"#RRGGBB"/空
+    //     （backgroundColor / arcColor 同型）。非空のときだけ書く。ブランド差し替え用。
+    //   holdMs : 長押し確定に要する時間[ms]。`0` センチネル（= 未指定。`0` は「長押し 0ms」の
+    //     正当値を持たない ＝ fontSize / tickCount 同型）。`> 0` のときだけ書く。
+    // 既定外観（既定 circle / light / 緑 / 既定 holdMs）は描画の唯一の真実である HmiSimpleButton 側に集約する。
+    QString shape;
+    QString theme;
+    QString accentColor;
+    int holdMs = 0;
+
     // Task 39: アクション（書き手）/ バインディング（読み手）。いずれも optional 配列で、
     // 空のとき toJson で省略（後方互換）。実行 / 描画への反映は T41 以降で、本タスクでは
     // 型と保存（round-trip）のみ。isValidJson の必須集合には含めない（後方互換）。

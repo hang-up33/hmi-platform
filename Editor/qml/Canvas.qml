@@ -191,6 +191,13 @@ Item {
                 needleColor: item.widgetNeedleColor,
                 tickCount: item.widgetTickCount,
                 unit: item.widgetUnit,
+                // Task W-A: SimpleButton 固有も保存スナップショットへ含める（SimpleButton JSON を
+                // Editor で開いて保存しても形状・テーマ・差し色・長押し時間を失わないため。Codex PR #163 [P2]）。
+                // shape/theme/accentColor は非空のとき・holdMs は >0 のとき C++ 側で書き出される。
+                shape: item.widgetShape,
+                theme: item.widgetTheme,
+                accentColor: item.widgetAccentColor,
+                holdMs: item.widgetHoldMs,
                 // Task 39: アクション / バインディングも保存スナップショットへ含める
                 //（読み込んだ定義を Editor の保存で失わないため。Codex PR #78 [P1]）。
                 // 注：series と違い deep copy しないのは、actions/bindings はインスペクタで
@@ -826,6 +833,12 @@ Item {
                     widgetNeedleColor: modelData.needleColor !== undefined ? modelData.needleColor : ""
                     widgetTickCount: modelData.tickCount !== undefined ? modelData.tickCount : 0
                     widgetUnit: modelData.unit !== undefined ? modelData.unit : ""
+                    // Task W-A: SimpleButton 固有フィールドを素通し保持（描画 / delegate / パレットは
+                    // W-B〜だが、SimpleButton JSON を開いて保存しても失わないため。Codex PR #163 [P2]）。
+                    widgetShape: modelData.shape !== undefined ? modelData.shape : ""
+                    widgetTheme: modelData.theme !== undefined ? modelData.theme : ""
+                    widgetAccentColor: modelData.accentColor !== undefined ? modelData.accentColor : ""
+                    widgetHoldMs: modelData.holdMs !== undefined ? modelData.holdMs : 0
                     // Task 39: アクション / バインディングを素通し保持（保存で失わないため）。
                     widgetActions: modelData.actions !== undefined ? modelData.actions : []
                     widgetBindings: modelData.bindings !== undefined ? modelData.bindings : []

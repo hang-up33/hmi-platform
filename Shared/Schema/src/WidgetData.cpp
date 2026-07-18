@@ -59,6 +59,12 @@ QJsonObject WidgetData::toJson() const
     putString(obj, "needleColor", needleColor);
     putPositiveInt(obj, "tickCount", tickCount);
     putString(obj, "unit", unit);
+    // Task W-A（Phase 11）: SimpleButton 固有フィールド。shape / theme / accentColor は空センチネル
+    //（非空のとき書く）、holdMs は `0` センチネル（`> 0` のとき書く）。ON/OFF は既存 checked を再利用。
+    putString(obj, "shape", shape);
+    putString(obj, "theme", theme);
+    putString(obj, "accentColor", accentColor);
+    putPositiveInt(obj, "holdMs", holdMs);
     // Task 39: アクション（書き手）/ バインディング（読み手）。空のとき省略（後方互換）。
     putJsonArray(obj, "actions", actions);
     putJsonArray(obj, "bindings", bindings);
@@ -138,6 +144,12 @@ WidgetData WidgetData::fromJson(const QJsonObject &obj)
     w.needleColor = obj.value("needleColor").toString();
     w.tickCount = obj.value("tickCount").toInt(0);
     w.unit = obj.value("unit").toString();
+    // Task W-A（Phase 11）: SimpleButton 固有フィールド。shape / theme / accentColor は欠落時 空文字
+    //（= 未指定）。holdMs は **`toInt(0)`**（欠落時 0 = 未指定。`0` センチネル）。
+    w.shape = obj.value("shape").toString();
+    w.theme = obj.value("theme").toString();
+    w.accentColor = obj.value("accentColor").toString();
+    w.holdMs = obj.value("holdMs").toInt(0);
     // Task 39: アクション / バインディング配列（欠落時は空配列）。
     w.actions = jsonArrayToList<ActionData>(obj.value("actions"));
     w.bindings = jsonArrayToList<BindingData>(obj.value("bindings"));
@@ -209,6 +221,12 @@ QVariantMap WidgetData::toVariantMap() const
     m.insert(QStringLiteral("needleColor"), needleColor);
     m.insert(QStringLiteral("tickCount"), tickCount);
     m.insert(QStringLiteral("unit"), unit);
+    // Task W-A（Phase 11）: SimpleButton 固有フィールドは素通し（既定へのフォールバックは
+    // 描画側 HmiSimpleButton の resolved* が持つ）。ON/OFF は既存 checked を再利用する。
+    m.insert(QStringLiteral("shape"), shape);
+    m.insert(QStringLiteral("theme"), theme);
+    m.insert(QStringLiteral("accentColor"), accentColor);
+    m.insert(QStringLiteral("holdMs"), holdMs);
     m.insert(QStringLiteral("actions"), listToVariantList(actions));
     m.insert(QStringLiteral("bindings"), listToVariantList(bindings));
     return m;
@@ -279,6 +297,12 @@ WidgetData WidgetData::fromVariantMap(const QVariantMap &map)
     w.needleColor = map.value(QStringLiteral("needleColor")).toString();
     w.tickCount = map.value(QStringLiteral("tickCount")).toInt();
     w.unit = map.value(QStringLiteral("unit")).toString();
+    // Task W-A（Phase 11）: SimpleButton 固有フィールド。shape / theme / accentColor は欠落時 空文字
+    //（= 未指定）。holdMs は欠落時 0（= 未指定。`0` センチネル）。
+    w.shape = map.value(QStringLiteral("shape")).toString();
+    w.theme = map.value(QStringLiteral("theme")).toString();
+    w.accentColor = map.value(QStringLiteral("accentColor")).toString();
+    w.holdMs = map.value(QStringLiteral("holdMs")).toInt();
     w.actions = variantListToList<ActionData>(map.value(QStringLiteral("actions")));
     w.bindings = variantListToList<BindingData>(map.value(QStringLiteral("bindings")));
     return w;

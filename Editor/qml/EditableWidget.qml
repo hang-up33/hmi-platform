@@ -124,6 +124,16 @@ Item {
     property int widgetTickCount: 0
     property string widgetUnit: ""
 
+    // Task W-A（Phase 11）: SimpleButton（ベゼル無しシンプルボタン）固有のメタ。描画 / delegate /
+    // パレットは後続タスク（W-B〜）だが、**SimpleButton JSON を Editor で開いて保存しても形状・
+    // テーマ・差し色・長押し時間を失わない**ため、ここで素通し保持する（delegate が modelData から
+    // 流し込み、snapshotModel が JSON キー shape/theme/accentColor/holdMs へ書き戻す。Codex PR #163 [P2]）。
+    // shape/theme/accentColor は空センチネル、holdMs は 0 センチネル。ON/OFF は既存 widgetChecked を再利用。
+    property string widgetShape: ""
+    property string widgetTheme: ""
+    property string widgetAccentColor: ""
+    property int widgetHoldMs: 0
+
     // Task 39: アクション / バインディングのメタ。Editor は T40 まで編集 UI を持たないが、
     // **読み込んだ定義を保存で失わない**ため、ここで素通し保持する（delegate が modelData
     // から流し込み、snapshotModel が保存へ書き戻す。Codex PR #78 [P1]）。配列をそのまま持つ。

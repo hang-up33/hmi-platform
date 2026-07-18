@@ -66,6 +66,11 @@ private slots:
     void meterFieldsRoundTrip();
     void meterRangeOmittedWhenUnspecified();
     void negativeMeterRangeRoundTrip();
+    // Task W-A（Phase 11）: SimpleButton 固有フィールドの round-trip（JSON / QVariantMap 両方）。
+    // shape/theme/accentColor（空センチネル）+ holdMs（`0` センチネル）+ 再利用する checked の
+    // 往復、および未指定時に各キーが JSON で省略される（後方互換）ことを固定する。
+    void simpleButtonFieldsRoundTrip();
+    void simpleButtonFieldsOmittedWhenUnspecified();
     void actionsAndBindingsRoundTrip();
     void omitsEmptyActionsAndBindings();
     void isValidJsonRejectsInvalidActionsBindings();
@@ -771,6 +776,77 @@ void WidgetDataTest::isValidJsonRejectsInvalidSeries()
     }
 }
 
+// Task W-A（Phase 11）: SimpleButton 固有フィールドの round-trip（JSON / QVariantMap 両方）。
+// shape/theme/accentColor（空センチネル）+ holdMs（`0` センチネル）+ 再利用する checked が
+// 往復で保たれることを固定する。
+void WidgetDataTest::simpleButtonFieldsRoundTrip()
+{
+    WidgetData src;
+    src.id = "sb001";
+    src.type = "SimpleButton";
+    src.width = 184;
+    src.height = 184;
+    src.text = "TEST";
+    src.shape = "circle";
+    src.theme = "light";
+    src.accentColor = "#3aa564";
+    src.holdMs = 800;
+    src.checked = true;  // ON 状態（既定 false と異なる → 書かれる）
+
+    // JSON round-trip
+    const QJsonObject obj = src.toJson();
+    QVERIFY(obj.contains("shape"));
+    QVERIFY(obj.contains("theme"));
+    QVERIFY(obj.contains("accentColor"));
+    QVERIFY(obj.contains("holdMs"));
+    QVERIFY(obj.contains("checked"));
+    QCOMPARE(obj.value("shape").toString(), QStringLiteral("circle"));
+    QCOMPARE(obj.value("theme").toString(), QStringLiteral("light"));
+    QCOMPARE(obj.value("holdMs").toInt(), 800);
+
+    const WidgetData restored = WidgetData::fromJson(obj);
+    QCOMPARE(restored.shape, QStringLiteral("circle"));
+    QCOMPARE(restored.theme, QStringLiteral("light"));
+    QCOMPARE(restored.accentColor, QStringLiteral("#3aa564"));
+    QCOMPARE(restored.holdMs, 800);
+    QCOMPARE(restored.checked, true);
+
+    // QVariantMap round-trip
+    const QVariantMap m = src.toVariantMap();
+    QCOMPARE(m.value("shape").toString(), QStringLiteral("circle"));
+    QCOMPARE(m.value("holdMs").toInt(), 800);
+    const WidgetData r = WidgetData::fromVariantMap(m);
+    QCOMPARE(r.shape, QStringLiteral("circle"));
+    QCOMPARE(r.theme, QStringLiteral("light"));
+    QCOMPARE(r.accentColor, QStringLiteral("#3aa564"));
+    QCOMPARE(r.holdMs, 800);
+    QCOMPARE(r.checked, true);
+}
+
+// Task W-A（Phase 11）: SimpleButton の未指定（shape/theme/accentColor=空、holdMs=0）のとき、
+// 各キーが JSON で省略され（後方互換）、fromJson が既定（空 / 0）へ復元することを固定する。
+void WidgetDataTest::simpleButtonFieldsOmittedWhenUnspecified()
+{
+    WidgetData src;
+    src.id = "sb002";
+    src.type = "SimpleButton";
+    src.width = 184;
+    src.height = 184;
+    // shape / theme / accentColor は既定の空、holdMs は既定 0（未指定）。
+
+    const QJsonObject obj = src.toJson();
+    QVERIFY(!obj.contains("shape"));
+    QVERIFY(!obj.contains("theme"));
+    QVERIFY(!obj.contains("accentColor"));
+    QVERIFY(!obj.contains("holdMs"));
+
+    const WidgetData restored = WidgetData::fromJson(obj);
+    QVERIFY(restored.shape.isEmpty());
+    QVERIFY(restored.theme.isEmpty());
+    QVERIFY(restored.accentColor.isEmpty());
+    QCOMPARE(restored.holdMs, 0);
+}
+
 // Task 39: アクション / バインディング配列が round-trip で要素ごと再現される。
 void WidgetDataTest::actionsAndBindingsRoundTrip()
 {
@@ -1092,6 +1168,11 @@ void WidgetDataTest::fromVariantMapFillsSentinelDefaults()
     QCOMPARE(w.showGrid, false);
     QCOMPARE(w.showLegend, false);
     QCOMPARE(w.yTickCount, 0);
+    // Task W-A（Phase 11）: SimpleButton 固有フィールドも欠落時に既定（空 / 0）になる。
+    QVERIFY(w.shape.isEmpty());
+    QVERIFY(w.theme.isEmpty());
+    QVERIFY(w.accentColor.isEmpty());
+    QCOMPARE(w.holdMs, 0);
     QVERIFY(w.actions.isEmpty());
     QVERIFY(w.bindings.isEmpty());
 }
