@@ -910,6 +910,7 @@ Item {
                                        : wrapper.widgetType === "NumericField" ? numericComponent
                                        : wrapper.widgetType === "Trend" ? trendComponent
                                        : wrapper.widgetType === "Meter" ? meterComponent
+                                       : wrapper.widgetType === "SimpleButton" ? simpleButtonComponent
                                                                         : buttonComponent
                     }
 
@@ -1099,6 +1100,31 @@ Item {
                             widgetOpacity: wrapper.widgetOpacity
                             widgetEnabled: wrapper.widgetEnabled
                             // Task M-B: 選択中継は他 Widget と同形。
+                            onClicked: function(modifiers) {
+                                wrapper.selectRequested(wrapper.widgetId, modifiers)
+                            }
+                        }
+                    }
+
+                    // Task W-B（Phase 11）: SimpleButton の 6 分岐目。Editor キャンバスは設計面なので
+                    // live:false（長押しを動かさず静的プレビュー・進捗 0 固定）。形状 / テーマ / 差し色 /
+                    // 長押し時間 / ON-OFF（checked）を wrapper メタから流す（未指定は空 / 0 で HmiSimpleButton
+                    // 側の resolved* が既定へ解決）。選択中継は他 Widget と同形。
+                    Component {
+                        id: simpleButtonComponent
+                        HmiSimpleButton {
+                            objectName: "hmiSimpleButton"
+                            anchors.fill: parent
+                            live: false
+                            text: wrapper.widgetText
+                            shape: wrapper.widgetShape
+                            theme: wrapper.widgetTheme
+                            accentColor: wrapper.widgetAccentColor
+                            holdMs: wrapper.widgetHoldMs
+                            checked: wrapper.widgetChecked
+                            // 共通状態（opacity / enabled）も他 Widget と同型で流す（Codex PR #164 [P2]）。
+                            widgetOpacity: wrapper.widgetOpacity
+                            widgetEnabled: wrapper.widgetEnabled
                             onClicked: function(modifiers) {
                                 wrapper.selectRequested(wrapper.widgetId, modifiers)
                             }

@@ -496,4 +496,109 @@ TestCase {
         VariableStore.setValue("vehicleSpeed", 200);
         compare(meter.displayValue, 100);
     }
+
+    // Task W-B（Phase 11）: type:"SimpleButton" の delegate は HmiSimpleButton を描き（他種別は
+    // 描かない）、live:true でライブ実行する。checked は binding {property:"checked"} の指す変数へ
+    // 追従（読み）し、長押し確定の toggled は writeBoundValue で同変数へ書き戻す（書き）。
+    // Spix は実長押しを発火できないため、E2E と同様に toggled(value) シグナルを直接 emit して
+    // 「押し続けて確定」を模す（widget は状態を持たず consumer が onToggled で書き戻す設計）。
+    function test_delegate_renders_simple_button_and_toggle_writes_back() {
+        canvas.variableModel = [{ name: "pumpRunning", type: "bool", initial: "false" }];
+        canvas.widgetModel = [{
+            id: "sb1", type: "SimpleButton", x: 0, y: 0, width: 180, height: 180,
+            text: "TEST", shape: "circle", theme: "light", holdMs: 400,
+            bindings: [{ property: "checked", variable: "pumpRunning" }]
+        }];
+
+        var wrapper = null;
+        tryVerify(function() {
+            wrapper = findByObjectName(canvas, "widget_sb1");
+            return wrapper !== null;
+        }, 1000, "SimpleButton delegate widget_sb1 が生成されない");
+
+        var sb = null;
+        tryVerify(function() {
+            sb = findByObjectName(wrapper, "hmiSimpleButton");
+            return sb !== null;
+        }, 1000, "SimpleButton type で HmiSimpleButton が描かれない");
+        // 型分岐：他種別の Widget は生成されない。
+        verify(findByObjectName(wrapper, "hmiButton") === null,
+               "SimpleButton type なのに HmiButton も生成された");
+        verify(findByObjectName(wrapper, "hmiMeter") === null,
+               "SimpleButton type なのに HmiMeter も生成された");
+
+        // Simulator はライブ実行＝live:true。
+        compare(sb.live, true);
+
+        // checked は変数 pumpRunning（false）に追従（読み）。
+        compare(sb.checked, false);
+
+        // 長押し確定を模す：toggled(true) を emit → onToggled が writeBoundValue で変数へ書き戻す。
+        sb.toggled(true);
+        compare(VariableStore.get("pumpRunning"), true);
+        // 変数が変われば checked 表示も boundValue 再評価で追従する（読み書き両用 binding）。
+        compare(sb.checked, true);
+
+        // もう一度確定すると false へ戻る（トグル）。
+        sb.toggled(false);
+        compare(VariableStore.get("pumpRunning"), false);
+        compare(sb.checked, false);
+    }
+
+    // Task W-B（Codex PR #164 [P2]）: enabled=false の SimpleButton は長押し確定（toggled）でも
+    // checked binding 先の変数へ書き戻さない（Button の runClickActions と同じ「無効＝操作で変数を
+    // 更新しない」契約。writeBoundValue が runClickActions より前に走るため onToggled 先頭でガードする）。
+    function test_disabled_simple_button_toggle_is_noop() {
+        canvas.variableModel = [{ name: "pumpRunning", type: "bool", initial: "false" }];
+        canvas.widgetModel = [{
+            id: "sb1", type: "SimpleButton", x: 0, y: 0, width: 180, height: 180,
+            text: "TEST", enabled: false,
+            bindings: [{ property: "checked", variable: "pumpRunning" }]
+        }];
+
+        var wrapper = null;
+        tryVerify(function() {
+            wrapper = findByObjectName(canvas, "widget_sb1");
+            return wrapper !== null;
+        }, 1000, "SimpleButton delegate widget_sb1 が生成されない");
+        var sb = null;
+        tryVerify(function() {
+            sb = findByObjectName(wrapper, "hmiSimpleButton");
+            return sb !== null;
+        }, 1000, "HmiSimpleButton が描かれない");
+
+        compare(VariableStore.get("pumpRunning"), false);
+        sb.toggled(true);   // disabled なので書き戻さない（no-op）
+        compare(VariableStore.get("pumpRunning"), false);  // 変化なし
+    }
+
+    // Task W-B（Codex PR #164 [P2]）: checked binding と同じ変数を指す toggleVariable アクションを
+    // 併記しても、長押し確定（toggled）は writeBoundValue だけで書き戻し **二重トグルで打ち消さない**。
+    // onToggled が runClickActions を呼ばない設計の回帰固定（呼ぶと writeBoundValue の次値を action の
+    // toggleVariable が直後に再反転し、最終値が元へ戻って操作が実質無効になる）。
+    function test_simple_button_toggle_does_not_double_toggle() {
+        canvas.variableModel = [{ name: "pumpRunning", type: "bool", initial: "false" }];
+        canvas.widgetModel = [{
+            id: "sb1", type: "SimpleButton", x: 0, y: 0, width: 180, height: 180, text: "TEST",
+            bindings: [{ property: "checked", variable: "pumpRunning" }],
+            actions: [{ trigger: "onClick", op: "toggleVariable", target: "pumpRunning" }]
+        }];
+
+        var wrapper = null;
+        tryVerify(function() {
+            wrapper = findByObjectName(canvas, "widget_sb1");
+            return wrapper !== null;
+        }, 1000, "SimpleButton delegate widget_sb1 が生成されない");
+        var sb = null;
+        tryVerify(function() {
+            sb = findByObjectName(wrapper, "hmiSimpleButton");
+            return sb !== null;
+        }, 1000, "HmiSimpleButton が描かれない");
+
+        // 長押し確定 → writeBoundValue のみで pumpRunning=true。action の toggleVariable は
+        // 実行されない（＝再反転しない）ので最終値は true のまま。
+        sb.toggled(true);
+        compare(VariableStore.get("pumpRunning"), true);
+        compare(sb.checked, true);
+    }
 }

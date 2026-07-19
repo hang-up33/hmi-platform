@@ -16,6 +16,16 @@ Item {
     width: 184
     height: 184
 
+    // ── 共通状態（他 Widget と同型。opacity/enabled を SimpleButton にも反映。Codex PR #164 [P2]）──
+    // Item.opacity / Item.enabled 組込みと衝突するため公開入力は widget* 命名（規約通り）。
+    // widgetOpacity は -1 センチネル（未指定＝1.0）、widgetEnabled は既定 true（false で淡色 + 長押し無効）。
+    property real widgetOpacity: -1.0
+    property bool widgetEnabled: true
+    readonly property real resolvedOpacity: widgetOpacity >= 0 ? widgetOpacity : 1.0
+    // Task 42（HmiButton）と同型：disabled は淡色で見せる。MouseArea は止めない
+    //（Editor の「クリックで選択」中継を殺さないため）。長押しの実行無効化は _beginHold で行う。
+    opacity: resolvedOpacity * (widgetEnabled ? 1.0 : 0.4)
+
     // ── 公開入力（未指定＝空 / 0 は resolved* で既定へ）────────────────
     property string text: "TEST"           // 面中央のラベル（issue の "TEST"）
     property string shape: ""              // "circle" | "square"（空＝circle）
@@ -93,7 +103,9 @@ Item {
         }
     }
     function _beginHold() {
-        if (!root.live)
+        // live:false（Editor プレビュー）は動かさない。widgetEnabled=false（無効）も
+        // 長押し進捗を動かさない（無効ボタンで進捗リング/バーが伸びる誤作動を防ぐ。Codex PR #164 [P2]）。
+        if (!root.live || !root.widgetEnabled)
             return
         holdTimer.startedAt = Date.now()
         root.holdProgress = 0.0

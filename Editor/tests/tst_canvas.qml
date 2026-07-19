@@ -1077,6 +1077,39 @@ TestCase {
         compare(meter.displayValue, 90);
     }
 
+    // Task W-B（Phase 11）: type:"SimpleButton" の delegate は HmiSimpleButton を描き、
+    // 他 Widget（Button/Label/Meter）は生成しないこと。Editor は設計面なので live:false。
+    // 形状 / テーマ / 差し色 / 長押し時間 / checked が resolved* / 公開プロパティへ伝播する。
+    function test_delegate_renders_simple_button_for_simplebutton_type() {
+        canvas.widgetModel = [
+            { id: "sb1", type: "SimpleButton", x: 0, y: 0, width: 180, height: 180,
+              text: "TEST", shape: "square", theme: "dark",
+              accentColor: "#123456", holdMs: 500, checked: true }
+        ];
+        tryVerify(function() { return editableChildren().length === 1; }, 1000,
+                  "SimpleButton モデルが反映されない");
+        const wrapper = editableChildren()[0];
+        compare(wrapper.widgetType, "SimpleButton");
+        var sb = null;
+        tryVerify(function() {
+            sb = findByObjectName(wrapper, "hmiSimpleButton");
+            return sb !== null;
+        }, 1000, "SimpleButton type で HmiSimpleButton が描かれない");
+        verify(findByObjectName(wrapper, "hmiButton") === null,
+               "SimpleButton type なのに HmiButton も生成された");
+        verify(findByObjectName(wrapper, "hmiMeter") === null,
+               "SimpleButton type なのに HmiMeter も生成された");
+        // Editor キャンバスは設計面＝live:false（長押しを動かさない静的プレビュー）。
+        compare(sb.live, false);
+        // 形状 / テーマ / 差し色 / 長押し時間 / ON-OFF が伝播する。
+        compare(sb.isCircle, false);          // shape:"square"
+        compare(sb.resolvedTheme, "dark");
+        compare(sb.resolvedAccent, Qt.color("#123456"));
+        compare(sb.resolvedHoldMs, 500);
+        compare(sb.text, "TEST");
+        compare(sb.checked, true);
+    }
+
     // Task 48: 追加した Widget の id だけが btn001 と異なるものを返すヘルパ。
     function addedWidget() {
         const ch = editableChildren();

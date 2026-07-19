@@ -124,7 +124,7 @@ HmiButton/HmiMeter と同じ **resolved\* フォールバック方式**。root �
 **hold-to-actuate（QML 再現）**：押下（`onPressed`）で `Timer`（`holdMs` を刻む）を開始し `holdProgress` を 0→1 へ進める。
 満了で `checked = !checked` + `toggled(checked)` emit + 進捗リセット。指を離す / キャンバス外（`onReleased`/`onCanceled`）で進捗を 0 へ戻す。
 **`live:false`（Editor）は Timer を回さず `holdProgress:0` 固定**（設計面で誤作動させない）。
-実挙動は Simulator delegate の `onToggled` で `writeBoundValue("checked", …)` 相当＋`runClickActions` へ結線（Task 51 の入力 Widget 経路と同型。Schema/ブリッジ無改変）。
+実挙動は Simulator delegate の `onToggled` で `writeBoundValue("checked", …)` へ結線する（Task 51 の入力 Widget 経路と**完全同型**。Schema/ブリッジ無改変）。**`runClickActions` は呼ばない**：`checked` と同じ変数を指す `toggleVariable` アクションがあると、書き戻した次値を直後に再反転して打ち消す二重トグルになるため（Codex PR #164 [P2]）。SimpleButton の状態遷移は `checked` binding 経路へ一本化する（トグル以外の副作用アクションが要る用途は将来別途）。
 
 **描画**：`Canvas.onPaint` で ① 面（`resolvedTheme` の face 色 + 影）② ランプ（ON で accent 発光）③ TEST ラベル + ON/OFF ④ 進捗（circle=外周リング / square=下端バー、`resolvedAccent`、長さ∝`holdProgress`）。`onCheckedChanged`/`onHoldProgressChanged`/resolved 変化で `requestPaint()`。
 

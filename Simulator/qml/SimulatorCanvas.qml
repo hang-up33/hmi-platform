@@ -221,6 +221,7 @@ Item {
                                    : wrapper.modelData.type === "NumericField" ? numericComponent
                                    : wrapper.modelData.type === "Trend" ? trendComponent
                                    : wrapper.modelData.type === "Meter" ? meterComponent
+                                   : wrapper.modelData.type === "SimpleButton" ? simpleButtonComponent
                                                                         : buttonComponent
                 }
 
@@ -476,6 +477,53 @@ Item {
                         widgetOpacity: wrapper.modelData.opacity !== undefined ? wrapper.modelData.opacity : -1
                         widgetEnabled: wrapper.modelData.enabled !== undefined ? wrapper.modelData.enabled : true
                         // Meter は表示専用＝clicked を action へ結線しない。
+                    }
+                }
+
+                // Task W-B（Phase 11）: SimpleButton の 6 分岐目。Simulator/Runtime はライブ実行＝live:true
+                //（長押し確定で toggled が出る）。Runtime は本ソース共有で自動継承。
+                //   checked：binding {property:"checked"} の指す変数へ追従（HmiButton と同じ boundValue 経路。
+                //     無 bind 時は modelData.checked〔初期値〕）。
+                //   onToggled：長押し確定で得た「次値」を writeBoundValue で checked binding 先の変数へ
+                //     書き戻す（NumericField の valueCommitted → writeBoundValue と**完全同型**の入力 Widget 経路。
+                //     widget は状態を持たず consumer が書き戻す）。**runClickActions は呼ばない**：checked と
+                //     同じ変数を指す toggleVariable アクションがあると、writeBoundValue で書いた次値を直後に
+                //     再反転して打ち消す二重トグルになるため（Codex PR #164 [P2]）。SimpleButton の状態遷移は
+                //     checked binding 経路へ一本化する（トグル以外の副作用アクションが要る用途は将来別途）。
+                Component {
+                    id: simpleButtonComponent
+                    HmiSimpleButton {
+                        objectName: "hmiSimpleButton"
+                        anchors.fill: parent
+                        live: true
+                        text: {
+                            const v = wrapper.boundValue("text")
+                            return v !== undefined ? String(v)
+                                : (wrapper.modelData.text !== undefined ? wrapper.modelData.text : "TEST")
+                        }
+                        shape: wrapper.modelData.shape !== undefined ? wrapper.modelData.shape : ""
+                        theme: wrapper.modelData.theme !== undefined ? wrapper.modelData.theme : ""
+                        accentColor: wrapper.modelData.accentColor !== undefined ? wrapper.modelData.accentColor : ""
+                        holdMs: wrapper.modelData.holdMs !== undefined ? wrapper.modelData.holdMs : 0
+                        checked: {
+                            const v = wrapper.boundValue("checked")
+                            return v !== undefined ? VariableStore.coerce("bool", v)
+                                : (wrapper.modelData.checked !== undefined ? wrapper.modelData.checked : false)
+                        }
+                        // 共通状態（opacity / enabled）も他 Widget と同型で流す（Codex PR #164 [P2]）。
+                        // enabled=false は淡色表示 + 長押し無効（_beginHold ガード）+ 書き戻し no-op（onToggled ガード）。
+                        widgetOpacity: wrapper.modelData.opacity !== undefined ? wrapper.modelData.opacity : -1
+                        widgetEnabled: wrapper.modelData.enabled !== undefined ? wrapper.modelData.enabled : true
+                        onToggled: function(value) {
+                            // Task 42 と同じ enabled 契約：disabled（enabled=false）の Widget は
+                            // ユーザー操作で変数/PLC を書き換えない（Codex PR #164 [P2]）。
+                            if (wrapper.modelData.enabled === false) {
+                                return
+                            }
+                            // 次値を checked binding 先の変数へ書き戻すだけ（writeBoundValue のみ。
+                            // 二重トグル回避のため runClickActions は呼ばない。上のコメント参照）。
+                            wrapper.writeBoundValue("checked", value)
+                        }
                     }
                 }
             }
