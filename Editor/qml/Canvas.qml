@@ -243,6 +243,50 @@ Item {
     // 「ラベル追加」が同じ経路を type 違いで呼ぶ。Label は既定文字 "Label"・背景は
     // 未指定（空文字）＝HmiLabel 側で透明にフォールバックする（plan「Label の既定文字・
     // 透明背景」）。Button は従来どおり既定文字 "New"・背景未指定（#4cc9f0 へフォールバック）。
+    // Task 48 / 51 / T-C / M-C / W-C: 既知の種別（"Button" / "Label" / "NumericField" /
+    // "Trend" / "Meter" / "SimpleButton"）だけを採用し、未知値 / 空 / undefined は "Button" に
+    // フォールバックする（ホワイトリスト正規化）。描画フォールバックと保存値が乖離して JSON の
+    // 型契約が壊れるのを防ぐ（CodeRabbit PR #98 指摘）。新種別を足す時はここの許可リストに追加する
+    //（Task 51 で "NumericField"、T-C で "Trend"、M-C で "Meter"、W-C で "SimpleButton" を追加）。
+    // addWidget（ツールバー）/ addPresetWidget（サンプルパレット）が共用する。
+    function normalizeWidgetType(type) {
+        return (type === "Label" || type === "Button"
+                || type === "NumericField" || type === "Trend" || type === "Meter"
+                || type === "SimpleButton")
+            ? type : "Button"
+    }
+
+    // Task W-C（Phase 11）: サンプルパレットのプリセットから Widget を追加する。preset は
+    // `{ type, defaults }`（defaults は width/height/text や種別固有フィールドの初期値マップ）。
+    // addWidget（種別だけ・既定サイズ固定）と違い、**プリセットの defaults をそのまま初期値**にし、
+    // **キャンバス中央**へ置いて追加した Widget を選択する（クリック追加の手触り確認。D&D は W-D）。
+    // 構造変更なので addWidget と同じく pushUndo → snapshot → 再代入の経路に乗せる。
+    function addPresetWidget(preset) {
+        if (!preset || !preset.type) {
+            return
+        }
+        pushUndo()
+        const snapshot = snapshotModel()
+        const id = nextWidgetId(snapshot)
+        const d = preset.defaults || {}
+        const newWidget = { id: id, type: normalizeWidgetType(preset.type), tag: "" }
+        // defaults を素通しでコピー（未知キーは WidgetData.fromVariantMap が無視するので無害）。
+        for (const k in d) {
+            newWidget[k] = d[k]
+        }
+        // サイズ既定（未指定なら 120×40）。中央配置の計算に使う。
+        const w = newWidget.width !== undefined ? newWidget.width : 120
+        const h = newWidget.height !== undefined ? newWidget.height : 40
+        newWidget.width = w
+        newWidget.height = h
+        newWidget.x = Math.round((canvasWidth - w) / 2)
+        newWidget.y = Math.round((canvasHeight - h) / 2)
+        snapshot.push(newWidget)
+        widgetModel = snapshot
+        // 追加した Widget を選択（インスペクタで即編集でき、手触りが分かりやすい）。
+        selectedWidgetIds = [id]
+    }
+
     function addWidget(type) {
         // Task 26: 古い widgetModel を直接 concat せず、現在の live Item 群を
         // スナップショットしてから追加する。これによりインスペクタでの未保存
@@ -251,14 +295,7 @@ Item {
         pushUndo()  // Task 38: 追加の直前状態を undo へ
         const snapshot = snapshotModel()
         const id = nextWidgetId(snapshot)
-        // Task 48 / 51 / T-C / M-C: 既知の種別（"Button" / "Label" / "NumericField" /
-        // "Trend" / "Meter"）だけを採用し、未知値 / 空 / undefined は "Button" にフォールバック
-        // する（ホワイトリスト正規化）。描画フォールバックと保存値が乖離して JSON の型契約が
-        // 壊れるのを防ぐ（CodeRabbit PR #98 指摘）。新種別を足す時はここの許可リストに追加する
-        //（Task 51 で "NumericField"、Task T-C で "Trend"、Task M-C で "Meter" を追加）。
-        const widgetType = (type === "Label" || type === "Button"
-                || type === "NumericField" || type === "Trend" || type === "Meter")
-            ? type : "Button"
+        const widgetType = normalizeWidgetType(type)
         // Task T-C: Trend はグラフらしく大きめの既定サイズ（240×120 = HmiTrend の既定実寸）。
         // Task M-C: Meter はスピードメーターらしく正方形の既定サイズ（200×200 = HmiMeter の既定実寸）。
         // 他種別は従来どおり 120×40。

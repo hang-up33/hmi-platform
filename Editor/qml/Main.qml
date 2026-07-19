@@ -776,6 +776,15 @@ Window {
                         font.bold: true
                     }
 
+                    // Task W-C（Phase 11）: サンプルパレット（選択に依らず常時表示）。プリセットを
+                    // 実 Widget の見た目で並べ、セルのクリックでキャンバス中央へ追加する（D&D は W-D）。
+                    SamplePalette {
+                        objectName: "samplePalette"
+                        onPresetActivated: function(preset) {
+                            canvas.addPresetWidget(preset)
+                        }
+                    }
+
                     // Task 40 / 44: Project レベルの変数定義パネル（選択に依らず常時表示）。
                     // 変数の追加 / 削除 / 名前・型・初期値の編集を行い、rootWindow.projectVariables を
                     // 駆動する。アクション target / バインディング variable の ComboBox 選択肢になる。

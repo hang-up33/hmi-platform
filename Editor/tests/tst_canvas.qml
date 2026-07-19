@@ -1132,6 +1132,43 @@ TestCase {
                   "追加 Button が HmiButton で描かれない");
     }
 
+    // Task W-C（Phase 11）: addPresetWidget(preset) はプリセットの defaults をそのまま初期値にし、
+    // キャンバス中央へ SimpleButton を追加して選択する（サンプルパレットのクリック追加経路）。
+    function test_add_preset_widget_creates_simple_button() {
+        canvas.addPresetWidget({
+            id: "simple-circle-light", type: "SimpleButton",
+            defaults: { width: 160, height: 160, text: "TEST", shape: "circle", theme: "light" }
+        });
+        tryVerify(function() { return editableChildren().length === 2; }, 1000,
+                  "preset 追加が反映されない");
+        const added = addedWidget();
+        verify(added !== null, "新規 SimpleButton widget が見つからない");
+        compare(added.widgetType, "SimpleButton");
+        // defaults がそのまま初期値になる。
+        compare(added.width, 160);
+        compare(added.height, 160);
+        compare(added.widgetText, "TEST");
+        compare(added.widgetShape, "circle");
+        compare(added.widgetTheme, "light");
+        // キャンバス中央（(800-160)/2, (600-160)/2 = 320, 220）へ置かれる。
+        compare(added.x, 320);
+        compare(added.y, 220);
+        // 追加した Widget が選択される（インスペクタで即編集できる手触り）。
+        compare(canvas.selectedWidgetId, added.widgetId);
+        // 実 Widget（HmiSimpleButton）で描かれる。
+        tryVerify(function() { return findByObjectName(added, "hmiSimpleButton") !== null; }, 1000,
+                  "追加 SimpleButton が HmiSimpleButton で描かれない");
+    }
+
+    // Task W-C: 不正 / 空 preset は no-op（追加されない）。type 欠落や null を弾く。
+    function test_add_preset_widget_ignores_invalid() {
+        canvas.addPresetWidget(null);
+        canvas.addPresetWidget({ defaults: { width: 100 } });  // type 欠落
+        // 何も追加されない（初期 btn001 の 1 件のまま）。
+        wait(50);
+        compare(editableChildren().length, 1);
+    }
+
     // Task 48: addWidget("Label") は Label 型 Widget を追加し HmiLabel で描かれる。
     // 既定文字は "Label"、背景は未指定（HmiLabel 側で透明にフォールバック）。
     function test_add_widget_label_type() {

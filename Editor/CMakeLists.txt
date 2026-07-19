@@ -13,6 +13,7 @@ qt_add_qml_module(hmi_editor
         qml/Canvas.qml
         qml/EditableWidget.qml
         qml/InspectorSection.qml
+        qml/SamplePalette.qml
 )
 
 target_link_libraries(hmi_editor
