@@ -1169,6 +1169,77 @@ TestCase {
         compare(editableChildren().length, 1);
     }
 
+    // Task W-D（Phase 11）: ドロップ座標を渡すと、その地点を **中心** に Widget を置く
+    //（D&D 追加の経路。DropArea.onDropped が drop.x/drop.y を渡す）。offscreen E2E では
+    // 実ドラッグを発火できないため、座標付き addPresetWidget を直接呼んで配置を検証する。
+    function test_add_preset_widget_drop_position() {
+        // 中心を (400, 300) に落とす → 160×160 の SimpleButton は (320, 220) 起点。
+        canvas.addPresetWidget({
+            id: "simple-circle-light", type: "SimpleButton",
+            defaults: { width: 160, height: 160, text: "TEST", shape: "circle", theme: "light" }
+        }, 400, 300);
+        tryVerify(function() { return editableChildren().length === 2; }, 1000,
+                  "D&D preset 追加が反映されない");
+        const added = addedWidget();
+        verify(added !== null, "ドロップ追加された Widget が見つからない");
+        compare(added.widgetType, "SimpleButton");
+        // ドロップ地点 (400,300) を中心に置くので起点は (400-80, 300-80) = (320, 220)。
+        compare(added.x, 320);
+        compare(added.y, 220);
+        // 追加した Widget が選択される。
+        compare(canvas.selectedWidgetId, added.widgetId);
+    }
+
+    // Task W-D: ドロップ座標がキャンバス外へはみ出す場合はキャンバス内へ clamp する。
+    // 右下隅に落としても Widget 全体が 800×600 の内側に収まる。
+    function test_add_preset_widget_drop_clamps_to_canvas() {
+        canvas.addPresetWidget({
+            id: "simple-square-dark", type: "SimpleButton",
+            defaults: { width: 160, height: 160, text: "TEST", shape: "square", theme: "dark" }
+        }, 1000, 800);  // キャンバス外
+        tryVerify(function() { return editableChildren().length === 2; }, 1000,
+                  "clamp 対象の D&D 追加が反映されない");
+        const added = addedWidget();
+        verify(added !== null, "clamp 対象の Widget が見つからない");
+        // 右下へ clamp：x = 800-160 = 640, y = 600-160 = 440。
+        compare(added.x, 640);
+        compare(added.y, 440);
+        // 負側（左上外）へ落としても 0 未満にならない。
+        canvas.selectedWidgetIds = [];
+        canvas.addPresetWidget({
+            id: "simple-square-dark", type: "SimpleButton",
+            defaults: { width: 160, height: 160, text: "TEST", shape: "square", theme: "dark" }
+        }, -50, -50);
+        tryVerify(function() { return editableChildren().length === 3; }, 1000,
+                  "左上外の D&D 追加が反映されない");
+        const added2 = canvas.selectedWidgetId;
+        const items = editableChildren();
+        let w2 = null;
+        for (let i = 0; i < items.length; ++i) {
+            if (items[i].widgetId === added2) { w2 = items[i]; break; }
+        }
+        verify(w2 !== null, "左上外に落とした Widget が見つからない");
+        compare(w2.x, 0);
+        compare(w2.y, 0);
+    }
+
+    // Task W-D: D&D 追加も構造変更なので undo で 1 件前へ戻せる（addPresetWidget は
+    // クリック追加と同じ pushUndo 経路）。
+    function test_add_preset_widget_drop_is_undoable() {
+        compare(canvas.canUndo, false);
+        canvas.addPresetWidget({
+            id: "simple-circle-light", type: "SimpleButton",
+            defaults: { width: 160, height: 160, text: "TEST", shape: "circle", theme: "light" }
+        }, 400, 300);
+        tryVerify(function() { return editableChildren().length === 2; }, 1000,
+                  "D&D preset 追加が反映されない");
+        compare(canvas.canUndo, true);
+        canvas.undo();
+        tryVerify(function() { return editableChildren().length === 1; }, 1000,
+                  "undo で D&D 追加が取り消されない");
+        compare(canvas.canUndo, false);
+    }
+
     // Task 48: addWidget("Label") は Label 型 Widget を追加し HmiLabel で描かれる。
     // 既定文字は "Label"、背景は未指定（HmiLabel 側で透明にフォールバック）。
     function test_add_widget_label_type() {

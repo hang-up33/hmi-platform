@@ -184,10 +184,10 @@ Editor=`live:false`、Simulator=`live:true` + `checked: boundValue("checked")` +
 
 | Task | 状態 | PR |
 |---|---|---|
-| W-A Schema 拡張（SimpleButton フィールド round-trip） | ⬜ 未着手 | — |
-| W-B HmiSimpleButton 描画 + delegate 6 分岐目 | ⬜ 未着手 | — |
-| W-C サンプルパレット・パネル（見た目そのまま） | ⬜ 未着手 | — |
-| W-D パレット → キャンバス ドラッグ&ドロップ追加 | ⬜ 未着手 | — |
+| W-A Schema 拡張（SimpleButton フィールド round-trip） | ✅ 完了 | #163 |
+| W-B HmiSimpleButton 描画 + delegate 6 分岐目 | ✅ 完了 | #164 |
+| W-C サンプルパレット・パネル（見た目そのまま） | ✅ 完了 | #165 |
+| W-D パレット → キャンバス ドラッグ&ドロップ追加 | ✅ 完了 | 本 PR |
 | W-E インスペクタ型対応 + cross-app E2E + スクショ | ⬜ 未着手 | — |
 
 ## 非スコープ（別承認）

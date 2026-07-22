@@ -256,12 +256,16 @@ Item {
             ? type : "Button"
     }
 
-    // Task W-C（Phase 11）: サンプルパレットのプリセットから Widget を追加する。preset は
+    // Task W-C / W-D（Phase 11）: サンプルパレットのプリセットから Widget を追加する。preset は
     // `{ type, defaults }`（defaults は width/height/text や種別固有フィールドの初期値マップ）。
-    // addWidget（種別だけ・既定サイズ固定）と違い、**プリセットの defaults をそのまま初期値**にし、
-    // **キャンバス中央**へ置いて追加した Widget を選択する（クリック追加の手触り確認。D&D は W-D）。
-    // 構造変更なので addWidget と同じく pushUndo → snapshot → 再代入の経路に乗せる。
-    function addPresetWidget(preset) {
+    // addWidget（種別だけ・既定サイズ固定）と違い、**プリセットの defaults をそのまま初期値**にする。
+    // 位置は引数で決める：
+    //   - `dropX`/`dropX` を渡した場合（W-D の D&D）：その **widgetLayer 基準の座標を中心** に置く
+    //     （ドロップ地点にウィジェットが乗る。キャンバス内へ clamp）。
+    //   - 省略した場合（W-C のクリック追加）：従来どおり **キャンバス中央** へ置く。
+    // どちらも追加した Widget を選択する。構造変更なので addWidget と同じく
+    // pushUndo → snapshot → 再代入の経路に乗せる。
+    function addPresetWidget(preset, dropX, dropY) {
         if (!preset || !preset.type) {
             return
         }
@@ -274,13 +278,20 @@ Item {
         for (const k in d) {
             newWidget[k] = d[k]
         }
-        // サイズ既定（未指定なら 120×40）。中央配置の計算に使う。
+        // サイズ既定（未指定なら 120×40）。配置計算に使う。
         const w = newWidget.width !== undefined ? newWidget.width : 120
         const h = newWidget.height !== undefined ? newWidget.height : 40
         newWidget.width = w
         newWidget.height = h
-        newWidget.x = Math.round((canvasWidth - w) / 2)
-        newWidget.y = Math.round((canvasHeight - h) / 2)
+        if (dropX !== undefined && dropY !== undefined) {
+            // W-D: ドロップ座標を中心にウィジェットを置き、キャンバス内へ clamp する。
+            newWidget.x = Math.round(Math.max(0, Math.min(canvasWidth - w, dropX - w / 2)))
+            newWidget.y = Math.round(Math.max(0, Math.min(canvasHeight - h, dropY - h / 2)))
+        } else {
+            // W-C: キャンバス中央。
+            newWidget.x = Math.round((canvasWidth - w) / 2)
+            newWidget.y = Math.round((canvasHeight - h) / 2)
+        }
         snapshot.push(newWidget)
         widgetModel = snapshot
         // 追加した Widget を選択（インスペクタで即編集でき、手触りが分かりやすい）。
@@ -1168,6 +1179,49 @@ Item {
                         }
                     }
                 }
+            }
+        }
+
+        // Task W-D（Phase 11）: サンプルパレットからのドラッグ&ドロップ受け口。
+        // パレットのセル（SamplePalette.qml）が Drag.mimeData にプリセット JSON を
+        // 載せてドラッグし、ここへドロップするとドロップ座標（widgetLayer と同じ
+        // background 基準）へ addPresetWidget で追加する。
+        // DropArea は MouseArea ではないので通常のクリック（選択 / 背景解除）は妨げない。
+        // widgetLayer より後ろに宣言＝最前面だが、ドラッグ以外のイベントは素通りする。
+        DropArea {
+            id: presetDropArea
+            objectName: "presetDropArea"
+            anchors.fill: parent
+            // パレットセルが付ける Drag.keys と一致させ、他のドラッグは受けない。
+            keys: ["application/x-hmi-preset"]
+
+            // ドラッグ中の視覚フィードバック（薄い枠のハイライト）。落とせる面だと分かる。
+            Rectangle {
+                anchors.fill: parent
+                visible: presetDropArea.containsDrag
+                color: "transparent"
+                border.color: "#4c9be0"
+                border.width: 2
+                radius: 2
+            }
+
+            onDropped: function(drop) {
+                const json = drop.getDataAsString("application/x-hmi-preset")
+                if (!json) {
+                    drop.accepted = false
+                    return
+                }
+                let preset
+                try {
+                    preset = JSON.parse(json)
+                } catch (e) {
+                    drop.accepted = false
+                    return
+                }
+                // drop.x / drop.y は DropArea（= background = widgetLayer と同座標系）基準。
+                // ドロップ地点を中心にウィジェットを置く（clamp は addPresetWidget 側）。
+                root.addPresetWidget(preset, drop.x, drop.y)
+                drop.accept()
             }
         }
     }

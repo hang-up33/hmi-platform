@@ -16,7 +16,7 @@ Yocto / i.MX8M Plus 向け Qt6 HMI ランタイムの統合開発基盤。5 モ�
 **現在のフェーズ**：**Phase 11 / Widget サンプルパレット（D&D 追加）＋ 初号「シンプルボタン」着手中。**
 
 - **やること**：issue #155 のボタンを新 Widget 種別 `SimpleButton`（`HmiSimpleButton.qml`）で QML 再現し、見た目そのままのサンプルをインスペクタに並べてキャンバスへ D&D 追加する汎用パレットを新設（Canvas 自描画・新 Qt 依存ゼロ、Meter/Trend と同方針）。
-- **現在地**：見た目プロトタイプ承認済み（QML モジュール登録のみ・Schema/delegate/パレット未接続）。**次 = W-A（Schema 拡張）**。正本は [Docs/phase11-widget-palette-plan.md](Docs/phase11-widget-palette-plan.md)「進捗」表。
+- **現在地**：W-A〜W-D 完了（Schema 拡張 / HmiSimpleButton 描画 + delegate / サンプルパレット / パレット→キャンバス D&D 追加）。**次 = W-E（インスペクタ型対応 + cross-app E2E + スクショ）**。正本は [Docs/phase11-widget-palette-plan.md](Docs/phase11-widget-palette-plan.md)「進捗」表。
 - **完了済み**：Phase 1〜3-B（MVP / テスト基盤 / E2E / Runtime・実機描画）、Phase 4（Button + 拡張）、Phase 5（Label）、Phase 6・6-B（NumericField）、Phase 7（Modbus TCP・MB-1〜4、残 MB-5/6 はローカル専用）、Phase 8・8-B（Trend）、Phase 9（OPC-UA・OP-1〜6）、Phase 10（Meter・M-A〜D）。この節は**最新ステータスのみ**（完了タスクの詳細は積まず development-history / 各 plan へ）。
 
 ---
