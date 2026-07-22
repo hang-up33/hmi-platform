@@ -1,6 +1,6 @@
-# [Future] リファクタリング計画（候補・未承認）
+# リファクタリング計画（承認済み・着手中）
 
-> **ステータス：`[Future]`・候補（ユーザー未承認）。** 進行中の Phase 11（残タスク W-D / W-E）を逸脱する大規模提案のため、AGENTS.md「スコープ」の方針（フェーズスコープを逸脱する大規模リファクタ提案は `[Future]` として分離）に従い Future 扱いとする。**Phase 11 クローズ後に本計画を再評価し、ユーザー承認を得てから着手する**（それまでどのタスクにも着手しない。CLAUDE.md「Must Always：未承認フェーズには自動着手しない」）。承認時は 1 タスク = 1 ブランチ = 1 PR（`task/rf-<記号>-<短い名>`）で進め、常駐文書（README / CLAUDE.md 等）の同期は承認時に行う。
+> **ステータス：承認済み・RF-A から着手中（2026-07-22 ユーザー指示「リファクタリング進めて」で承認）。** 当初は `[Future]`（Phase 11 クローズ後に再評価）としていたが、ユーザーの明示指示により Phase 11（残タスク W-E）と並行で着手する。1 タスク = 1 PR で進め、常駐文書（README / CLAUDE.md 等）の同期は各タスク PR で行う。
 
 ## 背景と目的
 
@@ -68,9 +68,9 @@ graph LR
 
 | Task | 状態 | PR | 備考 |
 |---|---|---|---|
-| RF-A | 未着手（Future） | — | Phase 11 クローズ後に承認確認 |
-| RF-B | 未着手（Future） | — | 同上 |
+| RF-A | ✅ 完了 | — | ツールバー→`EditorToolbar.qml`・ダイアログ 4 つ→`EditorDialogs.qml` を抽出（Main.qml 2,712→2,533 行）。着手時に W-D の D&D ゴースト（`Overlay.overlay` 親化）が Editor の全クリックを奪い E2E 4 件が落ちる不具合を発見し同 PR で修正 |
+| RF-B | 未着手 | — | 次候補は実施順どおり RF-D |
 | RF-C | 取り下げ | — | 重複は意図的設計（parseValidated 集約済み + Shared 非昇格方針）のため除外 |
-| RF-D | 未着手（Future） | — | Phase 11 クローズ後に承認確認 |
-| RF-E | 未着手（Future） | — | 着手時に方式 (a)/(b) を試作比較 |
+| RF-D | 未着手 | — | 実施順の次タスク |
+| RF-E | 未着手 | — | 着手時に方式 (a)/(b) を試作比較 |
 | RF-F | 保留 | — | [widgetmodel-refactor-deferred](../.claude/rules/project-widgetmodel-refactor-deferred.md) を継続 |

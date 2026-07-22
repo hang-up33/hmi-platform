@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Window
 import QtQuick.Controls
-import QtQuick.Dialogs
 import HmiEditor
 import HmiWidgets
 
@@ -301,13 +300,8 @@ Window {
     // 「選択中 Item の単一プロパティ名」へ書き戻す方式だが、系列色は配列内 index への
     // 書き戻しが要るため別ダイアログ（seriesColorDialog）を使う。
     function openSeriesColorDialog(index, currentHex) {
-        if (!canvas.selectedItem) {
-            return
-        }
-        seriesColorDialog.targetIndex = index
-        seriesColorDialog.selectedColor =
-            (currentHex && /^#[0-9A-Fa-f]{6}$/.test(currentHex)) ? currentHex : "#4cc9f0"
-        seriesColorDialog.open()
+        // Task RF-A: 実体は EditorDialogs へ移動（呼び出し名は据え置き）。
+        dialogs.openSeriesColor(index, currentHex)
     }
 
     // Task 26: 選択中の live な EditableWidget はインスペクタの編集対象。
@@ -380,14 +374,8 @@ Window {
     //（"widgetBackgroundColor" 等）、fallback = 未指定時の既定色（HmiButton の
     // resolved* と同じ値。ダイアログの初期色として使う）。
     function openColorDialog(field, targetProperty, fallback) {
-        if (!canvas.selectedItem) {
-            return
-        }
-        inspectorColorDialog.targetField = field
-        inspectorColorDialog.targetProperty = targetProperty
-        inspectorColorDialog.selectedColor =
-            (field.text !== "" && field.acceptableInput) ? field.text : fallback
-        inspectorColorDialog.open()
+        // Task RF-A: 実体は EditorDialogs へ移動（インスペクタ各所の呼び出し名は据え置き）。
+        dialogs.openInspectorColor(field, targetProperty, fallback)
     }
 
     // Task 19: E2E（Spix の invokeMethod）から呼ぶ JSON 保存ラッパー。
@@ -628,108 +616,17 @@ Window {
         anchors.fill: parent
         color: "#e0e0e0"
 
-        // 上部ツールバー（Task 6: 保存 / Task 7: 開く / Task 18: 追加）
-        Row {
+        // 上部ツールバー（Task 6: 保存 / Task 7: 開く / Task 18: 追加）。
+        // Task RF-A: ボタン群の実体は EditorToolbar.qml に切り出した（objectName・挙動は不変）。
+        // FileDialog は EditorDialogs（id: dialogs）の所有なのでシグナル経由で開く。
+        EditorToolbar {
             id: toolbar
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.margins: 8
-            spacing: 8
-
-            // Task 18 / 48: Widget 追加。E2E からは objectName で参照する。
-            // Task 48: 横展開で種別が増えたため「ボタン追加」と明示し、隣に「ラベル追加」を足す。
-            // objectName（addWidgetButton）と挙動（Button を追加）は据え置き＝既存 E2E 互換。
-            Button {
-                objectName: "addWidgetButton"
-                text: qsTr("ボタン追加")
-                onClicked: canvas.addWidget("Button")
-            }
-
-            // Task 48: ラベル（表示専用 Widget）追加。同じ addWidget を type 違いで呼ぶ。
-            Button {
-                objectName: "addLabelButton"
-                text: qsTr("ラベル追加")
-                onClicked: canvas.addWidget("Label")
-            }
-
-            // Task 51: 数値入力（NumericField）追加。Phase 6 の最初の入力 Widget。
-            // 同じ addWidget を type 違いで呼ぶ（ホワイトリストに "NumericField" を追加済み）。
-            Button {
-                objectName: "addNumericButton"
-                text: qsTr("数値入力追加")
-                onClicked: canvas.addWidget("NumericField")
-            }
-
-            // Task T-C: トレンドグラフ（Trend）追加。Phase 8 の最初の表示 Widget（ライブ
-            // 折れ線）。同じ addWidget を type 違いで呼ぶ（ホワイトリストに "Trend" を追加済み）。
-            Button {
-                objectName: "addTrendButton"
-                text: qsTr("トレンド追加")
-                onClicked: canvas.addWidget("Trend")
-            }
-
-            // Task M-C: メーター（Meter）追加。Phase 10 の表示 Widget（車のスピードメーター風＝
-            // 円弧 + 針）。同じ addWidget を type 違いで呼ぶ（ホワイトリストに "Meter" を追加済み）。
-            Button {
-                objectName: "addMeterButton"
-                text: qsTr("メーター追加")
-                onClicked: canvas.addWidget("Meter")
-            }
-
-            Button {
-                text: qsTr("開く")
-                onClicked: openDialog.open()
-            }
-
-            Button {
-                text: qsTr("保存")
-                onClicked: saveDialog.open()
-            }
-
-            // Task 35: グリッドスナップ ON/OFF トグル。canvas.snapEnabled を駆動し、
-            // ON でドラッグ / リサイズが格子に吸着しグリッド線も表示される。
-            // 編集時の補助のみで JSON には保存しない。
-            CheckBox {
-                objectName: "snapToggle"
-                text: qsTr("スナップ")
-                checked: canvas.snapEnabled
-                onToggled: canvas.snapEnabled = checked
-            }
-
-            // Task 37: コピー / ペースト / 複製。ショートカット（Cmd/Ctrl+C/V・Ctrl+Shift+D）
-            // と同じ Canvas 関数を叩く（ボタンは発見性とヘッドレススクショ用）。
-            Button {
-                objectName: "copyButton"
-                text: qsTr("コピー")
-                enabled: canvas.selectedWidgetIds.length > 0
-                onClicked: canvas.copySelected()
-            }
-            Button {
-                objectName: "pasteButton"
-                text: qsTr("ペースト")
-                enabled: canvas.clipboard.length > 0
-                onClicked: canvas.pasteClipboard()
-            }
-            Button {
-                objectName: "duplicateButton"
-                text: qsTr("複製")
-                enabled: canvas.selectedWidgetIds.length > 0
-                onClicked: canvas.duplicateSelected()
-            }
-
-            // Task 38: undo / redo ボタン（ショートカットと同じ Canvas 関数）。
-            Button {
-                objectName: "undoButton"
-                text: qsTr("元に戻す")
-                enabled: canvas.canUndo
-                onClicked: canvas.undo()
-            }
-            Button {
-                objectName: "redoButton"
-                text: qsTr("やり直す")
-                enabled: canvas.canRedo
-                onClicked: canvas.redo()
-            }
+            editorCanvas: canvas
+            onOpenRequested: dialogs.openOpenDialog()
+            onSaveRequested: dialogs.openSaveDialog()
         }
 
         // Task 26: 右側インスペクタ。選択中 Widget の各プロパティを編集する。
@@ -2625,88 +2522,11 @@ Window {
         }
     }
 
-    // Task 46: 色スウォッチクリックで開く共有 ColorDialog。targetField /
-    // targetProperty を差し替えて 3 つの色（背景 / 文字 / ボーダー）で使い回す。
-    // 確定は CheckBox と同じ離散操作なので、明示 beginEdit/commitEdit で
-    // 1 操作 = 1 件を undo へ積む（フォーカス境界を通らないため。Task 38 と同型）。
-    ColorDialog {
-        id: inspectorColorDialog
-        title: qsTr("色を選択")
-        property var targetField: null
-        property string targetProperty: ""
-        onAccepted: {
-            if (!canvas.selectedItem || !targetField) {
-                return
-            }
-            // Schema は "#RRGGBB" 文字列を期待するため hex 化して書き戻す。
-            // TextField の表示も更新する（プログラム代入は textEdited を発火
-            // しないため二重書き戻しは起きない）。
-            const hex = rootWindow.colorToHex(selectedColor)
-            canvas.beginEdit()
-            canvas.selectedItem[targetProperty] = hex
-            canvas.commitEdit()
-            targetField.text = hex
-        }
-    }
-
-    // Task 8B-D: Trend 系列の線色を選ぶ共有 ColorDialog（series 配列の index へ書き戻す）。
-    // 色変更は離散操作なので明示 beginEdit/commitEdit で 1 件 undo へ積む（CheckBox と同型）。
-    ColorDialog {
-        id: seriesColorDialog
-        title: qsTr("系列の線色を選択")
-        property int targetIndex: -1
-        onAccepted: {
-            if (!canvas.selectedItem || targetIndex < 0) {
-                return
-            }
-            const hex = rootWindow.colorToHex(selectedColor)
-            canvas.beginEdit()
-            rootWindow.updateSeries(targetIndex, "color", hex)
-            canvas.commitEdit()
-        }
-    }
-
-    // Task 6: JSON 保存ダイアログ
-    FileDialog {
-        id: saveDialog
-        title: qsTr("プロジェクトを保存")
-        fileMode: FileDialog.SaveFile
-        nameFilters: [qsTr("JSON files (*.json)"), qsTr("All files (*)")]
-        defaultSuffix: "json"
-        onAccepted: {
-            // Canvas 上の live EditableWidget 群を Shared/Schema 互換の Widget
-            // リストへ変換（Task 26 で Canvas.snapshotModel() に集約・共用）。
-            const widgets = canvas.snapshotModel()
-            // Task 39: 読み込んだ変数定義もそのまま保存へ渡す（失わないため）。
-            const ok = projectIo.save(saveDialog.selectedFile, "Sample", "Main", widgets,
-                                      rootWindow.projectVariables)
-            if (!ok) {
-                console.warn("プロジェクト保存に失敗:", saveDialog.selectedFile)
-            } else {
-                console.log("プロジェクト保存:", saveDialog.selectedFile)
-            }
-        }
-    }
-
-    // Task 7: JSON 読込ダイアログ
-    FileDialog {
-        id: openDialog
-        title: qsTr("プロジェクトを開く")
-        fileMode: FileDialog.OpenFile
-        nameFilters: [qsTr("JSON files (*.json)"), qsTr("All files (*)")]
-        onAccepted: {
-            const result = projectIo.load(openDialog.selectedFile)
-            if (!result || !result.ok) {
-                console.warn("プロジェクト読込に失敗:", openDialog.selectedFile)
-                return
-            }
-            // Task 40: 変数定義を widgetModel より先に設定（sync 時に ComboBox 選択肢を揃える）。
-            rootWindow.projectVariables = result.variables !== undefined ? result.variables : []
-            // Repeater の model を差し替えて Widget 群を再構築する
-            canvas.widgetModel = result.widgets
-            canvas.clearHistory()  // Task 38: 読込前プロジェクトの undo 履歴は破棄
-            console.log("プロジェクト読込:", openDialog.selectedFile,
-                        "widgets =", result.widgets.length)
-        }
+    // Task RF-A: ダイアログ群（色選択 ×2 / ファイル保存・読込）は EditorDialogs.qml に
+    // 切り出した（各ダイアログのロジックは不変。Task 46 / 8B-D / 6 / 7 の経緯はそちらを参照）。
+    EditorDialogs {
+        id: dialogs
+        editorCanvas: canvas
+        editorRoot: rootWindow
     }
 }

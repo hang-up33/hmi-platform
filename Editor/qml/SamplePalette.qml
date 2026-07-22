@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Window
 import QtQuick.Controls
 import HmiWidgets
 
@@ -128,12 +129,17 @@ InspectorSection {
 
                 // Task W-D（Codex PR #166 [Minor]）: ドラッグ中のゴースト。
                 // インスペクタの ScrollView は clip: true なので、ゴーストを cell の子に置くと
-                // インスペクタ境界で切れてキャンバス側まで追従して見えない。**ウィンドウ直下の
-                // Overlay.overlay（クリップされない最前面レイヤ）を親** にしてカーソルへ追従させる。
-                // 位置は cellMouse がドラッグ中に mapToItem で overlay 座標へ変換して更新する。
+                // インスペクタ境界で切れてキャンバス側まで追従して見えない。**ウィンドウの
+                // contentItem（クリップされないルート Item）を親**にして z を上げ、カーソルへ
+                // 追従させる。位置は cellMouse がドラッグ中に mapToItem で親座標へ変換して更新する。
+                // 注意：ここに Overlay.overlay を使ってはいけない（RF-A 中に発覚した W-D の
+                // 不具合）。QQuickOverlay は子を持つと Editor ウィンドウ全体のマウスイベントを
+                // 奪い、ツールバー・キャンバスのクリックが全て死ぬ（Qt 6.10 offscreen で実証、
+                // E2E 4 件が失敗）。contentItem 親 + 高 z なら同じ「クリップされない最前面」を
+                // 副作用なしで実現できる。
                 Rectangle {
                     id: dragGhost
-                    parent: Overlay.overlay
+                    parent: cell.Window.window ? cell.Window.window.contentItem : null
                     z: 1000
                     width: cell.width
                     height: cell.height

@@ -422,7 +422,12 @@ timeline
 
 ---
 
-## 番外: 開発コードネーム「Atlas」決定（2026-05-30）
+## リファクタリング（RF-A〜・着手中）
+
+**計画書**：[Docs/refactoring-plan.md](refactoring-plan.md)（PR #167 で `[Future]` として起票 → 2026-07-22 ユーザー指示で承認・Phase 11 と並行着手）
+
+- ✅ **RF-A: Main.qml 分割①（ツールバー / ダイアログ抽出）**。`Editor/qml/Main.qml`（2,712 行）からツールバー Row を `EditorToolbar.qml`、ダイアログ 4 つ（色選択 ×2 / 保存 / 読込）を `EditorDialogs.qml` へ抽出（2,533 行に減）。objectName・挙動は不変＝既存 E2E 互換。Canvas 参照は自己参照罠回避で受け口を `editorCanvas` 別名にした（MB-4 罠①と同型）。
+  - **学び（W-D の不具合発見・同 PR で修正）**：E2E 検証で 4 件（place_and_drag / save_load_roundtrip / simulator_display / style_roundtrip）が RF-A 適用前の main でも失敗しており、bisect で W-D（PR #166）由来と特定。**D&D ゴーストを `Overlay.overlay` に再親化すると、QQuickOverlay が Editor ウィンドウ全体の合成マウスイベントを奪い、ツールバー・キャンバスのクリックが全て死ぬ**（Qt 6.10 offscreen で実証）。ゴーストの親を `Window.contentItem` + 高 `z` に変えて修正（クリップ回避という元目的は維持）。
 
 フェーズタスクとは別に、プロジェクト全体の**開発時の通称（ブランド別名）**を決めた経緯。
 
