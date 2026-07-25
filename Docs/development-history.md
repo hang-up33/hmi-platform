@@ -428,6 +428,7 @@ timeline
 
 - ✅ **RF-A: Main.qml 分割①（ツールバー / ダイアログ抽出）**。`Editor/qml/Main.qml`（2,712 行）からツールバー Row を `EditorToolbar.qml`、ダイアログ 4 つ（色選択 ×2 / 保存 / 読込）を `EditorDialogs.qml` へ抽出（2,533 行に減）。objectName・挙動は不変＝既存 E2E 互換。Canvas 参照は自己参照罠回避で受け口を `editorCanvas` 別名にした（MB-4 罠①と同型）。
   - **学び（W-D の不具合発見・同 PR で修正）**：E2E 検証で 4 件（place_and_drag / save_load_roundtrip / simulator_display / style_roundtrip）が RF-A 適用前の main でも失敗しており、bisect で W-D（PR #166）由来と特定。**D&D ゴーストを `Overlay.overlay` に再親化すると、QQuickOverlay が Editor ウィンドウ全体の合成マウスイベントを奪い、ツールバー・キャンバスのクリックが全て死ぬ**（Qt 6.10 offscreen で実証）。ゴーストの親を `Window.contentItem` + 高 `z` に変えて修正（クリップ回避という元目的は維持）。
+- ✅ **RF-D: 種別分岐の集約（widgetTypeTable）**。種別ごとの「許可リスト・既定サイズ・既定文字」が `Canvas.qml` の `normalizeWidgetType`（許可リスト）と `addWidget`（`isTrend/isMeter` サイズ分岐 + text 三項連鎖）に散っていたのを、単一の `readonly property var widgetTypeTable`（種別 → `{width, height, text}`）へ集約。`normalizeWidgetType` はキー存在判定、`addWidget` は `meta` 参照、`addPresetWidget` はサイズ既定に同テーブルを使う。**新種別追加時はテーブルに 1 行足すだけ**で 3 関数が追従する。既存挙動は完全不変（全 26 テスト緑）で、従来欠けていた Trend 既定サイズ（240×120）の回帰テストを補った。
 
 フェーズタスクとは別に、プロジェクト全体の**開発時の通称（ブランド別名）**を決めた経緯。
 

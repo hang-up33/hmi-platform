@@ -69,8 +69,8 @@ graph LR
 | Task | 状態 | PR | 備考 |
 |---|---|---|---|
 | RF-A | ✅ 完了 | — | ツールバー→`EditorToolbar.qml`・ダイアログ 4 つ→`EditorDialogs.qml` を抽出（Main.qml 2,712→2,533 行）。着手時に W-D の D&D ゴースト（`Overlay.overlay` 親化）が Editor の全クリックを奪い E2E 4 件が落ちる不具合を発見し同 PR で修正 |
-| RF-B | 未着手 | — | 次候補は実施順どおり RF-D |
+| RF-B | 未着手 | — | 実施順の次タスク（インスペクタ本体を `InspectorPanel.qml` へ抽出） |
 | RF-C | 取り下げ | — | 重複は意図的設計（parseValidated 集約済み + Shared 非昇格方針）のため除外 |
-| RF-D | 未着手 | — | 実施順の次タスク |
+| RF-D | ✅ 完了 | — | 種別メタ（許可リスト + 既定サイズ + 既定文字）を `Canvas.qml` の `widgetTypeTable` 1 箇所へ集約。`normalizeWidgetType`（キー存在で許可判定）/ `addWidget`（isTrend/isMeter 分岐と text 三項連鎖を廃止）/ `addPresetWidget`（サイズ既定）が参照。既存挙動不変（全 26 緑）+ Trend 既定サイズの回帰テストを追加 |
 | RF-E | 未着手 | — | 着手時に方式 (a)/(b) を試作比較 |
 | RF-F | 保留 | — | [widgetmodel-refactor-deferred](../.claude/rules/project-widgetmodel-refactor-deferred.md) を継続 |

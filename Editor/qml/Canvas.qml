@@ -238,22 +238,32 @@ Item {
         return "btn" + String(widgetIdCounter).padStart(3, "0")
     }
 
-    // Task 48: 既定サイズ/位置で Widget を 1 個追加する。引数 type で種別を選ぶ
-    // （省略時は後方互換で "Button"）。Phase 5 横展開でツールバーの「ボタン追加」/
-    // 「ラベル追加」が同じ経路を type 違いで呼ぶ。Label は既定文字 "Label"・背景は
-    // 未指定（空文字）＝HmiLabel 側で透明にフォールバックする（plan「Label の既定文字・
-    // 透明背景」）。Button は従来どおり既定文字 "New"・背景未指定（#4cc9f0 へフォールバック）。
-    // Task 48 / 51 / T-C / M-C / W-C: 既知の種別（"Button" / "Label" / "NumericField" /
-    // "Trend" / "Meter" / "SimpleButton"）だけを採用し、未知値 / 空 / undefined は "Button" に
+    // Task RF-D: 種別メタの単一テーブル（許可リスト + 既定サイズ + 既定文字を 1 箇所に集約）。
+    // 従来は normalizeWidgetType の許可リスト・addWidget の既定サイズ/文字が別々に散っており、
+    // 新種別追加時に複数箇所を同じ形で触る必要があった（Task 48/51/T-C/M-C/W-C の経緯）。ここに
+    // 1 行足せば normalizeWidgetType（キー存在で許可判定）・addWidget（既定サイズ/文字の付与）・
+    // addPresetWidget（サイズ未指定時のフォールバック）がすべて追従する。
+    //   - 既定文字：Label="Label"・NumericField="0"（数値慣習）・Trend/Meter=""（文字を持たない）・
+    //     Button/SimpleButton="New"。背景は各 Hmi* 側で未指定フォールバックするのでここでは持たない。
+    //   - 既定サイズ：Trend=240×120・Meter=200×200（各 Hmi* の既定実寸）・他=120×40。
+    // object literal を property へ入れるときはコードブロック誤認を避けるため丸括弧で包む。
+    readonly property string defaultWidgetType: "Button"
+    readonly property var widgetTypeTable: ({
+        "Button":       { "width": 120, "height": 40,  "text": "New" },
+        "Label":        { "width": 120, "height": 40,  "text": "Label" },
+        "NumericField": { "width": 120, "height": 40,  "text": "0" },
+        "Trend":        { "width": 240, "height": 120, "text": "" },
+        "Meter":        { "width": 200, "height": 200, "text": "" },
+        "SimpleButton": { "width": 120, "height": 40,  "text": "New" }
+    })
+
+    // Task 48/51/T-C/M-C/W-C: 既知の種別だけを採用し、未知値/空/undefined は既定種別（Button）へ
     // フォールバックする（ホワイトリスト正規化）。描画フォールバックと保存値が乖離して JSON の
-    // 型契約が壊れるのを防ぐ（CodeRabbit PR #98 指摘）。新種別を足す時はここの許可リストに追加する
-    //（Task 51 で "NumericField"、T-C で "Trend"、M-C で "Meter"、W-C で "SimpleButton" を追加）。
+    // 型契約が壊れるのを防ぐ（CodeRabbit PR #98 指摘）。許可リストは widgetTypeTable のキー集合
+    // ＝新種別はテーブルに 1 行足すだけで許可される（Task RF-D で集約）。
     // addWidget（ツールバー）/ addPresetWidget（サンプルパレット）が共用する。
     function normalizeWidgetType(type) {
-        return (type === "Label" || type === "Button"
-                || type === "NumericField" || type === "Trend" || type === "Meter"
-                || type === "SimpleButton")
-            ? type : "Button"
+        return widgetTypeTable.hasOwnProperty(type) ? type : defaultWidgetType
     }
 
     // Task W-C / W-D（Phase 11）: サンプルパレットのプリセットから Widget を追加する。preset は
@@ -278,9 +288,13 @@ Item {
         for (const k in d) {
             newWidget[k] = d[k]
         }
-        // サイズ既定（未指定なら 120×40）。配置計算に使う。
-        const w = newWidget.width !== undefined ? newWidget.width : 120
-        const h = newWidget.height !== undefined ? newWidget.height : 40
+        // サイズ既定（preset.defaults に width/height が無ければ種別の既定サイズ）。配置計算に使う。
+        // Task RF-D: 固定 120×40 でなく widgetTypeTable から種別の既定サイズを引く（newWidget.type は
+        // normalizeWidgetType 済みなので meta は必ず存在。現行プリセットは defaults で寸法を明示する
+        // ため実挙動は不変だが、寸法省略プリセットを足したとき種別ごとの既定に追従する）。
+        const meta = widgetTypeTable[newWidget.type]
+        const w = newWidget.width !== undefined ? newWidget.width : meta.width
+        const h = newWidget.height !== undefined ? newWidget.height : meta.height
         newWidget.width = w
         newWidget.height = h
         if (dropX !== undefined && dropY !== undefined) {
@@ -307,23 +321,18 @@ Item {
         const snapshot = snapshotModel()
         const id = nextWidgetId(snapshot)
         const widgetType = normalizeWidgetType(type)
-        // Task T-C: Trend はグラフらしく大きめの既定サイズ（240×120 = HmiTrend の既定実寸）。
-        // Task M-C: Meter はスピードメーターらしく正方形の既定サイズ（200×200 = HmiMeter の既定実寸）。
-        // 他種別は従来どおり 120×40。
-        const isTrend = widgetType === "Trend"
-        const isMeter = widgetType === "Meter"
+        // Task RF-D: 既定サイズ・既定文字は widgetTypeTable から引く（Trend=240×120・
+        // Meter=200×200・他=120×40、Label="Label"・NumericField="0"・Trend/Meter=""・
+        // Button="New"）。従来ここに散っていた isTrend/isMeter 分岐と text 三項連鎖を集約した。
+        // widgetType は normalizeWidgetType 済みなので meta は必ずテーブルに存在する。
+        const meta = widgetTypeTable[widgetType]
         const newWidget = {
             id: id,
             type: widgetType,
             x: 50, y: 200,
-            width: isTrend ? 240 : isMeter ? 200 : 120,
-            height: isTrend ? 120 : isMeter ? 200 : 40,
-            // Label は既定文字 "Label"・透明背景（背景は未指定のままで HmiLabel が
-            // transparent にフォールバック）。NumericField は数値慣習で初期値 "0"。
-            // Trend / Meter は文字を持たないので "" 固定。Button は従来どおり "New"。
-            text: widgetType === "Label" ? "Label"
-                : widgetType === "NumericField" ? "0"
-                : (isTrend || isMeter) ? "" : "New", tag: ""
+            width: meta.width,
+            height: meta.height,
+            text: meta.text, tag: ""
         }
         snapshot.push(newWidget)
         // 新しい配列を代入することで Repeater に確実にモデル変更を通知する。

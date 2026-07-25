@@ -1339,4 +1339,21 @@ TestCase {
         tryVerify(function() { return editableChildren().length === 1; }, 1000,
                   "undo で Meter 追加が取り消されない");
     }
+
+    // Task RF-D: addWidget("Trend") が種別テーブル（widgetTypeTable）の既定サイズ 240×120・
+    // 既定文字 "" で追加されることを検証する（Meter の 200×200 と対）。従来 Trend の既定サイズ
+    // 検証テストが無く、テーブル集約後にこのエントリを守る回帰が欠けていたため RF-D で補う。
+    function test_add_widget_trend_type() {
+        canvas.addWidget("Trend");
+        tryVerify(function() { return editableChildren().length === 2; }, 1000,
+                  "Trend が追加されない");
+        const added = addedWidget();
+        verify(added !== null, "新規 Trend widget が見つからない");
+        compare(added.widgetType, "Trend");
+        compare(added.widgetText, "");
+        compare(added.width, 240);
+        compare(added.height, 120);
+        tryVerify(function() { return findByObjectName(added, "hmiTrend") !== null; }, 1000,
+                  "追加 Trend が HmiTrend で描かれない");
+    }
 }
