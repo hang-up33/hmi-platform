@@ -160,7 +160,7 @@ Editor=`live:false`、Simulator=`live:true` + `checked: boundValue("checked")` +
 | 文字（フォント） | ❌（テーマが決める。ラベル文字列だけ「基本」に残すかは実装時確定） |
 | 背景・枠 | ❌（テーマが担う） |
 | 状態 | ✅（有効 + ON/OFF＝`checked`） |
-| クリックアクション | ✅（トグル用途。`selectedSupportsClickAction` は真のまま） |
+| クリックアクション | ❌（W-B で状態遷移を `checked` binding 経路へ一本化＝`runClickActions` を呼ばない設計にしたため、編集 UI も出さない。`selectedSupportsClickAction` へ `&& !selectedIsSimpleButton`） |
 | バインディング | ✅ **`checked` の値源** |
 | シンプルボタン詳細（形状 / テーマ / 差し色 / 長押し時間 `holdMs`） | ✅ `visible: selectedIsSimpleButton` |
 
@@ -187,8 +187,16 @@ Editor=`live:false`、Simulator=`live:true` + `checked: boundValue("checked")` +
 | W-A Schema 拡張（SimpleButton フィールド round-trip） | ✅ 完了 | #163 |
 | W-B HmiSimpleButton 描画 + delegate 6 分岐目 | ✅ 完了 | #164 |
 | W-C サンプルパレット・パネル（見た目そのまま） | ✅ 完了 | #165 |
-| W-D パレット → キャンバス ドラッグ&ドロップ追加 | ✅ 完了 | 本 PR |
-| W-E インスペクタ型対応 + cross-app E2E + スクショ | ⬜ 未着手 | — |
+| W-D パレット → キャンバス ドラッグ&ドロップ追加 | ✅ 完了 | #166 |
+| W-E インスペクタ型対応 + cross-app E2E + スクショ | ✅ 完了 | 本 PR |
+
+**Phase 11 クローズ**（W-A〜W-E 全完了）。
+
+> **W-E での W-D 回帰修正**：W-D のドラッグゴーストを `Overlay.overlay` に親替えした変更が、
+> QtQuick Controls の Overlay にマウスイベントを奪わせ **Editor ウィンドウ全体のクリックを殺す
+> 回帰**を起こしていた（main の CI で e2e_place_and_drag / e2e_save_load_roundtrip /
+> e2e_simulator_display / e2e_style_roundtrip の 4 件が失敗）。W-E でゴーストの親を
+> ウィンドウの `contentItem`（クリップされず入力も奪わない）へ差し替えて解消した。
 
 ## 非スコープ（別承認）
 

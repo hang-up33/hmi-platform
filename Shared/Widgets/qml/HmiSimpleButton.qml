@@ -115,6 +115,19 @@ Item {
         holdTimer.stop()
         root.holdProgress = 0.0
     }
+    // Task W-E: 長押し満了（確定）を模す公開メソッド。Spix は実 press-hold を発火できない
+    // ため、E2E / unit はこれを invokeMethod で叩いて「押し続けて満ちた」状態遷移だけを起こす
+    // （HmiNumericField.commitValue() と同じ「確定点を公開する」前例）。ガードは実挙動と同じ：
+    // live:false（Editor プレビュー）と widgetEnabled=false（無効）では何もしない。
+    // Timer 満了時と同様、checked は自己代入せず「次値」を toggled で通知するだけ
+    // （状態更新は consumer/binding 経路から戻る。Codex PR #158 [P2] と同型）。
+    function commitHold() {
+        if (!root.live || !root.widgetEnabled)
+            return
+        holdTimer.stop()
+        root.holdProgress = 0.0
+        root.toggled(!root.checked)
+    }
 
     // ── 面 + 影 + 進捗（Canvas 自描画）────────────────────────────
     Canvas {

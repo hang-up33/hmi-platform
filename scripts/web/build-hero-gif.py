@@ -32,7 +32,7 @@ CAPTURE = os.path.join(ROOT, "scripts/capture-app-screenshot-linux.sh")
 # atlas-dashboard-demo.json の widgets 配列は組み上げ順 (ヘッダ -> ステータス ->
 # KPI タイル -> 機械ステータス盤 -> 操作 -> トレンド) に並んでいるので前方スライスで段階を作る。
 # 最終フレームは実行時に widget 総数へ自動で揃えるため (main 参照)、末尾値の手動更新は不要。
-MILESTONES = [1, 3, 6, 9, 12, 15, 18, 21, 33, 35, 38]
+MILESTONES = [1, 3, 6, 9, 12, 15, 18, 21, 33, 36, 39]
 
 
 def main():

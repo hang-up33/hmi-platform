@@ -468,6 +468,11 @@ Window {
         || inspectorNeedleColorField.activeFocus
         || inspectorTickCountSpin.activeFocus
         || inspectorUnitField.activeFocus
+        // Task W-E: シンプルボタン詳細欄（形状 / テーマ / 差し色 / 長押し時間）も undo の操作境界に含める。
+        || inspectorShapeCombo.activeFocus
+        || inspectorThemeCombo.activeFocus
+        || inspectorAccentColorField.activeFocus
+        || inspectorHoldMsSpin.activeFocus
         || fieldX.activeFocus || fieldY.activeFocus
         || fieldW.activeFocus || fieldH.activeFocus
 
@@ -510,13 +515,23 @@ Window {
     readonly property bool selectedIsMeter:
         canvas.selectedItem !== null && canvas.selectedItem.widgetType === "Meter"
 
+    // Task W-E: 選択中 Widget が SimpleButton 型か。SimpleButton はテーマが外観を決めるため
+    // 文字（フォント）・背景・枠セクションを隠し、固有の「シンプルボタン詳細」（形状 / テーマ /
+    // 差し色 / 長押し時間）を出す。状態（有効 + ON/OFF＝checked）とバインディング（checked の
+    // 値源）は表示する。クリックアクションは持たない（状態遷移は checked binding 経路へ一本化。
+    // toggleVariable アクションと併用すると二重トグルになるため。Codex PR #164 [P2]）。
+    readonly property bool selectedIsSimpleButton:
+        canvas.selectedItem !== null && canvas.selectedItem.widgetType === "SimpleButton"
+
     // Task 51 / T-C / M-C: クリックアクション（onClick）を扱える Widget か（= Button のみ）。Label /
     // NumericField / Trend / Meter はクリックアクションを持たないため、`!selectedIsLabel && …`
     // を毎回連結せず派生プロパティへまとめる（今後の入力 / 表示 Widget 追加で破綻しにくい。
     // 新たに「クリックアクション非対応」種別が増えたらここだけ直せばよい）。Trend / Meter は
     // Label の既存抑制（selectedIsLabel）と独立に AND するだけで競合しない（派生 1 本に集約）。
+    // Task W-E: SimpleButton もクリックアクション非対応（長押しトグル＝checked binding 経路のみ）。
     readonly property bool selectedSupportsClickAction:
         !selectedIsLabel && !selectedIsNumericField && !selectedIsTrend && !selectedIsMeter
+        && !selectedIsSimpleButton
 
     // Task 38: インスペクタの Widget 編集を undo の 1 操作境界にする。どれかの入力欄が
     // フォーカスを得た時に前状態を保留（beginEdit）し、全フィールドからフォーカスが
@@ -1164,7 +1179,10 @@ Window {
                         // メーター）ため文字セクションを丸ごと隠す（型出し分けは visible のみ）。
                         InspectorSection {
                             title: qsTr("文字")
+                            // Task W-E: SimpleButton はテーマが文字色・サイズを決める（ラベル文字列
+                            // 自体は「基本」の Text 欄で編集）ため、フォント詳細を隠す。
                             visible: !rootWindow.selectedIsTrend && !rootWindow.selectedIsMeter
+                                     && !rootWindow.selectedIsSimpleButton
 
                             // フォント family は ComboBox。model 先頭に「(既定フォント)」を置き、
                             // index 0 = 未指定（空文字 = システム既定）にマップする。残りは
@@ -1381,6 +1399,10 @@ Window {
                         // ── 背景・枠 : 背景色 / ボーダー / 角丸 / 不透明度 ──
                         InspectorSection {
                             title: qsTr("背景・枠")
+                            // Task W-E: SimpleButton は面色・縁取り・影をテーマ（light/dark）が
+                            // 決めるため、背景・枠セクションごと隠す（backgroundColor/border* は
+                            // SimpleButton では未使用＝plan §Schema「流さない」）。
+                            visible: !rootWindow.selectedIsSimpleButton
 
                             // Task 29: 背景色（"#RRGGBB" hex の TextField）。空文字は HmiButton 側で
                             // 既定外観にフォールバックされる（widgetBackgroundColor は空 = 未指定）。
@@ -2169,6 +2191,140 @@ Window {
                             }
                         }
 
+                        // ── シンプルボタン詳細（SimpleButton 選択時のみ）: 形状 / テーマ / 差し色 / 長押し時間 ──
+                        // Task W-E: SimpleButton 固有の編集 UI。型出し分けは visible のみ（objectName・
+                        // 編集ロジック・Schema 不変）。形状 / テーマは hAlign と同じ「表示ラベル model +
+                        // parallel な values 配列」の ComboBox（index 0 = 未指定 = 空文字 = HmiSimpleButton
+                        // の resolved* が既定へ解決）。差し色は色スウォッチ + ColorDialog（弧色と同型）、
+                        // 長押し時間は SpinBox（0 = 既定 800ms。tickCount と同じ 0 センチネル）。
+                        InspectorSection {
+                            objectName: "inspectorSimpleButtonSection"
+                            title: qsTr("シンプルボタン詳細")
+                            visible: rootWindow.selectedIsSimpleButton
+
+                            Label { text: qsTr("形状") }
+                            ComboBox {
+                                id: inspectorShapeCombo
+                                objectName: "inspectorShapeCombo"
+                                width: parent.width
+                                readonly property var values: ["", "circle", "square"]
+                                model: [qsTr("(既定:円形)"), qsTr("円形"), qsTr("四角")]
+                                ToolTip.text: qsTr("ボタンの面の形。円形は進捗リング、四角は進捗バーで長押しを表します")
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
+                                onActivated: {
+                                    if (canvas.selectedItem) {
+                                        canvas.selectedItem.widgetShape = values[currentIndex]
+                                    }
+                                }
+                                Connections {
+                                    target: canvas
+                                    function onSelectedItemChanged() {
+                                        const it = canvas.selectedItem
+                                        const v = it ? it.widgetShape : ""
+                                        const idx = inspectorShapeCombo.values.indexOf(v)
+                                        inspectorShapeCombo.currentIndex = idx >= 0 ? idx : 0
+                                    }
+                                }
+                            }
+
+                            Label { text: qsTr("テーマ") }
+                            ComboBox {
+                                id: inspectorThemeCombo
+                                objectName: "inspectorThemeCombo"
+                                width: parent.width
+                                readonly property var values: ["", "light", "dark"]
+                                model: [qsTr("(既定:ライト)"), qsTr("ライト"), qsTr("ダーク")]
+                                ToolTip.text: qsTr("面・文字・影の配色テーマ。背景色や枠はテーマが決めます")
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
+                                onActivated: {
+                                    if (canvas.selectedItem) {
+                                        canvas.selectedItem.widgetTheme = values[currentIndex]
+                                    }
+                                }
+                                Connections {
+                                    target: canvas
+                                    function onSelectedItemChanged() {
+                                        const it = canvas.selectedItem
+                                        const v = it ? it.widgetTheme : ""
+                                        const idx = inspectorThemeCombo.values.indexOf(v)
+                                        inspectorThemeCombo.currentIndex = idx >= 0 ? idx : 0
+                                    }
+                                }
+                            }
+
+                            // 差し色（"#RRGGBB" hex の TextField + 色スウォッチ）。空 = 未指定＝
+                            // テーマ既定の緑（light #2fa563 / dark #56d68a）へ HmiSimpleButton 側で解決。
+                            Label { text: qsTr("差し色 (#RRGGBB)") }
+                            Row {
+                                width: parent.width - parent.leftPadding
+                                spacing: 6
+
+                                TextField {
+                                    id: inspectorAccentColorField
+                                    objectName: "inspectorAccentColorField"
+                                    width: parent.width - rootWindow.colorSwatchReserve
+                                    placeholderText: qsTr("(既定: テーマの緑)")
+                                    validator: RegularExpressionValidator {
+                                        regularExpression: /^(#[0-9A-Fa-f]{6})?$/
+                                    }
+                                    ToolTip.text: qsTr("ランプ・進捗・ON 表示に使うアクセント色。空欄でテーマ既定の緑")
+                                    ToolTip.visible: hovered
+                                    ToolTip.delay: 600
+                                    onTextEdited: {
+                                        if (canvas.selectedItem && acceptableInput) {
+                                            canvas.selectedItem.widgetAccentColor = text
+                                        }
+                                    }
+                                    Connections {
+                                        target: canvas
+                                        function onSelectedItemChanged() {
+                                            inspectorAccentColorField.text = canvas.selectedItem
+                                                ? canvas.selectedItem.widgetAccentColor : ""
+                                        }
+                                    }
+                                }
+                                ColorSwatch {
+                                    objectName: "inspectorAccentColorSwatch"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    field: inspectorAccentColorField
+                                    targetProperty: "widgetAccentColor"
+                                    // HmiSimpleButton の light テーマ既定 accent と揃える。
+                                    fallback: "#2fa563"
+                                }
+                            }
+
+                            // 長押し時間 [ms]。0 = 未指定＝HmiSimpleButton 側で既定 800ms へ解決
+                            //（tickCount と同じ 0 センチネル）。editable なし SpinBox（矢印で増減）。
+                            Label { text: qsTr("長押し時間 [ms]") }
+                            SpinBox {
+                                id: inspectorHoldMsSpin
+                                objectName: "inspectorHoldMsSpin"
+                                from: 0
+                                to: 10000
+                                stepSize: 100
+                                value: 0
+                                ToolTip.text: qsTr("押し続けて ON/OFF が確定するまでの時間。0 で既定（800ms）")
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
+                                onValueModified: {
+                                    if (canvas.selectedItem) {
+                                        canvas.selectedItem.widgetHoldMs = value
+                                    }
+                                }
+                                Connections {
+                                    target: canvas
+                                    function onSelectedItemChanged() {
+                                        const it = canvas.selectedItem
+                                        // 0/未指定はそのまま 0（＝既定 800ms）を表示する。
+                                        inspectorHoldMsSpin.value = (it && it.widgetHoldMs > 0)
+                                            ? it.widgetHoldMs : 0
+                                    }
+                                }
+                            }
+                        }
+
                         // ── 状態 : 有効 / チェック可能 / チェック状態 ──
                         // Task 48 / 51: Label（表示専用）はセクションごと隠す。**NumericField は
                         // 「有効」だけ出す**（トグル / 初期オンは Button 専用）。NumericField も
@@ -2238,7 +2394,11 @@ Window {
                                 objectName: "inspectorCheckedCheck"
                                 text: qsTr("状態をオン")
                                 // Task 51: トグル / 状態オンは Button 専用（NumericField は「有効」のみ）。
+                                // Task W-E: SimpleButton も ON/OFF（checked）を持つため出す（クリック
+                                // アクション非対応でも checked は編集できる。トグル化 checkable は
+                                // SimpleButton では常時トグルなので出さない）。
                                 visible: rootWindow.selectedSupportsClickAction
+                                         || rootWindow.selectedIsSimpleButton
                                 // PR #110: checked の ON 外観は checkable 非依存になった（PR #109 修正）。
                                 // よって checked 編集も checkable でゲートしない（checkable:false の
                                 // 状態表示〔ランプ/インジケータ〕用 JSON でも直接 ON/OFF を編集できる）。

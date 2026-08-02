@@ -114,7 +114,7 @@ InspectorSection {
                 // drag.target にする（Flow は cell の位置を管理し続け、プロキシの x/y 変化には
                 // 影響されない）。プロキシに Drag.mimeData でプリセット JSON を載せ、
                 // Canvas の DropArea が（内部ドラッグの）座標付きで受け取る。プロキシ自体は
-                // 不可視で、見た目のゴーストは下の dragGhost（クリップされない Overlay）が担う。
+                // 不可視で、見た目のゴーストは下の dragGhost（ウィンドウ contentItem 直下）が担う。
                 Item {
                     id: dragProxy
                     width: cell.width

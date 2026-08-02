@@ -231,6 +231,29 @@ set_tests_properties(e2e_meter_live PROPERTIES
     LABELS e2e
 )
 
+# Task W-E (Phase 11): SimpleButton の長押しトグル cross-app E2E。
+# Editor で pumpRunning(bool) 変数 + SimpleButton(shape/theme/accentColor/holdMs +
+# checked binding) を `--open` → saveTo で round-trip → 保存 JSON を直接検証
+# （type:"SimpleButton" / 固有フィールド / checked binding）→ Simulator を `--open` で起動し、
+# 公開メソッド commitHold() を invokeMethod で複数回叩いて長押し満了（確定）を模し、
+# SimpleButton（objectName "hmiSimpleButton"）の公開 checked が each 回で反転する
+# （onToggled → writeBoundValue → VariableStore → boundValue("checked") 再評価）のを
+# getStringProperty で観測する。Spix は実 press-hold を発火できないため確定点を公開メソッド
+# で模す（NumericField の commitValue() と同じ前例）。Canvas はピクセル不可視なので公開
+# プロパティのみで「長押し確定 → 変数 → ON/OFF 追従」を見る。2 プロセス起動のため TIMEOUT
+# は他の cross-app と同等。
+add_test(
+    NAME e2e_simple_button_live
+    COMMAND ${Python3_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_simple_button_live.py
+        --editor-binary $<TARGET_FILE:hmi_editor>
+        --simulator-binary $<TARGET_FILE:hmi_simulator>
+)
+set_tests_properties(e2e_simple_button_live PROPERTIES
+    TIMEOUT 60
+    LABELS e2e
+)
+
 # MB-2: Modbus TCP 読込ポーリングの cross-app E2E。
 # pymodbus ソフトスレーブ（modbus_slave.py をサブプロセス起動）の holding register を
 # Simulator（ModbusController）が周期ポーリング → 変数 → text binding 追従で Label に反映

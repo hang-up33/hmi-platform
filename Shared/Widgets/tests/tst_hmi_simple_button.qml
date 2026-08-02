@@ -164,6 +164,35 @@ TestCase {
         compare(sb.opacity, 0.4);   // 1.0 * 0.4
     }
 
+    // Task W-E: commitHold()（長押し満了を模す公開メソッド。E2E が invokeMethod で叩く）は
+    // Timer 満了と同じ通知を出す＝toggled(!checked) を emit し、checked 自体は変えない
+    // （状態更新は consumer/binding 経路から戻す設計）。進捗も 0 に戻る。
+    function test_commit_hold_emits_toggled_when_live() {
+        sb.checked = false;
+        sb.commitHold();
+        compare(toggledSpy.count, 1);
+        compare(toggledSpy.signalArguments[0][0], true);   // 次値 = !checked
+        compare(sb.checked, false);                        // 自己代入しない
+        compare(sb.holdProgress, 0);
+
+        // checked=true からの確定は次値 false を通知する（トグル）。
+        sb.checked = true;
+        sb.commitHold();
+        compare(toggledSpy.count, 2);
+        compare(toggledSpy.signalArguments[1][0], false);
+    }
+
+    // Task W-E: commitHold() のガードは実挙動（_beginHold）と同じ：live:false（Editor
+    // プレビュー）と widgetEnabled=false（無効）では toggled を出さない。
+    function test_commit_hold_guards_preview_and_disabled() {
+        previewSb.commitHold();                 // live:false → no-op
+        compare(previewToggledSpy.count, 0);
+
+        sb.widgetEnabled = false;               // live:true でも無効なら no-op
+        sb.commitHold();
+        compare(toggledSpy.count, 0);
+    }
+
     // widgetEnabled=false は live:true でも長押し進捗を動かさない（無効ボタンで進捗が伸びない）。
     function test_disabled_does_not_hold_even_when_live() {
         sb.live = true;

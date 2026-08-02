@@ -410,7 +410,7 @@ timeline
 
 ---
 
-## Phase 11: Widget サンプルパレット（D&D 追加）＋ 初号「シンプルボタン」（着手中）
+## Phase 11: Widget サンプルパレット（D&D 追加）＋ 初号「シンプルボタン」（完了 — W-A〜W-E クローズ）
 
 **計画書**：[Docs/phase11-widget-palette-plan.md](phase11-widget-palette-plan.md)（W-A〜W-E。2026-07-12 承認）
 
@@ -419,6 +419,11 @@ timeline
   - **タスク**：W-A（Schema 拡張＝`shape`/`theme`/`accentColor`/`holdMs` + `checked` 再利用）/ W-B（HmiSimpleButton 描画 + delegate 6 分岐目・長押し確定リング/バー）/ W-C（サンプルパレット・パネル＝実 Widget を縮小レンダリング）/ W-D（パレット→キャンバス D&D 追加）/ W-E（インスペクタ型対応 + cross-app E2E + スクショ）。
   - **見た目プロトタイプ先行（本エントリ）**：見た目確定のため `HmiSimpleButton.qml` を W-A/W-B に先行して作成し、ユーザーレビューで反復調整（ランプを右上へ・TEST を大きな主ラベル/ON・OFF を小さな従に・文字サイズは面短辺比でリサイズ耐性）→ 承認。`Shared/Widgets/CMakeLists.txt` の `QML_FILES` に登録（ビルド検証済み・Web `ctest` 26/26 緑）。**まだ Schema 型・delegate・パレットには未接続**＝単体プレビュー用コンポーネント。正式な横展開は W-A（Schema）以降。
   - **非スコープ（別承認）**：効果音・複数アクセントテーマの動的追加・WARN/ERR/LOCK 状態モード・他 Widget 種別のプリセット拡充・リッチ版ボタン（retro/juicy/temperate）移植。
+- ✅ **W-A〜W-D**（PR #163 / #164 / #165 / #166）：Schema 拡張（`shape`/`theme`/`accentColor`/`holdMs` の 4 メソッド round-trip）→ HmiSimpleButton 描画 + delegate 6 分岐目（長押し確定リング/バー・`checked` binding 経路一本化＝`runClickActions` 非使用）→ サンプルパレット（実 Widget 縮小レンダリング + クリック追加）→ パレット→キャンバス D&D 追加（`addPresetWidget(preset, dropX, dropY)` + `DropArea`）。
+- ✅ **W-E: インスペクタ型対応 + cross-app E2E + スクショ（Phase 11 クローズ）**
+  - **目的**：SimpleButton の属性（形状 / テーマ / 差し色 / 長押し時間）をインスペクタで編集可能にし、長押しトグルの round-trip を E2E で固定して Phase 11 を閉じる。
+  - **成果物**：①インスペクタ「シンプルボタン詳細」セクション（`selectedIsSimpleButton` 出し分け。文字・背景/枠はテーマが決めるため非表示、`checked`〔状態をオン〕は表示、クリックアクションは `selectedSupportsClickAction` に `&& !selectedIsSimpleButton` で非表示）②`HmiSimpleButton.commitHold()`（長押し満了を模す公開メソッド＝`commitValue()` 前例）③cross-app E2E `e2e_simple_button_live`（Editor round-trip 保存 JSON 直接 assert → Simulator で `commitHold()` 3 連打・`checked` 反転を観測）④ショーケース demo に SimpleButton（長押し RUN・`running` バインド）追加 + ヒーロー（editor.gif / simulator.png）撮り直し。
+  - **学び（重要）**：**W-D の D&D ゴーストを `Overlay.overlay` に親替えした変更が、QtQuick Controls の Overlay にマウスイベントを奪わせ Editor ウィンドウ全体のクリックを殺す回帰**を起こしていた（main CI で e2e 4 件失敗）。W-E でゴーストの親をウィンドウ `contentItem` に差し替えて解消（[qml-module-conventions](../.claude/rules/qml-module-conventions.md) に追記）。
 
 ---
 
