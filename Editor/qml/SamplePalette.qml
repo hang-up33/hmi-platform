@@ -117,6 +117,7 @@ InspectorSection {
                 // 不可視で、見た目のゴーストは下の dragGhost（ウィンドウ contentItem 直下）が担う。
                 Item {
                     id: dragProxy
+                    objectName: "paletteDragProxy_" + cell.modelData.id
                     width: cell.width
                     height: cell.height
                     // 初期は cell 全面に重なる（x/y=0）。ドラッグ中は cellMouse が x/y を動かす。
@@ -139,6 +140,7 @@ InspectorSection {
                 // 副作用なしで実現できる。
                 Rectangle {
                     id: dragGhost
+                    objectName: "paletteDragGhost_" + cell.modelData.id
                     parent: cell.Window.window ? cell.Window.window.contentItem : null
                     z: 1000
                     width: cell.width
@@ -162,6 +164,7 @@ InspectorSection {
                 // クリック＝W-C の中央追加、ドラッグ＝W-D の D&D 追加。
                 MouseArea {
                     id: cellMouse
+                    objectName: "paletteCellMouse_" + cell.modelData.id
                     anchors.fill: parent
                     hoverEnabled: true
                     drag.target: dragProxy

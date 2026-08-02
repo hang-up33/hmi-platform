@@ -689,9 +689,11 @@ Window {
                     }
 
                     // Task W-C（Phase 11）: サンプルパレット（選択に依らず常時表示）。プリセットを
-                    // 実 Widget の見た目で並べ、セルのクリックでキャンバス中央へ追加する（D&D は W-D）。
+                    // 実 Widget の見た目で並べ、セルのクリックでキャンバス中央へ追加する。
+                    // Task W-D: dragOverlay を渡してキャンバスへのドラッグ&ドロップ追加を有効化する。
                     SamplePalette {
                         objectName: "samplePalette"
+                        dragOverlay: dragOverlay
                         onPresetActivated: function(preset) {
                             canvas.addPresetWidget(preset)
                         }
@@ -2679,6 +2681,17 @@ Window {
             canvasHeight: 600
             anchors.verticalCenter: parent.verticalCenter
             x: (parent.width - inspector.width - width) / 2
+        }
+
+        // Task W-D（Phase 11）: サンプルパレットのドラッグ中ゴーストを載せる最前面の重ね合わせ層。
+        // 外側 Rectangle の最後の子＝canvas / inspector より前面に描画され、ウィンドウ全域を覆う。
+        // SamplePalette がドラッグ中だけここへゴーストを reparent し、Canvas の DropArea まで運ぶ。
+        // マウスイベントは透過させる（ゴーストは見た目だけ・ドラッグは元 MouseArea が担う）。
+        Item {
+            id: dragOverlay
+            objectName: "dragOverlay"
+            anchors.fill: parent
+            z: 1000
         }
     }
 
