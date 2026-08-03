@@ -1215,7 +1215,14 @@ Item {
             }
 
             onDropped: function(drop) {
-                const json = drop.getDataAsString("application/x-hmi-preset")
+                let json = drop.getDataAsString("application/x-hmi-preset")
+                // Qt Quick 内部 D&D では getDataAsString() が空になる環境があるため、
+                // 同一シーン内ドラッグの source attached property からも読む。
+                if (!json && drop.source && drop.source.Drag
+                        && drop.source.Drag.mimeData
+                        && drop.source.Drag.mimeData["application/x-hmi-preset"] !== undefined) {
+                    json = String(drop.source.Drag.mimeData["application/x-hmi-preset"])
+                }
                 if (!json) {
                     drop.accepted = false
                     return

@@ -42,6 +42,7 @@ InspectorSection {
                 id: cell
                 required property var modelData
                 objectName: "paletteCell_" + modelData.id
+                property bool dndActive: false
                 width: 112
                 height: 122
                 radius: 4
@@ -121,7 +122,8 @@ InspectorSection {
                     width: cell.width
                     height: cell.height
                     // 初期は cell 全面に重なる（x/y=0）。ドラッグ中は cellMouse が x/y を動かす。
-                    Drag.active: cellMouse.drag.active
+                    // リリース確定まで Drag.active を保つため、MouseArea.drag.active へ直結しない。
+                    Drag.active: cell.dndActive
                     Drag.mimeData: ({ "application/x-hmi-preset": JSON.stringify(cell.modelData) })
                     Drag.keys: ["application/x-hmi-preset"]
                     // hotSpot は押下位置に合わせて cellMouse.onPressed で毎回設定する
@@ -145,7 +147,7 @@ InspectorSection {
                     z: 1000
                     width: cell.width
                     height: cell.height
-                    visible: cellMouse.drag.active
+                    visible: cell.dndActive
                     color: "#e8f0ff"
                     border.color: "#9db8e0"
                     border.width: 1
@@ -189,6 +191,13 @@ InspectorSection {
                         dragProxy.x = 0
                         dragProxy.y = 0
                     }
+                    function finishDnd() {
+                        if (cell.dndActive) {
+                            dragProxy.Drag.drop()
+                        }
+                        cell.dndActive = false
+                        resetProxy()
+                    }
                     onPressed: function(mouse) {
                         // ホットスポットを実際の押下位置に合わせ、ドロップ座標＝カーソル位置にする
                         //（セル中央以外を掴んでもズレない。Codex PR #166 [P2]）。
@@ -198,13 +207,18 @@ InspectorSection {
                     }
                     onPositionChanged: function(mouse) { moveGhost(mouse.x, mouse.y) }
                     onClicked: palette.presetActivated(cell.modelData)
-                    onReleased: {
-                        if (dragProxy.Drag.active) {
-                            dragProxy.Drag.drop()
+                    drag.onActiveChanged: {
+                        if (drag.active) {
+                            cell.dndActive = true
+                        } else {
+                            finishDnd()
                         }
+                    }
+                    onReleased: finishDnd()
+                    onCanceled: {
+                        cell.dndActive = false
                         resetProxy()
                     }
-                    onCanceled: resetProxy()
                 }
             }
         }

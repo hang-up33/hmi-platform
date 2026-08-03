@@ -104,6 +104,20 @@ TestCase {
         return result;
     }
 
+    function driveScene(src, pressLocalX, pressLocalY, endSceneX, endSceneY) {
+        const startScene = src.mapToItem(testCase, pressLocalX, pressLocalY);
+        mousePress(src, pressLocalX, pressLocalY);
+        const steps = 30;
+        for (let i = 1; i <= steps; ++i) {
+            const t = i / steps;
+            const mx = startScene.x + (endSceneX - startScene.x) * t;
+            const my = startScene.y + (endSceneY - startScene.y) * t;
+            mouseMove(testCase, mx, my);
+        }
+        const endLocal = src.mapFromItem(testCase, endSceneX, endSceneY);
+        mouseRelease(src, endLocal.x, endLocal.y);
+    }
+
     // Task W-D: dragProxy が Canvas の DropArea と一致する MIME key で preset JSON を運ぶ。
     function test_drag_proxy_carries_preset_mime_data() {
         const proxy = findByObjectName(testCase, "paletteDragProxy_simple-circle-light");
@@ -135,5 +149,16 @@ TestCase {
         verify(ma !== null, "パレットセルの MouseArea が見つからない");
         compare(ma.drag.target, proxy);
         compare(proxy.Drag.keys[0], "application/x-hmi-preset");
+
+        const targetScene = canvas.mapToItem(testCase, 400, 300);
+        driveScene(ma, ma.width / 2, ma.height / 2, targetScene.x, targetScene.y);
+
+        tryVerify(function() { return editableChildren().length === 1; }, 2000,
+                  "パレットからキャンバスへ D&D しても Widget が追加されない");
+        const snap = canvas.snapshotModel();
+        compare(snap.length, 1);
+        compare(snap[0].type, "SimpleButton");
+        compare(snap[0].shape, "circle");
+        compare(snap[0].theme, "light");
     }
 }
