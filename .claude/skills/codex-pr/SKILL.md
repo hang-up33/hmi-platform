@@ -117,9 +117,11 @@ gh pr create --title "Task N: <短い説明>" --body-file /tmp/pr_body.md
 
 ### 6. `@codex review` コメントで明示的にレビュー依頼
 
-`gh pr create` 直後と、Codex 指摘修正の `git push` 直後の **両方** で必ず実行：
+`gh pr create` 直後と、Codex 指摘修正の `git push` 直後の **両方** で必ず実行する。**投稿の直前に基準値（`HEAD_SHA` / `SINCE`）を採ってから投稿する**（手順 7「ループ前の確定」と同じ理由＝投稿後に採ると隙間で応答を取りこぼす）：
 
 ```sh
+HEAD_SHA=$(git rev-parse HEAD)
+SINCE=$(date -u +%Y-%m-%dT%H:%M:%SZ)     # 投稿の直前に採る
 gh pr comment <PR番号> --body "@codex review"
 ```
 
@@ -130,14 +132,15 @@ gh pr comment <PR番号> --body "@codex review"
 
 **`gh pr create` 直後に完了報告して放置するのは禁止**。ユーザーから「Codex 指摘を修正して」と再指示を待たず、Claude 側が自走で Codex のレビュー結果をポーリングし、指摘があれば修正コミット → push → `@codex review` 再依頼 を繰り返す。
 
-**ループ前の確定（毎ラウンド必須）**：直前の `git push` と `gh pr comment <N> --body "@codex review"` を **投稿し終えた直後** に、以降のラウンド全体で使う基準時刻を確定する：
+**ループ前の確定（毎ラウンド必須）**：`git push` を済ませたら、**そのラウンドの `@codex review` を投稿する直前** に、以降のラウンド全体で使う基準時刻を確定する（採ってから、既存の投稿ステップで 1 回だけ投げる）：
 
 ```sh
-SINCE=$(date -u +%Y-%m-%dT%H:%M:%SZ)   # 例: 2026-05-25T04:20:00Z
 HEAD_SHA=$(git rev-parse HEAD)
+SINCE=$(date -u +%Y-%m-%dT%H:%M:%SZ)          # 例: 2026-05-25T04:20:00Z（投稿の直前に採る）
 ```
 
-`SINCE` を待機後（手順 2 内）に取得すると、待機中に Codex が投稿したクリーン文言を `?since=` で除外してしまい「シグナルなし」と誤判定して 30 分無反応扱いになる。**必ず待機の前に確定**する。
+- **ここで `@codex review` を投稿しない**（新たな投稿を足さない）。投稿は各ラウンド **1 回だけ**＝初回は手順 6、ループ時は手順 7 の再依頼で行う。この確定ブロックは**その 1 回の投稿の直前**に置いて `HEAD_SHA` / `SINCE` を採るだけ（同一 HEAD へ 2 回依頼すると二重レビューでレビュー枠を重複消費し、先に返ったクリーンで完了後にもう一方の指摘が届く）。
+- `SINCE` を投稿の **後** に取ると、投稿〜取得の隙間や待機中に来た Codex 応答の `created_at` が `SINCE` より前になり `?since=` で恒久除外され、実はクリーンでも「シグナルなし」と誤判定して 30 分無反応扱いになる。**必ず投稿の直前に確定**する（待機の前でも投稿の後だと隙間で取りこぼす）。
 
 ループ手順：
 
@@ -176,8 +179,8 @@ HEAD_SHA=$(git rev-parse HEAD)
    - **どのシグナルも出ていない**（reviews も inline も issue comment もまだ無い）→ Codex がまだレビュー中。手順 1 の待機に戻る（ループは脱出しない）
 4. **修正**：該当箇所を編集 → `cmake --build build` 成功確認 → 修正ファイルを明示的に `git add` → コミット
 5. **push**：`git push`（force-push は基本しない、追加コミットで対応）
-6. **再依頼**：`gh pr comment <N> --body "@codex review"`
-7. **「ループ前の確定」に戻る** — `SINCE` と `HEAD_SHA` を **必ず再取得** してから手順 1 の待機へ。再取得しないと旧ラウンドの値で判定して誤動作する
+6. **基準値を再取得**：`HEAD_SHA=$(git rev-parse HEAD)` / `SINCE=$(date -u +%Y-%m-%dT%H:%M:%SZ)` を **投稿の直前に採る**（「ループ前の確定」参照。旧ラウンドの値のまま / 投稿後に採ると隙間で取りこぼす）
+7. **再依頼（1 回だけ）**：`gh pr comment <N> --body "@codex review"` を投げてから手順 1 の待機へ戻る（同一 HEAD へ二重に依頼しない）
 
 ループ中の中間報告は不要（ユーザーは「次のレビュー結果が来るまでに何度修正したか」を後で PR の commit 履歴で確認できる）。
 

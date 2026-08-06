@@ -58,6 +58,7 @@ cmake --build build
 
 | スキル | 用途 |
 |---|---|
+| [ship-task](.claude/skills/ship-task/SKILL.md) | 実装を done まで一気通貫で仕上げるオーケストレータ（実装→ビルド→ctest→kaizen→進捗同期→PR→Codex 自走ループ）。詳細は下記 skill へ委譲・Web/ローカル環境差を吸収 |
 | [mvp-next-task](.claude/skills/mvp-next-task/SKILL.md) | フェーズタスク進行標準ワークフロー |
 | [codex-pr](.claude/skills/codex-pr/SKILL.md) | PR 作成と Codex レビュー自走ループ |
 | [qt6-build](.claude/skills/qt6-build/SKILL.md) | Qt6 + CMake ビルド手順・プラットフォーム別ビルド |
