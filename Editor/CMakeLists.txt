@@ -16,6 +16,7 @@ qt_add_qml_module(hmi_editor
         qml/SamplePalette.qml
         qml/EditorToolbar.qml
         qml/EditorDialogs.qml
+        qml/InspectorPanel.qml
 )
 
 target_link_libraries(hmi_editor

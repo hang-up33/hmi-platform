@@ -14,7 +14,7 @@ Phase 1〜11 で Widget 種別が 6 つ（Button / Label / NumericField / Trend 
 ```mermaid
 graph LR
     subgraph Editor
-        EM[Main.qml 2712行<br>ツールバー+インスペクタ+ダイアログ]
+        EM[Main.qml 2712行→346行<br>RF-A/RF-B でツールバー・ダイアログ・<br>インスペクタを別ファイルへ]
         EC[Canvas.qml 1174行<br>delegate 6種 + 編集ロジック]
         EIO[ProjectIo.cpp<br>save + load]
         ESG[ScreenshotGrabber.h]
@@ -31,7 +31,7 @@ graph LR
 
 | # | 事実 | 根拠（現状） |
 |---|---|---|
-| 1 | `Editor/qml/Main.qml` = 2,712 行。窓・約 30 関数・ツールバー・インスペクタ（`InspectorSection` 複数節）・ダイアログ 4 つが同居 | `grep` でトップレベル関数 30 個、627〜2632 行が単一 `Rectangle` |
+| 1 | `Editor/qml/Main.qml` = 2,712 行。窓・約 30 関数・ツールバー・インスペクタ（`InspectorSection` 複数節）・ダイアログ 4 つが同居（**RF-A / RF-B で解消済み＝346 行**。窓・プロジェクト変数定義・ショートカット・子ファイルの結線のみが残る） | `grep` でトップレベル関数 30 個、627〜2632 行が単一 `Rectangle` |
 | 2 | delegate の「Schema 値 → Hmi* プロパティ受け渡し」が Editor（`Canvas.qml` 内 6 `Component`）と Simulator（`SimulatorCanvas.qml` 内 6 `Component`）で型ごとに同形反復 | 両ファイルの `sourceComponent` 5 分岐 + 6 `Component` |
 | 3 | 新種別追加時に触る箇所が散在：Schema（`WidgetData`）／`normalizeWidgetType` ホワイトリスト／ツールバー追加ボタン／パレット preset／`sourceComponent` 分岐 ×2／delegate `Component` ×2／インスペクタ `selectedIsX` と表示節／テスト／hero-demo | Task W-B（PR #164）で実際に踏んだ経路 |
 | 4 | `ProjectIo::load`（Editor）と `ProjectLoader::load`（Simulator）は骨格が同形だが、**戻り値契約はアプリ別**：Editor は接続詳細を各 `variable.source` へ展開して返し `connections` を返さない（UI 再表示用）、Simulator は未展開の変数 + 独立 `connections` を返す（Modbus/OPC-UA 通信用）。検証付き parse は既に `ProjectData::parseValidated` に集約済みで、ファイル I/O はアプリ側に残す契約（`ProjectData.h` のコメント） | `ProjectIo.cpp:168-206` / `ProjectLoader.cpp:70-91` / `ProjectData.h:36-42` |
@@ -69,8 +69,8 @@ graph LR
 | Task | 状態 | PR | 備考 |
 |---|---|---|---|
 | RF-A | ✅ 完了 | — | ツールバー→`EditorToolbar.qml`・ダイアログ 4 つ→`EditorDialogs.qml` を抽出（Main.qml 2,712→2,533 行）。着手時に W-D の D&D ゴースト（`Overlay.overlay` 親化）が Editor の全クリックを奪い E2E 4 件が落ちる不具合を発見し同 PR で修正 |
-| RF-B | 未着手 | — | 実施順の次タスク（インスペクタ本体を `InspectorPanel.qml` へ抽出） |
+| RF-B | ✅ 完了 | — | インスペクタ本体（`ScrollView` 以下の全 `InspectorSection`）と**インスペクタ専用のヘルパー**（フォーカス集約 `widgetEditFieldFocused` / `inspectorFieldFocused`、型判定 `selectedIsXxx` / `selectedSupportsClickAction`、アクション・バインディング・系列・幾何の編集関数、`ColorSwatch`）を `InspectorPanel.qml` へ抽出（Main.qml 2,533→346 行）。Project レベルの変数定義（`projectVariables` と編集ヘルパー）とダイアログ起動は Window 所有のまま `editorRoot` 経由で呼ぶ。既存挙動不変（全 30 緑）+ 回帰テスト `tst_inspector_panel.qml`（6 件）を追加 |
 | RF-C | 取り下げ | — | 重複は意図的設計（parseValidated 集約済み + Shared 非昇格方針）のため除外 |
 | RF-D | ✅ 完了 | — | 種別メタ（許可リスト + 既定サイズ + 既定文字）を `Canvas.qml` の `widgetTypeTable` 1 箇所へ集約。`normalizeWidgetType`（キー存在で許可判定）/ `addWidget`（isTrend/isMeter 分岐と text 三項連鎖を廃止）/ `addPresetWidget`（サイズ既定）が参照。既存挙動不変（全 26 緑）+ Trend 既定サイズの回帰テストを追加 |
-| RF-E | 未着手 | — | 着手時に方式 (a)/(b) を試作比較 |
+| RF-E | 未着手 | — | 実施順の次タスク。着手時に方式 (a)/(b) を試作比較 |
 | RF-F | 保留 | — | [widgetmodel-refactor-deferred](../.claude/rules/project-widgetmodel-refactor-deferred.md) を継続 |

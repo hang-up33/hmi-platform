@@ -15,6 +15,9 @@ Item {
     // Main.qml の Canvas（id: canvas）と Window（id: rootWindow）。
     property var editorCanvas: null
     property var editorRoot: null
+    // Task RF-B: インスペクタ本体（id: inspector = InspectorPanel.qml）。系列色ダイアログの
+    // 書き戻し先 updateSeries() は Main.qml から InspectorPanel へ移ったため、そちらを指す。
+    property var editorInspector: null
 
     // Task 46: 色スウォッチクリックで共有 ColorDialog を開く。field = 書き戻し先の
     // hex TextField、targetProperty = 選択中 live Item のプロパティ名
@@ -89,7 +92,7 @@ Item {
             }
             const hex = root.editorRoot.colorToHex(selectedColor)
             root.editorCanvas.beginEdit()
-            root.editorRoot.updateSeries(targetIndex, "color", hex)
+            root.editorInspector.updateSeries(targetIndex, "color", hex)
             root.editorCanvas.commitEdit()
         }
     }
