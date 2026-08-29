@@ -1,12 +1,12 @@
 # アーキテクチャ概要 (Architecture)
 
-本ドキュメントは、Atlas（hmi-platform）プロジェクトの**アーキテクチャおよびモジュール設計に関する正本**です。
+このドキュメントは、Atlas（hmi-platform）の**アーキテクチャとモジュール構成の正本**。「どう作られているか」を知りたくなったら、まずここを見ればOK。
 
 ---
 
 ## 1. 全体構造
 
-ルート `CMakeLists.txt` から 5 つのサブプロジェクトを統合しています。
+ルートの `CMakeLists.txt` が 5 つのサブプロジェクトをまとめている。
 
 | モジュール | ターゲット名 | 種類 | QML URI | 役割 |
 |---|---|---|---|---|
@@ -21,23 +21,23 @@
 ## 2. コア設計原則
 
 ### JSON スキーマの一元管理 (`Shared/Schema`)
-- Widget / Screen / Project に該当するすべてのデータ型および JSON シリアライズ/デシリアライズ処理（`toJson`/`fromJson`/`isValidJson`）は、`Shared/Schema` にのみ定義・実装します。
-- 詳細な実装規約は [.claude/rules/schema-conventions.md](../.claude/rules/schema-conventions.md) を参照してください。
+- Widget / Screen / Project にあたるデータ型と、JSON の読み書き処理（`toJson`/`fromJson`/`isValidJson`）は、すべて `Shared/Schema` にだけ置く。
+- 実装の細かい規約は [.claude/rules/schema-conventions.md](../.claude/rules/schema-conventions.md) を見てほしい。
 
 ### QML モジュールとコンポーネント設計 (`Shared/Widgets`)
-- Widget コンポーネントは QtQuick 標準型との名称衝突を避けるため、必ず `Hmi` プレフィックスを付与します（例: `HmiButton.qml`, `HmiLabel.qml`, `HmiMeter.qml`）。
-- 共有 QML モジュールは `STATIC` ライブラリとしてビルドし、アプリ本体に直リンクします。
-- 詳細な QML モジュール規約は [.claude/rules/qml-module-conventions.md](../.claude/rules/qml-module-conventions.md) を参照してください。
+- Widget コンポーネントには必ず `Hmi` という接頭辞を付ける（例: `HmiButton.qml`, `HmiLabel.qml`, `HmiMeter.qml`）。QtQuick 標準の型と名前がかぶらないようにするため。
+- 共有 QML モジュールは `STATIC` ライブラリとしてビルドして、アプリ本体に直接リンクする形にしている。
+- QML モジュールの細かい規約は [.claude/rules/qml-module-conventions.md](../.claude/rules/qml-module-conventions.md) を見てほしい。
 
 ### WidgetModel の設計方針
-- JSON 入出力は `QJsonDocument` を使用します。
-- Editor / Simulator における Widget リストの現状実装は **QML の `var` 配列ベース** です（`widgetModel = widgetModel.concat([...])` で配列丸ごと差し替えて Repeater をリトリガする方式）。
-- `QAbstractListModel` 化は現時点では deferred（保留）としています（[.claude/rules/project-widgetmodel-refactor-deferred.md](../.claude/rules/project-widgetmodel-refactor-deferred.md) 参照）。
+- JSON の入出力には `QJsonDocument` を使う。
+- Editor / Simulator の Widget リストは、いまのところ **QML の `var` 配列** で持っている（`widgetModel = widgetModel.concat([...])` のように配列を丸ごと差し替えて Repeater を作り直す方式）。
+- `QAbstractListModel` への置き換えは今は保留にしている（理由は [.claude/rules/project-widgetmodel-refactor-deferred.md](../.claude/rules/project-widgetmodel-refactor-deferred.md) 参照）。
 
 ---
 
 ## 3. プラットフォームとビルド展開
 
-- **PC ビルド (macOS / Windows)**: Editor / Simulator / Runtime をそれぞれビルド・実行可能。
-- **実機ビルド (i.MX8MP / Yocto)**: Runtime モジュールは `Simulator` の QML/C++ ソースを共有し、Yocto SDK (aarch64) でクロスビルドして i.MX8MP (scarthgap / weston / Qt6) 上で実行します。
-- 詳細は [Docs/archive/phase3b-runtime-plan.md](archive/phase3b-runtime-plan.md) を参照してください。
+- **PC ビルド (macOS / Windows)**: Editor / Simulator / Runtime はそれぞれ普通にビルド・実行できる。
+- **実機ビルド (i.MX8MP / Yocto)**: Runtime は `Simulator` の QML/C++ ソースをそのまま使い回し、Yocto SDK (aarch64) でクロスビルドして i.MX8MP (scarthgap / weston / Qt6) 上で動かす。
+- 詳しい手順は [Docs/archive/phase3b-runtime-plan.md](archive/phase3b-runtime-plan.md) にまとめている。

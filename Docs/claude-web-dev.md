@@ -1,12 +1,12 @@
 # Claude Code on the web で開発する（Qt6 を導入する）
 
-これまで「Web 版は非対応」としていた理由は **Qt をインストールできない** ことだったが、原因は
-コンテナの**ネットワークアクセスが既定の `Trusted`** で `download.qt.io` を遮断していた点にあった。
-**ポリシーを `Full` にすれば CI と同じ `aqtinstall` がそのまま通り、Web でもビルド〜テストできる**。
+これまで「Web版は非対応」と言っていたのは、**Qtがインストールできない**からだった。原因を辿ると、
+コンテナの**ネットワークアクセスが既定の `Trusted`** になっていて、それが `download.qt.io` を遮断していただけだった。
+**ネットワークポリシーを `Full` にすれば、CIと同じ `aqtinstall` がそのまま通り、Web上でもビルド〜テストまでできる。**
 
-GUI ディスプレイは不要：ビルド・ユニット・E2E は `-platform offscreen`、**GUI スクショも
-`-platform offscreen` + アプリ内蔵 `--screenshot`（`QQuickWindow::grabWindow()`）でウィンドウシステム
-無しに撮れる**（Xvfb 不要）。詳細な経緯・代替案は本ドキュメント末尾。
+GUIのディスプレイは無くても大丈夫：ビルド・ユニットテスト・E2Eは `-platform offscreen` で動くし、**GUIのスクショも
+`-platform offscreen` + アプリ内蔵の `--screenshot`（`QQuickWindow::grabWindow()`）を使えば、ウィンドウシステム
+無しで撮れる**（Xvfbも不要）。詳しい経緯や代替案はこの文書の一番下にまとめてある。
 
 ## セットアップ手順
 
@@ -76,7 +76,7 @@ QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software \
 > 日本語ラベルを □（豆腐）にしないため、`setup.sh` が `fonts-noto-cjk` を導入する。
 > 実機 i.MX8MP の VNC キャプチャ（`scripts/yocto/vnc-capture.py`）とは別経路（あちらは実機 / weston 用）。
 
-## なぜ GUI が無くても良いか
+## なぜ GUI が無くても大丈夫なのか
 
 | 用途 | 仕組み | 既存の使用箇所 |
 |---|---|---|
@@ -85,9 +85,9 @@ QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software \
 | GUI スクショ証跡（PC ビルド / Web） | `-platform offscreen` + `--screenshot`（`grabWindow`） | `scripts/capture-app-screenshot-linux.sh` |
 | スクショ証跡（実機 i.MX8MP） | `QT_QPA_PLATFORM=vnc` | `scripts/yocto/vnc-capture.py` |
 
-ただし offscreen には限界がある：Spix の実マウスドラッグ（`mouseBeginDrag/EndDrag`）は drag 閾値に
-届かず、座標変更は `setStringProperty` で代替している（`Docs/development-history.md` 参照）。
-`--screenshot` は「起動直後の静止画」前提なので、真の手動操作検証は引き続きローカル / 実機で行う。
+ただし offscreen にも限界はある：Spix の本物のマウスドラッグ（`mouseBeginDrag/EndDrag`）は drag の閾値に
+届かないので、座標変更は代わりに `setStringProperty` で行っている（`Docs/development-history.md` 参照）。
+`--screenshot` は「起動直後の静止画」が前提なので、本当の手動操作の検証は引き続きローカルや実機で行う。
 
 ## 代替案（ポリシーを変えられない場合）
 

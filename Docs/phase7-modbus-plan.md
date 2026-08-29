@@ -1,9 +1,9 @@
 # Phase 7 計画 — Modbus TCP 通信対応（Ethernet で実 PLC と連動）
 
-> **位置づけ**：実務 HMI の核心＝**実デバイス（PLC）と値をやり取りする**機能。`hmi_runtime`（実機）/ `hmi_simulator`（PC）が **Modbus TCP マスタ**として PLC のレジスタを周期ポーリング・書込し、既存の **変数ストア + バインディング**経路に流し込む。
+> **この計画の位置づけ**：実務 HMI の核心とも言える、**実デバイス（PLC）と値をやり取りする**機能。`hmi_runtime`（実機）/ `hmi_simulator`（PC）が **Modbus TCP マスタ**としてPLCのレジスタを周期的にポーリングし、ユーザー操作時に書込みして、既存の **変数ストア + バインディング**の仕組みに流し込む。
 >
-> **本書は計画のみ**（実装は別 PR でタスク 1 つずつ）。要求の倉庫は [requirements.md](requirements.md) の §2.3、結線規約は [.claude/rules/qml-module-conventions.md](../.claude/rules/qml-module-conventions.md)、Schema 規約は [.claude/rules/schema-conventions.md](../.claude/rules/schema-conventions.md)、実機/SDK 事情は [.claude/rules/dev-environment.md](../.claude/rules/dev-environment.md)。
-> **進捗の正本は本ファイル「進捗」表**。
+> **この文書は計画だけを書いたもの**（実装は別 PR でタスクを1つずつ進める）。要求の倉庫は [requirements.md](requirements.md) の §2.3、結線規約は [.claude/rules/qml-module-conventions.md](../.claude/rules/qml-module-conventions.md)、Schema 規約は [.claude/rules/schema-conventions.md](../.claude/rules/schema-conventions.md)、実機/SDK まわりの事情は [.claude/rules/dev-environment.md](../.claude/rules/dev-environment.md) を見てほしい。
+> **進捗の正本はこのファイルの「進捗」表**。
 >
 > **承認状態**：**着手済み（2026-06-16 ユーザー承認）。MB-1 完了（PR #119）。MB-2〔PC 読込ポーリング〕完了（PR #121）。MB-3〔実 PLC 読込確認〕ローカル達成（2026-06-16：実 AutomationDirect CLICK ＠192.168.1.2:502 へ `hmi_simulator` で接続し DS1/DS2(holding)・C1(coil) を読込・binding 追従を確認。証跡 `Docs/samples/mb-3-click-plc-demo.json` + スクショ）。** 直近完了は Phase 6-B（NumericField 拡張・Task 53〜55）。MB-5 / MB-6（実 PLC 書込・実機 Yocto）はローカル専用で Web 環境では実施不可（MB-1 / MB-2 / MB-4 は Web 可）。step / decimals / unit や後続入力 Widget〔Gauge / Toggle〕は引き続き別承認の候補。
 
