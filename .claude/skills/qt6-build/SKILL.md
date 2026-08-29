@@ -180,7 +180,7 @@ $c = [System.IO.File]::ReadAllText('path\to\script.ps1', [System.Text.UTF8Encodi
 ### 12. CI（aqtinstall）: 最新 Qt バージョンは Updates.xml 未同期で取得失敗する
 
 **原因**：`jurplel/install-qt-action@v4` にローカル開発と同じ最新版（例 `6.11.0`）を渡すと、Qt 公式 mirror の `Updates.xml` 同期遅れで `Failed to locate XML data for Qt version '6.11.0'` で落ちる（Task 15 初回ランで両 OS 再現）。
-**対処**：CI では **1〜2 マイナー下げた安定取得可能なバージョン（現状 6.10.0）** を使う。Qt 6.x の minor 互換でテスト緑判定は維持される。バージョンを上げる時は事前に `aqt list-qt <host> desktop --spec "<X.Y>"` で取得可能性を確認する。詳細パターンは [Docs/phase2-testing-plan.md](../../../Docs/phase2-testing-plan.md) の「Task 15 で確立したパターン」を参照。
+**対処**：CI では **1〜2 マイナー下げた安定取得可能なバージョン（現状 6.10.0）** を使う。Qt 6.x の minor 互換でテスト緑判定は維持される。バージョンを上げる時は事前に `aqt list-qt <host> desktop --spec "<X.Y>"` で取得可能性を確認する。詳細パターンは [Docs/archive/phase2-testing-plan.md](../../../Docs/archive/phase2-testing-plan.md) の「Task 15 で確立したパターン」を参照。
 
 ### 13. Windows PowerShell: `New-Object <型>(<算術式>, ...)` がカンマ演算子で誤パースされる
 

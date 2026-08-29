@@ -1,7 +1,7 @@
 """Phase 3-A E2E 共通ハーネス：Editor / Simulator を `--e2e` で起動し、
 Spix XML-RPC エンドポイントの URL を返す。
 
-設計指針（Docs/phase3-e2e-plan.md）：
+設計指針（Docs/archive/phase3-e2e-plan.md）：
 - Python 標準ライブラリのみで動く（pytest 等の追加依存を避ける）。
 - 起動時は ``QT_QPA_PLATFORM=offscreen`` をデフォルトに設定し、CI / オフ
   スクリーンランナーでも動かす。

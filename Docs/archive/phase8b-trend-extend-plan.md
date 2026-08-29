@@ -9,7 +9,7 @@ Phase 5/6/8 で確立した**横展開テンプレ**（Schema 4 メソッド + d
 
 > **進捗の正本は本ファイル「進捗」表**。承認・着手でステータスが動いたら常駐文書
 > （CLAUDE.md / AGENTS.md / README / mvp-task-runner / development-history）を同期する
-> （[feedback-phase-status-sync](../.claude/rules/feedback-phase-status-sync.md)）。
+> （[feedback-phase-status-sync](../../.claude/rules/feedback-phase-status-sync.md)）。
 
 ## 承認状態
 
@@ -149,7 +149,7 @@ Phase 8 の `HmiTrend` を N 系列へ一般化する。要点：
 ## リスク / 未確定事項
 
 1. **実機 Canvas 性能（N 系列）**：系列数 × 点数ぶんの再描画が i.MX8MP で重い恐れ。Phase 8 と同じく描画間引きの余地を残し、8B-B に VNC 実描画確認 TODO（Web では満たせない＝完了条件外）。
-2. **凡例/目盛りラベルのフォント**：実機 image に**日本語フォントが無い**（[dev-environment.md](../.claude/rules/dev-environment.md)）→ 和文ラベルは □。**動作証跡スクショの凡例ラベルは ASCII 推奨**（既存の実機ラベル方針と同じ）。`Canvas` の `fillText` 既定フォントで足りるか実装時確認。
+2. **凡例/目盛りラベルのフォント**：実機 image に**日本語フォントが無い**（[dev-environment.md](../../.claude/rules/dev-environment.md)）→ 和文ラベルは □。**動作証跡スクショの凡例ラベルは ASCII 推奨**（既存の実機ラベル方針と同じ）。`Canvas` の `fillText` 既定フォントで足りるか実装時確認。
 3. **系列の値供給と依存追跡**：`seriesValues` を delegate で `VariableStore.values[...]` から組むとき、**関数/式評価中に `values` を読んで依存追跡させる**（`Qt.binding` 動的生成に頼らない）こと。多系列で配列を作る式が再評価コスト高なら最適化を検討（[[qml-module-conventions]] boundValue 節）。
 4. **単系列項目の去就**：Phase 8 の `lineColor`/単一 `value` バインドと新 `series` の二重定義を、インスペクタでどう一本化するか（8B-D 着手時に確定）。Schema は両方温存（後方互換）。
 5. **自動 Y スケールの全系列横断**：複数系列で min/max を全系列から取ると軸が暴れうる → 固定 Y 軸（`hasYMin`/`hasYMax`）併用を推奨運用とする（Phase 8 のリスク継承）。

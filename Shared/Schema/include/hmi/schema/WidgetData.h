@@ -89,7 +89,7 @@ struct WidgetData {
     bool hasMaxValue = false;
 
     // Task T-A（Phase 8）: Trend（トレンドグラフ）固有フィールド。設計の正本は
-    // Docs/phase8-trend-plan.md「§Task A」。すべて optional ＝ isValidJson 必須集合に含めない（後方互換）。
+    // Docs/archive/phase8-trend-plan.md「§Task A」。すべて optional ＝ isValidJson 必須集合に含めない（後方互換）。
     //   pointCount(N) / sampleMs[ms] : `0` センチネル（= 未指定）。toJson は `> 0` のときだけ書く。
     //     `0`/負値はいずれも下流（HmiTrend）が「未指定」として既定へ解決するためクランプしない。
     //   yMin/hasYMin・yMax/hasYMax : Y 軸範囲。**負値が正当**なのでセンチネル不可 → presence フラグ方式
@@ -107,7 +107,7 @@ struct WidgetData {
 
     // Task 8B-A（Phase 8-B）: Trend 拡張。複数系列 + 軸目盛り/凡例。すべて optional ＝
     // isValidJson 必須集合に含めない（後方互換）。設計の正本は
-    // Docs/phase8b-trend-extend-plan.md「§Task 8B-A」。
+    // Docs/archive/phase8b-trend-extend-plan.md「§Task 8B-A」。
     //   series      : N 本の折れ線（子型 TrendSeriesData {variable, color, label} の配列）。
     //     空のとき toJson 省略（actions/bindings 同型）。**series 空＝Phase 8 単系列の暗黙 1 系列**
     //     （既存 value バインド + lineColor）として下流の HmiTrend が後方互換で 1 本描く。
@@ -121,7 +121,7 @@ struct WidgetData {
     int yTickCount = 0;
 
     // Task M-A（Phase 10）: Meter（スピードメーター風＝円弧＋針）固有フィールド。設計の正本は
-    // Docs/phase10-meter-plan.md「§Task M-A」。すべて optional ＝ isValidJson 必須集合に含めない（後方互換）。
+    // Docs/archive/phase10-meter-plan.md「§Task M-A」。すべて optional ＝ isValidJson 必須集合に含めない（後方互換）。
     //   meterMin/hasMeterMin・meterMax/hasMeterMax : スケール範囲（値→角度マッピングの定義域）。
     //     **負値が正当**（例 -20℃）なのでセンチネル不可 → presence フラグ方式（minValue/yMin の前例踏襲）。
     //     **JSON は hasMeterMin キーを作らず meterMin キーの有無で presence を表す**が、
@@ -143,7 +143,7 @@ struct WidgetData {
     QString unit;
 
     // Task W-A（Phase 11）: SimpleButton（ベゼル無しシンプルボタン）固有フィールド。設計の正本は
-    // Docs/phase11-widget-palette-plan.md「§Schema 拡張」。すべて optional ＝ isValidJson 必須集合に
+    // Docs/archive/phase11-widget-palette-plan.md「§Schema 拡張」。すべて optional ＝ isValidJson 必須集合に
     // 含めない（後方互換）。ON/OFF 状態は既存 checked を再利用する（新規フィールドではない）。
     //   shape / theme : 人間可読な **文字列**（hAlign 同型）。`""` センチネル（= 未指定）。
     //     shape="circle"/"square"（既定 circle へ解決）、theme="light"/"dark"（既定 light へ解決）。

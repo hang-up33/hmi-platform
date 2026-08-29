@@ -2,7 +2,7 @@
 
 Editor で Widget を配置し、JSON で保存して Simulator が同じ JSON を描画できる **最小ループ（MVP）** を成立させるフェーズ。Task 1〜8 で構成する。運用は、以降のフェーズで定着する **1 タスク = 1 ブランチ = 1 PR** を概ね踏襲する（ただし **Task 1 はリポジトリ初期化期のため直接コミット・PR なし**。Task 2 以降が PR 経由）。完了基準は `cmake --build` 緑 ＋ 該当動作の確認。
 
-> **本書の位置づけ（2026-05-30 事後作成）**：Phase 1 / MVP は「フェーズごとに計画書を書く」運用が定着する **前**（Phase 2 以降で定着）に完了したため、当時は計画書が存在しなかった。本書は他フェーズ（[phase2-testing-plan.md](phase2-testing-plan.md) / [phase3-e2e-plan.md](phase3-e2e-plan.md) / [phase3b-runtime-plan.md](phase3b-runtime-plan.md)）と体裁を揃えるため、**[development-history.md](development-history.md) と各 PR を一次情報として遡って整理**したもの。計画段階の予測ではなく「何をやり、何を完了基準としたか」の確定記録（事後まとめ）である。罠と回避策の集約は [CLAUDE.md](../CLAUDE.md) を参照。
+> **本書の位置づけ（2026-05-30 事後作成）**：Phase 1 / MVP は「フェーズごとに計画書を書く」運用が定着する **前**（Phase 2 以降で定着）に完了したため、当時は計画書が存在しなかった。本書は他フェーズ（[phase2-testing-plan.md](phase2-testing-plan.md) / [phase3-e2e-plan.md](phase3-e2e-plan.md) / [phase3b-runtime-plan.md](phase3b-runtime-plan.md)）と体裁を揃えるため、**[development-history.md](../development-history.md) と各 PR を一次情報として遡って整理**したもの。計画段階の予測ではなく「何をやり、何を完了基準としたか」の確定記録（事後まとめ）である。罠と回避策の集約は [CLAUDE.md](../../CLAUDE.md) を参照。
 
 ```mermaid
 flowchart LR
@@ -38,7 +38,7 @@ flowchart LR
 
 ## このフェーズで確立した規約（以降も有効）
 
-Phase 1 は本リポジトリの基本ルールが生まれたフェーズでもある。詳細・罠は [CLAUDE.md](../CLAUDE.md) に集約済み。要点：
+Phase 1 は本リポジトリの基本ルールが生まれたフェーズでもある。詳細・罠は [CLAUDE.md](../../CLAUDE.md) に集約済み。要点：
 
 - **Shared/Schema が唯一の真実**（Task 3）：Widget / Screen / Project の型と JSON I/O はここにのみ定義。`Q_GADGET` / `Q_OBJECT` は必要になるまで付けない（struct + namespace スタイル）。
 - **検証は Schema 側に集約**（Task 7）：`fromJson()` はキー欠落を既定値で埋める緩い設計のため、読込側は必ず `isValidJson()` を先に通す。`ProjectData → ScreenData → WidgetData` と階層的に検証。

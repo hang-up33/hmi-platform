@@ -97,7 +97,7 @@ flowchart LR
 | スコープ | ①Editor QML テスト（`Editor/tests/tst_canvas.qml` 等）に「選択 → インスペクタ編集 → Item 反映」「削除」を追加。②E2E（`tests/e2e/`）に「Editor で選択 → インスペクタで text / color 変更 → `saveTo` → Simulator で `getStringProperty` 検証」シナリオを追加（既存 `harness.py` 流用、Editor=9876 / Simulator=9877 の既定ポート据え置き）。③styled Button を含む JSON を `hmi_runtime` で **i.MX8MP 実機**描画し撮影 |
 | 完了基準 | macOS で `ctest`（unit + e2e）緑。実機 styled 描画写真 `Docs/screenshots/task-30-runtime-styled.png`（HDMI 未接続のため VNC digital capture。実機なので `.png`）。README スクショ（`editor.png` / `simulator.png`）も更新 |
 
-> **進捗（Windows 母艦セッション）**：①Editor QML テスト追加（`tst_canvas.qml` に `test_delete_preserves_other_widgets_style_edits` ＝削除が他 widget の未保存スタイル編集を保つ保証）・②E2E シナリオ実装（`tests/e2e/test_style_roundtrip.py` ＝選択→**選択中 Widget のスタイルメタ更新**（インスペクタの書き戻し先と同一経路）→`saveTo`→保存 JSON 直接検証→Simulator の `hmiButton` を `getStringProperty` 検証。`SimulatorCanvas.qml` の HmiButton に `objectName: "hmiButton"` 付与・CMake 登録済み。**インスペクタ TextField UI 自体は Spix が onTextEdited を発火できないため駆動せず、検証スコープを直接メタ更新に限定**＝Codex PR #60 指摘対応）・README スクショ更新（`simulator.png` 追加・`editor.png` キャプション刷新）まで **Windows で完了（unit ctest 8/8 緑、E2E は `HMI_ENABLE_E2E=OFF` でスキップ）**。③**実機 styled 描画も完了**：style 対応 `hmi_runtime` を aarch64 クロスビルド → i.MX8MP 実機へ scp → 起動し styled JSON を描画、`Docs/screenshots/task-30-runtime-styled.png` に digital capture（HDMI 未接続のため Qt 内蔵 VNC platform + `scripts/yocto/vnc-capture.py` で撮影。手順と罠は [scripts/yocto/README.md](../scripts/yocto/README.md) / [dev-environment.md](../.claude/rules/dev-environment.md)）。④**macOS E2E 実行も完了**（2026-06-03）：Homebrew Qt で再ビルド後、`ctest -L e2e` で新シナリオ `e2e_style_roundtrip` を含む **E2E 5/5 緑**、別途ラベル無し `ctest`（全件）で **unit 8 + e2e 5 = 13/13 緑**を確認（`-L e2e` は e2e ラベルの 5 件のみを走らせるオプションのため、13 緑はラベル無し `ctest` 側の結果）。これにより **Task 30＝Phase 4 クローズ**。
+> **進捗（Windows 母艦セッション）**：①Editor QML テスト追加（`tst_canvas.qml` に `test_delete_preserves_other_widgets_style_edits` ＝削除が他 widget の未保存スタイル編集を保つ保証）・②E2E シナリオ実装（`tests/e2e/test_style_roundtrip.py` ＝選択→**選択中 Widget のスタイルメタ更新**（インスペクタの書き戻し先と同一経路）→`saveTo`→保存 JSON 直接検証→Simulator の `hmiButton` を `getStringProperty` 検証。`SimulatorCanvas.qml` の HmiButton に `objectName: "hmiButton"` 付与・CMake 登録済み。**インスペクタ TextField UI 自体は Spix が onTextEdited を発火できないため駆動せず、検証スコープを直接メタ更新に限定**＝Codex PR #60 指摘対応）・README スクショ更新（`simulator.png` 追加・`editor.png` キャプション刷新）まで **Windows で完了（unit ctest 8/8 緑、E2E は `HMI_ENABLE_E2E=OFF` でスキップ）**。③**実機 styled 描画も完了**：style 対応 `hmi_runtime` を aarch64 クロスビルド → i.MX8MP 実機へ scp → 起動し styled JSON を描画、`Docs/screenshots/task-30-runtime-styled.png` に digital capture（HDMI 未接続のため Qt 内蔵 VNC platform + `scripts/yocto/vnc-capture.py` で撮影。手順と罠は [scripts/yocto/README.md](../../scripts/yocto/README.md) / [dev-environment.md](../../.claude/rules/dev-environment.md)）。④**macOS E2E 実行も完了**（2026-06-03）：Homebrew Qt で再ビルド後、`ctest -L e2e` で新シナリオ `e2e_style_roundtrip` を含む **E2E 5/5 緑**、別途ラベル無し `ctest`（全件）で **unit 8 + e2e 5 = 13/13 緑**を確認（`-L e2e` は e2e ラベルの 5 件のみを走らせるオプションのため、13 緑はラベル無し `ctest` 側の結果）。これにより **Task 30＝Phase 4 クローズ**。
 
 > **Note**：T25〜T27 / T29 の実装中に「選択や編集が `var` 配列の delegate 再生成で巻き戻る」事象（CLAUDE.md「Spix 罠」最終群と同根）が出たら、**設計指針の "live Item が真実 + 構造変更時のみスナップショット" 方針で吸収**する。それでも破綻するようなら QAbstractListModel 化を別タスク化してユーザーに相談（本スライスには含めない）。
 
@@ -140,7 +140,7 @@ Task 28 と同じ **4層 + インスペクタ + テスト** を 1 タスクで�
 
 - **編集中の真実は live な `EditableWidget` インスタンス**（保存は既に `canvas.widgetItems` を走査する設計）。インスペクタは選択中 Item に two-way バインドし、編集は Item のプロパティを直接更新する → delegate 再生成を起こさず、フォーカスや選択も保てる。
 - **構造変更（追加 / 削除）時のみ** live Items から配列をスナップショット → 変更 → 再代入する（既存 `addWidget()` の「配列丸ごと差し替えで Repeater をリトリガ」を踏襲）。これにより未保存の編集が他 widget で消えない。選択は **id で追跡**し、再生成後に id→Item を解決し直す。
-- これは [project-widgetmodel-refactor-deferred.md](../.claude/rules/project-widgetmodel-refactor-deferred.md) の「Phase 3-B スコープ確定後に再評価」を満たした上での判断。Phase 3-B は完了したが、**インスペクタは live Item 直編集で十分綺麗に閉じる**ため、`QAbstractListModel` 化は引き続き不要（過剰な refactor を本スライスに混ぜない＝CLAUDE.md「仮想的な将来要件で設計しない」）。
+- これは [project-widgetmodel-refactor-deferred.md](../../.claude/rules/project-widgetmodel-refactor-deferred.md) の「Phase 3-B スコープ確定後に再評価」を満たした上での判断。Phase 3-B は完了したが、**インスペクタは live Item 直編集で十分綺麗に閉じる**ため、`QAbstractListModel` 化は引き続き不要（過剰な refactor を本スライスに混ぜない＝CLAUDE.md「仮想的な将来要件で設計しない」）。
 
 ### 選択状態は Canvas が保持
 
@@ -151,12 +151,12 @@ Task 28 と同じ **4層 + インスペクタ + テスト** を 1 タスクで�
 ### Schema 拡張の後方互換
 
 - 新フィールドは **optional**（`toJson` で既定値時は省略、`fromJson` は欠落時に既定値）。`isValidJson` の必須集合は **id / type / width / height のまま据え置く**。これにより Phase 1〜3-B で保存した旧 JSON がそのまま読める。
-- 値の表現：色は **`#RRGGBB` 文字列**（`HmiButton` の `property color` が解釈）、`fontSize` は **int px**（既定 14、`0`/未設定は既定にフォールバック）。Schema 実装規約（[.claude/rules/schema-conventions.md](../.claude/rules/schema-conventions.md)：struct + `toJson`/`fromJson`/`isValidJson` を同時更新）を踏襲。
+- 値の表現：色は **`#RRGGBB` 文字列**（`HmiButton` の `property color` が解釈）、`fontSize` は **int px**（既定 14、`0`/未設定は既定にフォールバック）。Schema 実装規約（[.claude/rules/schema-conventions.md](../../.claude/rules/schema-conventions.md)：struct + `toJson`/`fromJson`/`isValidJson` を同時更新）を踏襲。
 
 ### `0` が正当値の数値プロパティは `-1` センチネル（Task 31）
 
 - `fontSize`（Task 28）は「`0` = 未指定」で済んだが、`borderWidth` / `radius`（Task 31）は **`0` 自体が意味を持つ**（ボーダーなし / 角丸なし）。このとき optional 化のセンチネルを `0` にすると「未指定」と「明示的に 0」が区別できない。
-- そこで **`-1` をセンチネル**にし、**5 箇所で揃える**：Schema `toJson`（`>= 0` で書き出し＝`0` も書く）/ `fromJson`（`toInt(-1)`）/ **C++ ブリッジ save の QVariantMap 読取（`m.value(key, -1).toInt()`）** / HmiButton の `resolved*`（`< 0` で既定）/ インスペクタ SpinBox（`from: 0`）。1 箇所でも `0` 既定に戻すと「キー欠落が明示 0 として誤保存」される（Codex PR #62 P2 で実際に指摘）。詳細は [schema-conventions.md](../.claude/rules/schema-conventions.md)。
+- そこで **`-1` をセンチネル**にし、**5 箇所で揃える**：Schema `toJson`（`>= 0` で書き出し＝`0` も書く）/ `fromJson`（`toInt(-1)`）/ **C++ ブリッジ save の QVariantMap 読取（`m.value(key, -1).toInt()`）** / HmiButton の `resolved*`（`< 0` で既定）/ インスペクタ SpinBox（`from: 0`）。1 箇所でも `0` 既定に戻すと「キー欠落が明示 0 として誤保存」される（Codex PR #62 P2 で実際に指摘）。詳細は [schema-conventions.md](../../.claude/rules/schema-conventions.md)。
 
 ### スタイルは HmiButton に集約し両アプリから渡す
 
@@ -256,7 +256,7 @@ flowchart LR
 |---|---|
 | スコープ | `selectedWidgetId`（単一）を **選択 ID 集合（`selectedWidgetIds`）へ拡張**（Shift / Ctrl クリックで加除、背景ラバーバンドは任意）。複数選択時：一括ドラッグ移動、一括削除、整列（左 / 水平中央 / 右 / 上 / 垂直中央 / 下）と等間隔分布。インスペクタは複数選択時「N 個選択中」表示 + 整列 / 分布 / 削除アクション。**※実装では単一プロパティのフィールド編集は単一選択時のみとし、複数選択時の共通プロパティ編集は範囲外（後続候補）に簡略化した**（移動 / 整列 / 分布 / 削除の一括操作を優先） |
 | 完了基準 | ビルド緑、QML テスト緑。複数選択 → 一括移動 / 整列 / 削除。スクショ `Docs/screenshots/task-36-multiselect-align.png` |
-| 完了 | ✅ 実装済み（[Docs/phase4-button-slice-plan.md](phase4-button-slice-plan.md) 進捗表参照）。選択真実を `selectedWidgetIds` 集合へ移し `selectedWidgetId` は単一選択時のみ非空の派生に。HmiButton.clicked が modifiers を中継、Canvas に selectWidget / deleteWidgets / alignSelected / distributeSelected / begin・updateBatchDrag を実装 |
+| 完了 | ✅ 実装済み（[Docs/archive/phase4-button-slice-plan.md](phase4-button-slice-plan.md) 進捗表参照）。選択真実を `selectedWidgetIds` 集合へ移し `selectedWidgetId` は単一選択時のみ非空の派生に。HmiButton.clicked が modifiers を中継、Canvas に selectWidget / deleteWidgets / alignSelected / distributeSelected / begin・updateBatchDrag を実装 |
 | 新規ポイント | **選択を単一 id → 集合へ拡張**（T25 の `selected: widgetId === root.selectedWidgetId` を `selectedWidgetIds.includes(widgetId)` に。delegate 結線の互換に注意）。インスペクタの「複数選択時の共通値編集」 |
 
 #### T37: コピー / ペースト / 複製（Editor）

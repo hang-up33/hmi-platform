@@ -3,7 +3,7 @@ import QtQuick
 // Task M-B（Phase 10）: 共有 Meter Widget（車のスピードメーター風＝円弧（アーク）＋針）。
 // Phase 5（Label）/ Phase 6（NumericField）/ Phase 8（Trend）で確立した横展開テンプレ
 // （resolved\* フォールバック方式 + 選択中継 clicked + delegate 型分岐）に乗せた新 Widget 種別。
-// 設計の正本は Docs/phase10-meter-plan.md「HmiMeter.qml（§Task M-B）」。
+// 設計の正本は Docs/archive/phase10-meter-plan.md「HmiMeter.qml（§Task M-B）」。
 //
 // **新 Qt 依存ゼロが本フェーズの最重要制約**：描画は QML 標準の `Canvas` 自描画
 // （`import QtQuick` のみ。QtCharts / QtQuick.Controls など新規モジュールを import しない）。

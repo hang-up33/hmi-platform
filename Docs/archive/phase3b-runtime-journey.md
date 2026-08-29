@@ -1,8 +1,8 @@
 # Phase 3-B 奮闘記 — Yocto クロスビルド〜実機描画まで
 
 > Task 23/24 を「どう乗り越えたか」を残す**振り返り（postmortem）**。
-> 技術的な事実・罠は [development-history.md](development-history.md) と
-> [.claude/rules/dev-environment.md](../.claude/rules/dev-environment.md) に集約してある。
+> 技術的な事実・罠は [development-history.md](../development-history.md) と
+> [.claude/rules/dev-environment.md](../../.claude/rules/dev-environment.md) に集約してある。
 > こちらは **障害の連鎖と、そのときの判断・心境** を物語として記録する（第三者が「なぜこんなに
 > かかったのか」「どう抜けたのか」を追体験できるように）。所要は 2026-05-30〜06-01。
 

@@ -6,7 +6,7 @@
 > **承認スコープ**：①**real 変数型**（`VariableData` の型に `"real"` を追加し、NumericField で浮動小数を入出力）／②**数値範囲 min/max**（`WidgetData` に範囲を持たせ、入力を clamp）。
 > **非スコープ（別承認）**：`step`（刻み）・`decimals`（小数桁）・`unit`（単位表示）・テンキーポップアップ（requirements FR-NUM の P2 群）、後続入力 Widget（Gauge / Toggle）。
 >
-> 関連：write 経路・読み書き両用 binding は [phase6-input-widget-plan.md](phase6-input-widget-plan.md)、要求は [requirements.md](requirements.md)（FR-NUM-05/06）、Schema 規約は [.claude/rules/schema-conventions.md](../.claude/rules/schema-conventions.md)、結線規約は [.claude/rules/qml-module-conventions.md](../.claude/rules/qml-module-conventions.md)。
+> 関連：write 経路・読み書き両用 binding は [phase6-input-widget-plan.md](phase6-input-widget-plan.md)、要求は [requirements.md](../requirements.md)（FR-NUM-05/06）、Schema 規約は [.claude/rules/schema-conventions.md](../../.claude/rules/schema-conventions.md)、結線規約は [.claude/rules/qml-module-conventions.md](../../.claude/rules/qml-module-conventions.md)。
 > **進捗の正本は本ファイル「進捗」表**。
 
 ---
@@ -57,7 +57,7 @@ flowchart LR
 
 ### 数値範囲 min/max（Task 54）
 
-- **Schema**：上記 presence フラグ方式で `WidgetData` に `minValue`/`maxValue`(double) + `hasMinValue`/`hasMaxValue`(bool)。4 メソッド（`toJson`/`fromJson`/`toVariantMap`/`fromVariantMap`）を揃える（[schema-conventions](../.claude/rules/schema-conventions.md)）。
+- **Schema**：上記 presence フラグ方式で `WidgetData` に `minValue`/`maxValue`(double) + `hasMinValue`/`hasMaxValue`(bool)。4 メソッド（`toJson`/`fromJson`/`toVariantMap`/`fromVariantMap`）を揃える（[schema-conventions](../../.claude/rules/schema-conventions.md)）。
 - **NumericField**：`property real minValue`/`maxValue` + `property bool hasMin`/`hasMax`。
   - **validator**：`hasMin`/`hasMax` のとき `IntValidator`/`DoubleValidator` の `bottom`/`top` に設定（未指定側は付けない）。
   - **clamp**：`commitValue` の正規化後、`hasMin && n < minValue → n = minValue`、`hasMax && n > maxValue → n = maxValue`（**範囲外は拒否でなく clamp**＝requirements FR-NUM-05 の「clamp / 拒否」のうち clamp を採用。確定時に丸める）。clamp 後の値を emit ＝変数へは常に範囲内が書かれる。
@@ -102,4 +102,4 @@ flowchart LR
 | 54 数値範囲 min/max | ✅ 完了 | [#113](https://github.com/hang-up33/hmi-platform/pull/113) |
 | 55 cross-app E2E（real + clamp）+ スクショ | ✅ 完了 | [#114](https://github.com/hang-up33/hmi-platform/pull/114) |
 
-> **本 PR は計画書（+ 進捗ステータス同期）のみ**。Phase 6-B の承認＝フェーズ進行のため、常駐文書（README / CLAUDE.md / AGENTS.md / `.claude/agents/mvp-task-runner.md` / development-history）を本 PR で同期する（[feedback-phase-status-sync](../.claude/rules/feedback-phase-status-sync.md)）。実装は Task 53 から 1 タスクずつ。
+> **本 PR は計画書（+ 進捗ステータス同期）のみ**。Phase 6-B の承認＝フェーズ進行のため、常駐文書（README / CLAUDE.md / AGENTS.md / `.claude/agents/mvp-task-runner.md` / development-history）を本 PR で同期する（[feedback-phase-status-sync](../../.claude/rules/feedback-phase-status-sync.md)）。実装は Task 53 から 1 タスクずつ。

@@ -3,7 +3,7 @@
 本リポジトリの開発を **タスク単位の時系列** で俯瞰するためのドキュメント。第三者（新規参加者・レビュアー・関係部署）が「どんな順序でどこまで作ってきたか」を 1 枚で把握できることを目的とする。
 
 - 各 Task は **目的 / PR / 主な成果物 / 学び** の 4 行を基本とする（簡潔さ優先）。
-- 詳細な計画・受け入れ基準は `Docs/phase*-plan.md` を参照。罠と回避策は [CLAUDE.md](../CLAUDE.md) に集約。
+- 詳細な計画・受け入れ基準は計画書（進行中 `Docs/phase*-plan.md` / 完了済み `Docs/archive/phase*-plan.md`）を参照。罠と回避策は [CLAUDE.md](../CLAUDE.md) に集約。
 - 進捗状態（✅ 完了 / ⏳ 未着手）の一覧は [README.md](../README.md#フェーズ進捗) を参照。
 
 ## タイムライン俯瞰
@@ -46,7 +46,7 @@ timeline
 ## Phase 1: MVP — Editor / Simulator の作画 → 保存 → 読込
 
 **目標**：Editor で Widget を配置し、JSON で保存して Simulator が同じ JSON を描画できる最小ループを成立させる。
-**計画書**：[phase1-mvp-plan.md](phase1-mvp-plan.md)（2026-05-30 に他フェーズと体裁を揃えて事後整理。Phase 1 は計画書化前に完了したため、本ヒストリーと各 PR を一次情報として遡って作成）
+**計画書**：[phase1-mvp-plan.md](archive/phase1-mvp-plan.md)（2026-05-30 に他フェーズと体裁を揃えて事後整理。Phase 1 は計画書化前に完了したため、本ヒストリーと各 PR を一次情報として遡って作成）
 
 ### Task 1: Qt6 プロジェクト雛形
 
@@ -102,7 +102,7 @@ timeline
 ## Phase 2: テスト基盤導入
 
 **目標**：Qt Test（C++ ユニット）・Qt Quick Test（QML 振る舞い）・CI を整備し、退行を機械的に検出できる土台を作る。
-**計画書**：[Docs/phase2-testing-plan.md](phase2-testing-plan.md)
+**計画書**：[Docs/archive/phase2-testing-plan.md](archive/phase2-testing-plan.md)
 
 ### Task 9: Qt Test 基盤構築 ([PR #18](https://github.com/hang-up33/hmi-platform/pull/18))
 
@@ -151,7 +151,7 @@ timeline
 ## Phase 3-A: E2E テスト導入
 
 **目標**：Editor 配置 → JSON 保存 → Simulator 表示までの cross-app 動作を `ctest -L e2e` で自動検証する。
-**計画書**：[Docs/phase3-e2e-plan.md](phase3-e2e-plan.md)
+**計画書**：[Docs/archive/phase3-e2e-plan.md](archive/phase3-e2e-plan.md)
 
 ### Task 16: Spix 取り込み + Editor / Simulator 統合 ([PR #28](https://github.com/hang-up33/hmi-platform/pull/28))
 
@@ -194,7 +194,7 @@ timeline
 ## Phase 3-B: Runtime / i.MX8MP 対応
 
 **目標**：Simulator と同じ JSON 描画機能を i.MX8MP 実機（Yocto / Wayland or EGLFS）で動かす Runtime を導入する。
-**計画書**：[Docs/phase3b-runtime-plan.md](phase3b-runtime-plan.md)（v2、PR [#37](https://github.com/hang-up33/hmi-platform/pull/37) で策定）
+**計画書**：[Docs/archive/phase3b-runtime-plan.md](archive/phase3b-runtime-plan.md)（v2、PR [#37](https://github.com/hang-up33/hmi-platform/pull/37) で策定）
 **方針**：Simulator/ のソースを共有して `hmi_runtime` バイナリを生成し、3 バイナリ構成（hmi_editor / hmi_simulator / hmi_runtime）を維持。開発ホストは Windows 母艦 + WSL2 で、Yocto SDK クロスビルドは **WSL2 内**で実施。実機 image が Qt6 非対応（zeus 5.4、2026-05-30 判明）のため、Task 23 は新 BSP（scarthgap）で `imx-image-full` をビルドして実機更新 → 同一 BSP から SDK 生成、に拡張（詳細は計画書 §「実機 image 調査結果と更新方針」）。
 
 ### Task 22: Runtime CMake glue ([PR #39](https://github.com/hang-up33/hmi-platform/pull/39))
@@ -220,7 +220,7 @@ timeline
 ## Phase 4: Button 縦スライス（Task 25〜32）+ 拡張（Task 33〜43）
 
 **目標**：Widget 種別を横に増やす前に、Button 1 つを全レイヤ（Schema→Widgets→Editor→Simulator→Runtime→実機）で深く作り込み「Widget 追加テンプレ」を確立する。
-**計画書**：[Docs/phase4-button-slice-plan.md](phase4-button-slice-plan.md)（タスク内容・完了基準・進捗の正本）
+**計画書**：[Docs/archive/phase4-button-slice-plan.md](archive/phase4-button-slice-plan.md)（タスク内容・完了基準・進捗の正本）
 
 - **コア縦スライス（Task 25〜32）**：✅ 完了。選択 / インスペクタ / リサイズ / 削除 / スタイル属性（色・フォント・ボーダー・角丸）の全レイヤ貫通・テスト/E2E 拡充・i.MX8MP 実機 styled 描画まで（Task 31〜32 は PR [#64](https://github.com/hang-up33/hmi-platform/pull/64) / [#66](https://github.com/hang-up33/hmi-platform/pull/66)）。
 - **拡張（Task 33〜43・2026-06-07 承認）**：✅ 完了（PR #69〜#87 + 実機撮影）。A=フォント詳細 / 配置 / opacity、C=グリッドスナップ / 複数選択・整列 / コピペ / undo-redo、B=変数ストア / アクション編集 / Simulator・Runtime 実行 / 状態別スタイル / アクション round-trip E2E + 実機（i.MX8MP）アクション動作撮影（`vnc-click-capture.py`）。
@@ -232,7 +232,7 @@ timeline
 ## インスペクタ UX 改善（Task 44〜46）
 
 **目標**：横展開（新 Widget 種別）で同じ散らかりが各 Widget へ波及する前に、テンプレ＝右側インスペクタを綺麗にしてから増やす。
-**計画書**：[Docs/inspector-ux-plan.md](inspector-ux-plan.md)
+**計画書**：[Docs/archive/inspector-ux-plan.md](archive/inspector-ux-plan.md)
 
 - **Task 44〜45**：✅ 完了（PR [#94](https://github.com/hang-up33/hmi-platform/pull/94)）。`InspectorSection`（折りたたみヘッダ + Column）を導入し平坦な約 20 項目を 6 セクション（基本 / 文字 / 背景・枠 / 状態 / 動作 / 詳細）＋変数定義へ再編、分かりづらいラベルを言い換え（`チェック可能`→`トグルボタンにする` 等）＋ hover ツールチップ。**スキーマ・round-trip・objectName は不変**で unit 10 + e2e 6 = 16/16 緑。
 - **Task 46（任意）**：✅ 完了。背景色 / 文字色 / ボーダー色の hex TextField の隣に **色スウォッチ**（現在色プレビュー。未指定は Widget 種別の resolved 既定色を表示）を追加し、クリックで共有 `ColorDialog` → `#RRGGBB` を live Item + TextField へ書き戻す（明示 beginEdit/commitEdit で 1 件 undo）。手入力欄・objectName は不変。
@@ -243,7 +243,7 @@ timeline
 ## Phase 5: 横展開（新 Widget 種別・最初は Label）
 
 **目標**：Phase 4 で固めたテンプレで Widget 種別を横に増やす。**最初の Widget = Label（文字表示）**。
-**計画書**：[Docs/phase5-widget-expansion-plan.md](phase5-widget-expansion-plan.md)（Task 47〜49）
+**計画書**：[Docs/archive/phase5-widget-expansion-plan.md](archive/phase5-widget-expansion-plan.md)（Task 47〜49）
 
 - 🟦 着手（計画起票）。Label は既存スキーマで足りるため **Schema / C++ ブリッジ無改変**で、横展開で唯一新しい **delegate の「型分岐の足場」**（`type` で HmiButton / HmiLabel を描き分ける）を導入する。binding は全 Widget・action は対話 Widget のみ＝**Label は表示専用**。後続 Widget（Lamp / Gauge 等）は Label 完了後に別途承認。
 - **Task 47（型分岐の足場 + HmiLabel 描画）完了**（2026-06-11）。
@@ -267,7 +267,7 @@ timeline
 ## Phase 6: 入力 Widget（最初は NumericField / 数値入力）
 
 **目標**：Phase 5 で確立した横展開テンプレ（型分岐の足場）に乗りつつ、**初めて「ユーザー入力 → 変数へ書き込む（write）」相互作用を持つ入力 Widget** を導入する。**最初の入力 Widget = NumericField（数値入力）**。
-**計画書**：[Docs/phase6-input-widget-plan.md](phase6-input-widget-plan.md)（Task 50〜52）
+**計画書**：[Docs/archive/phase6-input-widget-plan.md](archive/phase6-input-widget-plan.md)（Task 50〜52）
 
 - ✅ 完了（Task 50〜52）。Label が binding の「読み」（変数 → 表示の追従）だけだったのに対し、NumericField は **読み（表示）+ 書き（入力確定で変数更新）の両用 binding** を担う初の入力 Widget。
   - **設計の核**：write は **既存 `bindings` を読み書き両用に使う**（表示=`boundValue("value")` の読み、入力確定=同じ変数へ `setValue(coerce(...))` の書き）ことで実現し、**Schema / C++ ブリッジは無改変**（新キー・新トリガを足さない。後方互換）。`HmiNumericField` は Shared/Widgets が初めて QtQuick.Controls（TextField + IntValidator）に依存する（import のみ。i.MX8MP rootfs の plugin 同梱は要確認 TODO）。MVP は **int 変数のみ**（real 型・min/max は Schema 連鎖するため別承認）。
@@ -288,7 +288,7 @@ timeline
 ## Phase 6-B: NumericField 拡張（real 型 + 数値範囲 min/max）
 
 **目標**：Phase 6（int 変数のみ）で保留した **real（浮動小数）型**と **数値範囲 min/max** を実装する。
-**計画書**：[Docs/phase6b-numeric-extend-plan.md](phase6b-numeric-extend-plan.md)（Task 53〜55。2026-06-13 ユーザー承認）
+**計画書**：[Docs/archive/phase6b-numeric-extend-plan.md](archive/phase6b-numeric-extend-plan.md)（Task 53〜55。2026-06-13 ユーザー承認）
 
 - ✅ 完了（Task 53〜55）。スコープは 2 軸：**real は変数スコープ**（`VariableData.type="real"` + `VariableStore.coerce("real")`。NumericField は real/int を持たず、**bound 変数の型から `isReal` を導出**して `DoubleValidator` に切替える）／**min/max は Widget スコープ**（`WidgetData.minValue/maxValue`。同じ変数を別 NumericField が別レンジで編集しうるため Widget 固有）。
   - **設計の核（計画段階で確定）**：**min/max は負値が正当なので `-1`/`0` をセンチネルに使えない**（borderWidth/radius との差）→ **presence フラグ方式**（`hasMinValue`/`hasMaxValue` bool ＋ `minValue`/`maxValue` double。JSON はキーの有無で未指定を表す）。範囲外入力は**確定時に clamp**（拒否でなく境界へ丸め）。
@@ -356,7 +356,7 @@ timeline
 
 ## Phase 8: トレンドグラフ（Trend・ライブ折れ線）
 
-**計画書**：[Docs/phase8-trend-plan.md](phase8-trend-plan.md)（T-A〜T-D。2026-06-16 ユーザー要望「トレンドグラフ欲しい」+ スコープ 2 問確定で着手）
+**計画書**：[Docs/archive/phase8-trend-plan.md](archive/phase8-trend-plan.md)（T-A〜T-D。2026-06-16 ユーザー要望「トレンドグラフ欲しい」+ スコープ 2 問確定で着手）
 
 - ✅ 完了（T-A〜T-D）。新 Widget 種別「Trend」を Phase 5（Label）/ Phase 6（NumericField）の **横展開テンプレ**（型分岐の足場 + Schema 4 メソッド + インスペクタ型対応 + cross-app E2E）に乗せた。**ライブのみ**（bound 変数を変更時/周期サンプリングしリングバッファに直近 N 点保持、履歴永続化は非スコープ）。**描画は QML `Canvas` 自描画で新 Qt モジュール依存ゼロ**（QtCharts 不使用＝Phase 7 の QtSerialBus 同梱問題を構造的に回避し i.MX8MP rootfs にそのまま載る）。サンプル源は既存 `bindings` の「読み」を再利用するため **Schema / C++ ブリッジは無改変**。Canvas はピクセル不可視のため、E2E は公開プロパティ（`sampleCount`/`lastValue`）でサンプル取り込みを観測する。
   - **タスク**：T-A（Schema 拡張：`type:"Trend"` + `pointCount`/Y軸 min·max〔presence フラグ〕/線色/`sampleMs`・PR #127）/ T-B（`HmiTrend.qml` Canvas 描画 + delegate 4 分岐目・PR #128）/ T-C（Editor 追加 UI + インスペクタ型対応・PR #130）/ T-D（cross-app E2E `tests/e2e/test_trend_live.py`〔`e2e_trend_live`〕+ `simulator.png` ライブ折れ線スクショ）。すべて Web 可。
@@ -366,7 +366,7 @@ timeline
 
 ## Phase 8-B: Trend 拡張（複数系列 + 軸目盛り/凡例）
 
-**計画書**：[Docs/phase8b-trend-extend-plan.md](phase8b-trend-extend-plan.md)（8B-A〜8B-E。2026-06-17 着手承認＝Phase 8 完了後の候補から「複数系列 + 軸目盛り/凡例」をユーザー選択。履歴永続化は今回非スコープ）
+**計画書**：[Docs/archive/phase8b-trend-extend-plan.md](archive/phase8b-trend-extend-plan.md)（8B-A〜8B-E。2026-06-17 着手承認＝Phase 8 完了後の候補から「複数系列 + 軸目盛り/凡例」をユーザー選択。履歴永続化は今回非スコープ）
 
 - ✅ 完了（2026-06-20 クローズ）— 8B-A〜8B-E すべて完了（Web `ctest` 25/25 緑）。Phase 8 の単系列 Trend を ①複数系列（子型 `TrendSeriesData {variable, color, label}` の `series` 配列で N 本の折れ線・色分け）②軸目盛り/凡例（グリッド線・Y 軸目盛りラベル・系列名凡例）へ拡張した。**Phase 8 の最重要制約「新 Qt モジュール依存ゼロ（QML `Canvas` 自描画のみ・QtCharts 不使用）」を維持**（グリッド/目盛り/凡例も `Canvas` の `strokeText`/`fillText`/線描）。**Phase 8 の単系列 JSON は無改変で動く**（`series` 空＝既存 `value` バインド + `lineColor` を暗黙 1 系列に合成する後方互換）。
   - **タスク**：8B-A（Schema 拡張：子型 `TrendSeriesData` + `WidgetData.series`/`showGrid`/`showLegend`/`yTickCount`・4 メソッド + round-trip）/ 8B-B（`HmiTrend.qml` を N 系列化〔`_buffers` + `series`/`seriesValues`〕+ Simulator delegate が `VariableStore` から各系列値を供給）/ 8B-C（軸/凡例描画）/ 8B-D（Editor 系列エディタ + 軸/凡例トグル + `editor.png`）/ 8B-E（cross-app E2E〔系列ごと独立サンプリング〕+ スクショ）。すべて Web 可。
@@ -380,7 +380,7 @@ timeline
 
 ## Phase 9: OPC-UA クライアント（完了・OP-1〜OP-6）
 
-**計画書**：[Docs/phase9-opcua-plan.md](phase9-opcua-plan.md)（OP-1〜OP-6。2026-06-20 スコープ選択＝Phase 8-B クローズ後の候補から OPC-UA をユーザー選択。**本タスクは計画書の起票のみ**）
+**計画書**：[Docs/archive/phase9-opcua-plan.md](archive/phase9-opcua-plan.md)（OP-1〜OP-6。2026-06-20 スコープ選択＝Phase 8-B クローズ後の候補から OPC-UA をユーザー選択。**本タスクは計画書の起票のみ**）
 
 - 📋 計画起票（PR #139）→ 🚧 OP-1 完了（PR #140）→ OP-2 完了（macOS ローカル）→ OP-3 完了（macOS ローカル）→ OP-4 完了（macOS ローカル）。Modbus（Phase 7）で導入した「変数ソース」抽象（`connections[]` + `VariableData.source`）に **proto 2 本目（`opcua`）** を足し、`OpcUaController`（`QOpcUaClient` + MonitoredItem 購読 + 書込/接続状態/自動再接続）を Simulator 共有ソースに置く（→Runtime 継承・Editor は `Qt6::OpcUa` 非リンク）。読込/購読値は `VariableStore.setValue`、書込は MB-4 の二経路分離を流用。
   - **OP-3 完了（macOS ローカル：test_server.py 実サーバ代用での読込追従確認）**：`scripts/opcua/test_server.py`（asyncua ライブ値サーバ：Counter/Temperature/Running/Setpoint の 4 ノードをライブで変化させる）を起動し、`Docs/samples/opcua-demo.json`（同 4 変数を OPC-UA 購読で表示する Label 群）を `hmi_simulator` で開いて OPC-UA 接続→MonitoredItem 購読→Label 追従を肉眼確認。証跡スクショ 2 枚（4 秒差）で Counter 68→98・Temperature 27.47→23.17 の値変化を記録（`Docs/screenshots/op3-read-t1.png` / `op3-read-t2.png`）。コードは OP-2 完了時点のものを使用（新たな実装変更なし）。
@@ -397,7 +397,7 @@ timeline
 
 ## Phase 10: メーター（Meter・車のスピードメーター風／完了 — M-A〜M-D クローズ）
 
-**計画書**：[Docs/phase10-meter-plan.md](phase10-meter-plan.md)（M-A〜M-D。2026-06-27 スコープ選択＝Phase 9 クローズ後の候補からユーザーが「メーター」を選択し、形状を「車のスピードメーター風＝円弧＋針」に確定。**本タスクは計画書の起票のみ**）
+**計画書**：[Docs/archive/phase10-meter-plan.md](archive/phase10-meter-plan.md)（M-A〜M-D。2026-06-27 スコープ選択＝Phase 9 クローズ後の候補からユーザーが「メーター」を選択し、形状を「車のスピードメーター風＝円弧＋針」に確定。**本タスクは計画書の起票のみ**）
 
 - 📋 計画起票。新 Widget 種別「Meter」を Phase 5（Label）/ 6（NumericField）/ 8（Trend）で確立した横展開テンプレ（resolved\* フォールバック + Schema 4 メソッド + delegate 型分岐 + インスペクタ型対応 + cross-app E2E）に乗せる。**描画は円弧（アーク）＋針の QML `Canvas` 自描画で新 Qt モジュール依存ゼロ**（Trend と同じく i.MX8MP rootfs にそのまま載る）。読み取り専用表示で値源は既存 `bindings` の「読み」を再利用＝**Schema 4 メソッド追加のみで C++ ブリッジ無改変**。
   - **Schema 新規フィールド（Meter 固有・全 optional）**：`meterMin`/`hasMeterMin`・`meterMax`/`hasMeterMax`（スケール範囲＝値→角度マッピング定義域。負値正当 → presence フラグ方式。NumericField の `minValue`/`maxValue`・Trend の `yMin`/`yMax` の前例踏襲で**独立フィールド**）、`arcColor`/`needleColor`（`""` センチネル）、`tickCount`（`0` センチネル）、`unit`（`""` センチネル）。`isValidJson` 必須集合（id/type/width/height）は不変＝後方互換。
@@ -412,7 +412,7 @@ timeline
 
 ## Phase 11: Widget サンプルパレット（D&D 追加）＋ 初号「シンプルボタン」（完了 — W-A〜W-E クローズ）
 
-**計画書**：[Docs/phase11-widget-palette-plan.md](phase11-widget-palette-plan.md)（W-A〜W-E。2026-07-12 承認）
+**計画書**：[Docs/archive/phase11-widget-palette-plan.md](archive/phase11-widget-palette-plan.md)（W-A〜W-E。2026-07-12 承認）
 
 - 📋 計画起票 + 見た目プロトタイプ。issue #155「シンプル・イズ・ベスト版 HMI ボタン（ベゼル無し）」を QML の実 Widget として忠実再現し、さらに**見た目そのままの Widget サンプルをインスペクタに並べてキャンバスへ D&D で追加する汎用パレット UX** を新設する（初号＝シンプルボタン。将来他 Widget もパレット化）。
   - **設計方針**：ランプ・進捗リング・円形など既存 HmiButton（Rectangle+Text）で描けない造形のため**新 Widget 種別 `SimpleButton`（`HmiSimpleButton.qml`）** として横展開テンプレに乗せる。**描画は Canvas 自描画で新 Qt モジュール依存ゼロ**（`import QtQuick` のみ＝Meter/Trend 同方針で i.MX8MP rootfs にそのまま載る）。issue の `oklch()`/`color-mix()` は Qt Quick 非対応のため hex 換算。効果音は非スコープ。
@@ -454,10 +454,10 @@ timeline
 - [README.md](../README.md) — 進捗表（状態のみ）・ビルド手順・スクリーンショット
 - [CLAUDE.md](../CLAUDE.md) — Claude Code 向けの作業指針・既知の罠の集約
 - [AGENTS.md](../AGENTS.md) — Codex GitHub App 向けのレビュー指針
-- [Docs/phase2-testing-plan.md](phase2-testing-plan.md) — Phase 2 計画書
-- [Docs/phase3-e2e-plan.md](phase3-e2e-plan.md) — Phase 3-A 計画書
-- [Docs/phase3b-runtime-plan.md](phase3b-runtime-plan.md) — Phase 3-B 計画書 v2
-- [Docs/phase4-button-slice-plan.md](phase4-button-slice-plan.md) — Phase 4 計画書（コア縦スライス + 拡張）
-- [Docs/phase10-meter-plan.md](phase10-meter-plan.md) — Phase 10 計画書（メーター / 円弧＋針）
-- [Docs/phase3b-runtime-journey.md](phase3b-runtime-journey.md) — Phase 3-B 奮闘記（Task 23/24 をどう乗り越えたか・心境の記録）
-- [Docs/qml-canvas-structure.md](qml-canvas-structure.md) — Canvas.qml の構造解説
+- [Docs/archive/phase2-testing-plan.md](archive/phase2-testing-plan.md) — Phase 2 計画書
+- [Docs/archive/phase3-e2e-plan.md](archive/phase3-e2e-plan.md) — Phase 3-A 計画書
+- [Docs/archive/phase3b-runtime-plan.md](archive/phase3b-runtime-plan.md) — Phase 3-B 計画書 v2
+- [Docs/archive/phase4-button-slice-plan.md](archive/phase4-button-slice-plan.md) — Phase 4 計画書（コア縦スライス + 拡張）
+- [Docs/archive/phase10-meter-plan.md](archive/phase10-meter-plan.md) — Phase 10 計画書（メーター / 円弧＋針）
+- [Docs/archive/phase3b-runtime-journey.md](archive/phase3b-runtime-journey.md) — Phase 3-B 奮闘記（Task 23/24 をどう乗り越えたか・心境の記録）
+- [Docs/archive/qml-canvas-structure.md](archive/qml-canvas-structure.md) — Canvas.qml の構造解説

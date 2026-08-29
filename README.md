@@ -141,26 +141,30 @@ scp -O ~/build-yocto/Runtime/hmi_runtime root@<board-ip>:/tmp/hmi_runtime
 
 ## 開発ドキュメント
 
+> 🗺️ **どの文書が人間向けで、どれが AI エージェント向けかは [DOCS-MAP.md](DOCS-MAP.md) にまとめています。**
+> このリポジトリには Claude Code / Codex への指示ファイルが多数含まれるため、まず地図を見ると迷いません。
+
 詳細な開発仕様、進捗状況、各種ガイドラインは `Docs/` 配下を参照してください。
 
 - 🚀 **[フェーズ進捗・ステータス](Docs/phase-status.md)**: 現在の開発フェーズおよび完了機能の一覧
 - 📐 **[アーキテクチャ概要](Docs/architecture.md)**: モジュール構成、CMake、データモデル設計
 - 🔄 **[開発ワークフローとルール](Docs/workflow.md)**: PR 運用、コード規約、開発ルール
-- 🔍 **[コードレビューガイドライン](Docs/review-guidelines.md)**: PR レビュー観点・重要度定義
+- 🔍 **[コードレビューガイドライン](Docs/agents/review-guidelines.md)**: PR レビュー観点・重要度定義
 - 📜 **[開発経緯・PR 履歴](Docs/development-history.md)**: 過去のタスク達成履歴と技術的知見
+- 📦 **[完了フェーズの計画書](Docs/archive/)**: 過去の実装指示書（現在の仕様書ではありません）
 
 ---
 
 ## 現在地
 
 - **現在地**: **リファクタリング計画（2026-07-22 承認）着手中 — RF-A / RF-D / RF-B 完了、次タスク = RF-E**。機能追加はせず、`Editor/qml/Main.qml` の肥大化（2,712 行）と型分岐の散在を解消中。RF-A〔ツールバー / ダイアログ抽出〕/ RF-D〔種別メタを `widgetTypeTable` に集約〕/ RF-B〔インスペクタ本体 + インスペクタ専用ヘルパーを `InspectorPanel.qml` へ抽出。Main.qml **2,712→346 行**〕完了（macOS `ctest` 30/30 緑）。残る RF-E は Editor / Simulator の delegate 重複削減。進捗の正本は [Docs/refactoring-plan.md](Docs/refactoring-plan.md)。
-  - **Phase 11 / Widget サンプルパレット（ドラッグ&ドロップ追加）＋ 初号「シンプルボタン」完了（W-A〜W-E クローズ）**。issue #155「シンプル・イズ・ベスト版 HMI ボタン（ベゼル無し）」を新 Widget 種別 `SimpleButton`（`HmiSimpleButton.qml`）として QML で忠実再現し、**見た目そのままの Widget サンプルをインスペクタに並べてキャンバスへ D&D で追加**する汎用パレット UX を新設した（将来他 Widget もパレット化）。Canvas 自描画で新 Qt 依存ゼロ（Meter/Trend 同方針）。W-A〔Schema 拡張〕/ W-B〔HmiSimpleButton 描画 + delegate 6 分岐目〕/ W-C〔サンプルパレット〕/ W-D〔パレット→キャンバス D&D 追加〕/ W-E〔インスペクタ型対応（シンプルボタン詳細＝形状 / テーマ / 差し色 / 長押し時間）+ cross-app E2E `e2e_simple_button_live` + スクショ同期〕すべて完了（Web `ctest` 27/27 緑）。次フェーズは未承認候補から選定（自動着手しない）。進捗の正本は [Docs/phase11-widget-palette-plan.md](Docs/phase11-widget-palette-plan.md)。
-  - **Phase 10 / メーター（Meter・車のスピードメーター風）完了**（M-A〜M-D クローズ）。新 Widget 種別「Meter」を横展開テンプレに乗せた（円弧＋針の QML `Canvas` 自描画で新 Qt モジュール依存ゼロ）。進捗の正本は [Docs/phase10-meter-plan.md](Docs/phase10-meter-plan.md)。
-  - **Phase 9 / OPC-UA クライアント完了**（2026-06-27 OP-6 クローズ）。**OP-1〜OP-6 すべて完了**：OP-1〔Schema + Editor UI〕／OP-2〔PC 読込/購読〕／OP-3〔実サーバ読込確認〕／OP-4〔書込 + 接続状態 + 自動再接続〕／OP-5〔実サーバ書込確認〕／OP-6〔実機 Runtime 展開（i.MX8MP で OPC-UA ライブ値を VNC キャプチャで確認）〕。**🔴 Qt OpcUa は aqtinstall 非同梱＝Web/CI 不可。macOS / Windows / 実機（SDK 包含）ともに導入済み**（手順は [.claude/rules/dev-environment.md](.claude/rules/dev-environment.md)）。進捗の正本は [Docs/phase9-opcua-plan.md](Docs/phase9-opcua-plan.md)。
-  - **Phase 8 / トレンドグラフ（単系列ライブ折れ線）完了**（2026-06-16 承認・PR #127〜#131）。新 Widget 種別「Trend」を横展開テンプレに乗せ、`Canvas` 自描画で実機にそのまま載る。進捗の正本は [Docs/phase8-trend-plan.md](Docs/phase8-trend-plan.md)。
+  - **Phase 11 / Widget サンプルパレット（ドラッグ&ドロップ追加）＋ 初号「シンプルボタン」完了（W-A〜W-E クローズ）**。issue #155「シンプル・イズ・ベスト版 HMI ボタン（ベゼル無し）」を新 Widget 種別 `SimpleButton`（`HmiSimpleButton.qml`）として QML で忠実再現し、**見た目そのままの Widget サンプルをインスペクタに並べてキャンバスへ D&D で追加**する汎用パレット UX を新設した（将来他 Widget もパレット化）。Canvas 自描画で新 Qt 依存ゼロ（Meter/Trend 同方針）。W-A〔Schema 拡張〕/ W-B〔HmiSimpleButton 描画 + delegate 6 分岐目〕/ W-C〔サンプルパレット〕/ W-D〔パレット→キャンバス D&D 追加〕/ W-E〔インスペクタ型対応（シンプルボタン詳細＝形状 / テーマ / 差し色 / 長押し時間）+ cross-app E2E `e2e_simple_button_live` + スクショ同期〕すべて完了（Web `ctest` 27/27 緑）。次フェーズは未承認候補から選定（自動着手しない）。進捗の正本は [Docs/archive/phase11-widget-palette-plan.md](Docs/archive/phase11-widget-palette-plan.md)。
+  - **Phase 10 / メーター（Meter・車のスピードメーター風）完了**（M-A〜M-D クローズ）。新 Widget 種別「Meter」を横展開テンプレに乗せた（円弧＋針の QML `Canvas` 自描画で新 Qt モジュール依存ゼロ）。進捗の正本は [Docs/archive/phase10-meter-plan.md](Docs/archive/phase10-meter-plan.md)。
+  - **Phase 9 / OPC-UA クライアント完了**（2026-06-27 OP-6 クローズ）。**OP-1〜OP-6 すべて完了**：OP-1〔Schema + Editor UI〕／OP-2〔PC 読込/購読〕／OP-3〔実サーバ読込確認〕／OP-4〔書込 + 接続状態 + 自動再接続〕／OP-5〔実サーバ書込確認〕／OP-6〔実機 Runtime 展開（i.MX8MP で OPC-UA ライブ値を VNC キャプチャで確認）〕。**🔴 Qt OpcUa は aqtinstall 非同梱＝Web/CI 不可。macOS / Windows / 実機（SDK 包含）ともに導入済み**（手順は [.claude/rules/dev-environment.md](.claude/rules/dev-environment.md)）。進捗の正本は [Docs/archive/phase9-opcua-plan.md](Docs/archive/phase9-opcua-plan.md)。
+  - **Phase 8 / トレンドグラフ（単系列ライブ折れ線）完了**（2026-06-16 承認・PR #127〜#131）。新 Widget 種別「Trend」を横展開テンプレに乗せ、`Canvas` 自描画で実機にそのまま載る。進捗の正本は [Docs/archive/phase8-trend-plan.md](Docs/archive/phase8-trend-plan.md)。
   - **Phase 7 / Modbus TCP** は MB-1〜MB-4（書込 + 接続状態 + 自動再接続・PR #119/#121/#122）完了。残る MB-5〔実 PLC 書込確認〕/ MB-6〔実機 Yocto〕はローカル専用で Web 不可。進捗の正本は [Docs/phase7-modbus-plan.md](Docs/phase7-modbus-plan.md)。
 - 開発の時系列（各タスクの目的 / PR / 学び）: [Docs/development-history.md](Docs/development-history.md)
-- 各フェーズの計画と進捗表（正本）: [Docs/](Docs/) の `phase*-plan.md`
+- 各フェーズの計画と進捗表（正本）: 進行中は [Docs/](Docs/) の `phase*-plan.md`、完了済みは [Docs/archive/](Docs/archive/)
 - 開発ガイド・ビルドの罠・ルール: [CLAUDE.md](CLAUDE.md)
 
 ## ライセンス

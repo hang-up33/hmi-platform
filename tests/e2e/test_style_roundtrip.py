@@ -25,7 +25,7 @@ Task 19/20 の座標 round-trip のスタイル版。
 出る）で担保する。Spix が実テキスト入力を再現できるようになったら本 E2E をインスペクタ
 ``TextField`` 経路へ拡張する。
 
-Spix v0.14 制約・回避策（CLAUDE.md / [Docs/phase3-e2e-plan.md]・既存 E2E と同方針）：
+Spix v0.14 制約・回避策（CLAUDE.md / [Docs/archive/phase3-e2e-plan.md]・既存 E2E と同方針）：
 
 - 選択は ``widget_btn001`` を ``mouseClick`` して行う（HmiButton の ``clicked`` 中継で
   ``selectedWidgetId`` が更新される＝アプリ実動作と同じ経路）。

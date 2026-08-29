@@ -20,7 +20,7 @@ metadata:
 
 | 文書 | 箇所 |
 |---|---|
-| `Docs/phase*-plan.md` | 「進捗」表（**正本**） |
+| `Docs/phase*-plan.md`（完了後は `Docs/archive/` へ移す） | 「進捗」表（**正本**） |
 | README.md | 「フェーズ進捗」冒頭の散文 + フェーズ別の表 |
 | CLAUDE.md | 「現在のフェーズ」段落 + 「Must Always」先頭バレット |
 | AGENTS.md | 「スコープ」節 |

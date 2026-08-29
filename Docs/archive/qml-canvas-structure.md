@@ -1,6 +1,11 @@
 # Canvas.qml の構造
 
-[Editor/qml/Canvas.qml](../Editor/qml/Canvas.qml) は 3 段の入れ子で構成されている。
+> **⚠️ この文書は 2026-05-24 時点（Task 7 相当）の Canvas.qml を説明したもので、現在の実装とは一致しません。**
+> 当時 41 行程度だった `Editor/qml/Canvas.qml` は現在 1,244 行あり、本文が中心に据える
+> `default property alias content: widgetLayer.data` は既に存在しません（選択・複数選択・D&D・グリッドスナップ等の増築で構造が変わったため）。
+> 現在の構造は [architecture.md](../architecture.md) と実コードを参照してください。書き直しは [refactoring-plan.md](../refactoring-plan.md) の RF タスク完了後が適切です。
+
+[Editor/qml/Canvas.qml](../../Editor/qml/Canvas.qml) は 3 段の入れ子で構成されている。
 
 ```mermaid
 graph TD

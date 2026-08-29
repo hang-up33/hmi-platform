@@ -3,7 +3,7 @@ import QtQuick
 // Task T-B（Phase 8）: 共有 Trend Widget（ライブ折れ線グラフ）。Phase 5（Label）/
 // Phase 6（NumericField）で確立した横展開テンプレ（resolved\* フォールバック方式 +
 // 選択中継 clicked + delegate 型分岐）に乗せた新 Widget 種別。設計の正本は
-// Docs/phase8-trend-plan.md「HmiTrend.qml（§Task B）」。
+// Docs/archive/phase8-trend-plan.md「HmiTrend.qml（§Task B）」。
 //
 // **新 Qt 依存ゼロが本フェーズの最重要制約**：描画は QML 標準の `Canvas` 自描画
 // （`import QtQuick` のみ。QtCharts / QtQuick.Controls など新規モジュールを import しない）。

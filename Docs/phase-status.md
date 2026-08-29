@@ -20,24 +20,26 @@
 
 ## 完了済みフェーズ一覧
 
+完了フェーズの計画書は [Docs/archive/](archive/) に格納しています（当時の実装指示書であり、現在の仕様書ではありません）。
+
 | フェーズ | 概要 | 主な成果物 / PR / 計画書 |
 |---|---|---|
-| **Phase 1** | MVP 開発 | Editor, Simulator, JSON Schema 基礎。[phase1-mvp-plan.md](phase1-mvp-plan.md) |
-| **Phase 2** | テスト基盤 | Unit Test (QtTest) 基盤構築。[phase2-testing-plan.md](phase2-testing-plan.md) |
-| **Phase 3-A** | E2E テスト | Spix (E2E) 統合。[phase3-e2e-plan.md](phase3-e2e-plan.md) |
-| **Phase 3-B** | Runtime & 実機描画 | 3 バイナリ構成（Editor / Simulator / Runtime）、Yocto SDK クロスビルド、i.MX8MP 実機描画。[phase3b-runtime-plan.md](phase3b-runtime-plan.md) |
-| **Phase 4** | Button 縦スライス | Button 1 つを全レイヤ（Schema→Widgets→Editor→Simulator→Runtime→実機）で深掘り。[phase4-button-slice-plan.md](phase4-button-slice-plan.md) |
-| **Phase 4 拡張** | 編集体験 & 状態/アクション | グリッドスナップ、複数選択・整列、コピペ、undo-redo、変数ストア + アクション + 状態別スタイル。[phase4-button-slice-plan.md](phase4-button-slice-plan.md) |
-| **インスペクタ UX 改善** | インスペクタ整理 | セクション化、色スウォッチ / ColorDialog。[inspector-ux-plan.md](inspector-ux-plan.md) |
-| **Phase 5** | Label 横展開 | 型分岐の足場（Loader + Component）導入、Label Widget 追加。[phase5-widget-expansion-plan.md](phase5-widget-expansion-plan.md) |
-| **Phase 6** | NumericField (数値入力) | 読み書き両用 binding、IntValidator。[phase6-input-widget-plan.md](phase6-input-widget-plan.md) |
-| **Phase 6-B** | NumericField 拡張 | real 型 (`DoubleValidator`)、数値範囲 (min/max) clamp。[phase6b-numeric-extend-plan.md](phase6b-numeric-extend-plan.md) |
-| **Phase 7** | Modbus TCP 通信 | QtSerialBus (QModbusTcpClient) ポーリング/書込、実 PLC 動作確認。[phase7-modbus-plan.md](phase7-modbus-plan.md) |
-| **Phase 8** | Trend (折れ線グラフ) | QML Canvas 自描画、単系列ライブ折れ線グラフ。[phase8-trend-plan.md](phase8-trend-plan.md) |
-| **Phase 8-B** | Trend 拡張 | 複数系列 (series)、軸目盛り / 凡例描画。[phase8b-trend-extend-plan.md](phase8b-trend-extend-plan.md) |
-| **Phase 9** | OPC-UA クライアント | QtOpcUa クライアント、i.MX8MP 実機 VNC 動作確認。[phase9-opcua-plan.md](phase9-opcua-plan.md) |
-| **Phase 10** | Meter (メーター) | QML Canvas 円弧＋針描画、スピードメーター風 Widget。[phase10-meter-plan.md](phase10-meter-plan.md) |
-| **Phase 11** | Widget サンプルパレット + SimpleButton | 見た目そのままのサンプルを並べてキャンバスへ D&D 追加する汎用パレット UX、新 Widget 種別 `SimpleButton`。[phase11-widget-palette-plan.md](phase11-widget-palette-plan.md) |
+| **Phase 1** | MVP 開発 | Editor, Simulator, JSON Schema 基礎。[phase1-mvp-plan.md](archive/phase1-mvp-plan.md) |
+| **Phase 2** | テスト基盤 | Unit Test (QtTest) 基盤構築。[phase2-testing-plan.md](archive/phase2-testing-plan.md) |
+| **Phase 3-A** | E2E テスト | Spix (E2E) 統合。[phase3-e2e-plan.md](archive/phase3-e2e-plan.md) |
+| **Phase 3-B** | Runtime & 実機描画 | 3 バイナリ構成（Editor / Simulator / Runtime）、Yocto SDK クロスビルド、i.MX8MP 実機描画。[phase3b-runtime-plan.md](archive/phase3b-runtime-plan.md) |
+| **Phase 4** | Button 縦スライス | Button 1 つを全レイヤ（Schema→Widgets→Editor→Simulator→Runtime→実機）で深掘り。[phase4-button-slice-plan.md](archive/phase4-button-slice-plan.md) |
+| **Phase 4 拡張** | 編集体験 & 状態/アクション | グリッドスナップ、複数選択・整列、コピペ、undo-redo、変数ストア + アクション + 状態別スタイル。[phase4-button-slice-plan.md](archive/phase4-button-slice-plan.md) |
+| **インスペクタ UX 改善** | インスペクタ整理 | セクション化、色スウォッチ / ColorDialog。[inspector-ux-plan.md](archive/inspector-ux-plan.md) |
+| **Phase 5** | Label 横展開 | 型分岐の足場（Loader + Component）導入、Label Widget 追加。[phase5-widget-expansion-plan.md](archive/phase5-widget-expansion-plan.md) |
+| **Phase 6** | NumericField (数値入力) | 読み書き両用 binding、IntValidator。[phase6-input-widget-plan.md](archive/phase6-input-widget-plan.md) |
+| **Phase 6-B** | NumericField 拡張 | real 型 (`DoubleValidator`)、数値範囲 (min/max) clamp。[phase6b-numeric-extend-plan.md](archive/phase6b-numeric-extend-plan.md) |
+| **Phase 7** | Modbus TCP 通信 | QtSerialBus (QModbusTcpClient) ポーリング/書込、実 PLC 読込確認。**機能は完了だが MB-5（実 PLC 書込確認）/ MB-6（実機 Runtime 展開）は未着手**（実機作業のため Web 不可）。[phase7-modbus-plan.md](phase7-modbus-plan.md) |
+| **Phase 8** | Trend (折れ線グラフ) | QML Canvas 自描画、単系列ライブ折れ線グラフ。[phase8-trend-plan.md](archive/phase8-trend-plan.md) |
+| **Phase 8-B** | Trend 拡張 | 複数系列 (series)、軸目盛り / 凡例描画。[phase8b-trend-extend-plan.md](archive/phase8b-trend-extend-plan.md) |
+| **Phase 9** | OPC-UA クライアント | QtOpcUa クライアント、i.MX8MP 実機 VNC 動作確認。[phase9-opcua-plan.md](archive/phase9-opcua-plan.md) |
+| **Phase 10** | Meter (メーター) | QML Canvas 円弧＋針描画、スピードメーター風 Widget。[phase10-meter-plan.md](archive/phase10-meter-plan.md) |
+| **Phase 11** | Widget サンプルパレット + SimpleButton | 見た目そのままのサンプルを並べてキャンバスへ D&D 追加する汎用パレット UX、新 Widget 種別 `SimpleButton`。[phase11-widget-palette-plan.md](archive/phase11-widget-palette-plan.md) |
 
 ---
 

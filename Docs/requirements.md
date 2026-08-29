@@ -4,8 +4,12 @@
 >
 > **狙い**：単なる作画デモではなく、**実務 HMI として使える**ことを見据える（通信プロトコル連携・数値入出力・状態表示を核に据える）。
 >
-> 関連：直近の完了フェーズ計画 [phase6b-numeric-extend-plan.md](phase6b-numeric-extend-plan.md)（Phase 6-B = 直近完了。次フェーズは未承認）、結線規約 [.claude/rules/qml-module-conventions.md](../.claude/rules/qml-module-conventions.md)、Schema 規約 [.claude/rules/schema-conventions.md](../.claude/rules/schema-conventions.md)。
-> **進捗の正本は各 `phase*-plan.md` の「進捗」表**。本書は要求の倉庫であり進捗表ではない。
+> 関連：結線規約 [.claude/rules/qml-module-conventions.md](../.claude/rules/qml-module-conventions.md)、Schema 規約 [.claude/rules/schema-conventions.md](../.claude/rules/schema-conventions.md)。
+> **進捗の正本は各計画書（`Docs/phase*-plan.md` / 完了済みは `Docs/archive/phase*-plan.md`）の「進捗」表**。本書は要求の倉庫であり進捗表ではない。
+>
+> **⚠️ 本書の実装状況の記述は Phase 6-B 時点（2026-06 中旬）で止まっており、以降に完了した Phase 7〜11 を反映していません。**
+> 具体的には、下のロードマップ図の「Phase 7 …未承認」、Part 1 バックログ表の「数値入力 = P0（未着手）」「Gauge / メーター = P2」「トレンドグラフ = P2」「OPC-UA = P2」は**すべて実装済み**です。
+> **何が実装済みかは [phase-status.md](phase-status.md) を正としてください。** 本書は「まだ無いものの一覧」としてのみ読み、優先度表を最新の実装状況として読まないこと。
 
 ---
 
@@ -172,7 +176,7 @@ P0 の 3 領域（Lamp / 数値入力・表示 / Modbus）を機能要求(FR)・
 
 - **Schema 影響**：`WidgetData` に `minValue` / `maxValue` / `step`（数値入力用）を追加（センチネル規約 = `0` が正当値なら `-1` 等。[schema-conventions](../.claude/rules/schema-conventions.md)）。`decimals` / `unit` は 2.0 と共用。
 - **設計判断（要調査）**：数値入力の UI は **TextField + IntValidator/DoubleValidator**（[qml-module-conventions](../.claude/rules/qml-module-conventions.md) の「editable SpinBox 不具合」回避）を第一候補。テンキーポップアップは P2。**詳細 UI 仕様**（フィールド幅・フォント・バリデーション UX〔リアルタイム/確定時〕・範囲外フィードバック・focus/blur・タッチ操作）は **Phase 6 plan 起票時に定義**する（本書＝要求倉庫では過度に作り込まない＝CLAUDE.md「hypothetical future を設計しない」）。
-- **役割分担**：数値入力は **action（書き）を持つ対話 Widget**。Label / Lamp / 数値表示は binding（読み）のみ。Simulator / Runtime は「実行（変数書込）は可・編集 UI は不可」の原則を維持（[phase4-button-slice-plan.md](phase4-button-slice-plan.md) 設計原則）。
+- **役割分担**：数値入力は **action（書き）を持つ対話 Widget**。Label / Lamp / 数値表示は binding（読み）のみ。Simulator / Runtime は「実行（変数書込）は可・編集 UI は不可」の原則を維持（[phase4-button-slice-plan.md](archive/phase4-button-slice-plan.md) 設計原則）。
 
 ### 2.3 Modbus 通信対応（本命）
 

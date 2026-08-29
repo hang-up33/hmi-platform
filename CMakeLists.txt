@@ -30,7 +30,7 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS SerialBus)
 # 見えるようにするため）。リンクは Simulator の function 内に閉じ Editor には波及しない。
 #
 # **Qt OPC-UA（qtopcua）は aqtinstall（Web/CI）に同梱されない**ため、ローカル kit / 実機 rootfs で
-# qtopcua + open62541 backend を導入した環境でのみビルドできる（Docs/phase9-opcua-plan.md）。
+# qtopcua + open62541 backend を導入した環境でのみビルドできる（Docs/archive/phase9-opcua-plan.md）。
 # よって REQUIRED にすると Web/CI（self-hosted linux runner も qtopcua 未導入）で configure が
 # 全落ちする。HMI_ENABLE_E2E / Spix と同じく **graceful degrade**：qtopcua があれば OPC-UA を
 # 組み込み（HMI_HAS_OPCUA を立てる）、無ければ OPC-UA 機能を除いてビルドする（Modbus 等は不変）。
@@ -41,7 +41,7 @@ if(Qt6OpcUa_FOUND)
 else()
     set(HMI_HAS_OPCUA OFF)
     message(STATUS "Qt OPC-UA: NOT found (OpcUaController disabled; install qtopcua + "
-                   "open62541 backend to enable — see Docs/phase9-opcua-plan.md)")
+                   "open62541 backend to enable — see Docs/archive/phase9-opcua-plan.md)")
 endif()
 
 qt_standard_project_setup(REQUIRES 6.5)

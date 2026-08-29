@@ -2,11 +2,11 @@
 
 > **位置づけ**：Modbus TCP（Phase 7）に続く 2 本目の実機器連携。`hmi_runtime`（実機）/ `hmi_simulator`（PC）が **OPC-UA クライアント**として OPC-UA サーバ（PLC / ゲートウェイ / SCADA）のノードを購読・読み書きし、既存の **変数ストア + バインディング**経路に流し込む。Modbus と同じ「変数ソース」抽象に **2 つ目の proto** を足す形にする。
 >
-> **本書は計画のみ**（実装は別 PR でタスク 1 つずつ）。要求の倉庫は [requirements.md](requirements.md)、結線規約は [.claude/rules/qml-module-conventions.md](../.claude/rules/qml-module-conventions.md)、Schema 規約は [.claude/rules/schema-conventions.md](../.claude/rules/schema-conventions.md)、実機/SDK 事情は [.claude/rules/dev-environment.md](../.claude/rules/dev-environment.md)。Modbus 実装の前例は [phase7-modbus-plan.md](phase7-modbus-plan.md)。
+> **本書は計画のみ**（実装は別 PR でタスク 1 つずつ）。要求の倉庫は [requirements.md](../requirements.md)、結線規約は [.claude/rules/qml-module-conventions.md](../../.claude/rules/qml-module-conventions.md)、Schema 規約は [.claude/rules/schema-conventions.md](../../.claude/rules/schema-conventions.md)、実機/SDK 事情は [.claude/rules/dev-environment.md](../../.claude/rules/dev-environment.md)。Modbus 実装の前例は [phase7-modbus-plan.md](../phase7-modbus-plan.md)。
 > **進捗の正本は本ファイル「進捗」表**。
 >
 > **承認状態**：**完了（2026-06-27 OP-6 クローズ）。OP-1〔Schema + Editor UI〕#140 ／OP-2〔PC 読込/購読〕／OP-3〔実サーバ読込確認〕／OP-4〔書込 + 接続状態 + 自動再接続〕／OP-5〔実サーバ書込確認〕／OP-6〔実機 Runtime 展開〕すべて完了。** 直近完了は Phase 8-B（Trend 拡張・PR #138 でクローズ）。
-> **🔴 最重要ゲート（Web 不可）→ macOS / Windows / 実機すべて解消済み**：**Qt OPC-UA（`qtopcua`）は aqtinstall のバイナリ addon に含まれない**（2026-06-20 実証）ので Web/CI ではビルド不可（この点は不変）。macOS は OP-2 着手時に qtopcua を Homebrew Qt にマージして解消（2026-06-22）。**Windows 母艦は `scripts/windows/build-opcua.ps1` で解消済み（OP-5・2026-06-27）**。**実機 rootfs は `meta-toolchain-qt6` SDK に既包含（OP-6・2026-06-27）**。手順・罠の正本は [dev-environment.md](../.claude/rules/dev-environment.md)。
+> **🔴 最重要ゲート（Web 不可）→ macOS / Windows / 実機すべて解消済み**：**Qt OPC-UA（`qtopcua`）は aqtinstall のバイナリ addon に含まれない**（2026-06-20 実証）ので Web/CI ではビルド不可（この点は不変）。macOS は OP-2 着手時に qtopcua を Homebrew Qt にマージして解消（2026-06-22）。**Windows 母艦は `scripts/windows/build-opcua.ps1` で解消済み（OP-5・2026-06-27）**。**実機 rootfs は `meta-toolchain-qt6` SDK に既包含（OP-6・2026-06-27）**。手順・罠の正本は [dev-environment.md](../../.claude/rules/dev-environment.md)。
 
 ---
 
@@ -46,10 +46,10 @@ flowchart LR
 
 **設計原則（既存ルール・Modbus 実装との整合）**
 
-- **通信は Simulator 共有ソースに置く**（→ Runtime が自動継承。[qml-module-conventions](../.claude/rules/qml-module-conventions.md)「Simulator/Runtime はソース完全共通」）。実機固有差分は `#ifdef HMI_RUNTIME_BUILD`。
+- **通信は Simulator 共有ソースに置く**（→ Runtime が自動継承。[qml-module-conventions](../../.claude/rules/qml-module-conventions.md)「Simulator/Runtime はソース完全共通」）。実機固有差分は `#ifdef HMI_RUNTIME_BUILD`。
 - **Editor は `Qt6::OpcUa` をリンクしない**。Editor は「変数ソース定義（endpoint・NodeId）を JSON に書く」だけで実通信しない（Modbus の Editor 非リンク方針と同じ。変更時 `git diff` / `ldd` で確認）。
 - **`hmi_schema` は QML も通信も知らない**。OPC-UA を喋る C++（`OpcUaController`）は利用側アプリ（Simulator）に置く。
-- **`find_package(Qt6 ... OpcUa)` は root `CMakeLists.txt` に置く**（Simulator の共有 function が両ターゲットで解決できるように。MB-2 で確立した IMPORTED target スコープの罠回避。[qml-module-conventions](../.claude/rules/qml-module-conventions.md)）。
+- **`find_package(Qt6 ... OpcUa)` は root `CMakeLists.txt` に置く**（Simulator の共有 function が両ターゲットで解決できるように。MB-2 で確立した IMPORTED target スコープの罠回避。[qml-module-conventions](../../.claude/rules/qml-module-conventions.md)）。
 - **変数ストア + binding 経路を再利用**：購読/読込値は `VariableStore.setValue(name, val)` に流すだけで既存 `boundValue()` が UI を追従（Task 41 経路）。書込は数値入力/アクションが `VariableStore` を更新 → `OpcUaController.writeVariable()`（MB-4 の `writeBoundValue`→`writeToPlc` 二経路分離をそのまま流用し、読込由来の setValue では書き返さない）。
 
 ---
@@ -75,7 +75,7 @@ Modbus（Phase 7）で導入済みの **`connections[]` + `VariableData.source`*
 - **`proto`** で接続種別を分岐（`modbusTcp` / `opcua`）。OPC-UA 接続は **`endpoint`（`opc.tcp://host:port`）** を持つ（`host`/`port`/`unitId` は Modbus 用＝空でよい）。
 - **変数 `source`**：OPC-UA は **`nodeId`（文字列・例 `ns=2;s=Tag` / `ns=2;i=1001`）** で対象ノードを指す（Modbus の `reg`/`address` に相当）。`poll` は購読不可時のフォールバック周期 ms（`0` = 購読のみ＝既定）。
 - **書込可否**：OPC-UA はノードの AccessLevel で決まる（Modbus の coil/holding 限定と違う）。MVP は「書けるノードに書く・失敗はログ」とし、Editor は読/書を区別表示しない（着手時に再検討）。
-- Schema 実装は [schema-conventions](../.claude/rules/schema-conventions.md) の **4 メソッド**（`toJson`/`fromJson`/`toVariantMap`/`fromVariantMap`）を揃える。`ConnectionData` への `endpoint`、`source` への `nodeId` を **optional**（空時省略）で足す。**`proto` 既定は `modbusTcp`**（既存 JSON 互換）か **必須化**かを OP-1 着手時に確定（既存 Modbus JSON に `proto` がある前提なら必須化可。なければ既定 modbusTcp）。
+- Schema 実装は [schema-conventions](../../.claude/rules/schema-conventions.md) の **4 メソッド**（`toJson`/`fromJson`/`toVariantMap`/`fromVariantMap`）を揃える。`ConnectionData` への `endpoint`、`source` への `nodeId` を **optional**（空時省略）で足す。**`proto` 既定は `modbusTcp`**（既存 JSON 互換）か **必須化**かを OP-1 着手時に確定（既存 Modbus JSON に `proto` がある前提なら必須化可。なければ既定 modbusTcp）。
 - **🔴 `SourceData::isValidJson` を proto 種別を見た検証へ変える（Codex PR #139 [Major]）**：現行 `SourceData::isValidJson`（`Shared/Schema/src/SourceData.cpp:49-67`）は `connection` に加え **`reg` が `coil/discrete/input/holding` のいずれかであることを必須**にしている。このまま `nodeId` を optional 追加しても、OPC-UA の `{connection, nodeId}`（`reg` 無し）は **不正扱いで弾かれ、`ProjectIo`/`ProjectLoader` の `parseValidated` が source を落とす**（＝「`isValidJson` 必須集合は不変」は誤り）。OP-1 で **検証を「`connection` 必須 + （`reg` が有効値〔Modbus〕 **または** `nodeId` が非空〔OPC-UA〕）」へ変更**する（`reg` も `nodeId` も無いものは従来どおり不正）。**SourceData 単体は接続の `proto` を知らない**ため、proto で分岐せず **source が持つフィールド（reg/nodeId）の有無**で判定する自己完結ルールにする（型に `kind` 弁別子を足す案もあるが、フィールド有無判定で足りるので MVP は型を増やさない）。`toJson`/`fromJson`/`toVariantMap`/`fromVariantMap` の 4 メソッドにも `nodeId` を通す（現状 reg/address/poll のみ＝nodeId 追加が要る）。OP-1 完了基準に **「opcua source〔reg 無し・nodeId 有り〕が `isValidJson` を通る + round-trip で `nodeId` 保持 + Modbus source〔reg 有り〕も従来どおり有効 + reg/nodeId 双方欠落は不正」の unit テスト**を含める。
 
 > **確定**：接続は Phase 7 と同じ **プロジェクト共通 `connections[]` 参照**を踏襲（`source.connection` → `ConnectionData.id`）。proto 別フィールドは同一 `ConnectionData` に同居させ、`proto` で解釈を分ける（型を分けない＝Schema をシンプルに保つ）。OP-1 完了基準に「opcua 接続 + nodeId source の round-trip unit + Modbus 既存 JSON 無改変回帰」を含める。
@@ -102,7 +102,7 @@ QObject::connect(node, &QOpcUaNode::attributeUpdated, [](QOpcUa::NodeAttribute, 
 // 接続状態: client->stateChanged(QOpcUaClient::ClientState) / errorChanged
 ```
 
-- **非同期 API（シグナル）なので UI を塞がない**。購読が基本で `QTimer` ポーリングは購読不可ノードのフォールバックのみ（**未確認情報を断定しない**：[feedback-plan-docs-consistency](../.claude/rules/feedback-plan-docs-consistency.md) 項目 1/2。正確な enum 名・ctor・バックエンド名は着手時に Qt6 ドキュメント/examples で確認）。
+- **非同期 API（シグナル）なので UI を塞がない**。購読が基本で `QTimer` ポーリングは購読不可ノードのフォールバックのみ（**未確認情報を断定しない**：[feedback-plan-docs-consistency](../../.claude/rules/feedback-plan-docs-consistency.md) 項目 1/2。正確な enum 名・ctor・バックエンド名は着手時に Qt6 ドキュメント/examples で確認）。
 - **バックエンド**：Qt OPC-UA は backend plugin（open62541 が標準同梱の想定）が要る。**実行時に `availableBackends()` が空でないこと**を起動時チェックし、空ならエラー表示（実機 rootfs に plugin が無いと購読が黙って動かない＝Modbus の plugin 同梱罠と同型）。
 - **`OpcUaController` の責務（Simulator 側 C++）**：`signal variableUpdated(const QString &name, const QVariant &value)` を宣言し QML で `VariableStore.setValue` へ接続。書込は QML→`OpcUaController.writeVariable(name, value)`。接続状態は MB-4 と同じ `Q_PROPERTY QVariantMap connectionStates` + NOTIFY で公開（id→connected/connecting/disconnected/error）。**世代カウンタで configure/stop 後の旧接続・旧購読を弾く**（MB-2/MB-4 と同型）。スレッド境界（コールバックのスレッド）は実装時に確認し、跨ぐなら queued connection で UI スレッドへ。
 
@@ -138,7 +138,7 @@ flowchart TD
 
 | 項目 | 内容 |
 |---|---|
-| **Qt OpcUa 入手性（OP-2 着手前ゲート）→ macOS / Windows / 実機すべて解消済み** | **2026-06-20 実証：aqtinstall の Qt 6.10.0 linux desktop に `qtopcua` モジュールは無い**（`qtserialbus`/`qtserialport` はある）→ Web/CI 不可。**macOS は option ②（自前ビルド）で解消（2026-06-22）**：`brew install open62541 ninja` → qtopcua v6.11.1 を `qt-cmake`（`-DQT_NO_XCODE_MIN_VERSION_CHECK=ON`）でビルド → `/opt/homebrew/opt/qt` にマージ。`QOpcUaProvider::availableBackends()`=`("open62541")` 確認済み。**Windows 母艦 kit は `scripts/windows/build-opcua.ps1` で解消（2026-06-27）**（Stage A で 7z 取得・Stage B でソースビルドフォールバック）。**実機 rootfs は `meta-toolchain-qt6` SDK に既包含（OP-6 で確認・2026-06-27）**。3 環境すべて導入済み（手順・罠は [dev-environment.md](../.claude/rules/dev-environment.md)）。Web/CI（aqt 非同梱）は依然不可。 |
+| **Qt OpcUa 入手性（OP-2 着手前ゲート）→ macOS / Windows / 実機すべて解消済み** | **2026-06-20 実証：aqtinstall の Qt 6.10.0 linux desktop に `qtopcua` モジュールは無い**（`qtserialbus`/`qtserialport` はある）→ Web/CI 不可。**macOS は option ②（自前ビルド）で解消（2026-06-22）**：`brew install open62541 ninja` → qtopcua v6.11.1 を `qt-cmake`（`-DQT_NO_XCODE_MIN_VERSION_CHECK=ON`）でビルド → `/opt/homebrew/opt/qt` にマージ。`QOpcUaProvider::availableBackends()`=`("open62541")` 確認済み。**Windows 母艦 kit は `scripts/windows/build-opcua.ps1` で解消（2026-06-27）**（Stage A で 7z 取得・Stage B でソースビルドフォールバック）。**実機 rootfs は `meta-toolchain-qt6` SDK に既包含（OP-6 で確認・2026-06-27）**。3 環境すべて導入済み（手順・罠は [dev-environment.md](../../.claude/rules/dev-environment.md)）。Web/CI（aqt 非同梱）は依然不可。 |
 | **自動検証サーバ** | 実サーバは CI/Web から不達 → E2E は **`asyncua`（opcua-asyncio）ソフトサーバ**で固定（Modbus の pymodbus に相当）。dev 依存に閉じ製品コードに持ち込まない。**ただし OpcUa が Web で入らない以上、この E2E もローカルでしか緑にできない**（OP-2 以降）。 |
 | **バックエンド plugin** | Qt OPC-UA は backend（open62541 等）plugin が無いと購読が動かない。kit / rootfs 双方で plugin の同梱を確認（起動時 `availableBackends()` チェックを実装）。 |
 | **NodeId の人間表現** | `ns=2;s=Tag` 形式を JSON/内部の正準にする（Editor は素の文字列入力で開始。ブラウズ UI は P2）。off-by-one 系の罠は Modbus の address より少ない（文字列指定のため）。 |
@@ -158,4 +158,4 @@ flowchart TD
 | OP-5 実サーバ書込確認 | 完了（Windows local：`test_server.py` + `opcua-demo.json` の NumericField で Setpoint 書込 → asyncua クライアント読み返し確認。2026-06-27） | — |
 | OP-6 実機 Runtime 展開（WSL2+実機） | 完了（2026-06-27：i.MX8MP 実機で OPC-UA 読込購読を VNC キャプチャで確認。証跡：`Docs/screenshots/op6-runtime.png`） | — |
 
-> **OP-1（#140）〜OP-6 すべて完了。Phase 9 OPC-UA クライアント対応クローズ。** OP-6：`meta-toolchain-qt6` SDK に qtopcua が既包含（SDK 再ビルド不要）→ WSL2 クロスビルド → 実機 i.MX8MP への deb 転送（libsocketcan2 / libqt6serialport6 / libqt6serialbus6）→ `QT_QPA_PLATFORM=vnc:size=1280x720` で起動 → test_server.py（`--host` で全 IF バインド）に OPC-UA 接続 → Counter/Temperature/Running/Setpoint の購読追従を VNC キャプチャで実証。手順・罠は [dev-environment.md](../.claude/rules/dev-environment.md)「OPC-UA 実機展開」に追記済み。
+> **OP-1（#140）〜OP-6 すべて完了。Phase 9 OPC-UA クライアント対応クローズ。** OP-6：`meta-toolchain-qt6` SDK に qtopcua が既包含（SDK 再ビルド不要）→ WSL2 クロスビルド → 実機 i.MX8MP への deb 転送（libsocketcan2 / libqt6serialport6 / libqt6serialbus6）→ `QT_QPA_PLATFORM=vnc:size=1280x720` で起動 → test_server.py（`--host` で全 IF バインド）に OPC-UA 接続 → Counter/Temperature/Running/Setpoint の購読追従を VNC キャプチャで実証。手順・罠は [dev-environment.md](../../.claude/rules/dev-environment.md)「OPC-UA 実機展開」に追記済み。

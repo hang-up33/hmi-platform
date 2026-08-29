@@ -1,9 +1,9 @@
 # CI 復活計画 — self-hosted runner（Proxmox）で課金ゼロの自動 CI
 
-> **位置づけ**：2026-06-10 に GitHub Actions の課金回避で自動 CI（`pull_request` / `push` トリガ）を停止し、`workflow_dispatch`（手動）のみにした（[ci.yml](../.github/workflows/ci.yml) 冒頭コメント / [dev-environment.md](../.claude/rules/dev-environment.md)「リポジトリ運用の注意」）。これを **Proxmox 上の self-hosted runner で課金ゼロのまま自動 CI に戻す**ための計画。
+> **位置づけ**：2026-06-10 に GitHub Actions の課金回避で自動 CI（`pull_request` / `push` トリガ）を停止し、`workflow_dispatch`（手動）のみにした（[ci.yml](../../.github/workflows/ci.yml) 冒頭コメント / [dev-environment.md](../../.claude/rules/dev-environment.md)「リポジトリ運用の注意」）。これを **Proxmox 上の self-hosted runner で課金ゼロのまま自動 CI に戻す**ための計画。
 >
-> **状態（2026-06-18 更新）**：Proxmox に self-hosted runner を構築・動作確認（self-hosted で 100% green）まで完了。**本 PR `docs/ci-restore-selfhosted` で `ci.yml` を改修し自動 CI を on に戻す**（計画どおり）。
-> **進捗の正本は本ファイル「進捗」表**。
+> **状態：✅ 完了・アーカイブ**（実施 2026-06-18、完了確認 2026-08-29）。Proxmox の self-hosted runner 構築から `ci.yml` 改修まで全ステップ完了済み。
+> 現在の CI 構成の実体は [.github/workflows/ci.yml](../../.github/workflows/ci.yml)、runner の運用情報は [dev-environment.md](../../.claude/rules/dev-environment.md) を参照（本書は当時の計画記録）。
 
 ---
 
@@ -51,7 +51,7 @@ flowchart LR
 - **スペック目安**：2〜4 vCPU / 4GB+ RAM / 30GB+ disk。
 - **Docker は当面不要**＝LXC で十分（将来 runner 内で Docker を回すなら `features: nesting=1` を付けるか VM に切替）。
 
-### 2. CI 依存を入れる（[ci.yml](../.github/workflows/ci.yml) の Linux deps + α）
+### 2. CI 依存を入れる（[ci.yml](../../.github/workflows/ci.yml) の Linux deps + α）
 ```sh
 sudo apt-get update
 sudo apt-get install -y --no-install-recommends \
@@ -62,7 +62,7 @@ sudo apt-get install -y --no-install-recommends \
   cmake build-essential curl git python3 python3-pip
 ```
 - **末尾の `cmake build-essential curl git python3 python3-pip` は `ci.yml` の apt 一覧には無い**が、これは**意図的な差分**：GitHub-hosted の `ubuntu-latest` イメージにはこれらが**プリインストール済み**なので ci.yml は列挙しないが、**素の LXC には入っていない**ため明示導入が要る。内訳：
-  - **`cmake` / `build-essential`（= `g++` 等）**：ci.yml は直後に `cmake --version` / `g++ --version` / configure / build を実行する（[ci.yml](../.github/workflows/ci.yml) の Linux ジョブ）。`install-qt-action` も `ninja-build` もコンパイラ・cmake は供給しないため、無いと **テストの前に configure/build が落ちる**。
+  - **`cmake` / `build-essential`（= `g++` 等）**：ci.yml は直後に `cmake --version` / `g++ --version` / configure / build を実行する（[ci.yml](../../.github/workflows/ci.yml) の Linux ジョブ）。`install-qt-action` も `ninja-build` もコンパイラ・cmake は供給しないため、無いと **テストの前に configure/build が落ちる**。
   - **`curl` / `git`**：runner 取得・checkout。**`python3` / `pip`**：E2E harness と `setup-python` の土台。
   - それ以外（libgl 〜 fonts）は ci.yml の Linux deps と同一。
 - Qt 本体は **`ci.yml` 内の `jurplel/install-qt-action` で取得**（self-hosted でも動く。初回 DL・persistent runner なのでキャッシュで2回目以降速い）。**ただし下記「⚠️ SerialBus」の通り `modules` 追加が要る**。
@@ -152,7 +152,7 @@ jobs:
 - **④install-qt-action の `modules`** を `""` → `"qtserialbus qtserialport"` に（CMakeLists が SerialBus 必須。無いと configure で `Qt6SerialBus` 未検出。Codex PR #133 P2）。**linux / desktop 両ジョブの `Install Qt` ステップとも**（desktop も `ci-desktop` ラベル/手動で走るので必須）。
 - **⑤【public/fork 対応時のみ】** linux の `runs-on` を固定値でなく **fork 判定式**（「セキュリティ注意」の `${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || fromJSON('["self-hosted","linux"]') }}`）に差し替える。**private のままなら ① の固定値で良い**（この案は private 前提で、public 化時に①を⑤へ置換する）。
 - apt の Linux deps ステップは **self-hosted でも冪等に通る**（既導入なら skip 扱い）。passwordless sudo を runner ユーザーに付けておく。
-- 復活したら [dev-environment.md](../.claude/rules/dev-environment.md)「リポジトリ運用の注意」の「CI は手動のみ」記述も更新する。
+- 復活したら [dev-environment.md](../../.claude/rules/dev-environment.md)「リポジトリ運用の注意」の「CI は手動のみ」記述も更新する。
 
 ---
 
@@ -186,4 +186,4 @@ CI を回す箱（self-hosted）ができた後の **上積み候補**。今回�
 | Proxmox LXC 作成 + CI 依存導入 | ✅ 完了 | 2026-06-18。`pve`（VE 9.1.6）に **CT 101 `gh-runner`**（Ubuntu 24.04 / 4 vCPU・4GB・swap2GB / rootfs 32GB local-lvm / net vmbr0 DHCP=192.168.40.209 / unprivileged / nesting=1 / onboot=1）。CI 依存（本書 §2 一覧 + cmake/build-essential/curl/git/python3/sudo）導入済。`runner` ユーザー + NOPASSWD sudo は `apt-get` のみに限定（§2.5） |
 | self-hosted runner 登録・常駐化 | ✅ 完了 | 2026-06-18。actions/runner **v2.335.1** を `runner` ユーザーで `config.sh`（labels: `self-hosted` `Linux` `X64` `qt`、name `gh-runner-lxc`）→ `svc.sh install/start` で systemd 常駐（online / idle）。registration token は `gh api` で自動発行 |
 | runner で手動実行 → 緑確認 | ✅ 完了 | 2026-06-18。検証ブランチ `ci/verify-selfhosted`（linux=self-hosted / desktop=`if:false` / modules 追加）を `gh workflow run` → **self-hosted で 100% tests passed（22 passed、modbus 2 件は pymodbus 未導入で Skipped）**。run [27753217404](https://github.com/hang-up33/hmi-platform/actions/runs/27753217404) |
-| `ci.yml` 改修（①linux=self-hosted ②自動トリガ復活 ③desktop=main push 除外 ④modules=qtserialbus qtserialport）+ dev-environment.md 更新 | 🔄 本 PR | `docs/ci-restore-selfhosted`。本書の改修案を適用＝自動 CI on |
+| `ci.yml` 改修（①linux=self-hosted ②自動トリガ復活 ③desktop=main push 除外 ④modules=qtserialbus qtserialport）+ dev-environment.md 更新 | ✅ 完了 | `docs/ci-restore-selfhosted` をマージ済み。`.github/workflows/ci.yml` に ①〜④ すべて反映済み（2026-08-29 実物確認）＝自動 CI on |

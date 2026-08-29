@@ -6,7 +6,7 @@
 #   - macOS / Windows のホストビルド（build/ ・ build-mingw/）には一切影響しない。
 #   - SDK は本リポジトリの計画どおり、新 BSP（scarthgap, imx-6.6.52-2.2.x）から
 #     `bitbake meta-toolchain-qt6` で自前生成したものを install して使う
-#     （詳細は Docs/phase3b-runtime-plan.md と scripts/yocto/README.md）。
+#     （詳細は Docs/archive/phase3b-runtime-plan.md と scripts/yocto/README.md）。
 #
 # 使い方:
 #   ./scripts/yocto/cross-build.sh

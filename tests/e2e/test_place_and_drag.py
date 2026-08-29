@@ -17,7 +17,7 @@ Qt 6.11 + ``-platform offscreen`` 環境では ``QGuiApplication::postEvent``
 が動かないことを確認した。Task 18 の本質「E2E から QML プロパティを
 変更 → 反映パスが通る」は ``setStringProperty`` で十分担保できる。本物の
 マウスドラッグの動作確認は Phase 3-B（実機 / Yocto）の手動テストか、
-Spix の Qt 6 サポートが改善した段階で改めて追加する想定（[Docs/phase3-e2e-plan.md] 参照）。
+Spix の Qt 6 サポートが改善した段階で改めて追加する想定（[Docs/archive/phase3-e2e-plan.md] 参照）。
 
 Spix v0.14 の RPC：``getProperty`` は存在せず ``getStringProperty`` のみ
 （数値プロパティでも文字列として返る）。XML-RPC レスポンスは expat に

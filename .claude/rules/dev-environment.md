@@ -14,7 +14,7 @@
 - **環境固有の事実が変わったらこの文書を更新する**（新マシン追加、ディスク構成変更、WSL/SDK 状態、実機 image 更新など）。
 - 役割分担：
   - **この文書** = 環境・マシン・実機の「現状スナップショット」。
-  - [phase3b-runtime-plan.md](../../Docs/phase3b-runtime-plan.md) ほか `Docs/phase*-plan.md` = フェーズ/タスクの設計判断と完了基準。
+  - [phase3b-runtime-plan.md](../../Docs/archive/phase3b-runtime-plan.md) ほか計画書（進行中 `Docs/phase*-plan.md` / 完了済み `Docs/archive/phase*-plan.md`） = フェーズ/タスクの設計判断と完了基準。
   - [development-history.md](../../Docs/development-history.md) = タスクごとの時系列まとめ（目的 / PR / 成果物 / 学び）。
   - [CLAUDE.md](../../CLAUDE.md) = 作業指針（ビルド手順・ルール・罠）。
 - 重複が出たら、**手順・設計はプラン文書、環境の現状はこの文書**に寄せ、互いをリンクで結ぶ（同じ事実を二重メンテしない）。
@@ -109,7 +109,7 @@ Task 23（Yocto SDK で `hmi_runtime` をクロスビルド）用の WSL2 環境
 ### SDK 生成（2026-06-01：自前ビルドで完了）
 
 新 BSP（scarthgap, `imx-6.6.52-2.2.2`）から **自前ビルド** で image と SDK を生成し、実機更新まで完了した
-（手順の正本は [scripts/yocto/README.md](../../scripts/yocto/README.md)、設計判断は [phase3b-runtime-plan.md](../../Docs/phase3b-runtime-plan.md)）。
+（手順の正本は [scripts/yocto/README.md](../../scripts/yocto/README.md)、設計判断は [phase3b-runtime-plan.md](../../Docs/archive/phase3b-runtime-plan.md)）。
 
 - **image**：`bitbake imx-image-full` → microSD に焼いて実機更新（Qt6 6.8.1 入り）。
 - **SDK**：当初 `imx-image-full -c populate_sdk`（フル SDK）を試したが、**`onnxruntime-dbg`（692MB の ML デバッグ deb）の dpkg 展開で失敗**。Qt6 のクロスビルドに ML/opencv は不要なので **`bitbake meta-toolchain-qt6`（Qt6 だけの軽量 SDK, ~1.8GB `.sh`）に切替** → これで成功。
@@ -161,7 +161,7 @@ Task 23（Yocto SDK で `hmi_runtime` をクロスビルド）用の WSL2 環境
   - **実機ネットワーク（link-local のみの場合）**：mDNS が失敗したらシリアルで `ip addr show eth0` で link-local IP を確認し `ip addr add 192.168.1.211/24 dev eth0` で静的 IP 付与。Windows 母艦の送信元 IF アドレス（例 `192.168.1.210`）と同サブネットにする。
   - **test_server.py の全 IF バインド**：引数なしだと `127.0.0.1:4840` のみリッスンで実機から到達不可。`python test_server.py --host 192.168.1.210` で起動すると `0.0.0.0:4840` でリッスンして実機から接続可能になる。
   - **実機 VNC キャプチャ（OPC-UA 証跡）**：`QT_QPA_PLATFORM='vnc:size=1280x720'` で起動し `python scripts/yocto/vnc-capture.py 192.168.1.211 5900 out.png 192.168.1.210` でキャプチャ（第 4 引数は送信元 IP）。証跡：`Docs/screenshots/op6-runtime.png`（Counter/Temperature/Running/Setpoint の OPC-UA ライブ値が実機で表示）。
-- 詳細手順は [scripts/yocto/README.md](../../scripts/yocto/README.md)、設計判断は [phase3b-runtime-plan.md](../../Docs/phase3b-runtime-plan.md)。
+- 詳細手順は [scripts/yocto/README.md](../../scripts/yocto/README.md)、設計判断は [phase3b-runtime-plan.md](../../Docs/archive/phase3b-runtime-plan.md)。
 
 ---
 
@@ -174,9 +174,9 @@ Task 23（Yocto SDK で `hmi_runtime` をクロスビルド）用の WSL2 環境
   レビューは ChatGPT Codex（GitHub App）。詳細は CLAUDE.md「Codex 連携 / PR ワークフロー」。
 - **【暫定】GitHub Actions CI が 2026-06-07 12:26 UTC 以降、全 run 即時失敗中**（main push 含む全ブランチ。ジョブが runner 未割当のまま約 4 秒で failure・ステップ実行ゼロ・ログ無し＝404。2026-06-10 切り分け）。PR の変更内容とは無関係のインフラ起因で、**Actions の無料枠 / 支出上限切れの疑い**（`main` push 毎に macOS 10x / Windows 2x ジョブが走る設定のため消費が速い）。オーナーの Billing 設定でのみ確認・解消可能。この間の「テスト緑」は Web セッション内 `ctest` の結果で CI 緑ではない。**赤 CI を自分の PR のせいと誤診しないこと**。
 - **【CI コスト削減（2026-06-10）】上記の課金消費を止めるため、`.github/workflows/ci.yml` の自動トリガ（`pull_request` / `push`）をコメントアウトし、`workflow_dispatch`（手動実行）のみに切替えた**。
-- **【自動 CI 復活（2026-06-18）】上記コスト問題を解消する形で、Proxmox 上の self-hosted runner に linux ジョブを載せ替えて自動 CI を復活した**（計画・進捗の正本は [Docs/ci-self-hosted-plan.md](../../Docs/ci-self-hosted-plan.md)）。
+- **【自動 CI 復活（2026-06-18）】上記コスト問題を解消する形で、Proxmox 上の self-hosted runner に linux ジョブを載せ替えて自動 CI を復活した**（計画・進捗の正本は [Docs/archive/ci-self-hosted-plan.md](../../Docs/archive/ci-self-hosted-plan.md)）。
   - **runner 箱**：Proxmox `pve`（VE 9.1.6 / 192.168.40.99）の **LXC CT 101 `gh-runner`**（Ubuntu 24.04 / 4 vCPU・4GB・swap2GB / rootfs 32GB(local-lvm) / net vmbr0 DHCP=192.168.40.209 / unprivileged / nesting=1 / onboot=1）。CI 依存（[ci.yml](../../.github/workflows/ci.yml) の Linux deps + cmake/build-essential/curl/git/python3/sudo）導入済。
   - **runner 本体**：actions/runner v2.335.1 を `runner` ユーザーで登録（labels `self-hosted` `Linux` `X64` `qt` / name `gh-runner-lxc`）→ `svc.sh` で systemd 常駐（`actions.runner.hang-up33-hmi-platform.gh-runner-lxc.service`、enabled・自動起動）。`runner` の NOPASSWD sudo は `apt-get` のみに限定。
   - **ci.yml 構成**：**linux ジョブ＝`runs-on: [self-hosted, linux]`**（毎 PR / main push 自動・課金 0・主ゲート）。**desktop（mac 10x / win 2x）は `workflow_dispatch` か PR `ci-desktop` ラベル時のみ**（main push では走らない）。Qt は `install-qt-action` の `modules: "qtserialbus qtserialport"`（SerialBus 必須）。
   - **runner 操作（母艦から）**：`ssh root@192.168.40.99` → `pct exec 101 -- bash -c "cd /home/runner/actions-runner && ./svc.sh status|start|stop"`。GitHub 側状態は `gh api repos/hang-up33/hmi-platform/actions/runners`。
-  - **セキュリティ前提**：**private リポ限定**。public 化 / fork PR 許可時は linux の `runs-on` を fork→GitHub-hosted へ逃がす条件式に差し替える（[Docs/ci-self-hosted-plan.md](../../Docs/ci-self-hosted-plan.md)「セキュリティ注意」）。
+  - **セキュリティ前提**：**private リポ限定**。public 化 / fork PR 許可時は linux の `runs-on` を fork→GitHub-hosted へ逃がす条件式に差し替える（[Docs/archive/ci-self-hosted-plan.md](../../Docs/archive/ci-self-hosted-plan.md)「セキュリティ注意」）。

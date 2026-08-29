@@ -19,7 +19,7 @@ Task 19 の test_save_load_roundtrip.py との違い：
 - フェーズ 2 の起動先が **Editor → Simulator** に切り替わる
 - 検証は読み取り専用（Simulator は編集機能を持たない）
 - ポートは Editor=9876 / Simulator=9877 に分けて同時起動衝突を避ける
-  （main.cpp 既定値・[Docs/phase3-e2e-plan.md] と整合）
+  （main.cpp 既定値・[Docs/archive/phase3-e2e-plan.md] と整合）
 
 Spix v0.14 制約・回避策（CLAUDE.md「Spix（E2E）統合の罠」節）：
 - ``invokeMethod`` の第 3 引数は array：list で渡す（``_encode_value``）。

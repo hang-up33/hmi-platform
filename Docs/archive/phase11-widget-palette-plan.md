@@ -6,7 +6,7 @@ issue #155 の「シンプル・イズ・ベスト版 HMI ボタン（ベゼル�
 
 > **進捗の正本は本ファイル「進捗」表**。承認・着手でステータスが動いたら常駐文書
 > （CLAUDE.md / AGENTS.md / README / mvp-task-runner / development-history）を同期する
-> （[feedback-phase-status-sync](../.claude/rules/feedback-phase-status-sync.md)）。
+> （[feedback-phase-status-sync](../../.claude/rules/feedback-phase-status-sync.md)）。
 
 ## 承認状態
 

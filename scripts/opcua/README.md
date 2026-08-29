@@ -42,4 +42,4 @@ Counter / Temperature / Running の Label がライブで動けば読込追従 O
 
 > Qt OPC-UA（qtopcua）は aqtinstall 非同梱。ローカル kit で OPC-UA 込みの `hmi_simulator` を
 > ビルドする手順は [.claude/rules/dev-environment.md](../../.claude/rules/dev-environment.md)
-> 「Qt OPC-UA を Homebrew Qt にマージ」。計画は [Docs/phase9-opcua-plan.md](../../Docs/phase9-opcua-plan.md)。
+> 「Qt OPC-UA を Homebrew Qt にマージ」。計画は [Docs/archive/phase9-opcua-plan.md](../../Docs/archive/phase9-opcua-plan.md)。

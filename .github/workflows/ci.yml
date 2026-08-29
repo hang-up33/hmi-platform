@@ -5,7 +5,7 @@ on:
   # 停止していたが、Proxmox 上の self-hosted runner（linux ジョブ）に載せ替えて
   # 課金ゼロのまま自動 CI を復活した。linux=self-hosted（0 円）が日常 PR / main push の
   # 主ゲート。desktop（mac 10x / win 2x）は手動 dispatch か `ci-desktop` ラベル時のみ。
-  # 詳細は Docs/ci-self-hosted-plan.md。
+  # 詳細は Docs/archive/ci-self-hosted-plan.md。
   workflow_dispatch:
   pull_request:
     branches: [main]
@@ -30,7 +30,7 @@ jobs:
     name: Linux / Qt 6.10
     # self-hosted runner（Proxmox LXC / Ubuntu 24.04）で実行＝課金ゼロの主ゲート。
     # private リポ前提の固定値。public 化 / fork PR を許可する場合は fork なら
-    # GitHub-hosted へ逃がす条件式に差し替える（Docs/ci-self-hosted-plan.md「セキュリティ注意」）。
+    # GitHub-hosted へ逃がす条件式に差し替える（Docs/archive/ci-self-hosted-plan.md「セキュリティ注意」）。
     runs-on: [self-hosted, linux]
     timeout-minutes: 45
     steps:

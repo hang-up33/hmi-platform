@@ -7,7 +7,7 @@
 > **横展開で初めて必要になる「型分岐の足場」**（1 つの delegate が `type` で異なる Widget を描き分ける仕組み）を最小コストで導入する。
 >
 > 関連：縦スライス本体は [phase4-button-slice-plan.md](phase4-button-slice-plan.md)（「Phase 5 候補」を本計画に具体化）。インスペクタ整理は [inspector-ux-plan.md](inspector-ux-plan.md)。
-> 結線規約は [.claude/rules/qml-module-conventions.md](../.claude/rules/qml-module-conventions.md)、Schema 規約は [.claude/rules/schema-conventions.md](../.claude/rules/schema-conventions.md)。
+> 結線規約は [.claude/rules/qml-module-conventions.md](../../.claude/rules/qml-module-conventions.md)、Schema 規約は [.claude/rules/schema-conventions.md](../../.claude/rules/schema-conventions.md)。
 > **進捗の正本は本ファイル「進捗」表**。
 
 ---
@@ -46,7 +46,7 @@ flowchart LR
 | レイヤ | 変更 | 内容 |
 |---|---|---|
 | Shared/Schema（`WidgetData` 等） | **無し** | `type` 文字列・全スタイルフィールドが既存。`isValidJson` も Label を充足。新キー無し。 |
-| C++ ブリッジ（ProjectIo / ProjectLoader） | **無し** | `WidgetData::toVariantMap`/`fromVariantMap` が全フィールドを往復済み（[schema-conventions](../.claude/rules/schema-conventions.md)）。type に依らず素通し。 |
+| C++ ブリッジ（ProjectIo / ProjectLoader） | **無し** | `WidgetData::toVariantMap`/`fromVariantMap` が全フィールドを往復済み（[schema-conventions](../../.claude/rules/schema-conventions.md)）。type に依らず素通し。 |
 | Shared/Widgets | **新規** | `HmiLabel.qml`（表示専用）＋ `CMakeLists.txt` の `QML_FILES` に追記。 |
 | Editor（`Canvas.qml`） | **拡張** | delegate に `type` 分岐を導入（`type:"Label"`→HmiLabel、それ以外→HmiButton）。選択結線（clicked relay）は両型で維持。 |
 | Simulator/Runtime（`SimulatorCanvas.qml`） | **拡張** | 同じ `type` 分岐。Label は binding 追従のみ（click action は非結線＝表示専用）。Runtime はソース共有で自動。 |
@@ -120,8 +120,8 @@ flowchart LR
 - **役割分担**：binding（読み）⊂ 全 Widget・action（書き）⊂ 対話 Widget。Label は **binding を持ち action を持たない**。Simulator/Runtime は引き続き**実行（binding 追従）は可・編集 UI 不可**。
 - **型分岐の機構**は 2 分岐（Button/Label）で最小化。3 種別以上は本フェーズの後続 Widget で必要になってから昇格（hypothetical future の作り込みをしない）。
 - **EditableWidget の選択/リサイズ結線**は両型で一様に機能させる（HmiLabel も `clicked(int modifiers)` を中継）。Task 47 着手時にビルドで実機確認する。
-- **README スクショ同期**：見た目が変わる Task 48/49 で `Docs/screenshots/editor.png`/`simulator.png` とキャプションを同コミットで更新（[readme-screenshot-sync](../.claude/rules/readme-screenshot-sync.md)）。
-- **進捗ステータス同期**：本フェーズ着手＝フェーズ進行のため、実装着手時（Task 47）に常駐文書（CLAUDE.md「現在のフェーズ」/ AGENTS.md / README / `.claude/agents/mvp-task-runner.md`）を本計画へ同期する（[feedback-phase-status-sync](../.claude/rules/feedback-phase-status-sync.md)）。**本 PR は計画書のみ**で、ステータス同期は実装 PR で行う（#94 と同じ運用）。
+- **README スクショ同期**：見た目が変わる Task 48/49 で `Docs/screenshots/editor.png`/`simulator.png` とキャプションを同コミットで更新（[readme-screenshot-sync](../../.claude/rules/readme-screenshot-sync.md)）。
+- **進捗ステータス同期**：本フェーズ着手＝フェーズ進行のため、実装着手時（Task 47）に常駐文書（CLAUDE.md「現在のフェーズ」/ AGENTS.md / README / `.claude/agents/mvp-task-runner.md`）を本計画へ同期する（[feedback-phase-status-sync](../../.claude/rules/feedback-phase-status-sync.md)）。**本 PR は計画書のみ**で、ステータス同期は実装 PR で行う（#94 と同じ運用）。
 
 ---
 

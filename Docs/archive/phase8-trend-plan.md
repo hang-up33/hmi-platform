@@ -7,7 +7,7 @@ Trend が初めて必要にする差分（① Canvas 自描画、② 周期/変�
 
 > **進捗の正本は本ファイル「進捗」表**。承認・着手でステータスが動いたら常駐文書
 > （CLAUDE.md / AGENTS.md / README / mvp-task-runner / development-history）を同期する
-> （[feedback-phase-status-sync](../.claude/rules/feedback-phase-status-sync.md)）。
+> （[feedback-phase-status-sync](../../.claude/rules/feedback-phase-status-sync.md)）。
 
 ## 承認状態
 

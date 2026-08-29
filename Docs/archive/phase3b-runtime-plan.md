@@ -41,7 +41,7 @@ flowchart LR
 
 > **Note**：上記前提（SDK が生成済み・image の Qt6 が本リポジトリの 6.8 以上と minor 互換）は Task 23 着手時に確認する。差異があった場合は Task 23 を「SDK 生成 + バージョン整合」に拡張する。→ **2026-05-30 に確認した結果、実機 image は Qt6 非対応（NXP zeus 5.4）と判明。下記 Note・§「実機 image 調査結果と更新方針」で Task 23 を拡張済み。**
 >
-> **Note（2026-05-29 追記）**：クロスビルド環境は当初「WSL2 / VM」を併記していたが、**WSL2 に確定**した（VM は使わない）。以降、本書・[CLAUDE.md](../CLAUDE.md)・[development-history.md](development-history.md)・mvp-task-runner エージェントの関連記述はすべて WSL2 前提に統一済み。
+> **Note（2026-05-29 追記）**：クロスビルド環境は当初「WSL2 / VM」を併記していたが、**WSL2 に確定**した（VM は使わない）。以降、本書・[CLAUDE.md](../../CLAUDE.md)・[development-history.md](../development-history.md)・mvp-task-runner エージェントの関連記述はすべて WSL2 前提に統一済み。
 >
 > **Note（2026-05-30 追記｜重要・方針転換）**：Task 23 着手前に実機（i.MX8MP EVK）の現物を USB シリアル（COM5 / 115200 8N1）で調査したところ、**現行 image が Qt6 を一切含まない**ことが判明した。詳細と方針は下記 §「実機 image 調査結果と更新方針」を参照。上記 Note の「minor 互換」の範囲を超える乖離のため、**Task 23 を「実機 image を Qt6 対応の新 BSP（scarthgap）に更新したうえで SDK 生成・クロスビルドする」形に拡張**した。これに伴い、上表の Yocto image 行・下記 Task 23 本文・関連ドキュメント（CLAUDE.md / development-history / mvp-task-runner）も新 BSP・`imx-image-full` 前提に更新済み。
 
@@ -209,5 +209,5 @@ flowchart LR
 | # | タスク | 状態 |
 |---|---|---|
 | 22 | Runtime/ で Simulator のソースを再利用して hmi_runtime バイナリを追加 | ✅ 完了 |
-| 23 | Yocto SDK で hmi_runtime をクロスビルド | ✅ 完了（2026-06-01。新 BSP scarthgap で image 更新 → `meta-toolchain-qt6` SDK 自前生成 → `scripts/yocto/cross-build.sh` で aarch64 ELF。詳細は [scripts/yocto/README.md](../scripts/yocto/README.md)） |
+| 23 | Yocto SDK で hmi_runtime をクロスビルド | ✅ 完了（2026-06-01。新 BSP scarthgap で image 更新 → `meta-toolchain-qt6` SDK 自前生成 → `scripts/yocto/cross-build.sh` で aarch64 ELF。詳細は [scripts/yocto/README.md](../../scripts/yocto/README.md)） |
 | 24 | i.MX8MP 実機で hmi_runtime を起動し JSON 描画 | ✅ 完了（2026-06-01。実機 weston 上で Editor 由来 JSON を描画。証跡 `Docs/screenshots/task-24-runtime-imx.jpg`） |

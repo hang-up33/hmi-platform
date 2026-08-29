@@ -5,5 +5,5 @@
 # `hmi_add_simulator_like_executable` を呼ぶだけ。
 #
 # Yocto SDK でクロスビルドする時も `cmake --build <dir> --target hmi_runtime`
-# で同じターゲットを build する想定。詳細は Docs/phase3b-runtime-plan.md。
+# で同じターゲットを build する想定。詳細は Docs/archive/phase3b-runtime-plan.md。
 hmi_add_simulator_like_executable(hmi_runtime)

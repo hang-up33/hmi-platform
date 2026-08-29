@@ -4,7 +4,7 @@
 起動するための補助スクリプトと手順。**WSL2 内で実行する想定**で、macOS / Windows の
 ホストビルド（`build/` ・ `build-mingw/`）には影響しない。
 
-計画と設計判断の正本は [Docs/phase3b-runtime-plan.md](../../Docs/phase3b-runtime-plan.md)、
+計画と設計判断の正本は [Docs/archive/phase3b-runtime-plan.md](../../Docs/archive/phase3b-runtime-plan.md)、
 開発環境の現状は [.claude/rules/dev-environment.md](../../.claude/rules/dev-environment.md)。
 
 ## 前提（SDK と実機 image）

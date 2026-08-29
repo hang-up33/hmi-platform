@@ -56,9 +56,9 @@ CLAUDE.md の肥大化対策で切り出した詳細規約。`paths:` frontmatte
 |---|---|
 | Review owner: Codex | [CLAUDE.md](../../CLAUDE.md)「コードレビューの担当分け」 |
 | Codex PR workflow | [CLAUDE.md](../../CLAUDE.md)「Codex 連携 / PR ワークフロー」 |
-| Phase 2 testing plan | [Docs/phase2-testing-plan.md](../../Docs/phase2-testing-plan.md) |
-| Phase 3-A E2E plan | [Docs/phase3-e2e-plan.md](../../Docs/phase3-e2e-plan.md) |
-| Phase 3-B Runtime plan | [Docs/phase3b-runtime-plan.md](../../Docs/phase3b-runtime-plan.md) |
-| Runtime host OS | [dev-environment.md](dev-environment.md) / [Docs/phase3b-runtime-plan.md](../../Docs/phase3b-runtime-plan.md) |
-| Runtime transfer requirement | [Docs/phase3b-runtime-plan.md](../../Docs/phase3b-runtime-plan.md)（Phase 3-C 候補・転送機能は持たない方針） |
+| Phase 2 testing plan | [Docs/archive/phase2-testing-plan.md](../../Docs/archive/phase2-testing-plan.md) |
+| Phase 3-A E2E plan | [Docs/archive/phase3-e2e-plan.md](../../Docs/archive/phase3-e2e-plan.md) |
+| Phase 3-B Runtime plan | [Docs/archive/phase3b-runtime-plan.md](../../Docs/archive/phase3b-runtime-plan.md) |
+| Runtime host OS | [dev-environment.md](dev-environment.md) / [Docs/archive/phase3b-runtime-plan.md](../../Docs/archive/phase3b-runtime-plan.md) |
+| Runtime transfer requirement | [Docs/archive/phase3b-runtime-plan.md](../../Docs/archive/phase3b-runtime-plan.md)（Phase 3-C 候補・転送機能は持たない方針） |
 | Development history doc | [Docs/development-history.md](../../Docs/development-history.md) |

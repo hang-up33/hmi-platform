@@ -8,7 +8,7 @@
 > 不変**（表示・配置・ラベルのみ変更）で、既存 unit / E2E を緑のまま保つことを完了基準に含める。
 
 関連：進捗の正本は本ファイル「進捗」表。横展開本体は [phase4-button-slice-plan.md](phase4-button-slice-plan.md)「Phase 5 候補」。
-インスペクタ結線規約は [.claude/rules/qml-module-conventions.md](../.claude/rules/qml-module-conventions.md)（2 本立て編集・objectName）。
+インスペクタ結線規約は [.claude/rules/qml-module-conventions.md](../../.claude/rules/qml-module-conventions.md)（2 本立て編集・objectName）。
 
 ---
 
@@ -80,7 +80,7 @@ flowchart TD
 > 「ヘッダ Label（クリックで `expanded` をトグル、▼/▽ 表示）+ `Column { visible: expanded }`」の
 > 小さな inline コンポーネント（`InspectorSection`）を 1 つ作って各グループに使う。**既存の
 > 2 本立て編集結線（onTextEdited / Connections.onSelectedItemChanged）・objectName は一切変えない**
-> （[qml-module-conventions](../.claude/rules/qml-module-conventions.md)）。
+> （[qml-module-conventions](../../.claude/rules/qml-module-conventions.md)）。
 
 ---
 
@@ -98,7 +98,7 @@ flowchart TD
 - **objectName 不変**：E2E（Spix）は `inspectorBgColorField` と canvas 上の widget プロパティ（`widgetBackgroundColor` 等）を参照する。**ラベル（visible text）だけ変え objectName は据置**。折りたたみで `visible:false` になる項目は **詳細セクション（ID/Tag）のみ**で、E2E はこれらに依存しないため緑を維持できる（既定で開くセクションに E2E 依存項目を残す）。
 - **Simulator / Runtime は対象外**：インスペクタは Editor のみ（読み取り専用アプリは編集 UI を持たない）。
 - **動作（アクション/バインディング）の仕様は変えない**：UI の置き場所のみ整理。
-- **README スクショ同期**：見た目が変わるため Task 44/45 で `Docs/screenshots/editor.png` とキャプションを同コミットで更新（[readme-screenshot-sync](../.claude/rules/readme-screenshot-sync.md)）。
+- **README スクショ同期**：見た目が変わるため Task 44/45 で `Docs/screenshots/editor.png` とキャプションを同コミットで更新（[readme-screenshot-sync](../../.claude/rules/readme-screenshot-sync.md)）。
 
 ---
 
