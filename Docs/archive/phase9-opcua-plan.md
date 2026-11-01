@@ -2,7 +2,7 @@
 
 > **位置づけ**：Modbus TCP（Phase 7）に続く 2 本目の実機器連携。`hmi_runtime`（実機）/ `hmi_simulator`（PC）が **OPC-UA クライアント**として OPC-UA サーバ（PLC / ゲートウェイ / SCADA）のノードを購読・読み書きし、既存の **変数ストア + バインディング**経路に流し込む。Modbus と同じ「変数ソース」抽象に **2 つ目の proto** を足す形にする。
 >
-> **本書は計画のみ**（実装は別 PR でタスク 1 つずつ）。要求の倉庫は [requirements.md](../requirements.md)、結線規約は [.claude/rules/qml-module-conventions.md](../../.claude/rules/qml-module-conventions.md)、Schema 規約は [.claude/rules/schema-conventions.md](../../.claude/rules/schema-conventions.md)、実機/SDK 事情は [.claude/rules/dev-environment.md](../../.claude/rules/dev-environment.md)。Modbus 実装の前例は [phase7-modbus-plan.md](../phase7-modbus-plan.md)。
+> **本書は計画のみ**（実装は別 PR でタスク 1 つずつ）。要求の倉庫は [requirements/](../requirements/README.md)（旧版は [requirements-legacy.md](requirements-legacy.md)）、結線規約は [.claude/rules/qml-module-conventions.md](../../.claude/rules/qml-module-conventions.md)、Schema 規約は [.claude/rules/schema-conventions.md](../../.claude/rules/schema-conventions.md)、実機/SDK 事情は [.claude/rules/dev-environment.md](../../.claude/rules/dev-environment.md)。Modbus 実装の前例は [phase7-modbus-plan.md](../phase7-modbus-plan.md)。
 > **進捗の正本は本ファイル「進捗」表**。
 >
 > **承認状態**：**完了（2026-06-27 OP-6 クローズ）。OP-1〔Schema + Editor UI〕#140 ／OP-2〔PC 読込/購読〕／OP-3〔実サーバ読込確認〕／OP-4〔書込 + 接続状態 + 自動再接続〕／OP-5〔実サーバ書込確認〕／OP-6〔実機 Runtime 展開〕すべて完了。** 直近完了は Phase 8-B（Trend 拡張・PR #138 でクローズ）。

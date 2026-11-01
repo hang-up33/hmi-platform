@@ -6,7 +6,7 @@
 > **承認スコープ**：①**real 変数型**（`VariableData` の型に `"real"` を追加し、NumericField で浮動小数を入出力）／②**数値範囲 min/max**（`WidgetData` に範囲を持たせ、入力を clamp）。
 > **非スコープ（別承認）**：`step`（刻み）・`decimals`（小数桁）・`unit`（単位表示）・テンキーポップアップ（requirements FR-NUM の P2 群）、後続入力 Widget（Gauge / Toggle）。
 >
-> 関連：write 経路・読み書き両用 binding は [phase6-input-widget-plan.md](phase6-input-widget-plan.md)、要求は [requirements.md](../requirements.md)（FR-NUM-05/06）、Schema 規約は [.claude/rules/schema-conventions.md](../../.claude/rules/schema-conventions.md)、結線規約は [.claude/rules/qml-module-conventions.md](../../.claude/rules/qml-module-conventions.md)。
+> 関連：write 経路・読み書き両用 binding は [phase6-input-widget-plan.md](phase6-input-widget-plan.md)、要求は [requirements-legacy.md](requirements-legacy.md)（旧 FR-NUM-05/06。現行は [requirements/](../requirements/README.md)）、Schema 規約は [.claude/rules/schema-conventions.md](../../.claude/rules/schema-conventions.md)、結線規約は [.claude/rules/qml-module-conventions.md](../../.claude/rules/qml-module-conventions.md)。
 > **進捗の正本は本ファイル「進捗」表**。
 
 ---

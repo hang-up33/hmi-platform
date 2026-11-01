@@ -2,7 +2,7 @@
 
 > **この計画の位置づけ**：実務 HMI の核心とも言える、**実デバイス（PLC）と値をやり取りする**機能。`hmi_runtime`（実機）/ `hmi_simulator`（PC）が **Modbus TCP マスタ**としてPLCのレジスタを周期的にポーリングし、ユーザー操作時に書込みして、既存の **変数ストア + バインディング**の仕組みに流し込む。
 >
-> **この文書は計画だけを書いたもの**（実装は別 PR でタスクを1つずつ進める）。要求の倉庫は [requirements.md](requirements.md) の §2.3、結線規約は [.claude/rules/qml-module-conventions.md](../.claude/rules/qml-module-conventions.md)、Schema 規約は [.claude/rules/schema-conventions.md](../.claude/rules/schema-conventions.md)、実機/SDK まわりの事情は [.claude/rules/dev-environment.md](../.claude/rules/dev-environment.md) を見てほしい。
+> **この文書は計画だけを書いたもの**（実装は別 PR でタスクを1つずつ進める）。要求の倉庫は [requirements/06-modbus.md](requirements/06-modbus.md)、結線規約は [.claude/rules/qml-module-conventions.md](../.claude/rules/qml-module-conventions.md)、Schema 規約は [.claude/rules/schema-conventions.md](../.claude/rules/schema-conventions.md)、実機/SDK まわりの事情は [.claude/rules/dev-environment.md](../.claude/rules/dev-environment.md) を見てほしい。
 > **進捗の正本はこのファイルの「進捗」表**。
 >
 > **承認状態**：**着手済み（2026-06-16 ユーザー承認）。MB-1 完了（PR #119）。MB-2〔PC 読込ポーリング〕完了（PR #121）。MB-3〔実 PLC 読込確認〕ローカル達成（2026-06-16：実 AutomationDirect CLICK ＠192.168.1.2:502 へ `hmi_simulator` で接続し DS1/DS2(holding)・C1(coil) を読込・binding 追従を確認。証跡 `Docs/samples/mb-3-click-plc-demo.json` + スクショ）。** 直近完了は Phase 6-B（NumericField 拡張・Task 53〜55）。MB-5 / MB-6（実 PLC 書込・実機 Yocto）はローカル専用で Web 環境では実施不可（MB-1 / MB-2 / MB-4 は Web 可）。step / decimals / unit や後続入力 Widget〔Gauge / Toggle〕は引き続き別承認の候補。
@@ -44,7 +44,7 @@ flowchart LR
 **設計原則（既存ルールとの整合）**
 
 - **通信は Simulator 共有ソースに置く**（→ Runtime が自動継承。[qml-module-conventions](../.claude/rules/qml-module-conventions.md) の「Simulator/Runtime はソース完全共通」）。実機固有差分が出たら `#ifdef HMI_RUNTIME_BUILD`。
-- **Editor は `Qt6::SerialBus` をリンクしない**。Editor は「変数ソース定義（接続先・レジスタ番地）を JSON に書く」だけで実通信しない（[requirements.md](requirements.md) FR-MB-05）。
+- **Editor は `Qt6::SerialBus` をリンクしない**。Editor は「変数ソース定義（接続先・レジスタ番地）を JSON に書く」だけで実通信しない（[requirements/06-modbus.md](requirements/06-modbus.md) REQ-MBS-006）。
 - **`hmi_schema` は QML も通信も知らない**。Modbus を喋る C++（`ModbusController`）は利用側アプリ（Simulator）に置く（[qml-module-conventions](../.claude/rules/qml-module-conventions.md)「C++ ヘルパーは利用側アプリ」）。
 - **変数ストア + binding 経路を再利用**：読込値は `VariableStore.setValue(name, val)` に流すだけで既存 `boundValue()` が UI を追従（Task 41 の経路）。書込は数値入力/アクションが `VariableStore` を更新 → `ModbusController.write()`。
 
@@ -70,7 +70,7 @@ flowchart LR
 - **`poll`** はミリ秒（既定 1000）。**`port` 既定 502・`unitId` 既定 1**（plan 内で既定値を揃える）。
 - Schema 実装は [schema-conventions](../.claude/rules/schema-conventions.md) の **4 メソッド**（`toJson`/`fromJson`/`toVariantMap`/`fromVariantMap`）を揃える。`ConnectionData` / `source` は子型として `toJson`/`fromJson`/`isValidJson` 三点セット＋空時省略（後方互換）。`isValidJson` の必須集合には**入れない**。
 
-> **確定**：接続は **プロジェクト共通 `connections[]` リスト参照**を採用する（各変数の `source.connection` が接続定義の `id` を参照。複数変数が同一 PLC を指す実態に合い、host/port/unitId の重複を防ぐ）。**上記 JSON 例がこのフェーズの正準スキーマ**で、[requirements.md](requirements.md) §2.3 はこれを参照する。MB-1 完了基準に「`source.connection` → `ConnectionData.id` 参照の round-trip unit テスト」を含める。
+> **確定**：接続は **プロジェクト共通 `connections[]` リスト参照**を採用する（各変数の `source.connection` が接続定義の `id` を参照。複数変数が同一 PLC を指す実態に合い、host/port/unitId の重複を防ぐ）。**上記 JSON 例がこのフェーズの正準スキーマ**で、[requirements/06-modbus.md](requirements/06-modbus.md) はこれを参照する。MB-1 完了基準に「`source.connection` → `ConnectionData.id` 参照の round-trip unit テスト」を含める。
 
 ---
 
@@ -133,7 +133,7 @@ flowchart TD
 | 項目 | 内容 |
 |---|---|
 | **SDK/image の qtserialbus（着手前ゲート）** | 現行 image（scarthgap / Qt6 6.8.1）と `meta-toolchain-qt6` SDK の **`qtserialbus` 含有を最優先で確認**（ローカルで `find <SDK-sysroot> -iname '*SerialBus*'` / image の `qtserialbus` 有無）。結果（含有/不含）を本書に記録し、**不含なら MB-6 の Yocto レシピ追加（`IMAGE_INSTALL += "qtserialbus"` + SDK）を前倒しで着手**（image/SDK 再ビルドは数時間かかるため）。**PC 側（MB-1〜5）の Qt（aqtinstall）には SerialBus が同梱されるので先行可**だが、実機展開の手戻りを避けるため確認は早期に。**2026-06-16 時点：この確認は Web 環境では不可（WSL2 / SDK が要る）＝ローカルで未実施。MB-2 着手前までにローカルで実施し結果を記録する（MB-1 は SerialBus 非依存なので未確認のまま進めて可）。** |
-| **float 変数型 / スケーリング** | 16bit レジスタ → 物理量（温度・圧力）には float 型 + gain/offset が要る（[requirements.md](requirements.md) FR-VAR / バックログ C）。**MB-1〜2 は int/bool/coil で開始でき**、アナログ表示が要る段で float を最小導入（Phase 6 の数値 Widget と連携）。32bit/float レジスタの word/byte order は要調査。 |
+| **float 変数型 / スケーリング** | 16bit レジスタ → 物理量（温度・圧力）には float 型 + gain/offset が要る（[requirements/01-data-model.md](requirements/01-data-model.md) REQ-DAT-008）。**MB-1〜2 は int/bool/coil で開始でき**、アナログ表示が要る段で float を最小導入（Phase 6 の数値 Widget と連携）。32bit/float レジスタの word/byte order は要調査。 |
 | **Simulator の自動検証相手** | 実 PLC は CI/Web から不達 → E2E は **pymodbus ソフトスレーブ**で固定（PC 単体で `ctest` 緑）。pymodbus 導入は dev 依存に閉じ、製品コードには持ち込まない。 |
 | **Editor の非リンク維持** | Editor が誤って `Qt6::SerialBus` をリンクしないこと（変更時 `git diff` で確認）。通信は Simulator/Runtime のみ。 |
 

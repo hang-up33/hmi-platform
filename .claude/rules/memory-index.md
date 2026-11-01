@@ -27,6 +27,7 @@
 - [Codex review comment](feedback-codex-review-comment.md) — PR 作成後・修正 push 後は毎回 `@codex review` を明示投稿する
 - [Codex auto-loop](feedback-codex-auto-loop.md) — PR 作成後は Codex レビューを自走で待ち、指摘 0 件まで修正→再 push→再依頼を繰り返す
 - [CodeRabbit fallback](feedback-coderabbit-fallback.md) — Codex が利用上限で沈黙したら、代替レビュアー CodeRabbit の指摘を同じ自走ループで対応する
+- [Subagent review](feedback-subagent-review.md) — 作業が一区切りしたら、頼まれなくてもサブエージェントにレビューさせ、指摘を直してから完了報告する
 - [Plan docs consistency](feedback-plan-docs-consistency.md) — 計画ドキュメントは API 制約・未確認情報の保留・複数アプリ統合・既定値・README 同期・意図的重複/[Future] 分離の確認などの整合性ルールを守る
 - [Phase status sync](feedback-phase-status-sync.md) — タスク完了・フェーズ進行時は進捗ステータスの常駐文書（CLAUDE.md / AGENTS.md / README / plan 進捗表 / mvp-task-runner / development-history）を同期する。正本は plan の「進捗」表
 

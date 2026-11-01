@@ -7,7 +7,7 @@ engineering skills がこのリポジトリのコードを探索する前に読�
 このリポジトリには `CONTEXT.md` / `CONTEXT-MAP.md` は無い。代わりに以下を読む:
 
 - **`Docs/architecture.md`** — モジュール構造（Editor / Simulator / Runtime / Shared）
-- **`Docs/requirements.md`** — 用語・機能の定義（Widget 種別名、変数、アクション等）
+- **`Docs/requirements/`**（索引 `README.md`）— 用語・機能の定義（Widget 種別名、変数、アクション等）
 - **`.claude/rules/schema-conventions.md`** — Shared/Schema の型・JSON I/O 規約
 - **`.claude/rules/qml-module-conventions.md`** — QML モジュール・結線規約
 - 触る領域に対応する計画書の設計判断
@@ -22,10 +22,10 @@ ADR（アーキテクチャ決定記録）の正式な置き場（`Docs/adr/`）
 ## 用語はプロジェクトの語彙に合わせる
 
 出力（PR タイトル・リファクタ提案・仮説・テスト名）でドメイン概念に触れるときは、
-`Docs/requirements.md` で定義された用語を使う（`SimpleButton` などの Widget 種別名、
+`Docs/requirements/` で定義された用語を使う（`SimpleButton` などの Widget 種別名、
 開発コードネーム「Atlas」など）。勝手な同義語・造語に流れない（`.claude/rules/user-no-coined-terms.md`）。
 
-必要な概念が `Docs/requirements.md` に無ければ、それは兆候: 造語しているなら見直す。
+必要な概念が `Docs/requirements/` に無ければ、それは兆候: 造語しているなら見直す。
 本当に欠けているなら `/domain-modeling` 用にメモする。
 
 ## 既存の設計判断と矛盾したら明示する

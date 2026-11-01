@@ -27,6 +27,7 @@
 | [phase10-meter-plan.md](phase10-meter-plan.md) | Meter（メーター） |
 | [phase11-widget-palette-plan.md](phase11-widget-palette-plan.md) | Widget サンプルパレット + SimpleButton |
 | [ci-self-hosted-plan.md](ci-self-hosted-plan.md) | Proxmox self-hosted runner による自動 CI 復活 |
+| [requirements-legacy.md](requirements-legacy.md) | 旧要求仕様 / 機能バックログ（2026-10-31 に `Docs/requirements/` へ分割。実装状況は Phase 6-B 時点で止まっている） |
 | [qml-canvas-structure.md](qml-canvas-structure.md) | Canvas.qml の構造解説（**内容が実装と乖離**。冒頭の注記を参照） |
 
 Phase 7（Modbus）だけは実機作業（MB-5 / MB-6）が残っているため、[Docs/phase7-modbus-plan.md](../phase7-modbus-plan.md) に現行として置いています。

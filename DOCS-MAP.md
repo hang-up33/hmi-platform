@@ -22,7 +22,7 @@ flowchart TD
     Q -->|コードの構造| B["Docs/architecture.md"]
     Q -->|今どこまで進んだか| C["Docs/phase-status.md"]
     Q -->|なぜこう作ったか| D["Docs/development-history.md"]
-    Q -->|これから何を作るか| E["Docs/requirements.md"]
+    Q -->|これから何を作るか| E["Docs/requirements/"]
     Q -->|開発の進め方・PR ルール| F["Docs/workflow.md"]
     Q -->|ビルドが通らない| G[".claude/skills/qt6-build/SKILL.md"]
     Q -->|実機・Yocto の手順| H["scripts/yocto/README.md"]
@@ -50,7 +50,8 @@ hmi-platform/
 │   ├─ architecture.md          [人]    現行  モジュール構成・アプリの役割
 │   ├─ phase-status.md          [人]    現行  進捗の正本
 │   ├─ development-history.md   [人]    記録  タスク単位の開発経緯・PR・学び
-│   ├─ requirements.md          [人]    ⚠️    機能バックログ（実装状況の記述が古い）
+│   ├─ requirements/            [人+AI] 現行  関心別の要求仕様書 11 本（REQ/ACC 管理表）。索引は README.md
+│   ├─ requirements.md          [人]    現行  上記への案内（旧版は archive/requirements-legacy.md）
 │   ├─ workflow.md              [人+AI] 現行  開発ルール・PR ワークフロー
 │   ├─ refactoring-plan.md      [人+AI] 現行  進行中フェーズの計画・進捗表
 │   ├─ phase7-modbus-plan.md    [人+AI] 現行  Modbus（実機作業 MB-5/6 が未完のため現行）
@@ -61,7 +62,7 @@ hmi-platform/
 │   │   ├─ domain.md                    着手前に読むべき資料の指定
 │   │   └─ issue-tracker.md             GitHub Issues を使わない旨と代替
 │   │
-│   ├─ archive/                 [AI/記録] 完了フェーズの実装指示書 17 本（現在の仕様ではない）
+│   ├─ archive/                 [AI/記録] 完了フェーズの実装指示書 17 本 + 旧要求仕様 1 本（現在の仕様ではない）
 │   │   └─ README.md            [人]    現行  archive の中身一覧
 │   │
 │   ├─ samples/                 [人+AI] 現行  デモ用プロジェクト JSON（9 件）
@@ -102,8 +103,8 @@ hmi-platform/
 | ファイル | 行 | 注意点 |
 |---|---|---|
 | [Docs/development-history.md](Docs/development-history.md) | 463 | 時系列の開発経緯。「今どうなっているか」ではなく「どう作ってきたか」 |
-| [Docs/requirements.md](Docs/requirements.md) | 236 | **⚠️ 実装状況の記述が Phase 6-B 時点で止まっている。**優先度表を現状として読まないこと（冒頭の注記参照） |
-| [Docs/archive/](Docs/archive/) | 17 本 / 2,942 行 | 完了フェーズの実装指示書。仕様書ではない |
+| [Docs/requirements/](Docs/requirements/README.md) | 11 本 | 関心別の要求仕様書。各書に REQ/ACC 表。旧版は [archive/requirements-legacy.md](Docs/archive/requirements-legacy.md)（実装状況が古い） |
+| [Docs/archive/](Docs/archive/) | 18 本 | 完了フェーズの実装指示書。仕様書ではない |
 | [Docs/archive/qml-canvas-structure.md](Docs/archive/qml-canvas-structure.md) | 46 | **⚠️ 内容が実装と乖離**（Canvas.qml は現在 1,244 行） |
 
 ## AI エージェント向け（人間は読まなくてよい）
@@ -126,6 +127,6 @@ hmi-platform/
 ## 既知の穴
 
 このリポジトリには **「今の Atlas の機能仕様書」に相当する文書がありません**。
-`requirements.md` は自ら「要求の倉庫であり進捗表ではない」と宣言し、`architecture.md` はモジュール構成のみ、
+`Docs/requirements/` は「何を満たすべきか」（要求と受入条件）を関心別に書いた文書で、動作の詳細仕様ではない。`architecture.md` はモジュール構成のみ、
 `phase-status.md` は進捗のみを扱うため、「Meter のバインディングはどう解決されるか」といった問いに答える文書が存在しません。
 現状は README の概要か `Docs/archive/` の各計画書を読み解く必要があります。**`Docs/specification.md` の新規執筆が未着手の課題**です。

@@ -86,11 +86,11 @@ Matt Pocock の engineering skills が参照する設定。詳細は `Docs/agent
 
 ### Issue トラッカー
 
-このリポジトリは GitHub Issues を使わない。機能要求は [Docs/requirements.md](Docs/requirements.md)（バックログ）、
+このリポジトリは GitHub Issues を使わない。機能要求は [Docs/requirements/](Docs/requirements/README.md)（関心別の要求仕様書）、
 実装タスクと進捗は `Docs/phase*-plan.md`（進行中）/ `Docs/archive/phase*-plan.md`（完了済み）で管理する（各計画書の「進捗」表が正本）。
 デリバリは `task/<N>-<名>` ブランチ + PR + Codex レビュー自走ループ。詳細は [Docs/agents/issue-tracker.md](Docs/agents/issue-tracker.md)。
 
 ### Domain docs
 
-single-context。着手前に [Docs/architecture.md](Docs/architecture.md) / [Docs/requirements.md](Docs/requirements.md) / `.claude/rules/` を読む。
+single-context。着手前に [Docs/architecture.md](Docs/architecture.md) / [Docs/requirements/](Docs/requirements/README.md) / `.claude/rules/` を読む。
 ADR の正式な置き場（`Docs/adr/`）は未整備で、必要になった時点で作る。詳細は [Docs/agents/domain.md](Docs/agents/domain.md)。
