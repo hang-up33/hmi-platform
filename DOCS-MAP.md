@@ -45,6 +45,8 @@ hmi-platform/
 ├─ DOCS-MAP.md                  [人]    現行  このファイル
 ├─ CLAUDE.md                    [AI]    現行  Claude Code への作業指針
 ├─ AGENTS.md                    [AI]    現行  ChatGPT Codex への作業指針
+├─ LICENSE                      [人]    現行  MIT License
+├─ THIRD_PARTY_NOTICES.md       [人]    現行  依存ライブラリのライセンス一覧
 │
 ├─ Docs/                        ── 人間向けが中心
 │   ├─ architecture.md          [人]    現行  モジュール構成・アプリの役割
