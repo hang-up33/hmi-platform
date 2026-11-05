@@ -39,6 +39,7 @@ public static class WinCap
     [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT r);
     [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr hWnd, IntPtr hdc, uint flags);
     [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+    [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
 
     // PW_RENDERFULLCONTENT = 2 : 隠れていても全内容を描画させる
     public static Bitmap Capture(IntPtr hWnd)
@@ -59,6 +60,12 @@ public static class WinCap
     }
 }
 "@
+
+# 表示スケール 100% 超（例 150%）の画面では、DPI 非対応の PowerShell に対して
+# GetWindowRect が縮小した仮想座標を返し、PrintWindow の結果がウィンドウの左上部分だけに
+# 切り取られる（インスペクタが写らない。Task RF-G で発覚）。物理ピクセルで扱うため
+# 先に DPI 対応を宣言する。
+[WinCap]::SetProcessDPIAware() | Out-Null
 
 $proc = Get-Process -Name $ProcessName -ErrorAction Stop |
     Where-Object { $_.MainWindowHandle -ne 0 } |

@@ -180,4 +180,38 @@ TestCase {
         panel.variableFieldFocusCount = 0;
         compare(panel.inspectorFieldFocused, false);
     }
+
+    // Task RF-G: セクション別ファイルの入力欄がフォーカスを得たら、パネルの
+    // widgetEditFieldFocused（Canvas undo の操作境界）へ集約されること。
+    // 集約元が別ファイルの editFieldFocused になったので、ファイル跨ぎの OR を突く。
+    function test_07_section_focus_propagates_to_panel() {
+        canvas.selectedWidgetIds = ["btn001"];
+        const field = findByObjectName(panel, "inspectorActionValueField");
+        verify(field !== null, "動作セクションの値欄が無い");
+        field.forceActiveFocus();
+        tryCompare(panel, "widgetEditFieldFocused", true);
+        compare(panel.inspectorFieldFocused, true);
+        field.focus = false;
+        tryCompare(panel, "widgetEditFieldFocused", false);
+    }
+
+    // Task RF-G: Main.qml が呼ぶ syncActionToInspector / syncBindingToInspector は
+    // パネルから動作セクションへの転送になった。転送先の欄が選択 Item の値に揃うこと。
+    function test_08_action_binding_sync_forwarded() {
+        editorRootStub.projectVariables = [{ name: "run", type: "bool" }];
+        canvas.widgetModel = [
+            { id: "btn001", type: "Button", x: 100, y: 50, width: 120, height: 40, text: "Start",
+              actions: [{ trigger: "onClick", op: "toggleVariable", target: "run", value: "" }],
+              bindings: [{ property: "checked", variable: "run" }] }
+        ];
+        tryVerify(function() { return canvas.widgetItems.length > 0; }, 1000);
+        canvas.selectedWidgetIds = ["btn001"];
+        panel.syncActionToInspector();
+        panel.syncBindingToInspector();
+        compare(findByObjectName(panel, "inspectorActionOpCombo").currentText, "toggleVariable");
+        compare(findByObjectName(panel, "inspectorActionTargetCombo").currentText, "run");
+        compare(findByObjectName(panel, "inspectorBindingPropCombo").currentText, "checked");
+        compare(findByObjectName(panel, "inspectorBindingVarCombo").currentText, "run");
+        editorRootStub.projectVariables = [];
+    }
 }

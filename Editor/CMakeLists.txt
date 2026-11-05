@@ -17,6 +17,17 @@ qt_add_qml_module(hmi_editor
         qml/EditorToolbar.qml
         qml/EditorDialogs.qml
         qml/InspectorPanel.qml
+        qml/ColorSwatch.qml
+        qml/InspectorVariablesSection.qml
+        qml/InspectorBasicSection.qml
+        qml/InspectorTextSection.qml
+        qml/InspectorStyleSection.qml
+        qml/InspectorTrendSection.qml
+        qml/InspectorMeterSection.qml
+        qml/InspectorSimpleButtonSection.qml
+        qml/InspectorStateSection.qml
+        qml/InspectorActionSection.qml
+        qml/InspectorDetailSection.qml
 )
 
 target_link_libraries(hmi_editor
