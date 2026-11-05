@@ -21,7 +21,7 @@
 
 - ブランチ: `task/<N>-<短い名>`（フェーズタスク）/ `docs/<短い名>`（ドキュメント・設定）
 - `main` 直 push 禁止。PR 経由。
-- レビュー: Codex GitHub App（上限時は CodeRabbit にフォールバック）。指摘 0 件まで自走ループ。
+- レビュー: Codex GitHub App（上限時は CodeRabbit にフォールバック）。依頼は 1 PR 1 回。Blocker / Major を直して push し、再依頼しない。
 - マージはユーザーが行う（Claude はマージしない）。
 - 詳細は CLAUDE.md「PR ワークフロー」/ `.claude/rules/feedback-codex-*.md`。
 

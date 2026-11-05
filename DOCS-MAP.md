@@ -69,7 +69,7 @@ hmi-platform/
 │   └─ screenshots/             [人]    現行  README 掲載画像・動作証跡（47 件）
 │
 ├─ .claude/                     [AI]    ── ほぼ全部が Claude Code の動作設定。人間は読まなくてよい
-│   ├─ rules/*.md  (20)                 常時読み込まれる規約・環境メモ・ユーザーの好み
+│   ├─ rules/*.md  (22)                 常時読み込まれる規約・環境メモ・ユーザーの好み
 │   ├─ skills/*/SKILL.md (10)           手順書（ビルド / PR / E2E / スクショ 等）
 │   ├─ agents/*.md (2)                  サブエージェント定義
 │   ├─ commands/*.md (1)                スラッシュコマンド定義
@@ -114,7 +114,7 @@ hmi-platform/
 | [CLAUDE.md](CLAUDE.md) | 1 | Claude Code への作業指針。冒頭に「Claude Code への指針です」と明記 |
 | [AGENTS.md](AGENTS.md) | 1 | ChatGPT Codex への作業指針 |
 | [Docs/agents/](Docs/agents/) | 3 | レビュー作法・ドメイン資料の指定・課題管理の代替 |
-| `.claude/rules/*.md` | 20 | 常時読み込まれる規約。環境固有の罠、ユーザーの応答スタイルの好みなど |
+| `.claude/rules/*.md` | 22 | 常時読み込まれる規約。環境固有の罠、ユーザーの応答スタイルの好みなど |
 | `.claude/skills/*/SKILL.md` | 10 | エージェントが実行する手順書 |
 | `.claude/agents/*.md` | 2 | サブエージェント定義 |
 | `.claude/commands/*.md` | 1 | スラッシュコマンド定義 |

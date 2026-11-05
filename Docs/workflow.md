@@ -24,15 +24,16 @@
 - **PR 作成のお作法**:
   - PR は **ready-for-review**（draft はNG）で作る。
   - タイトル: `Task N: <短い説明>`
-  - 本文: Summary / 変更点 / Test plan / Codex 向け補足
+  - 本文: 何を・なぜ / 変更点 / 確認したこと / レビューで見てほしい点（書き方は [user-writing-readability](../.claude/rules/user-writing-readability.md)）
   - GUI の見た目や操作を変更した場合は、動作証跡のスクショを添付する（[screenshot-capture](../.claude/skills/screenshot-capture/SKILL.md) スキル）。
 
 ---
 
-## 3. Codex レビュー自走ループ
+## 3. Codex レビュー（1 PR 1 回）
 
-- **レビュー依頼**: `gh pr create` の直後と、修正を push した直後の両方で `gh pr comment <N> --body "@codex review"` を投稿する。
-- **自走ループ**: ユーザーの指示を待たず Codex のレビュー結果をポーリングし、指摘が0件のクリーンなレビュー（`Didn't find any major issues. 👍`）になるまで、修正・push・再依頼を繰り返す。
+- **レビュー依頼**: `gh pr create` の直後に 1 回だけ `gh pr comment <N> --body "@codex review"` を投稿する。修正 push 後は再依頼しない。
+- **待ち受けと修正**: ユーザーの指示を待たず Codex のレビュー結果をポーリングし、Blocker / Major を直して push する。
+- **終わり方**: 修正の差分をサブエージェントに確認させてから完了報告する。設計の変更になる修正は、直す前にユーザーに相談する（[feedback-review-convergence](../.claude/rules/feedback-review-convergence.md)）。
 - **マージ**: マージ（Squash and merge）はユーザーが行う。
 
 ---

@@ -50,7 +50,7 @@ cmake --build build
 2. **Shared/Schema が唯一の真実** — Widget / Screen / Project に該当する型・JSON 入出力は `Shared/Schema` にのみ実装する。
 3. **継続的改善（kaizen）の遵守** — タスク完了直前に [kaizen-close](.claude/skills/kaizen-close/SKILL.md) スキルで得た知見をドキュメント/ルールに反映する。
 4. **既存資産の保護** — フォルダ構成変更禁止・既存コード削除禁止・qmake等代替ビルドシステム導入禁止（対象は**ソース / ビルド構成**。`Docs/` 配下の整理はユーザー承認時に限り可）。
-5. **PR ワークフロー & Codex 自走ループ** — ブランチは `task/<N>-<名>`、Codex レビューは指摘 0 件まで自走で繰り返す（マージはユーザーが行う）。
+5. **PR ワークフロー & Codex レビュー** — ブランチは `task/<N>-<名>`、Codex レビューの依頼は 1 PR 1 回。Blocker / Major を直して push し、再依頼しない（[feedback-review-convergence](.claude/rules/feedback-review-convergence.md)）（マージはユーザーが行う）。
 6. **応答スタイル** — 日本語・敬語なし（常体）・簡潔な応答を基本とする。
 
 ---
@@ -59,9 +59,9 @@ cmake --build build
 
 | スキル | 用途 |
 |---|---|
-| [ship-task](.claude/skills/ship-task/SKILL.md) | 実装を done まで一気通貫で仕上げるオーケストレータ（実装→ビルド→ctest→kaizen→進捗同期→PR→Codex 自走ループ）。詳細は下記 skill へ委譲・Web/ローカル環境差を吸収 |
+| [ship-task](.claude/skills/ship-task/SKILL.md) | 実装を done まで一気通貫で仕上げるオーケストレータ（実装→ビルド→ctest→kaizen→進捗同期→PR→Codex レビュー対応）。詳細は下記 skill へ委譲・Web/ローカル環境差を吸収 |
 | [mvp-next-task](.claude/skills/mvp-next-task/SKILL.md) | フェーズタスク進行標準ワークフロー |
-| [codex-pr](.claude/skills/codex-pr/SKILL.md) | PR 作成と Codex レビュー自走ループ |
+| [codex-pr](.claude/skills/codex-pr/SKILL.md) | PR 作成と Codex レビュー（1 PR 1 回）の待ち受け・修正 |
 | [qt6-build](.claude/skills/qt6-build/SKILL.md) | Qt6 + CMake ビルド手順・プラットフォーム別ビルド |
 | [e2e-spix](.claude/skills/e2e-spix/SKILL.md) | Spix (E2E) テスト実行手順 |
 | [screenshot-capture](.claude/skills/screenshot-capture/SKILL.md) | 動作証跡スクショ撮影 |
@@ -88,7 +88,7 @@ Matt Pocock の engineering skills が参照する設定。詳細は `Docs/agent
 
 このリポジトリは GitHub Issues を使わない。機能要求は [Docs/requirements/](Docs/requirements/README.md)（関心別の要求仕様書）、
 実装タスクと進捗は `Docs/phase*-plan.md`（進行中）/ `Docs/archive/phase*-plan.md`（完了済み）で管理する（各計画書の「進捗」表が正本）。
-デリバリは `task/<N>-<名>` ブランチ + PR + Codex レビュー自走ループ。詳細は [Docs/agents/issue-tracker.md](Docs/agents/issue-tracker.md)。
+デリバリは `task/<N>-<名>` ブランチ + PR + Codex レビュー（1 PR 1 回）。詳細は [Docs/agents/issue-tracker.md](Docs/agents/issue-tracker.md)。
 
 ### Domain docs
 

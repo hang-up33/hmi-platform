@@ -1,6 +1,6 @@
 ---
 name: Phase status sync
-description: タスク完了・フェーズ進行時は、進捗ステータスが書かれた全常駐文書（CLAUDE.md / AGENTS.md / README / plan 進捗表 / mvp-task-runner / development-history）を同期する
+description: タスク完了・フェーズ進行時は、進捗ステータスが書かれた全常駐文書（CLAUDE.md / README / plan 進捗表 / mvp-task-runner / development-history）を同期する
 metadata:
   type: feedback
 ---
@@ -23,7 +23,7 @@ metadata:
 | `Docs/phase*-plan.md`（完了後は `Docs/archive/` へ移す） | 「進捗」表（**正本**） |
 | README.md | 「フェーズ進捗」冒頭の散文 + フェーズ別の表 |
 | CLAUDE.md | 「現在のフェーズ」段落 + 「Must Always」先頭バレット |
-| AGENTS.md | 「スコープ」節 |
+| AGENTS.md | 対象外。スコープ節は phase-status.md へのリンクだけで、進捗は書かない |
 | `.claude/agents/mvp-task-runner.md` | 「タスク順（厳守）」リスト |
 | `Docs/development-history.md` | フェーズ見出しの状態表記・エントリ |
 
@@ -35,6 +35,6 @@ metadata:
 - 特に **フェーズの開始・完了・承認** はステータスが大きく動くので必ず全文書を確認する（[[feedback-plan-docs-consistency]] 項目 6 のフェーズ再スコープ総ざらいと同じ要領）。
 - 二重メンテを減らすため、常駐文書に詳細な進捗を書き足さない：**詳細は正本（plan 進捗表）に書き、他文書は 1〜2 文 + リンク**で済ませる。
 - リモート / 別マシンのセッションでは作業前に `git fetch` → `git log --oneline origin/main` で実進捗を確認し、文書の記述を鵜呑みにしない（[dev-environment.md](dev-environment.md)「リポジトリ運用の注意」）。
-- **フェーズの承認・着手でステータスが動くなら、たとえ「計画書のみ」の PR でも常駐文書（README / CLAUDE.md / AGENTS.md / mvp-task-runner / development-history）を同じ PR で同期する。「同期は実装着手時（次タスク）に」と先送りしない**（2026-06-10 実証：Phase 5 plan 起票 PR #95 で「plan のみ・同期は Task 47 で」と先送りしたところ、`origin/main` の README 進捗表が前フェーズ〔Task 44〜45 = #94〕分も含めて stale なままで「task 完了みたいなのに README 更新されてない」とユーザー指摘。さらに #94〔実装 PR〕自身も README 進捗表に Task 44/45 を入れ忘れており、同期漏れが 1 フェーズ分累積していた）。**実装 PR / 計画 PR を問わず、その PR でステータスが進むなら常駐文書同期を同コミット内で完了させる**のが原則。
+- **フェーズの承認・着手でステータスが動くなら、たとえ「計画書のみ」の PR でも常駐文書（README / CLAUDE.md / mvp-task-runner / development-history）を同じ PR で同期する。「同期は実装着手時（次タスク）に」と先送りしない**（2026-06-10 実証：Phase 5 plan 起票 PR #95 で「plan のみ・同期は Task 47 で」と先送りしたところ、`origin/main` の README 進捗表が前フェーズ〔Task 44〜45 = #94〕分も含めて stale なままで「task 完了みたいなのに README 更新されてない」とユーザー指摘。さらに #94〔実装 PR〕自身も README 進捗表に Task 44/45 を入れ忘れており、同期漏れが 1 フェーズ分累積していた）。**実装 PR / 計画 PR を問わず、その PR でステータスが進むなら常駐文書同期を同コミット内で完了させる**のが原則。
 
 関連：[[feedback-plan-docs-consistency]] / [[feedback-continuous-improvement]]

@@ -1,12 +1,12 @@
 ---
 name: ship-task
-description: 実装タスクを「done」まで一気通貫で仕上げる標準オーケストレータ。実装 → ビルド → テスト → kaizen → 進捗ドキュメント同期 → PR 作成 → Codex レビュー自走ループ → クリーン到達で完了報告、までを 1 本の「完了チェックリスト」として束ねる。「実装を完了させて」「タスクを仕上げて」「次を（最後まで）進めて」「PR まで出して」「done まで持っていって」のように、実装を最後まで届ける指示では必ずこの skill を使う（単に「次進めて」でも、完了まで走らせる文脈ならこれ）。個別工程の詳細は mvp-next-task / codex-pr / kaizen-close へ委譲する。Web/リモート（Claude Code on the web）・macOS ローカル・Windows ローカルの環境差もこの skill が吸収するので、環境を意識せず呼べる。
+description: 実装タスクを「done」まで一気通貫で仕上げる標準オーケストレータ。実装 → ビルド → テスト → kaizen → 進捗ドキュメント同期 → PR 作成 → Codex レビュー（1 回）→ 指摘を直して完了報告、までを 1 本の「完了チェックリスト」として束ねる。「実装を完了させて」「タスクを仕上げて」「次を（最後まで）進めて」「PR まで出して」「done まで持っていって」のように、実装を最後まで届ける指示では必ずこの skill を使う（単に「次進めて」でも、完了まで走らせる文脈ならこれ）。個別工程の詳細は mvp-next-task / codex-pr / kaizen-close へ委譲する。Web/リモート（Claude Code on the web）・macOS ローカル・Windows ローカルの環境差もこの skill が吸収するので、環境を意識せず呼べる。
 origin: hmi-platform
 ---
 
 # ship-task — 実装を done まで届けるオーケストレータ
 
-このプロジェクトの「タスクが完了した」は、ローカルでビルドが通ったことではない。**PR を出して Codex のクリーンレビュー（指摘 0 件）まで到達し、進捗ドキュメントが最新化された状態**を指す。本 skill は、実装着手からその状態までの一連の工程を **1 本のチェックリスト** として束ねる。各工程の細かい手順は既存 skill が持っているので、本 skill は「順序・抜け漏れ防止・環境差の吸収」に責任を持ち、詳細はポインタで委譲する。
+このプロジェクトの「タスクが完了した」は、ローカルでビルドが通ったことではない。**PR を出して Codex のレビュー（1 回）で出た Blocker / Major を直し、進捗ドキュメントが最新化された状態**を指す。本 skill は、実装着手からその状態までの一連の工程を **1 本のチェックリスト** として束ねる。各工程の細かい手順は既存 skill が持っているので、本 skill は「順序・抜け漏れ防止・環境差の吸収」に責任を持ち、詳細はポインタで委譲する。
 
 ## いつ使う（When to Use）
 
@@ -16,7 +16,7 @@ origin: hmi-platform
 
 ## なぜオーケストレータが要るか
 
-工程が多く、**忘れやすいのは実装そのものではなく「仕上げ」**（進捗表の同期、スクショ、Codex 自走ループ、クリーン到達前の早すぎる完了報告）だから。過去に「PR を作って URL を貼って終わり」「README 進捗が 1 フェーズ分 stale」「常駐ドキュメントが 11 タスク分古い」といった取りこぼしが繰り返し起きた。1 本の完了ゲートに集約して、報告の直前に必ず全工程を見返す。
+工程が多く、**忘れやすいのは実装そのものではなく「仕上げ」**（進捗表の同期、スクショ、Codex レビューの待ち受け、レビュー結果を見る前の早すぎる完了報告）だから。過去に「PR を作って URL を貼って終わり」「README 進捗が 1 フェーズ分 stale」「常駐ドキュメントが 11 タスク分古い」といった取りこぼしが繰り返し起きた。1 本の完了ゲートに集約して、報告の直前に必ず全工程を見返す。
 
 ## 完了の定義（Definition of Done）— 報告前に必ず自問
 
@@ -25,10 +25,10 @@ origin: hmi-platform
 - [ ] 対象タスクの実装が 1 タスク分きっちり終わっている（「ついで」の混入なし）
 - [ ] `cmake --build` 成功、`ctest` 緑（新規テストが実際に走って PASS していることまで確認）
 - [ ] **見た目 or GUI 挙動が変わる**タスクなら操作後状態の動作証跡スクショ（D&D・選択・入力反映など静止外観が不変でも撮る）。**恒常外観**が変わったら README ヒーローも同期（どちらも不変なら「不変」と一言）
-- [ ] 進捗ドキュメントを **すべて** 同期（plan 進捗表〔正本〕/ README / CLAUDE.md / AGENTS.md / mvp-task-runner / development-history）
+- [ ] 進捗ドキュメントを **すべて** 同期（plan 進捗表〔正本〕/ README / CLAUDE.md / mvp-task-runner / development-history）
 - [ ] kaizen（新たな罠・知見）を反映済み
 - [ ] PR を ready-for-review で作成し、`@codex review` を投稿
-- [ ] Codex（or CodeRabbit）のレビューが **指摘 0 件のクリーン** に到達
+- [ ] Codex（or CodeRabbit）のレビューで出た **Blocker / Major をすべて直して push し、修正をサブエージェントで確認済み**（依頼は 1 PR 1 回。[feedback-review-convergence](../../rules/feedback-review-convergence.md)）
 - [ ] マージはしていない（squash マージはユーザーの責務）
 
 ## フェーズ（順に実行）
@@ -61,25 +61,25 @@ origin: hmi-platform
 1. **証跡スクショ / README ヒーロー同期** — 2 つを分けて判断する（[screenshot-capture](../screenshot-capture/SKILL.md) / [readme-screenshot-sync](../../rules/readme-screenshot-sync.md)）：
    - **タスク固有の動作証跡**：**GUI の「挙動」を変えたら撮る**。ドラッグ&ドロップ・選択・入力反映など、操作後にだけ状態が変わる変更は「静止時の見た目が変わらない」から省略、としてはいけない（`Docs/workflow.md` の GUI 変更時の動作証跡要件）。**操作後の状態**を撮って、変更した操作が実際に成功したことを PR で示す。**offscreen で実 D&D 等を撮れない環境なら、証跡は完了ゲート未達のまま勝手に省略しない** — 撮影可能なローカル / VNC 環境へ引き継ぐか、それが無理なら中断してユーザーに相談する（「代替検証で済ませる」を独自の例外にしない。省略を正式ルールにするなら正本 `Docs/workflow.md` 側の合意が要る＝この skill だけで緩めない）。
    - **README ヒーロー（editor.gif / simulator.png）**：**恒常的な外観**が変わったときだけ撮り直す。挙動だけ変えて静止外観が不変ならヒーローは省略してよい（「恒常外観 不変のため省略」と一言添える。Stop hook のリマインドはブロックではない）。
-2. **進捗ドキュメント同期** — [feedback-phase-status-sync](../../rules/feedback-phase-status-sync.md) の同期対象表を全部あたる。正本（plan 進捗表）を更新し、常駐ドキュメント（README / CLAUDE.md / AGENTS.md / mvp-task-runner / development-history）は「短いステータス + ポインタ」に留める（積み増して肥大化させない）。**計画のみの PR でもステータスが動くなら同コミットで同期**（先送りしない）。
+2. **進捗ドキュメント同期** — [feedback-phase-status-sync](../../rules/feedback-phase-status-sync.md) の同期対象表を全部あたる。正本（plan 進捗表）を更新し、常駐ドキュメント（README / CLAUDE.md / mvp-task-runner / development-history）は「短いステータス + ポインタ」に留める（積み増して肥大化させない）。**計画のみの PR でもステータスが動くなら同コミットで同期**（先送りしない）。
 3. **kaizen** — [kaizen-close](../kaizen-close/SKILL.md)。今回踏んだ罠・工夫を CLAUDE.md / rules / README / 設定のどこかに 1 か所反映する。コード領域固有の規約は path-scoped rule（`.claude/rules/` + `paths:`）へ。
 
-### フェーズ 4 — PR + Codex 自走ループ
+### フェーズ 4 — PR + Codex レビュー（1 回）
 
-- 手順の本体は [codex-pr](../codex-pr/SKILL.md)。PR は **ready-for-review**（draft 禁止）、タイトル `Task N: <説明>`、本文に Summary / 変更点 / Test plan / Codex 向け補足。
-- **PR 作成直後と、修正 push 直後の両方**で `@codex review` を投稿（[feedback-codex-review-comment](../../rules/feedback-codex-review-comment.md)）。
-- **指摘 0 件のクリーンレビューまで、ユーザー指示を待たず自走**で「待機 → 判定 → 修正 → **フェーズ 2 を現 HEAD で再実行** → push → 再依頼」を繰り返す（[feedback-codex-auto-loop](../../rules/feedback-codex-auto-loop.md)）。判定は state 優先（`CHANGES_REQUESTED` / inline あり → 修正、`Didn't find any major issues` → 脱出、シグナル無し → まだレビュー中で待機継続）。
+- 手順の本体は [codex-pr](../codex-pr/SKILL.md)。PR は **ready-for-review**（draft 禁止）、タイトル `Task N: <説明>`、本文は [user-writing-readability](../../rules/user-writing-readability.md) の PR 型（何を・なぜ / 変更点 / 確認したこと / レビューで見てほしい点）。
+- **PR 作成直後に 1 回だけ** `@codex review` を投稿する。修正 push 後は再依頼しない（[feedback-codex-review-comment](../../rules/feedback-codex-review-comment.md)）。
+- ユーザー指示を待たず「待機 → 判定 → 修正 → **フェーズ 2 を現 HEAD で再実行** → push → サブエージェントで修正を確認」を 1 回だけ行う。再依頼はしない（[feedback-review-convergence](../../rules/feedback-review-convergence.md) / [feedback-codex-auto-loop](../../rules/feedback-codex-auto-loop.md)）。判定は state 優先（`CHANGES_REQUESTED` / inline あり → 修正、`Didn't find any major issues` または Minor / Nit のみ → 脱出、シグナル無し → まだレビュー中で待機継続）。
 - **各修正 push の前に、環境別フェーズ 2（ビルド + テスト）を必ず現在の HEAD で再実行する**。codex-pr の委譲手順はビルドだけを想定しているが、テスト対象の挙動を変える修正だと**ビルドだけでは最終 HEAD のテスト緑を保証できない**。テストを走らせず前回結果を流用すると、最終 HEAD が赤でも完了条件を満たした扱いになる（docs のみ変更のラウンドは再テスト不要だが、その判断は毎回明示する）。
-- **判定は必ず「その回の HEAD」に絞る**（旧ラウンドの指摘を再処理したり、過去のクリーン文言で最新レビューを誤終了しないため）。**`HEAD_SHA` / `SINCE` は `@codex review` を送る「直前」に確定する**（送信「後」に取ると、投稿〜取得の隙間に来た Codex 応答の `created_at` が `SINCE` より前になり時刻フィルタから恒久除外され、実はクリーンでも「無反応」と誤判定してループが中断する。codex-pr「ループ前の確定」と同じ）。reviews は `commit_id`、inline は `original_commit_id`（新コミットへ re-anchor される `commit_id` では旧指摘が再マッチする）、issue コメントは投稿時刻（`SINCE` 以降）+ bot 名で絞る。Web の GitHub MCP でも `pull_request_read` の各コメントの `commit_id`/`original_commit_id`、`issue_read` の `created_at` で同様に絞る。詳細は [codex-pr](../codex-pr/SKILL.md)「Codex レビュー自走ループ」の「ループ前の確定」。
+- **判定は必ず「その回の HEAD」に絞る**（ユーザーの依頼で再レビューする場合に、古い指摘や過去のクリーン文言を拾わないため）。**`HEAD_SHA` / `SINCE` は `@codex review` を送る「直前」に確定する**（送信「後」に取ると、投稿〜取得の隙間に来た Codex 応答の `created_at` が `SINCE` より前になり時刻フィルタから恒久除外され、実はクリーンでも「無反応」と誤判定してループが中断する。codex-pr「ループ前の確定」と同じ）。reviews は `commit_id`、inline は `original_commit_id`（新コミットへ re-anchor される `commit_id` では旧指摘が再マッチする）、issue コメントは投稿時刻（`SINCE` 以降）+ bot 名で絞る。Web の GitHub MCP でも `pull_request_read` の各コメントの `commit_id`/`original_commit_id`、`issue_read` の `created_at` で同様に絞る。詳細は [codex-pr](../codex-pr/SKILL.md)「6. `@codex review` を 1 回だけ投稿する」。
 - **修正がフェーズ 3 の前提を変えたら、フェーズ 3 の該当項目も再実行する**。フェーズ 2 だけ回してフェーズ 3 を据え置くと、見た目を変える修正で証跡スクショ / README ヒーローが古いまま、タスク範囲や新たな知見が変わったのに進捗の正本 / kaizen が未更新のまま最終ゲートを通ってしまう。各修正の影響（見た目・範囲・学び）を見て該当項目だけ更新し、**完了報告の前に最終 HEAD とスクショ・進捗文書・kaizen の整合を確認する**。
 - Codex が利用上限で沈黙したら CodeRabbit のレビューにフォールバックする（[feedback-coderabbit-fallback](../../rules/feedback-coderabbit-fallback.md)）。
 - 待機は `sleep` をバックグラウンドで回し、完了通知で再開する（前景の長い sleep はブロックされる）。
 
 ### フェーズ 5 — 完了報告（ゲート）
 
-- 上の「完了の定義」を全項目満たしてから報告する。**PR URL を貼っただけ・クリーン未到達での完了報告は禁止**。
-- **「ctest 緑」は最終 HEAD の結果であること**を確認する。自走ループで最後に入れた修正の後にフェーズ 2 を回していなければ、完了報告の前にもう一度回す（前回ラウンドの緑を流用しない）。
-- 報告には「何ラウンドで指摘を解消したか」を添える（例：Codex 指摘 4 件を 3 ラウンドで解消、最終レビュー指摘なし）。
+- 上の「完了の定義」を全項目満たしてから報告する。**PR URL を貼っただけ・Blocker / Major が残ったままの完了報告は禁止**。
+- **「ctest 緑」は最終 HEAD の結果であること**を確認する。レビュー対応で最後に入れた修正の後にフェーズ 2 を回していなければ、完了報告の前にもう一度回す（修正前の緑を流用しない）。
+- 報告には、直した指摘と残した Minor / Nit を添える（例：Major 3 件を修正、Minor 1 件は残した）。
 - 敬語なし・3 行以内が基本（[user-response-style](../../rules/user-response-style.md)）。マージはユーザーが squash で行う旨を添える。
 
 ## 環境差分（コマンドはここを見る）
@@ -107,17 +107,17 @@ origin: hmi-platform
 
 ## 中断してユーザーに相談する例外
 
-自走を止めて相談すべきは、レビューの往復では収束しない類：
+自走を止めて相談すべきもの：
 
 - 大規模な方針差し戻し（タスク分割・設計書外ライブラリ導入を要求される）
-- Codex が同じ指摘を 3 回連続で返す（修正が意図に合っていない疑い）
+- 修正が設計の変更になる（直す前に相談する）
 - ビルド / テストが赤いまま固着する
 - 30 分待っても Codex / CodeRabbit が無反応（GitHub App 障害の疑い）
 - 未承認フェーズへの着手を求められている
 
 ## やってはいけないこと（Must Never）
 
-- クリーンレビュー未到達で「完了」と報告する（PR URL 提示だけで済ませる）。
+- Blocker / Major が残ったまま「完了」と報告する（設計の変更になる修正は、直す前に相談する）。
 - 進捗ドキュメントの同期を「次タスクで」と先送りする（ステータスが動く PR は同コミットで同期）。
 - main へ直接 push / コミットする。**Web/リモートではセッション指定の作業ブランチ以外へ push しない**（ローカルは規約どおり作成した `task/<N>-<短い名>` / `docs/<短い名>` ブランチへ push してよい＝この禁止は Web/リモート限定）。
 - PR を Claude 側でマージする（squash マージはユーザー）。
@@ -134,9 +134,9 @@ origin: hmi-platform
                     （新規テストをテスト名で PASS 確認）
          フェーズ3  D&D は GUI 挙動変更→操作後（ドロップ後）状態のスクショを撮る。
                     恒常外観は不変なので README ヒーローだけ省略を一言 / plan 進捗表 +
-                    README + CLAUDE.md + AGENTS.md + mvp-task-runner を同期 / kaizen を rule に追記
+                    README + CLAUDE.md + mvp-task-runner を同期 / kaizen を rule に追記
          フェーズ4  作業ブランチへ push → MCP で PR 作成 → @codex review
-                    → 自走ループ（指摘4件を3ラウンドで解消）→ クリーン到達
-         フェーズ5  完了報告（指摘4件を3ラウンドで解消・最終レビュー指摘なし・
+                    → レビュー（依頼 1 回。Major 3 件を修正、Minor 1 件は残した）
+         フェーズ5  完了報告（Major 3 件を修正しサブエージェント確認済み・Minor 1 件残し・
                     マージは squash でユーザー）
 ```
