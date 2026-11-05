@@ -26,6 +26,7 @@
 - [Continuous improvement](feedback-continuous-improvement.md) — タスク完了前に知見を CLAUDE.md / README / メモリに反映する
 - [Docs style](feedback-docs-style.md) — ドキュメントは Mermaid 図 + 最小説明から始める。冗長な ASCII 図 + 詳細散文は嫌われる
 - [Codex review comment](feedback-codex-review-comment.md) — PR 作成直後に `@codex review` を 1 回だけ明示投稿する（修正 push 後は投稿しない）
+- [PR no emoji](feedback-pr-no-emoji.md) — PR 本文・タイトル・コミットメッセージに絵文字を含めない（Attribution の🤖も外す）
 - [Codex auto-loop](feedback-codex-auto-loop.md) — PR 作成後は Codex レビューを自走で待ち、Blocker / Major を直して push する（再依頼しない）
 - [CodeRabbit fallback](feedback-coderabbit-fallback.md) — Codex が利用上限で沈黙したら、代替レビュアー CodeRabbit の指摘を同じ流れで対応する
 - [Review convergence](feedback-review-convergence.md) — レビュー依頼は 1 PR につき 1 回。Blocker / Major を直して push し、再依頼せず完了報告。修正はサブエージェントに確認させる
@@ -42,6 +43,7 @@
 ### project（CLAUDE.md / Docs に要約しか無い保留事項）
 
 - [widgetModel refactor deferred](project-widgetmodel-refactor-deferred.md) — widgetModel の QAbstractListModel 化は Phase 3-B スコープ確定後に再評価（保留の経緯付き。CLAUDE.md は要約のみ）
+- [RF-E remaining widgets deferred](project-rf-e-remaining-widgets-deferred.md) — RF-E の NumericField/Trend/Meter 展開は保留。孤立ブランチ `origin/claude/next-what-p9ky05`（統合型 HmiWidgetHost、技術検証済み）を参考資産として記録
 
 ### project 規約（path-scoped — 該当ファイル編集時のみロード）
 
