@@ -60,6 +60,7 @@ hmi-platform/
 │   ├─ requirements.md          [人]    現行  上記への案内（旧版は archive/requirements-legacy.md）
 │   ├─ workflow.md              [人+AI] 現行  開発ルール・PR ワークフロー
 │   ├─ v1-release-plan.md       [人+AI] 現行  v1.0 公開（OSS 化）の計画・進捗表
+│   ├─ v1-release-runbook.md    [人+AI] 現行  v1.0 公開当日の手順書
 │   ├─ refactoring-plan.md      [人+AI] 現行  リファクタリング計画（一区切り。残りは保留）
 │   ├─ dbc-tdd-plan.md          [人+AI] 現行  契約→テスト→実装の開発手順の導入計画・進捗表
 │   ├─ phase7-modbus-plan.md    [人+AI] 現行  Modbus（実機作業 MB-5/6 が未完のため現行）

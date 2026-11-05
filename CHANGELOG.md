@@ -2,7 +2,7 @@
 
 このファイルには、リリースごとの主な変更を書く。書き方は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に、バージョン番号は [Semantic Versioning](https://semver.org/lang/ja/) に従う。
 
-## [1.0.0] - 2026-11-09
+## [1.0.0] - 2026-11-08
 
 最初の公開リリース。
 
