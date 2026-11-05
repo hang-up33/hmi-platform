@@ -1,7 +1,10 @@
 # Issue トラッカー: このリポジトリ独自のワークフロー
 
-このリポジトリ（Atlas / hmi-platform）は GitHub Issues を課題管理に使っていない。
+このリポジトリ（Atlas / hmi-platform）は、GitHub Issues を自分たちの課題管理には使わない。
 代わりに Docs 配下の 2 種類のドキュメントで管理する。
+
+v1.0 の公開後は、外部の人から不具合報告と要望を受け付ける窓口として Issues を有効にする。
+受け付けた Issue のうち対応するものは、`Docs/requirements/` の REQ か、進行中の計画書のタスクに書き写してから着手する。
 
 ## 課題・要求が住んでいる場所
 

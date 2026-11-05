@@ -87,7 +87,7 @@ Matt Pocock の engineering skills が参照する設定。詳細は `Docs/agent
 
 ### Issue トラッカー
 
-このリポジトリは GitHub Issues を使わない。機能要求は [Docs/requirements/](Docs/requirements/README.md)（関心別の要求仕様書）、
+GitHub Issues は、公開後に外部の人から不具合報告と要望を受け付ける窓口として使う（v1.0 から）。自分たちのタスク管理には使わない。機能要求は [Docs/requirements/](Docs/requirements/README.md)（関心別の要求仕様書）、
 実装タスクと進捗は `Docs/phase*-plan.md`（進行中）/ `Docs/archive/phase*-plan.md`（完了済み）で管理する（各計画書の「進捗」表が正本）。
 デリバリは `task/<N>-<名>` ブランチ + PR + Codex レビュー（1 PR 1 回）。詳細は [Docs/agents/issue-tracker.md](Docs/agents/issue-tracker.md)。
 

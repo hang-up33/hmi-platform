@@ -47,6 +47,10 @@ hmi-platform/
 ├─ AGENTS.md                    [AI]    現行  ChatGPT Codex への作業指針
 ├─ LICENSE                      [人]    現行  MIT License
 ├─ THIRD_PARTY_NOTICES.md       [人]    現行  依存ライブラリのライセンス一覧
+├─ CONTRIBUTING.md              [人]    現行  貢献の手引き（ビルド・テスト・PR）
+├─ SECURITY.md                  [人]    現行  脆弱性の報告方法
+├─ CODE_OF_CONDUCT.md           [人]    現行  行動規範（Contributor Covenant 2.1）
+├─ CHANGELOG.md                 [人]    現行  リリースごとの変更履歴
 │
 ├─ Docs/                        ── 人間向けが中心
 │   ├─ architecture.md          [人]    現行  モジュール構成・アプリの役割

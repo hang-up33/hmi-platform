@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: セキュリティの問題 / Security issue
+    url: https://github.com/hang-up33/hmi-platform/security/advisories/new
+    about: 脆弱性は公開の Issue に書かず、こちらから非公開で知らせてください。
