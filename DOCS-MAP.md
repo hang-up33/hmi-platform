@@ -53,7 +53,8 @@ hmi-platform/
 │   ├─ requirements/            [人+AI] 現行  関心別の要求仕様書 11 本（REQ/ACC 管理表）。索引は README.md
 │   ├─ requirements.md          [人]    現行  上記への案内（旧版は archive/requirements-legacy.md）
 │   ├─ workflow.md              [人+AI] 現行  開発ルール・PR ワークフロー
-│   ├─ refactoring-plan.md      [人+AI] 現行  進行中フェーズの計画・進捗表
+│   ├─ v1-release-plan.md       [人+AI] 現行  v1.0 公開（OSS 化）の計画・進捗表
+│   ├─ refactoring-plan.md      [人+AI] 現行  リファクタリング計画（v1.0 公開まで中断）
 │   ├─ phase7-modbus-plan.md    [人+AI] 現行  Modbus（実機作業 MB-5/6 が未完のため現行）
 │   ├─ claude-web-dev.md        [人+AI] 現行  Claude on the Web での開発環境手順
 │   │

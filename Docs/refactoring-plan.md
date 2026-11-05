@@ -1,5 +1,7 @@
-# リファクタリング計画（承認済み・着手中）
+# リファクタリング計画（承認済み・v1.0 公開まで中断）
 
+> **ステータス（2026-11-05 追記）：v1.0 公開（2026-11-09）まで中断し、公開後に RF-E から再開する（[v1-release-plan.md](v1-release-plan.md)）。**
+>
 > **ステータス：承認済み・RF-A から着手中（2026-07-22 にユーザーから「リファクタリング進めて」の指示で承認）。** もともとは `[Future]`（Phase 11 が終わったら見直す）扱いだったが、ユーザーの明示的な指示で Phase 11（残りタスク W-E）と並行して進めることにした。1 タスク = 1 PR で進め、README / CLAUDE.md などの常駐文書の同期も各タスクの PR でやる。
 
 ## 背景と目的
@@ -72,5 +74,5 @@ graph LR
 | RF-B | ✅ 完了 | — | インスペクタ本体（`ScrollView` 以下の全 `InspectorSection`）と**インスペクタ専用のヘルパー**（フォーカス集約 `widgetEditFieldFocused` / `inspectorFieldFocused`、型判定 `selectedIsXxx` / `selectedSupportsClickAction`、アクション・バインディング・系列・幾何の編集関数、`ColorSwatch`）を `InspectorPanel.qml` へ抽出（Main.qml 2,533→346 行）。Project レベルの変数定義（`projectVariables` と編集ヘルパー）とダイアログ起動は Window 所有のまま `editorRoot` 経由で呼ぶ。既存挙動不変（全 30 緑）+ 回帰テスト `tst_inspector_panel.qml`（6 件）を追加 |
 | RF-C | 取り下げ | — | 重複は意図的設計（parseValidated 集約済み + Shared 非昇格方針）のため除外 |
 | RF-D | ✅ 完了 | — | 種別メタ（許可リスト + 既定サイズ + 既定文字）を `Canvas.qml` の `widgetTypeTable` 1 箇所へ集約。`normalizeWidgetType`（キー存在で許可判定）/ `addWidget`（isTrend/isMeter 分岐と text 三項連鎖を廃止）/ `addPresetWidget`（サイズ既定）が参照。既存挙動不変（全 26 緑）+ Trend 既定サイズの回帰テストを追加 |
-| RF-E | 未着手 | — | 実施順の次タスク。着手時に方式 (a)/(b) を試作比較 |
+| RF-E | 未着手 | — | 実施順の次タスク。着手時に方式 (a)/(b) を試作比較。**v1.0 公開（2026-11-09）の後に再開**（[v1-release-plan.md](v1-release-plan.md) D3） |
 | RF-F | 保留 | — | [widgetmodel-refactor-deferred](../.claude/rules/project-widgetmodel-refactor-deferred.md) を継続 |

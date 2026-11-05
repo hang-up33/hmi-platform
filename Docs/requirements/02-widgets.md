@@ -111,7 +111,7 @@ flowchart TD
 | 1 | Lamp の点灯状態を専用 bool で受けるか、既存プロパティを流用するか（旧案：専用 `lit`） | 未決 |
 | 2 | decimals / unit / step の追加先（Widget 共通か、種別別か） | 未決 |
 | 3 | Gauge・Image など P2 部品の優先順位。要望が出てから決める | 保留 |
-| 4 | Editor / Simulator の delegate 重複削減（RF-E） | 進行中（リファクタリング計画） |
+| 4 | Editor / Simulator の delegate 重複削減（RF-E） | v1.0 公開まで中断（リファクタリング計画） |
 
 ## 12. 変更履歴
 
