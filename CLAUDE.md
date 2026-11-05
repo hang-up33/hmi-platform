@@ -52,6 +52,7 @@ cmake --build build
 4. **既存資産の保護** — フォルダ構成変更禁止・既存コード削除禁止・qmake等代替ビルドシステム導入禁止（対象は**ソース / ビルド構成**。`Docs/` 配下の整理はユーザー承認時に限り可）。
 5. **PR ワークフロー & Codex レビュー** — ブランチは `task/<N>-<名>`、Codex レビューの依頼は 1 PR 1 回。Blocker / Major を直して push し、再依頼しない（[feedback-review-convergence](.claude/rules/feedback-review-convergence.md)）（マージはユーザーが行う）。
 6. **応答スタイル** — 日本語・敬語なし（常体）・簡潔な応答を基本とする。
+7. **契約 → テスト → 実装** — 本番コードは「当てはまる契約条件（事前・事後・不変）を書く → 条件ごとのテストを先に書き失敗を確認（振る舞いを変えないリファクタリングは変更前の成功を確認）→ テストに触らず実装」の順で書く（[dbc-tdd](.claude/rules/dbc-tdd.md) / 導入計画 [Docs/dbc-tdd-plan.md](Docs/dbc-tdd-plan.md)）。
 
 ---
 

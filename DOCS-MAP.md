@@ -55,6 +55,7 @@ hmi-platform/
 │   ├─ workflow.md              [人+AI] 現行  開発ルール・PR ワークフロー
 │   ├─ v1-release-plan.md       [人+AI] 現行  v1.0 公開（OSS 化）の計画・進捗表
 │   ├─ refactoring-plan.md      [人+AI] 現行  リファクタリング計画（v1.0 公開まで中断）
+│   ├─ dbc-tdd-plan.md          [人+AI] 現行  契約→テスト→実装の開発手順の導入計画・進捗表
 │   ├─ phase7-modbus-plan.md    [人+AI] 現行  Modbus（実機作業 MB-5/6 が未完のため現行）
 │   ├─ claude-web-dev.md        [人+AI] 現行  Claude on the Web での開発環境手順
 │   │
@@ -70,7 +71,7 @@ hmi-platform/
 │   └─ screenshots/             [人]    現行  README 掲載画像・動作証跡（47 件）
 │
 ├─ .claude/                     [AI]    ── ほぼ全部が Claude Code の動作設定。人間は読まなくてよい
-│   ├─ rules/*.md  (22)                 常時読み込まれる規約・環境メモ・ユーザーの好み
+│   ├─ rules/*.md  (24)                 常時読み込まれる規約・環境メモ・ユーザーの好み
 │   ├─ skills/*/SKILL.md (10)           手順書（ビルド / PR / E2E / スクショ 等）
 │   ├─ agents/*.md (2)                  サブエージェント定義
 │   ├─ commands/*.md (1)                スラッシュコマンド定義
@@ -92,8 +93,9 @@ hmi-platform/
 | [README.md](README.md) | 172 | 製品概要・対応 Widget・クイックスタート・現在地 |
 | [Docs/architecture.md](Docs/architecture.md) | 43 | Editor / Simulator / Runtime とモジュール構成 |
 | [Docs/phase-status.md](Docs/phase-status.md) | 49 | フェーズ進捗の正本 |
-| [Docs/workflow.md](Docs/workflow.md) | 54 | ブランチ規約・PR・レビュー・完了基準 |
+| [Docs/workflow.md](Docs/workflow.md) | 55 | ブランチ規約・PR・レビュー・完了基準 |
 | [Docs/refactoring-plan.md](Docs/refactoring-plan.md) | 76 | 進行中のリファクタリング計画と進捗表 |
+| [Docs/dbc-tdd-plan.md](Docs/dbc-tdd-plan.md) | 109 | 契約→テスト→実装の開発手順の導入計画と進捗表 |
 | [Docs/claude-web-dev.md](Docs/claude-web-dev.md) | 102 | Claude on the Web での開発セットアップ |
 | [Docs/phase7-modbus-plan.md](Docs/phase7-modbus-plan.md) | 153 | Modbus TCP。MB-5/6（実機）が未完 |
 | [scripts/yocto/README.md](scripts/yocto/README.md) | 144 | Yocto SDK クロスビルド・実機転送・VNC キャプチャ |
@@ -115,7 +117,7 @@ hmi-platform/
 | [CLAUDE.md](CLAUDE.md) | 1 | Claude Code への作業指針。冒頭に「Claude Code への指針です」と明記 |
 | [AGENTS.md](AGENTS.md) | 1 | ChatGPT Codex への作業指針 |
 | [Docs/agents/](Docs/agents/) | 3 | レビュー作法・ドメイン資料の指定・課題管理の代替 |
-| `.claude/rules/*.md` | 22 | 常時読み込まれる規約。環境固有の罠、ユーザーの応答スタイルの好みなど |
+| `.claude/rules/*.md` | 24 | 常時読み込まれる規約。環境固有の罠、ユーザーの応答スタイルの好みなど |
 | `.claude/skills/*/SKILL.md` | 10 | エージェントが実行する手順書 |
 | `.claude/agents/*.md` | 2 | サブエージェント定義 |
 | `.claude/commands/*.md` | 1 | スラッシュコマンド定義 |

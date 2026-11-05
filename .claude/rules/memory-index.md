@@ -31,6 +31,7 @@
 - [Review convergence](feedback-review-convergence.md) — レビュー依頼は 1 PR につき 1 回。Blocker / Major を直して push し、再依頼せず完了報告。修正はサブエージェントに確認させる
 - [Subagent review](feedback-subagent-review.md) — 作業が一区切りしたら、頼まれなくてもサブエージェントにレビューさせ、指摘を直してから完了報告する
 - [Plan docs consistency](feedback-plan-docs-consistency.md) — 計画ドキュメントは API 制約・未確認情報の保留・複数アプリ統合・既定値・README 同期・意図的重複/[Future] 分離の確認などの整合性ルールを守る
+- [DbC + テスト先行](dbc-tdd.md) — 本番コードは当てはまる契約条件 → テスト（失敗確認。振る舞い不変のリファクタリングは成功確認）→ 実装の順で書く。記法とテスト名の付け方
 - [Phase status sync](feedback-phase-status-sync.md) — タスク完了・フェーズ進行時は進捗ステータスの常駐文書（CLAUDE.md / README / plan 進捗表 / mvp-task-runner / development-history）を同期する。正本は plan の「進捗」表
 
 ### reference
