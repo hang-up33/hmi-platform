@@ -37,6 +37,9 @@ target_link_libraries(hmi_editor
         hmi_widgetsplugin
 )
 
+# V1-6: ルート CMake の project(VERSION) を `--version` で出せるよう渡す。
+target_compile_definitions(hmi_editor PRIVATE HMI_VERSION="${PROJECT_VERSION}")
+
 # Task 16: E2E テスト用 Spix エンドポイント。`--e2e` 起動時のみ
 # 実際にネットワークを開くため、リンクしても通常起動には影響しない。
 # Windows MinGW では AnyRPC の libstdc++ 衝突により無効化される

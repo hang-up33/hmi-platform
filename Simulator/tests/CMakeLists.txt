@@ -91,3 +91,13 @@ target_link_libraries(tst_hmi_simulator_qml
 
 # CI / headless 環境でも実行できるよう -platform offscreen を明示する。
 add_test(NAME tst_hmi_simulator_qml COMMAND tst_hmi_simulator_qml -platform offscreen)
+
+# V1-6: `--version` がルート CMake の project(VERSION) を出すことを確かめる
+# （契約 Simulator_main_main_Post1）。Runtime は同じ main.cpp から作るので両方を見る。
+foreach(_hmi_app hmi_simulator hmi_runtime)
+    add_test(NAME post_Simulator_main_main_Post1_printsProjectVersion_${_hmi_app}
+             COMMAND $<TARGET_FILE:${_hmi_app}> --version)
+    set_tests_properties(post_Simulator_main_main_Post1_printsProjectVersion_${_hmi_app} PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_COMMAND_LINE_PARSER_NO_GUI_MESSAGE_BOXES=1"
+        PASS_REGULAR_EXPRESSION "hmi_simulator ${PROJECT_VERSION}")
+endforeach()

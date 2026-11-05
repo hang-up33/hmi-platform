@@ -26,13 +26,13 @@ flowchart LR
 | # | タスク | スコープ | 完了基準（固有分） |
 |---|---|---|---|
 | 1 | Qt6 プロジェクト雛形 | CMake ルートと **Editor / Simulator / Shared/Schema / Shared/Widgets の 4 サブプロジェクト構成**を立ち上げる。各サブディレクトリに最小の `qt_add_executable` / `qt_add_qml_module` / `qt_add_library`。PR：`f195a0c`（初期化期のため直接コミット、PR 番号なし） | 4 ターゲットが生成され、Editor / Simulator が空ウィンドウで起動する |
-| 2 | キャンバス表示 ([PR #4](https://github.com/hang-up33/hmi-platform/pull/4)) | Editor 中央に **1024×600 の編集領域 `EditorCanvas`** を描画。`loadFromModule("HmiEditor", "Main")` の起動経路を確立 | Editor 起動でキャンバスが表示される |
-| 3 | Widget データ構造定義 ([PR #6](https://github.com/hang-up33/hmi-platform/pull/6)) | Widget / Screen / Project の型と JSON I/O を **`Shared/Schema` に集約**（struct + `namespace hmi::schema`、各型に `toJson()` / `fromJson()`） | 型のラウンドトリップ（生成 → JSON → 復元）が成立 |
-| 4 | Button 配置 ([PR #7](https://github.com/hang-up33/hmi-platform/pull/7)) | 「ボタンを追加」操作で Canvas に Button widget を 1 つ生やす。`HmiButton.qml`（共有 Widget）/ `EditableWidget.qml` / `widgetModel` の概念を導入 | 追加操作でボタンがキャンバスに出る |
-| 5 | ドラッグ可能化 ([PR #10](https://github.com/hang-up33/hmi-platform/pull/10)) | 配置済み Widget を **マウスドラッグで移動**可能にし、座標更新を `widgetModel` に反映 | ドラッグで Widget が動き、座標がモデルに反映される |
-| 6 | JSON 保存 ([PR #11](https://github.com/hang-up33/hmi-platform/pull/11)) | Editor の状態を `ProjectData` に変換し **JSON ファイルへ保存**。`Editor::ProjectIo`（`setContextProperty` で QML 公開）+ FileDialog 保存 UI | 保存した JSON が妥当な内容で書き出される |
-| 7 | JSON 読込 ([PR #14](https://github.com/hang-up33/hmi-platform/pull/14)) | 保存済み JSON を Editor で再オープンし状態を復元。`ProjectIo::load()` と **`ProjectData::isValidJson()` を含む階層的バリデーション API** | 読込で配置状態が復元される。不正 JSON は弾く |
-| 8 | Simulator 表示 ([PR #16](https://github.com/hang-up33/hmi-platform/pull/16)) | Editor が出した JSON を **Simulator（読み取り専用）が同じレイアウトで描画**。`Simulator::ProjectLoader` / `--open <path>` CLI / `HmiSimulator` モジュール | Editor と Simulator が同一 JSON を同一レイアウトで描画（**MVP ループ成立**） |
+| 2 | キャンバス表示 (PR #4) | Editor 中央に **1024×600 の編集領域 `EditorCanvas`** を描画。`loadFromModule("HmiEditor", "Main")` の起動経路を確立 | Editor 起動でキャンバスが表示される |
+| 3 | Widget データ構造定義 (PR #6) | Widget / Screen / Project の型と JSON I/O を **`Shared/Schema` に集約**（struct + `namespace hmi::schema`、各型に `toJson()` / `fromJson()`） | 型のラウンドトリップ（生成 → JSON → 復元）が成立 |
+| 4 | Button 配置 (PR #7) | 「ボタンを追加」操作で Canvas に Button widget を 1 つ生やす。`HmiButton.qml`（共有 Widget）/ `EditableWidget.qml` / `widgetModel` の概念を導入 | 追加操作でボタンがキャンバスに出る |
+| 5 | ドラッグ可能化 (PR #10) | 配置済み Widget を **マウスドラッグで移動**可能にし、座標更新を `widgetModel` に反映 | ドラッグで Widget が動き、座標がモデルに反映される |
+| 6 | JSON 保存 (PR #11) | Editor の状態を `ProjectData` に変換し **JSON ファイルへ保存**。`Editor::ProjectIo`（`setContextProperty` で QML 公開）+ FileDialog 保存 UI | 保存した JSON が妥当な内容で書き出される |
+| 7 | JSON 読込 (PR #14) | 保存済み JSON を Editor で再オープンし状態を復元。`ProjectIo::load()` と **`ProjectData::isValidJson()` を含む階層的バリデーション API** | 読込で配置状態が復元される。不正 JSON は弾く |
+| 8 | Simulator 表示 (PR #16) | Editor が出した JSON を **Simulator（読み取り専用）が同じレイアウトで描画**。`Simulator::ProjectLoader` / `--open <path>` CLI / `HmiSimulator` モジュール | Editor と Simulator が同一 JSON を同一レイアウトで描画（**MVP ループ成立**） |
 
 ---
 

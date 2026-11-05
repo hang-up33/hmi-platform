@@ -98,8 +98,8 @@ flowchart LR
 
 | Task | 状態 | PR |
 |---|---|---|
-| 53 real 変数型 end-to-end | ✅ 完了 | [#112](https://github.com/hang-up33/hmi-platform/pull/112) |
-| 54 数値範囲 min/max | ✅ 完了 | [#113](https://github.com/hang-up33/hmi-platform/pull/113) |
-| 55 cross-app E2E（real + clamp）+ スクショ | ✅ 完了 | [#114](https://github.com/hang-up33/hmi-platform/pull/114) |
+| 53 real 変数型 end-to-end | ✅ 完了 | #112 |
+| 54 数値範囲 min/max | ✅ 完了 | #113 |
+| 55 cross-app E2E（real + clamp）+ スクショ | ✅ 完了 | #114 |
 
 > **本 PR は計画書（+ 進捗ステータス同期）のみ**。Phase 6-B の承認＝フェーズ進行のため、常駐文書（README / CLAUDE.md / AGENTS.md / `.claude/agents/mvp-task-runner.md` / development-history）を本 PR で同期する（[feedback-phase-status-sync](../../.claude/rules/feedback-phase-status-sync.md)）。実装は Task 53 から 1 タスクずつ。

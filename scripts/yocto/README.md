@@ -137,8 +137,8 @@ python scripts/yocto/vnc-click-capture.py <board-ip> 5900 before.png after.png 5
 
 - **mDNS が IPv6（AAAA）しか返さないことがある**：`Resolve-DnsName imx8mp-lpddr4-evk.local` が
   `fe80::...`（IPv6 link-local）だけを返し IPv4（A）が出ない場合がある。IPv4 を引くには
-  **`Resolve-DnsName imx8mp-lpddr4-evk.local -Type A`** で A レコードを明示照会する
-  （例 `169.254.124.33`）。IPv6 link-local で直接 ping するなら zone id 付き（`fe80::...%<ifIndex>`）。
+  **`Resolve-DnsName imx8mp-lpddr4-evk.local -Type A`** で A レコードを明示照会する。
+  IPv6 link-local で直接 ping するなら zone id 付き（`fe80::...%<ifIndex>`）。
 - **SSH 鍵認証は非対話で回る**（`-o BatchMode=yes` で確認可）。PowerShell 越しに ssh/scp を呼ぶと
   known_hosts 追加の警告が stderr に出て `$LASTEXITCODE`/`$?` が偽陰性になることがあるが、
   標準出力の内容で成否を判断する（`2>&1` 由来の NativeCommandError は無視してよい）。

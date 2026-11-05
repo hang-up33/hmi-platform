@@ -1,11 +1,9 @@
 name: CI
 
 on:
-  # 【2026-06-18 自動 CI 復活】2026-06-10 に GitHub Actions の課金回避で自動トリガを
-  # 停止していたが、Proxmox 上の self-hosted runner（linux ジョブ）に載せ替えて
-  # 課金ゼロのまま自動 CI を復活した。linux=self-hosted（0 円）が日常 PR / main push の
-  # 主ゲート。desktop（mac 10x / win 2x）は手動 dispatch か `ci-desktop` ラベル時のみ。
-  # 詳細は Docs/archive/ci-self-hosted-plan.md。
+  # linux ジョブは PR と main への push のたびに走る主ゲート。
+  # desktop（macOS / Windows）ジョブは、public リポジトリでは毎回走る。
+  # private リポジトリでは課金を避けるため、手動実行か `ci-desktop` ラベルのときだけ走る。
   workflow_dispatch:
   pull_request:
     branches: [main]
@@ -22,16 +20,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Linux ジョブ：PR / push の毎回走る「主ゲート」。GitHub Actions の課金倍率が
-  # Linux=1x（mac=10x / win=2x）と最も安く、private リポジトリの無料枠を温存できる。
-  # このセッション（Ubuntu 24.04）で Qt 6.10.0 + offscreen により unit 8 + e2e 5 =
-  # 13/13 緑を実証済み。日常の PR 検証はこのジョブで完結させる。
+  # Linux ジョブ：PR / push の毎回走る「主ゲート」。Qt 6.10.0 + offscreen で
+  # unit と E2E をすべて回す。
   linux:
     name: Linux / Qt 6.10
-    # self-hosted runner（Proxmox LXC / Ubuntu 24.04）で実行＝課金ゼロの主ゲート。
-    # private リポ前提の固定値。public 化 / fork PR を許可する場合は fork なら
-    # GitHub-hosted へ逃がす条件式に差し替える（Docs/archive/ci-self-hosted-plan.md「セキュリティ注意」）。
-    runs-on: [self-hosted, linux]
+    # public リポジトリでは GitHub 標準の ubuntu-24.04 で動く（外部の人の PR も同じ）。
+    # 下の Linux deps のパッケージ名が 24.04 前提なので、ubuntu-latest ではなく版を固定する。
+    # private リポジトリでは、課金を避けるため自前の runner で動く。
+    # public リポジトリには自前の runner を登録しないこと（Docs/v1-release-plan.md V1-4）。
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","linux"]') || 'ubuntu-24.04' }}
     timeout-minutes: 45
     steps:
       - name: Checkout
@@ -44,7 +41,7 @@ jobs:
 
       # Qt6（offscreen / QtQuick）のビルド・実行に必要な OS ライブラリと、日本語ラベル用
       # フォント、Ninja を導入する。一覧は scripts/web/setup.sh と揃えている
-      # （ubuntu-latest = 24.04 を前提。libglib2.0-0t64 は 24.04 のパッケージ名）。
+      # （Ubuntu 24.04 が前提。libglib2.0-0t64 は 24.04 のパッケージ名）。
       - name: Install Linux deps
         run: |
           sudo apt-get update
@@ -102,17 +99,15 @@ jobs:
             build/Testing/Temporary/LastTestsFailed.log
           if-no-files-found: ignore
 
-  # macOS / Windows ジョブ：課金倍率が高い（mac=10x / win=2x）ため **既定では PR で走らせない**。
-  # 走るのは (1) main への push、(2) 手動 workflow_dispatch、(3) PR に `ci-desktop` ラベルを
-  # 付けたとき の 3 ケースのみ。これで無料枠の消費を抑えつつ、必要な時だけ実機 2 OS の
-  # ビルド・テストを確認できる（ローカル開発は元々 macOS / Windows 母艦で行う）。
+  # macOS / Windows ジョブ。
+  # public リポジトリでは GitHub 標準の runner が無料なので、PR と main への push のたびに走る。
+  # private リポジトリでは課金倍率が高い（mac=10x / win=2x）ため、手動実行か PR に
+  # `ci-desktop` ラベルを付けたときだけ走る。
   desktop:
     name: ${{ matrix.name }}
-    # 課金倍率が高い（mac=10x / win=2x）ため、手動 workflow_dispatch か PR の
-    # `ci-desktop` ラベル時のみ走らせる。main push では走らせない（main merge 毎の
-    # mac/win 自動課金を防ぐ。Codex PR #133 P2）。
     if: >-
-      github.event_name == 'workflow_dispatch'
+      github.event.repository.private == false
+      || github.event_name == 'workflow_dispatch'
       || contains(github.event.pull_request.labels.*.name, 'ci-desktop')
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45

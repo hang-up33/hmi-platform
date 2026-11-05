@@ -183,7 +183,7 @@ CI を回す箱（self-hosted）ができた後の **上積み候補**。今回�
 | ステップ | 状態 | メモ |
 |---|---|---|
 | 計画書作成 | ✅ 本書 | CI は off のまま。`ci.yml` 未変更 |
-| Proxmox LXC 作成 + CI 依存導入 | ✅ 完了 | 2026-06-18。`pve`（VE 9.1.6）に **CT 101 `gh-runner`**（Ubuntu 24.04 / 4 vCPU・4GB・swap2GB / rootfs 32GB local-lvm / net vmbr0 DHCP=192.168.40.209 / unprivileged / nesting=1 / onboot=1）。CI 依存（本書 §2 一覧 + cmake/build-essential/curl/git/python3/sudo）導入済。`runner` ユーザー + NOPASSWD sudo は `apt-get` のみに限定（§2.5） |
+| Proxmox LXC 作成 + CI 依存導入 | ✅ 完了 | 2026-06-18。仮想化サーバ上に LXC コンテナ（Ubuntu 24.04 / 4 vCPU・4GB）を作り、CI 依存を導入した。接続先などの詳細はリポジトリに書かない |
 | self-hosted runner 登録・常駐化 | ✅ 完了 | 2026-06-18。actions/runner **v2.335.1** を `runner` ユーザーで `config.sh`（labels: `self-hosted` `Linux` `X64` `qt`、name `gh-runner-lxc`）→ `svc.sh install/start` で systemd 常駐（online / idle）。registration token は `gh api` で自動発行 |
-| runner で手動実行 → 緑確認 | ✅ 完了 | 2026-06-18。検証ブランチ `ci/verify-selfhosted`（linux=self-hosted / desktop=`if:false` / modules 追加）を `gh workflow run` → **self-hosted で 100% tests passed（22 passed、modbus 2 件は pymodbus 未導入で Skipped）**。run [27753217404](https://github.com/hang-up33/hmi-platform/actions/runs/27753217404) |
+| runner で手動実行 → 緑確認 | ✅ 完了 | 2026-06-18。検証ブランチ `ci/verify-selfhosted`（linux=self-hosted / desktop=`if:false` / modules 追加）を `gh workflow run` → **self-hosted で 100% tests passed（22 passed、modbus 2 件は pymodbus 未導入で Skipped）**。run 27753217404 |
 | `ci.yml` 改修（①linux=self-hosted ②自動トリガ復活 ③desktop=main push 除外 ④modules=qtserialbus qtserialport）+ dev-environment.md 更新 | ✅ 完了 | `docs/ci-restore-selfhosted` をマージ済み。`.github/workflows/ci.yml` に ①〜④ すべて反映済み（2026-08-29 実物確認）＝自動 CI on |

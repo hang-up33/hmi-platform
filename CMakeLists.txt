@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(hmi_platform LANGUAGES CXX)
+project(hmi_platform VERSION 1.0.0 LANGUAGES CXX)
 
 # Windows ではアプリアイコンを exe に埋め込むため RC（リソースコンパイラ = MinGW windres）
 # を有効化する。Editor / Simulator の CMakeLists が configure_file で生成した .rc を

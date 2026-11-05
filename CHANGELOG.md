@@ -39,5 +39,6 @@
 - 実際の PLC への書き込み確認と、実機の Runtime での Modbus の確認はまだ行っていない。
 - 通信の暗号化と認証の設定には対応していない（[SECURITY.md](SECURITY.md)）。
 - ビルド済みのバイナリは配布していない。ソースからビルドする。
+- `hmi_runtime --version` は、Simulator と同じ名前で `hmi_simulator 1.0.0` と表示する（Runtime は Simulator のソースを共有しているため）。
 
 [1.0.0]: https://github.com/hang-up33/hmi-platform/releases/tag/v1.0.0

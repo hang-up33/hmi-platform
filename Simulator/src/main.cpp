@@ -25,10 +25,14 @@
 #include <Spix/QtQmlBot.h>
 #endif
 
+/// @post Simulator_main_main_Post1 `--version` を付けて起動すると、ルート CMake の
+///       project(VERSION) と同じ版数（例 1.0.0）を「hmi_simulator <版数>」の形で標準出力に出して終わる。
+///       Runtime も同じソースからビルドするので、hmi_runtime にも同じ条件が当てはまる
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
     app.setApplicationName("hmi_simulator");
+    app.setApplicationVersion(QStringLiteral(HMI_VERSION));
 
     // 起動時に表示する JSON を CLI で指定できるようにする（任意）。
     //   hmi_simulator [--open <path>] [--e2e] [--e2e-port <port>] [path]
@@ -36,6 +40,7 @@ int main(int argc, char *argv[])
     QCommandLineParser parser;
     parser.setApplicationDescription("HMI Simulator (read-only)");
     parser.addHelpOption();
+    parser.addVersionOption();
     QCommandLineOption openOpt({"o", "open"},
                                "Path to project JSON to load on startup.",
                                "path");

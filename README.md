@@ -1,10 +1,16 @@
 # hmi-platform（Atlas）
 
-GUI で HMI 画面を作図し、JSON 形式で保存。PC 試験環境でも組込み実機でも全く同じ画面を描画する、Qt6 ベースの次世代 HMI 開発プラットフォームです。
+Qt6 が動く組込み Linux 向けの、HMI 画面の作画・実行環境です。GUI で画面を作図して JSON 形式で保存し、PC の試験環境でも組込み実機でも同じ画面を描画します。
 
 - **Editor** … マウスドラッグ＆ドロップで Widget を配置・編集する作画ツール
 - **Simulator** … PC 上で同じ JSON を描画し、変数動作や通信を検証する試験環境
-- **Runtime** … i.MX8M Plus などの Linux 実機（Yocto / Qt6）で高速描画する実機ランタイム
+- **Runtime** … Qt6 が動く組込み Linux（Yocto など）で画面を表示する実機ランタイム
+
+動作確認済みの実機：NXP i.MX8M Plus EVK（Yocto scarthgap / Qt 6.8）。
+
+> **English**: Atlas (hmi-platform) is an HMI screen editor and runtime for embedded Linux with Qt 6. Design screens in the Editor, save them as JSON, test them on a PC with the Simulator, and run the same screens on a device with the Runtime. Supports Modbus TCP and OPC-UA. Tested on NXP i.MX8M Plus EVK. Licensed under MIT. Documentation is mainly in Japanese.
+
+本プロジェクトは、Claude Code（Anthropic）でほぼすべてのコードを書き、ChatGPT Codex と CodeRabbit でレビューしながら開発しています。
 
 > **開発コードネーム: Atlas**（天空を支える巨神 ＝ 各モジュールを束ねる基盤の意）。正式なリポジトリ名は `hmi-platform` です。
 
@@ -157,7 +163,7 @@ scp -O ~/build-yocto/Runtime/hmi_runtime root@<board-ip>:/tmp/hmi_runtime
 
 ## 現在地
 
-- **現在地**: **v1.0 公開準備（2026-11-05 承認）着手中 — 2026-11-09（月）に MIT ライセンスの OSS として公開予定**。11/9 まで機能凍結し、機微情報の確認・ライセンス・CI の公開対応を進める。V1-0〜V1-3 完了、次タスク = V1-4（CI を GitHub 標準の runner へ移す）。進捗の正本は [Docs/v1-release-plan.md](Docs/v1-release-plan.md)。
+- **現在地**: **v1.0 公開準備（2026-11-05 承認）着手中 — 2026-11-09（月）に MIT ライセンスの OSS として公開予定**。11/9 まで機能凍結し、機微情報の確認・ライセンス・CI の公開対応を進める。V1-0〜V1-6 完了、次タスク = V1-7（11/9 午前の公開前検証）。進捗の正本は [Docs/v1-release-plan.md](Docs/v1-release-plan.md)。
   - **契約→テスト→実装（DbC + テスト先行）の導入**：DT-1（計画とルール）完了、DT-2〜DT-6 は v1.0 公開後。正本は [Docs/dbc-tdd-plan.md](Docs/dbc-tdd-plan.md)。
   - **リファクタリング計画（2026-07-22 承認）一区切り — RF-A / RF-B / RF-D / RF-E / RF-G 完了**。機能追加はせず、`Editor/qml/Main.qml` の肥大化（2,712→346 行）と型分岐の散在を解消した。RF-E〔Button / Label / SimpleButton の delegate を `Shared/Widgets` の型別ホスト QML へ集約〕と RF-G〔`InspectorPanel.qml` をセクション単位へ分割〕も v1.0 に含める。RF-E の残り種別と RF-F は保留。進捗の正本は [Docs/refactoring-plan.md](Docs/refactoring-plan.md)。
   - **Phase 11 / Widget サンプルパレット（ドラッグ&ドロップ追加）＋ 初号「シンプルボタン」完了（W-A〜W-E クローズ）**。issue #155「シンプル・イズ・ベスト版 HMI ボタン（ベゼル無し）」を新 Widget 種別 `SimpleButton`（`HmiSimpleButton.qml`）として QML で忠実再現し、**見た目そのままの Widget サンプルをインスペクタに並べてキャンバスへ D&D で追加**する汎用パレット UX を新設した（将来他 Widget もパレット化）。Canvas 自描画で新 Qt 依存ゼロ（Meter/Trend 同方針）。W-A〔Schema 拡張〕/ W-B〔HmiSimpleButton 描画 + delegate 6 分岐目〕/ W-C〔サンプルパレット〕/ W-D〔パレット→キャンバス D&D 追加〕/ W-E〔インスペクタ型対応（シンプルボタン詳細＝形状 / テーマ / 差し色 / 長押し時間）+ cross-app E2E `e2e_simple_button_live` + スクショ同期〕すべて完了（Web `ctest` 27/27 緑）。次フェーズは未承認候補から選定（自動着手しない）。進捗の正本は [Docs/archive/phase11-widget-palette-plan.md](Docs/archive/phase11-widget-palette-plan.md)。

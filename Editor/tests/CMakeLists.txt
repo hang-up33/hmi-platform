@@ -37,3 +37,11 @@ target_link_libraries(tst_hmi_editor_qml
 # CI / headless 環境でも実行できるよう -platform offscreen を明示する
 # （Task 12 で確立した運用）。
 add_test(NAME tst_hmi_editor_qml COMMAND tst_hmi_editor_qml -platform offscreen)
+
+# V1-6: `--version` がルート CMake の project(VERSION) を出すことを確かめる
+# （契約 Editor_main_main_Post1）。QGuiApplication を作るので offscreen で起動する。
+add_test(NAME post_Editor_main_main_Post1_printsProjectVersion
+         COMMAND $<TARGET_FILE:hmi_editor> --version)
+set_tests_properties(post_Editor_main_main_Post1_printsProjectVersion PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_COMMAND_LINE_PARSER_NO_GUI_MESSAGE_BOXES=1"
+    PASS_REGULAR_EXPRESSION "hmi_editor ${PROJECT_VERSION}")

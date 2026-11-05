@@ -5,7 +5,7 @@
 > **この文書は計画だけを書いたもの**（実装は別 PR でタスクを1つずつ進める）。要求の倉庫は [requirements/06-modbus.md](requirements/06-modbus.md)、結線規約は [.claude/rules/qml-module-conventions.md](../.claude/rules/qml-module-conventions.md)、Schema 規約は [.claude/rules/schema-conventions.md](../.claude/rules/schema-conventions.md)、実機/SDK まわりの事情は [.claude/rules/dev-environment.md](../.claude/rules/dev-environment.md) を見てほしい。
 > **進捗の正本はこのファイルの「進捗」表**。
 >
-> **承認状態**：**着手済み（2026-06-16 ユーザー承認）。MB-1 完了（PR #119）。MB-2〔PC 読込ポーリング〕完了（PR #121）。MB-3〔実 PLC 読込確認〕ローカル達成（2026-06-16：実 AutomationDirect CLICK ＠192.168.1.2:502 へ `hmi_simulator` で接続し DS1/DS2(holding)・C1(coil) を読込・binding 追従を確認。証跡 `Docs/samples/mb-3-click-plc-demo.json` + スクショ）。** 直近完了は Phase 6-B（NumericField 拡張・Task 53〜55）。MB-5 / MB-6（実 PLC 書込・実機 Yocto）はローカル専用で Web 環境では実施不可（MB-1 / MB-2 / MB-4 は Web 可）。step / decimals / unit や後続入力 Widget〔Gauge / Toggle〕は引き続き別承認の候補。
+> **承認状態**：**着手済み（2026-06-16 ユーザー承認）。MB-1 完了（PR #119）。MB-2〔PC 読込ポーリング〕完了（PR #121）。MB-3〔実 PLC 読込確認〕ローカル達成（2026-06-16：実 AutomationDirect CLICK ＠192.168.0.10:502 へ `hmi_simulator` で接続し DS1/DS2(holding)・C1(coil) を読込・binding 追従を確認。証跡 `Docs/samples/mb-3-click-plc-demo.json` + スクショ）。** 直近完了は Phase 6-B（NumericField 拡張・Task 53〜55）。MB-5 / MB-6（実 PLC 書込・実機 Yocto）はローカル専用で Web 環境では実施不可（MB-1 / MB-2 / MB-4 は Web 可）。step / decimals / unit や後続入力 Widget〔Gauge / Toggle〕は引き続き別承認の候補。
 
 ---
 
@@ -145,7 +145,7 @@ flowchart TD
 |---|---|---|
 | MB-1 変数ソース Schema + Editor UI | 完了 | #119 |
 | MB-2 PC 読込ポーリング（pymodbus E2E） | 完了 | #121 |
-| MB-3 実 PLC 読込確認（ローカル） | 完了（2026-06-16 実 CLICK ＠192.168.1.2） | — |
+| MB-3 実 PLC 読込確認（ローカル） | 完了（2026-06-16 実 CLICK ＠192.168.0.10） | — |
 | MB-4 書込 + 接続状態 + 自動再接続 | 完了（書込 E2E `tests/e2e/test_modbus_write.py` 含む） | #122 |
 | MB-5 実 PLC 書込確認（ローカル） | 未着手（Web 不可） | — |
 | MB-6 実機 Runtime 展開（WSL2+実機） | 未着手（Web 不可） | — |

@@ -1,7 +1,7 @@
 {
   "project": "Atlas / AutomationDirect CLICK (Modbus TCP) Demo",
   "connections": [
-    { "id": "click1", "proto": "modbusTcp", "host": "192.168.1.2", "port": 502, "unitId": 1 }
+    { "id": "click1", "proto": "modbusTcp", "host": "192.168.0.10", "port": 502, "unitId": 1 }
   ],
   "variables": [
     { "name": "ds1", "type": "int",
@@ -15,7 +15,7 @@
     {
       "name": "Main",
       "widgets": [
-        { "id": "title", "type": "Label", "x": 60, "y": 40, "width": 700, "height": 56, "text": "CLICK PLC @ 192.168.1.2 / Modbus TCP", "textColor": "#1d3557", "fontSize": 30, "fontBold": true },
+        { "id": "title", "type": "Label", "x": 60, "y": 40, "width": 700, "height": 56, "text": "CLICK PLC @ 192.168.0.10 / Modbus TCP", "textColor": "#1d3557", "fontSize": 30, "fontBold": true },
         { "id": "lblDs1", "type": "Label", "x": 60, "y": 140, "width": 320, "height": 44, "text": "DS1 (holding 0):", "textColor": "#1d3557", "fontSize": 22 },
         { "id": "valDs1", "type": "Label", "x": 400, "y": 140, "width": 200, "height": 44, "text": "?", "textColor": "#2a9d8f", "fontSize": 24, "fontBold": true, "bindings": [ { "property": "text", "variable": "ds1" } ] },
         { "id": "lblDs2", "type": "Label", "x": 60, "y": 200, "width": 320, "height": 44, "text": "DS2 (holding 1):", "textColor": "#1d3557", "fontSize": 22 },

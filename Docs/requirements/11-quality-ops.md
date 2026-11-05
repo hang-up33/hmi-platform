@@ -15,7 +15,7 @@
 | 領域 | 内容 |
 |---|---|
 | テスト | unit（QtTest）・E2E（Spix）を `ctest` で実行 |
-| CI | self-hosted の Linux ランナーを主ゲートとし、mac / Windows は手動 or ラベル時 |
+| CI | Linux ジョブを主ゲートにする。public リポジトリでは GitHub 標準の runner で、mac / Windows も毎回走る。private リポジトリでは自前の runner で、mac / Windows は手動かラベル時だけ走る |
 | 性能計測 | JSON 読込・描画構築・変数更新の時間を CI で計測 |
 | 配備 | クロスビルドから実機配備までの手順 |
 
@@ -30,7 +30,7 @@
 
 ## 4. 前提条件・制約条件
 
-- CI は private リポジトリ前提。public 化や fork PR 許可時は、self-hosted の利用条件を見直す。
+- self-hosted runner は private リポジトリにだけ登録する。public リポジトリには登録しない。
 - 実機（i.MX8MP）での検証はローカル専用で、CI からは届かない。
 - 性能計測は、まず offscreen で測れる指標から始める。
 - Web 環境では qtopcua が無く、OPC-UA 込みのテストは SKIP になる。
@@ -39,7 +39,7 @@
 
 ```mermaid
 flowchart LR
-    PR["PR / main push"] --> L["Linux ジョブ<br/>(self-hosted)"]
+    PR["PR / main push"] --> L["Linux ジョブ<br/>(public は標準 runner)"]
     L --> B["ビルド"]
     B --> T["ctest<br/>(unit + E2E)"]
     T --> P["性能ベンチ<br/>(予定)"]

@@ -55,43 +55,43 @@ timeline
 - **成果物**：ルート `CMakeLists.txt`、各サブディレクトリの最小 `qt_add_executable` / `qt_add_qml_module` / `qt_add_library`。
 - **学び**：macOS 14+ では同梱 Qt 6.7.0 が `AGL.framework` 不在でリンク不可。Homebrew Qt 6.8+ を `CMAKE_PREFIX_PATH` で指定する運用を確立。
 
-### Task 2: キャンバス表示 ([PR #4](https://github.com/hang-up33/hmi-platform/pull/4))
+### Task 2: キャンバス表示 (PR #4)
 
 - **目的**：Editor の中央に 1024×600 の編集領域（`EditorCanvas`）を描画する。
 - **成果物**：`EditorCanvas.qml`、`HmiEditor` モジュールの起動経路（`loadFromModule("HmiEditor", "Main")`）。
 - **学び**：QtQuick 標準型と同名の QML ファイルは衝突する（`Canvas.qml` 不可）。プレフィックス命名（`EditorCanvas`）で回避。
 
-### Task 3: Widget データ構造定義 ([PR #6](https://github.com/hang-up33/hmi-platform/pull/6))
+### Task 3: Widget データ構造定義 (PR #6)
 
 - **目的**：Widget / Screen / Project の型と JSON I/O を `Shared/Schema` に集約する。
 - **成果物**：`hmi::schema::WidgetData` / `ScreenData` / `ProjectData`（struct + namespace スタイル）、各型に `toJson()` / `fromJson()`。
 - **学び**：Schema は唯一の真実とし、Q_GADGET / Q_OBJECT は必要になるまで付けない。利用側で検証ロジックが散らないよう、後の Task 7 で `isValidJson()` も Schema 側に集約する設計を確立。
 
-### Task 4: Button 配置 ([PR #7](https://github.com/hang-up33/hmi-platform/pull/7))
+### Task 4: Button 配置 (PR #7)
 
 - **目的**：「ボタンを追加」操作で Canvas に Button widget を 1 つ生やす。
 - **成果物**：`HmiButton.qml`（共有 Widget）、`EditableWidget.qml`、`widgetModel` の概念を導入。
 - **学び**：共有 QML モジュール（`HmiWidgets`）は `STATIC` でビルドし利用側で `hmi_widgetsplugin` を直リンクする構成が Qt 6.11 で唯一安定。
 
-### Task 5: ドラッグ可能化 ([PR #10](https://github.com/hang-up33/hmi-platform/pull/10))
+### Task 5: ドラッグ可能化 (PR #10)
 
 - **目的**：配置済み Widget をマウスドラッグで移動可能にする。
 - **成果物**：`EditableWidget.qml` の `MouseArea.drag.target` 設定、座標更新を `widgetModel` へ反映。
 - **学び**：`var` 配列の `widgetModel` は in-place push でバインディング通知が出ないため、配列ごと差し替え（`concat`）する運用に。これは後の Task 19 E2E で「Repeater 再生成によるバインディング巻き戻し」の罠を呼ぶ伏線になる。
 
-### Task 6: JSON 保存 ([PR #11](https://github.com/hang-up33/hmi-platform/pull/11))
+### Task 6: JSON 保存 (PR #11)
 
 - **目的**：Editor の状態を `ProjectData` に変換し JSON ファイルに保存する。
 - **成果物**：`Editor::ProjectIo`（`setContextProperty("projectIo", ...)` で QML 公開）、FileDialog 経由の保存 UI。
 - **学び**：`FileDialog.selectedFile` は `file://` 形式の `QUrl` なので `toLocalFile()` で OS パス化。書き込みは `QSaveFile.commit()` で原子的に。
 
-### Task 7: JSON 読込 ([PR #14](https://github.com/hang-up33/hmi-platform/pull/14))
+### Task 7: JSON 読込 (PR #14)
 
 - **目的**：保存済み JSON を Editor で再オープンし状態を復元する。
 - **成果物**：`ProjectIo::load()`、`ProjectData::isValidJson()` を含む階層的バリデーション API。
 - **学び**：`fromJson()` はキー欠落を既定値で埋める緩い設計のため、読込側は必ず `isValidJson()` を先に通す規約を確立。AppleScript で Qt QML のボタンを自動クリックする手段は事実上ない（後の E2E で Spix 採用の根拠に）。
 
-### Task 8: Simulator 表示 ([PR #16](https://github.com/hang-up33/hmi-platform/pull/16))
+### Task 8: Simulator 表示 (PR #16)
 
 - **目的**：Editor が出した JSON を Simulator（読み取り専用）が同じレイアウトで描画する。
 - **成果物**：`Simulator::ProjectLoader`、`--open <path>` CLI、`HmiSimulator` モジュール。
@@ -104,43 +104,43 @@ timeline
 **目標**：Qt Test（C++ ユニット）・Qt Quick Test（QML 振る舞い）・CI を整備し、退行を機械的に検出できる土台を作る。
 **計画書**：[Docs/archive/phase2-testing-plan.md](archive/phase2-testing-plan.md)
 
-### Task 9: Qt Test 基盤構築 ([PR #18](https://github.com/hang-up33/hmi-platform/pull/18))
+### Task 9: Qt Test 基盤構築 (PR #18)
 
 - **目的**：`ctest` で C++ ユニットテストを走らせる仕組みを入れる。
 - **成果物**：ルート `enable_testing()`、`tests/unit/` ディレクトリ、smoke テスト 1 件。
 - **学び**：`find_package(Qt6 ... Test)` は `BUILD_TESTING` で条件化（Codex 指摘）。これでテスト無効ビルド時の不要依存を回避。
 
-### Task 10: Schema JSON I/O テスト ([PR #21](https://github.com/hang-up33/hmi-platform/pull/21))
+### Task 10: Schema JSON I/O テスト (PR #21)
 
 - **目的**：`hmi_schema` の `toJson()` / `fromJson()` / `isValidJson()` をユニットテストで担保。
 - **成果物**：`tests/unit/SchemaTest.cpp`、Widget / Screen / Project 3 層分のラウンドトリップテスト。
 - **学び**：JSON I/O テストは Schema が唯一の真実である以上、ここで仕様変更の retro 影響を可視化する。
 
-### Task 11: ファイル I/O テスト（ProjectIo / ProjectLoader） ([PR #22](https://github.com/hang-up33/hmi-platform/pull/22))
+### Task 11: ファイル I/O テスト（ProjectIo / ProjectLoader） (PR #22)
 
 - **目的**：Editor の保存と Simulator の読込が実ファイル経由で対称であることを保証。
 - **成果物**：`ProjectIoTest` / `ProjectLoaderTest`、一時ディレクトリ経由の保存→読込ラウンドトリップ。
 - **学び**：FileDialog を介さない API レベルのテストとして整理。「Editor / Simulator の load() は重複を許容」の決定が、ここで両方独立にテストする方針に整合。
 
-### Task 12: Qt Quick Test 基盤構築 ([PR #23](https://github.com/hang-up33/hmi-platform/pull/23))
+### Task 12: Qt Quick Test 基盤構築 (PR #23)
 
 - **目的**：QML 側の振る舞いを `tst_*.qml` で書ける土台を入れる。
 - **成果物**：`tests/quick/` の `qt_add_test` 経路、smoke QML テスト。
 - **学び**：`add_test` には `-platform offscreen` を明示（Codex 指摘）。CI / ローカル両環境で display 依存を排除。
 
-### Task 13: 共有 Widget テスト（HmiButton） ([PR #24](https://github.com/hang-up33/hmi-platform/pull/24))
+### Task 13: 共有 Widget テスト（HmiButton） (PR #24)
 
 - **目的**：`HmiWidgets` モジュールの最小コンポーネントを QML テストで担保。
 - **成果物**：`tst_HmiButton.qml`、`Shared/Widgets` の plugin リンク経路の検証。
 - **学び**：共有モジュールを `STATIC` plugin として使う構成がテスト側でも素直に通る（=実アプリと同じリンクパターン）。
 
-### Task 14: Editor QML テスト（Canvas / EditableWidget） ([PR #25](https://github.com/hang-up33/hmi-platform/pull/25))
+### Task 14: Editor QML テスト（Canvas / EditableWidget） (PR #25)
 
 - **目的**：Editor の Canvas / EditableWidget の生成・配置ロジックを QML テストで担保。
 - **成果物**：`tst_EditorCanvas.qml`、Repeater delegate 生成完了の `tryVerify` 待ち。
 - **学び**：Repeater delegate は次の event loop で生成されるため `tryVerify` で待つ（Codex P2 Major 指摘）。Task 19 で踏む「再生成によるバインディング巻き戻し」と同根の問題系。
 
-### Task 15: CI 整備（GitHub Actions） ([PR #26](https://github.com/hang-up33/hmi-platform/pull/26))
+### Task 15: CI 整備（GitHub Actions） (PR #26)
 
 - **目的**：macOS / Windows の matrix で `cmake --build` と `ctest` を自動実行する。
 - **成果物**：`.github/workflows/ci.yml`、`jurplel/install-qt-action@v4` 経由の Qt 6.10.0 インストール、Tools 階層キャッシュ。
@@ -153,37 +153,37 @@ timeline
 **目標**：Editor 配置 → JSON 保存 → Simulator 表示までの cross-app 動作を `ctest -L e2e` で自動検証する。
 **計画書**：[Docs/archive/phase3-e2e-plan.md](archive/phase3-e2e-plan.md)
 
-### Task 16: Spix 取り込み + Editor / Simulator 統合 ([PR #28](https://github.com/hang-up33/hmi-platform/pull/28))
+### Task 16: Spix 取り込み + Editor / Simulator 統合 (PR #28)
 
 - **目的**：E2E フレームワーク Spix（OSS / MIT、`faaxm/spix` v0.14）を導入し、`--e2e` フラグで Spix サーバを起動可能にする。
 - **成果物**：FetchContent で Spix + AnyRPC を取得、`Editor/src/main.cpp` / `Simulator/src/main.cpp` に `--e2e` / `--e2e-port` を追加（既定 9876 / 9877）。
 - **学び**：AnyRPC は upstream 未メンテで罠の宝庫（`CMAKE_POLICY_VERSION_MINIMUM`、`CMAKE_SOURCE_DIR` 誤動作、`SpixCoreTargets` 同梱、MinGW での `std::recursive_mutex` 衝突）。Windows MinGW では `HMI_ENABLE_E2E` 既定 OFF で opt-out 運用。詳細罠リストは [e2e-spix](../.claude/skills/e2e-spix/SKILL.md) スキルへ集約。
 
-### Task 17: E2E ハーネス雛形 + smoke 1 件 ([PR #29](https://github.com/hang-up33/hmi-platform/pull/29))
+### Task 17: E2E ハーネス雛形 + smoke 1 件 (PR #29)
 
 - **目的**：Python テストランナー（`tests/e2e/harness.py`）と最初の smoke E2E（アプリ起動 → Spix サーバ応答確認）を入れる。
 - **成果物**：`harness.py`（`urllib.request` で XML-RPC を直接 POST する実装）、`subprocess` でアプリ起動／終了する contextmanager、smoke ケース 1 件。
 - **学び**：Homebrew Python 3.14 の `_pyexpat` が macOS の libexpat と非互換で `xmlrpc.client` が落ちる → urllib + 文字列マッチで回避し全環境で同じ実装を使う。`QT_QPA_PLATFORM=offscreen` を harness 側で `setdefault` し display 非依存。
 
-### Task 18: Editor 配置 + 座標反映 E2E ([PR #30](https://github.com/hang-up33/hmi-platform/pull/30))
+### Task 18: Editor 配置 + 座標反映 E2E (PR #30)
 
 - **目的**：Editor を Spix から操作して widget を配置し、座標変更が JSON に乗ることを検証。
 - **成果物**：`tests/e2e/test_editor_place.py`、`widget_<id>` objectName 規約、`setStringProperty(path, "x", "<n>")` による座標変更。
 - **学び**：Spix の `mouseBeginDrag` / `mouseEndDrag` は item 中央間の drag&drop モデルしか持たず、offscreen 環境では drag 閾値判定にも届かない → 座標変更は `setStringProperty` で代替。実マウスドラッグの検証は Phase 3-B 以降の手動 / 別タスク扱い。
 
-### Task 19: JSON 保存 → 読込ループ E2E ([PR #31](https://github.com/hang-up33/hmi-platform/pull/31))
+### Task 19: JSON 保存 → 読込ループ E2E (PR #31)
 
 - **目的**：Editor 配置 → 保存 → 再起動 → 復元のラウンドトリップを E2E 化。
 - **成果物**：`Main.qml` の `saveTo(path)` 関数化（FileDialog を介さない E2E ハンドル）、Editor `--open` CLI（Simulator と命名統一）、`invokeMethod` 配列引数対応。
 - **学び**：FileDialog は Spix から自動操作不可 → Window 直下に `Q_INVOKABLE` 相当の関数を生やし `invokeMethod` で呼ぶパターンを確立。Repeater 再生成で座標が巻き戻る事故 → 「Repeater サイズ変更 → 全 widget 座標変更」の順序固定で防御。
 
-### Task 20: Simulator 表示 E2E ([PR #32](https://github.com/hang-up33/hmi-platform/pull/32))
+### Task 20: Simulator 表示 E2E (PR #32)
 
 - **目的**：Editor が出した JSON を Simulator が起動して描画するまでを cross-app で検証。
 - **成果物**：Editor=`hmiEditorWindow` / Simulator=`hmiSimulatorWindow` の objectName 規約、`spix_app` contextmanager を 2 段重ねで順次起動するパターン。
 - **学び**：Editor を terminate してから Simulator を起動する設計で「今どちらが落ちたか」のデバッグが容易に。中間 JSON は `tempfile.mkstemp` → finally で `os.unlink`。
 
-### Task 21: E2E ジョブを GitHub Actions に追加 ([PR #33](https://github.com/hang-up33/hmi-platform/pull/33))
+### Task 21: E2E ジョブを GitHub Actions に追加 (PR #33)
 
 - **目的**：`ctest -L e2e` を CI で常時走らせる。
 - **成果物**：`.github/workflows/ci.yml` に E2E ステップ追加、`actions/setup-python@v5` の明示インストール。
@@ -194,22 +194,22 @@ timeline
 ## Phase 3-B: Runtime / i.MX8MP 対応
 
 **目標**：Simulator と同じ JSON 描画機能を i.MX8MP 実機（Yocto / Wayland or EGLFS）で動かす Runtime を導入する。
-**計画書**：[Docs/archive/phase3b-runtime-plan.md](archive/phase3b-runtime-plan.md)（v2、PR [#37](https://github.com/hang-up33/hmi-platform/pull/37) で策定）
+**計画書**：[Docs/archive/phase3b-runtime-plan.md](archive/phase3b-runtime-plan.md)（v2、PR #37 で策定）
 **方針**：Simulator/ のソースを共有して `hmi_runtime` バイナリを生成し、3 バイナリ構成（hmi_editor / hmi_simulator / hmi_runtime）を維持。開発ホストは Windows 母艦 + WSL2 で、Yocto SDK クロスビルドは **WSL2 内**で実施。実機 image が Qt6 非対応（zeus 5.4、2026-05-30 判明）のため、Task 23 は新 BSP（scarthgap）で `imx-image-full` をビルドして実機更新 → 同一 BSP から SDK 生成、に拡張（詳細は計画書 §「実機 image 調査結果と更新方針」）。
 
-### Task 22: Runtime CMake glue ([PR #39](https://github.com/hang-up33/hmi-platform/pull/39))
+### Task 22: Runtime CMake glue (PR #39)
 
 - **目的**：Simulator の QML module を `STATIC` library 化し、`Runtime/CMakeLists.txt` の glue だけで `hmi_runtime` バイナリをホストビルド可能にする。
 - **成果物**：`hmi_simulator_qmlplugin`（STATIC、`Simulator/CMakeLists.txt`）、共通 function `hmi_add_simulator_like_executable`、`Runtime/CMakeLists.txt`（C++ ソースは Simulator/ を `CMAKE_CURRENT_FUNCTION_LIST_DIR` 経由で参照）、ホスト起動スクショ `Docs/screenshots/task-22-runtime-host.png` / `task-22-simulator-host.png`。
 - **学び**：Qt の `qt_add_qml_module` を実行ファイル直結にすると別バイナリから共有できない → STATIC plugin + 直リンクが必須（`Shared/Widgets` と同パターン）。C++ ソース共有は CMake 関数 + `CMAKE_CURRENT_FUNCTION_LIST_DIR` でディレクトリを跨いだ参照が成立。Runtime/ には `.cpp` / `.qml` / `.h` を置かない原則を維持。hmi_simulator / hmi_runtime の PC ビルドが同一 JSON で完全一致のレイアウトを描画することを目視確認。
 
-### Task 23: Yocto SDK で hmi_runtime をクロスビルド ([PR #48](https://github.com/hang-up33/hmi-platform/pull/48))
+### Task 23: Yocto SDK で hmi_runtime をクロスビルド (PR #48)
 
 - **目的**：`hmi_runtime` を aarch64 ELF として生成。**前提変更（2026-05-30）**：実機の現行 image が Qt6 非対応（NXP zeus 5.4）と判明したため、WSL2 内で NXP 新 BSP（scarthgap, `imx-6.6.52-2.2.2`）の `imx-image-full` をビルドして実機 image を更新し、同一 BSP から生成した SDK でクロスビルドする。
 - **成果物**：[`scripts/yocto/cross-build.sh`](../scripts/yocto/cross-build.sh)（env source → toolchain file 明示渡し → `-DHMI_ENABLE_E2E=OFF -DBUILD_TESTING=OFF` → `--target hmi_runtime` → `file` で aarch64 ELF 検証、を固定）+ [`scripts/yocto/README.md`](../scripts/yocto/README.md)。生成物 `~/build-yocto/Runtime/hmi_runtime`（`ELF 64-bit LSB ... ARM aarch64`、Qt 6.8.1 依存）。
 - **学び**：(1) SDK は `imx-image-full -c populate_sdk`（フル SDK）だと ML 系（`onnxruntime-dbg` 692MB）の dpkg 展開で詰まるため、**`bitbake meta-toolchain-qt6`（Qt6 だけの軽量 SDK）に切替**。(2) SDK の env スクリプト名は NXP tune の都合で **`environment-setup-armv8a-poky-linux`**（`aarch64` ではない）。(3) 非対話では cmake alias が効かず toolchain file の明示渡しが必須。(4) `imx-image-full` フルビルドは tmp/work が巨大化するため **`INHERIT += "rm_work"`** で peak を抑制、E ドライブ枯渇は **`diskpart compact vdisk`**（管理者）で回収。(5) **crates.io が wget 既定 UA を 403（CloudFront）で弾く**ため `FETCHCMD_wget` に `--user-agent` を付与。GitHub 並列 fetch のスロットル（git exit 128）は retry で解消。詳細は [.claude/rules/dev-environment.md](../.claude/rules/dev-environment.md)。
 
-### Task 24: i.MX8MP 実機で hmi_runtime を起動し JSON 描画 ([PR #48](https://github.com/hang-up33/hmi-platform/pull/48))
+### Task 24: i.MX8MP 実機で hmi_runtime を起動し JSON 描画 (PR #48)
 
 - **目的**：実機に配布し、Editor が出した JSON 形状を実機画面で描画する。
 - **成果物**：実機描画の動作証跡 [`Docs/screenshots/task-24-runtime-imx.jpg`](screenshots/task-24-runtime-imx.jpg)（weston 上に「HMI Simulator」ウィンドウ + 3 widget が描画）。`scripts/yocto/README.md` に実機デプロイ手順を記載。
@@ -222,7 +222,7 @@ timeline
 **目標**：Widget 種別を横に増やす前に、Button 1 つを全レイヤ（Schema→Widgets→Editor→Simulator→Runtime→実機）で深く作り込み「Widget 追加テンプレ」を確立する。
 **計画書**：[Docs/archive/phase4-button-slice-plan.md](archive/phase4-button-slice-plan.md)（タスク内容・完了基準・進捗の正本）
 
-- **コア縦スライス（Task 25〜32）**：✅ 完了。選択 / インスペクタ / リサイズ / 削除 / スタイル属性（色・フォント・ボーダー・角丸）の全レイヤ貫通・テスト/E2E 拡充・i.MX8MP 実機 styled 描画まで（Task 31〜32 は PR [#64](https://github.com/hang-up33/hmi-platform/pull/64) / [#66](https://github.com/hang-up33/hmi-platform/pull/66)）。
+- **コア縦スライス（Task 25〜32）**：✅ 完了。選択 / インスペクタ / リサイズ / 削除 / スタイル属性（色・フォント・ボーダー・角丸）の全レイヤ貫通・テスト/E2E 拡充・i.MX8MP 実機 styled 描画まで（Task 31〜32 は PR #64 / #66）。
 - **拡張（Task 33〜43・2026-06-07 承認）**：✅ 完了（PR #69〜#87 + 実機撮影）。A=フォント詳細 / 配置 / opacity、C=グリッドスナップ / 複数選択・整列 / コピペ / undo-redo、B=変数ストア / アクション編集 / Simulator・Runtime 実行 / 状態別スタイル / アクション round-trip E2E + 実機（i.MX8MP）アクション動作撮影（`vnc-click-capture.py`）。
 
 > 各 Task の詳細エントリ（目的 / 成果物 / 学び）は未追記。タスク別の要点は計画書の「進捗」表セル、状態一覧は [README.md](../README.md#フェーズ進捗) を参照。
@@ -234,7 +234,7 @@ timeline
 **目標**：横展開（新 Widget 種別）で同じ散らかりが各 Widget へ波及する前に、テンプレ＝右側インスペクタを綺麗にしてから増やす。
 **計画書**：[Docs/archive/inspector-ux-plan.md](archive/inspector-ux-plan.md)
 
-- **Task 44〜45**：✅ 完了（PR [#94](https://github.com/hang-up33/hmi-platform/pull/94)）。`InspectorSection`（折りたたみヘッダ + Column）を導入し平坦な約 20 項目を 6 セクション（基本 / 文字 / 背景・枠 / 状態 / 動作 / 詳細）＋変数定義へ再編、分かりづらいラベルを言い換え（`チェック可能`→`トグルボタンにする` 等）＋ hover ツールチップ。**スキーマ・round-trip・objectName は不変**で unit 10 + e2e 6 = 16/16 緑。
+- **Task 44〜45**：✅ 完了（PR #94）。`InspectorSection`（折りたたみヘッダ + Column）を導入し平坦な約 20 項目を 6 セクション（基本 / 文字 / 背景・枠 / 状態 / 動作 / 詳細）＋変数定義へ再編、分かりづらいラベルを言い換え（`チェック可能`→`トグルボタンにする` 等）＋ hover ツールチップ。**スキーマ・round-trip・objectName は不変**で unit 10 + e2e 6 = 16/16 緑。
 - **Task 46（任意）**：✅ 完了。背景色 / 文字色 / ボーダー色の hex TextField の隣に **色スウォッチ**（現在色プレビュー。未指定は Widget 種別の resolved 既定色を表示）を追加し、クリックで共有 `ColorDialog` → `#RRGGBB` を live Item + TextField へ書き戻す（明示 beginEdit/commitEdit で 1 件 undo）。手入力欄・objectName は不変。
   - **学び（undo/redo の潜在バグ修正）**：検証中に「色変更 → undo で巻き戻らない」を発見。原因は **同数の配列を `widgetModel` に再代入しても Repeater が既存 delegate を再利用することがあり**、インスペクタの命令的書き込み（`selectedItem.widget* = value`）でバインディングが切れたプロパティへ復元値が届かないこと。undo/redo で **一度空配列を挟んで delegate を確実に全再生成**して修正（Windows の Win32 クリック注入で色変更→undo→redo の round-trip を実証）。tst_canvas の既存 undo テストは JS 配列リテラル由来のモデルで再現せず素通りしていた。
 
@@ -295,7 +295,7 @@ timeline
   - **タスク**：Task 53（real end-to-end）/ 54（min/max〔Schema presence フラグ + validator/clamp + インスペクタ範囲項目 + delegate〕）/ 55（cross-app E2E〔real typed-write + clamp〕+ スクショ）。
   - **step / decimals / unit / 後続入力 Widget（Gauge / Toggle）は非スコープ＝別承認**。
 
-### Task 53: real 変数型 end-to-end ([PR #112](https://github.com/hang-up33/hmi-platform/pull/112))
+### Task 53: real 変数型 end-to-end (PR #112)
 
 - ✅ 完了。`VariableData::isValidJson` に `"real"` を追加 + `VariableStore.coerce("real")`（`Number(raw)`、NaN→0.0）+ Editor 変数定義 ComboBox に `"real"` + `HmiNumericField.isReal`（`DoubleValidator` 切替 + commit を小数保持）+ SimulatorCanvas の `boundVariableType("value")==="real"` で `isReal` 導出。**`WidgetData` 無改変**（real は変数スコープ）。Web `ctest` unit 10 + e2e 8 = **18/18 緑**。
 - **学び（real 型 = 文字列正規化と locale の罠）**：int で素通せた箇所が real では破綻し、レビューから計 7 件の指摘を受けた（**Codex 6 件**＝locale 整合・JSON 数値精度・指数表記・表示整形・SimulatorCanvas テスト locale・非有限値、**CodeRabbit 1 件**＝C++ 範囲外キャスト UB。途中で Codex が利用上限に達し CodeRabbit にフォールバック）。要点は **「real の表示値は変数ストアの JS 数値由来で常に ASCII 小数点（C locale）」**という前提に validator・commit・表示・テスト入力をすべて揃えること：
@@ -305,7 +305,7 @@ timeline
   - real のテスト入力は `Qt.locale().decimalPoint` でなく **ASCII "36.5" 固定**（C locale 実装と整合させ locale 依存の test failure を防ぐ）。
   - 詳細は [.claude/rules/numeric-field-real-locale.md](../.claude/rules/numeric-field-real-locale.md)。
 
-### Task 54: 数値範囲 min/max ([PR #113](https://github.com/hang-up33/hmi-platform/pull/113))
+### Task 54: 数値範囲 min/max (PR #113)
 
 - ✅ 完了。NumericField に入力範囲を Widget スコープで追加。**負値が正当なので数値センチネル不可** → **presence フラグ方式**（`WidgetData.minValue/maxValue`(double) + `hasMinValue/hasMaxValue`(bool)。`toJson` は presence のときだけキーを書く＝後方互換、`fromJson` は `obj.contains()` で presence 判定）。`HmiNumericField` は validator の `bottom`/`top` + 確定時 clamp の二段で範囲を担保（範囲外は拒否でなく境界へ丸め）。Editor インスペクタ「詳細」に範囲 最小値/最大値（NumericField のみ可視、2 本立て、負値・小数可）。Web `ctest` **18/18 緑**。
 - **学び**：
@@ -314,7 +314,7 @@ timeline
   - **新しいインスペクタ入力欄は `widgetEditFieldFocused` に必ず登録する**（CodeRabbit Major）。漏らすと編集中に Delete ショートカットが誤発火し undo 境界も欠落する。
   - **CodeRabbit の偽陽性 2 件を理由付きで不採用にできた**：①「snapshotModel が JSON I/O＝Schema 集約違反」→ snapshotModel は live QML Item → QVariantMap の**収集**のみで実シリアライズは Schema（既存全フィールド同パターン）。②「`Canvas.qml` 命名衝突」→ Task 2 以来の既存ファイルで `import HmiEditor` 明示で回避済み・全面改名は別タスク。返信で根拠を示し CodeRabbit も了承（Codex 利用上限のため本 PR は CodeRabbit フォールバックでレビュー）。
 
-### Task 55: cross-app E2E（real typed-write + clamp）+ スクショ ([PR #114](https://github.com/hang-up33/hmi-platform/pull/114)) ＝ Phase 6-B クローズ
+### Task 55: cross-app E2E（real typed-write + clamp）+ スクショ (PR #114) ＝ Phase 6-B クローズ
 
 - ✅ 完了。Phase 6-B の締めとして Task 53（real）/ 54（min/max）の 2 軸を初めて cross-app E2E で観測。`tests/e2e/test_numeric_extend.py` 新設（Phase 6 Task 52 テンプレ踏襲）：Editor で real 変数 + `maxValue` 付き NumericField の fixture を `--open` → `saveTo` round-trip し保存 JSON を直接 assert（`type:"real"` / presence フラグ＝`maxValue` キー有・`minValue` キー無 / value binding）。Simulator で root〔`hmiNumericField`〕に `setStringProperty(text)` + `commitValue()` invoke で確定を模し、**real は "36.5" の小数保持**、max=100 の NumericField は **"150"→clamp で 100** が `writeBoundValue` 経由で変数へ書かれ観測用 Label が追従するのを観測。`e2e_numeric_extend` 登録。Web `ctest` **19/19 緑**（unit 10 + e2e 9）。
 - **スクショ**：`editor.png` を範囲項目（インスペクタ「詳細」最小値/最大値）が見える状態へ更新（+ `task-55` 証跡）。`--screenshot` 単体では Widget 未選択でインスペクタが空になるため、**E2E と同じ Spix を流用した使い捨てスクリプト**（「詳細」展開 + NumericField 選択 + ウィンドウ高拡大 → `takeScreenshotAsBase64`、Editor 本体は無改変）で撮影。
@@ -391,7 +391,7 @@ timeline
   - **🔴 最重要ゲート（Web 不可）**：**Qt OPC-UA（`qtopcua`）は aqtinstall のバイナリ addon に含まれない**（2026-06-20 実証：Web の Qt 6.10.0 linux で `aqt list-qt ... --modules` に `qtopcua` 無し・`qtserialbus` はある）。よって OP-2 以降（OpcUa リンク）は Web でビルド・テスト不可。実装はローカル kit（Qt OpcUa を自前ビルド/別配布でマージ）+ 実機 rootfs（`qtopcua` + open62541 backend）が要る。**OP-1（Schema + Editor UI）のみ OpcUa 非依存で Web 可。**
   - **タスク**：OP-1（変数ソース Schema 拡張〔`endpoint`/`nodeId`/`proto`〕+ Editor UI・Web 可）/ OP-2（PC 読込/購読・asyncua ソフトサーバ E2E・ローカル）/ OP-3（実サーバ読込確認・ローカル）/ OP-4（書込 + 接続状態 + 再接続・ローカル）/ OP-5（実サーバ書込確認・ローカル）/ OP-6（実機 Runtime 展開・WSL2+実機）。
   - **OP-5 完了（Windows 母艦：`test_server.py` + `opcua-demo.json` の NumericField で Setpoint 書込確認。2026-06-27）**：Windows 母艦（Qt 6.11.0 MinGW）に `scripts/windows/build-opcua.ps1` で qtopcua を導入し `hmi_simulator` をリビルド。`scripts/opcua/test_server.py` をソフトサーバとして起動し `Docs/samples/opcua-demo.json` を開いて NumericField で Setpoint を書き込み asyncua クライアント（別ターミナル）で読み返し確認。macOS に続き Windows でも OP-3（読込追従）と OP-5（書込）を実証。
-  - **OP-6 完了（2026-06-27：i.MX8MP 実機で OPC-UA 読込購読を VNC キャプチャで確認）**：`meta-toolchain-qt6` SDK に qtopcua が既包含（SDK 再ビルド不要）→ WSL2 で `HMI_BUILD_DIR=/home/ubuntu/build-yocto-op6 HMI_SRC_DIR=/mnt/c/repo/hmi-platform bash scripts/yocto/cross-build.sh` → 実機 scp（Windows 母艦から `scp -O -o StrictHostKeyChecking=no`）→ 実機に `libsocketcan2` / `libqt6serialport6` / `libqt6serialbus6` の deb を転送 + `dpkg -i`（この順で依存解決）→ 実機の eth0 に `ip addr add 192.168.1.211/24 dev eth0` で静的 IP 付与 → Windows 母艦で `python test_server.py --host 192.168.1.210`（全 IF バインド）起動 → `QT_QPA_PLATFORM='vnc:size=1280x720'` で hmi_runtime 起動 → `python scripts/yocto/vnc-capture.py 192.168.1.211 5900 out.png 192.168.1.210` でキャプチャ。証跡：`Docs/screenshots/op6-runtime.png`（Counter=234・Temperature=20.065・Running=false・Setpoint=50 のライブ値が i.MX8MP 実機で表示）。踏んだ罠と手順の正本は [.claude/rules/dev-environment.md](../.claude/rules/dev-environment.md)「OPC-UA 実機展開」に追記済み。**Phase 9 OPC-UA クライアント対応クローズ（OP-1〜OP-6 全完了）。**
+  - **OP-6 完了（2026-06-27：i.MX8MP 実機で OPC-UA 読込購読を VNC キャプチャで確認）**：`meta-toolchain-qt6` SDK に qtopcua が既包含（SDK 再ビルド不要）→ WSL2 で `HMI_BUILD_DIR=/home/ubuntu/build-yocto-op6 HMI_SRC_DIR=/mnt/c/repo/hmi-platform bash scripts/yocto/cross-build.sh` → 実機 scp（Windows 母艦から `scp -O -o StrictHostKeyChecking=no`）→ 実機に `libsocketcan2` / `libqt6serialport6` / `libqt6serialbus6` の deb を転送 + `dpkg -i`（この順で依存解決）→ 実機の eth0 に `ip addr add 192.0.2.11/24 dev eth0` で静的 IP 付与 → Windows 母艦で `python test_server.py --host 192.0.2.10`（全 IF バインド）起動 → `QT_QPA_PLATFORM='vnc:size=1280x720'` で hmi_runtime 起動 → `python scripts/yocto/vnc-capture.py 192.0.2.11 5900 out.png 192.0.2.10` でキャプチャ。証跡：`Docs/screenshots/op6-runtime.png`（Counter=234・Temperature=20.065・Running=false・Setpoint=50 のライブ値が i.MX8MP 実機で表示）。踏んだ罠と手順の正本は [.claude/rules/dev-environment.md](../.claude/rules/dev-environment.md)「OPC-UA 実機展開」に追記済み。**Phase 9 OPC-UA クライアント対応クローズ（OP-1〜OP-6 全完了）。**
 
 ---
 

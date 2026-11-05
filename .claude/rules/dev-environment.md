@@ -40,7 +40,7 @@
   - VS の `cl.exe` や別 MinGW が PATH を汚染しないよう `setup-env.ps1` が Qt 付属ツールチェインを PATH 先頭に挿入。
   - EXE 出力先はビルドツリー直下（`build-mingw\hmi_editor.exe`）。macOS の `.app` とは構造が違う。
   - 初回のみ `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` が必要。
-  - **PowerShell から WSL を呼ぶとき `$HOME` 等の `$` 変数は PowerShell 側で先に展開される**（2026-06-09 実証）。`wsl ... bash -lc "... HMI_BUILD_DIR=$HOME/... "` と書くと PS が `$HOME`(=`C:\Users\k`) を埋め、WSL では `C:Usersk/...`（`:` と `\` が落ちた壊れたパス）になり CMake が `try_compile`/source-dir で落ちる。回避：**WSL の絶対パスを直書き**（`/home/ubuntu/...`）するか、`bash -lc` の引数を**単一引用符**で囲って PS の変数展開を止める。
+  - **PowerShell から WSL を呼ぶとき `$HOME` 等の `$` 変数は PowerShell 側で先に展開される**（2026-06-09 実証）。`wsl ... bash -lc "... HMI_BUILD_DIR=$HOME/... "` と書くと PS が `$HOME`(=`C:\Users\<ユーザー名>`) を埋め、WSL では `C:Users<ユーザー名>/...`（`:` と `\` が落ちた壊れたパス）になり CMake が `try_compile`/source-dir で落ちる。回避：**WSL の絶対パスを直書き**（`/home/ubuntu/...`）するか、`bash -lc` の引数を**単一引用符**で囲って PS の変数展開を止める。
   - **GUI サブシステムの exe（hmi_editor.exe 等）は PowerShell の `&` で起動しても待たれない**（`$LASTEXITCODE` も取れない）。`--screenshot` のような「起動→処理→終了」を待つには `Start-Process -Wait -PassThru` を使う。
   - **QtSerialBus / QtSerialPort はローカル kit に未同梱だった（2026-06-16 / Phase 7 MB-3 で発覚・解消済み）**：`C:\Qt\6.11.0\mingw_64` には SerialBus / SerialPort が入っておらず、MB-2 の `ModbusController`（`Qt6::SerialBus`）が `find_package` 段階で `Could NOT find Qt6SerialBus` → ビルド不可だった（MB-2 は Web/CI の aqtinstall 同梱前提で書かれていた）。**Modbus を扱うローカルビルドにはこの 2 モジュールが必須**。導入手順（実証済み）：
     - **MaintenanceTool は不可**：`qt.qt6.6110.addons.qtserialbus` を `Component(s) not found` で選択できない（6.11.0 が「歴史的バージョン」扱いになり既定リポジトリから外れているため。GUI updater 実行を要求される）。
@@ -71,18 +71,11 @@
 
 ---
 
-## ディスク事情（Windows 母艦・2026-05-30 時点）
+## ディスク事情（Windows 母艦）
 
-| ドライブ | 容量 | 空き | 主な用途 |
-|---|---|---|---|
-| **C:** | 476 GB | 約 80 GB | OS / 開発ツール（VS, Unity, dotnet…）/ ユーザープロファイル（AppData 等） |
-| **D:** | 466 GB | 約 41 GB | ゲーム（Steam 約 386GB / Epic 約 38GB）。**Yocto 用に容量が足りなくなったら、ここのゲームを整理して空ける** |
-| **E:** | 233 GB | 約 212 GB | **Yocto ビルド置き場**（2026-05-30 のディスク整理で 212GB を確保） |
-
-- **Yocto ビルド方針（2026-05-30 決定）**：新 BSP（scarthgap）の image+SDK フルビルドは **100〜200GB** 規模。
-  **E ドライブを使用し、足りなくなったら D ドライブ（ゲーム）を空ける**。
+- **Yocto ビルドは 100〜200GB 要る**：新 BSP（scarthgap）の image+SDK フルビルドはこの規模になる。空きの大きいドライブを Yocto 用にあてる。
 - **WSL distro の relocate が必要**：WSL の `ext4.vhdx` は現状 **C:**（`%LOCALAPPDATA%\wsl\{...}\ext4.vhdx`、約 2.5GB）にあり、
-  WSL 内ビルドは C を消費する。E の空きを使うには Task 23 着手時に distro を E へ移す：
+  WSL 内ビルドは C を消費する。空きの大きいドライブ（以下の例では E:）へ distro を移す：
   ```powershell
   wsl --shutdown
   wsl --export Ubuntu-22.04 E:\wsl\ubuntu-2204.tar
@@ -128,7 +121,7 @@ Task 23（Yocto SDK で `hmi_runtime` をクロスビルド）用の WSL2 環境
 - **crates.io の 403**：bitbake の wget 既定 UA を crates.io（CloudFront）が 403 で弾く。`conf/local.conf` に
   `FETCHCMD_wget = "/usr/bin/env wget -t 2 -T 30 --passive-ftp --user-agent=yocto-bitbake"` を足すと解消（premirror に無く crates.io 直叩きになる crate 全般に効く）。
 - **GitHub 並列 fetch のスロットル**：`gitsm://github.com/...` の clone が exit 128 で稀に落ちる（並列 fetch 集中時）。リポジトリは健在なので **retry で通る**。
-- **ディスク**：`imx-image-full` は tmp/work が巨大化し E（233GB の外付け SSD）を使い切る。**`INHERIT += "rm_work"`** で peak を ~30GB に抑える。それでも膨らんだ vhdx は **`diskpart compact vdisk`（管理者 PowerShell、`wsl --shutdown` 後 attach readonly → compact）** で物理回収（`wsl --manage --set-sparse` や `fstrim` だけでは縮まなかった。compact は 228GB に対し一晩かかったが ~52GB 回収）。
+- **ディスク**：`imx-image-full` は tmp/work が巨大化し、Yocto 用ドライブを使い切ることがある。**`INHERIT += "rm_work"`** で peak を ~30GB に抑える。それでも膨らんだ vhdx は **`diskpart compact vdisk`（管理者 PowerShell、`wsl --shutdown` 後 attach readonly → compact）** で物理回収（`wsl --manage --set-sparse` や `fstrim` だけでは縮まなかった。compact は 228GB に対し一晩かかったが ~52GB 回収）。
 - **WSL distro relocate（C→E）**：`wsl --export` → `--unregister` → `--import ... --version 2`（[ディスク事情] 節のコマンド）。
 
 ---
@@ -146,11 +139,11 @@ Task 23（Yocto SDK で `hmi_runtime` をクロスビルド）用の WSL2 環境
   - **ネットワーク**：LAN 直結だと DHCP 無しで **link-local（169.254.x.x）** になる。**WSL2 は NAT 越しで link-local に届きにくいので Windows 母艦から `scp`** する（Windows の ethernet も 169.254.x.x が付き ping 可）。
   - **起動**：weston は **root（uid 0）** で動作、Wayland socket は `/run/user/0/wayland-1`。`export XDG_RUNTIME_DIR=/run/user/0; export WAYLAND_DISPLAY=wayland-1; export QT_QPA_PLATFORM=wayland` してから `hmi_runtime --open <json>`。
 - **実機キャプチャ・接続メモ（Task 30 で確立）**：
-  - **mDNS で IP が引ける**：実機は avahi 稼働。`imx8mp-lpddr4-evk.local` が link-local IP に解決される（実績 `169.254.29.17` / `169.254.48.18` / `169.254.124.33` など **DHCP 無しの link-local は毎回変わる**ので、記録値を使い回さず**都度 mDNS で解決**する。Windows は `Resolve-DnsName imx8mp-lpddr4-evk.local`）。
-    - **mDNS が IPv6（AAAA）だけ返すことがある**（2026-06-10 実証）：素の `Resolve-DnsName` が `fe80::...`（IPv6 link-local）しか返さず IPv4 が出ないことがある。IPv4（A）を引くには **`-Type A` を明示**（`Resolve-DnsName imx8mp-lpddr4-evk.local -Type A` → 例 `169.254.124.33`）。IPv6 link-local で直接叩くなら zone id 付き（`ping fe80::...%<ifIndex>`、ifIndex は `Get-NetAdapter`／直結 IF は実績「イーサネット 2」）。ボード MAC は IPv6 から導出可（`fe80::204:9fff:fe06:c9dc` → `00:04:9f:06:c9:dc`、NXP OUI `00:04:9f`）。
+  - **mDNS で IP が引ける**：実機は avahi 稼働。`imx8mp-lpddr4-evk.local` が link-local IP に解決される（**DHCP 無しの link-local は毎回変わる**ので、記録値を使い回さず**都度 mDNS で解決**する。Windows は `Resolve-DnsName imx8mp-lpddr4-evk.local`）。
+    - **mDNS が IPv6（AAAA）だけ返すことがある**（2026-06-10 実証）：素の `Resolve-DnsName` が `fe80::...`（IPv6 link-local）しか返さず IPv4 が出ないことがある。IPv4（A）を引くには **`-Type A` を明示**（`Resolve-DnsName imx8mp-lpddr4-evk.local -Type A`）。IPv6 link-local で直接叩くなら zone id 付き（`ping fe80::...%<ifIndex>`、ifIndex は `Get-NetAdapter` で調べる）。
     - **SSH 鍵認証が非対話で通る**（`-o BatchMode=yes` で確認可）。PowerShell 越しに ssh/scp を呼ぶと「known_hosts に追加」警告が stderr に出て `$LASTEXITCODE`/`$?` が偽陰性（exit 1 表示）になるが、**標準出力の内容で成否を判断**してよい（`2>&1` 由来の NativeCommandError は無視）。
   - **アクション（クリック→状態変化）の実機証跡は `scripts/yocto/vnc-click-capture.py`**（Task 43 で確立）。`vnc-capture.py` は 1 枚読むだけなので、変数/アクション/バインディングの「動き」を撮るには VNC の **PointerEvent** でクリックを送って before/after を撮る。クリック座標は画面ピクセル（1024x768 ウィンドウに 800x600 キャンバスを centerIn ＝キャンバス `(cx,cy)` → 画面 `(112+cx, 84+cy)`）。**after は non-incremental 全面で撮る**（QVnc は変化なしだと incremental 応答を保留し recv が timeout する）。手順は [scripts/yocto/README.md](../../scripts/yocto/README.md)「アクション（クリック→状態変化）を実機で撮る」。
-  - **link-local の宛先 IF 選択がぶれる**：母艦に複数の link-local IF（VirtualBox `192.168.56.x` / WSL `172.18.x` 等）があると `169.254.x.x` への ping/ssh が別 IF 経由で **host unreachable** になる。実機直結アダプタ（実績「イーサネット 2」`169.254.32.193`）を**送信元に固定**する：ping は `-S <src>`、**ssh は `-b <src>`、scp は `-o BindAddress=<src>`**（**Windows OpenSSH の `scp` に `-b` は無い** — 渡すと `unknown option -- b` で落ちる。`scp` のバインドは ssh_config 経由の `-o BindAddress=` で行う。ssh 本体は従来どおり `-b`。2026-06-09 実証）。
+  - **link-local の宛先 IF 選択がぶれる**：母艦に複数の link-local IF（VirtualBox `192.168.56.x` / WSL `172.18.x` 等）があると `169.254.x.x` への ping/ssh が別 IF 経由で **host unreachable** になる。実機と直結したアダプタのアドレスを**送信元に固定**する：ping は `-S <src>`、**ssh は `-b <src>`、scp は `-o BindAddress=<src>`**（**Windows OpenSSH の `scp` に `-b` は無い** — 渡すと `unknown option -- b` で落ちる。`scp` のバインドは ssh_config 経由の `-o BindAddress=` で行う。ssh 本体は従来どおり `-b`。2026-06-09 実証）。
   - **`pkill -f hmi_runtime` 厳禁**：ssh のリモートシェルのコマンドライン自身に "hmi_runtime" が含まれ、`pkill -f` が**自分の親シェルを kill** して ssh が exit 255 で即死する。停止は **`pkill -x hmi_runtime`**。
   - **HDMI 未接続だと weston に出力が無い**（`DRM: head 'HDMI-A-1' ... is disconnected`）→ Qt は "fake screen" 描画で `weston-screenshooter` も撮れない。物理モニタ無しで撮るには **`QT_QPA_PLATFORM='vnc:size=1024x768'` で起動 → 母艦から `scripts/yocto/vnc-capture.py <ip> 5900 out.png <src>`**（Qt 内蔵 VNC, 依存なし。**size は runtime ウィンドウ実寸＝1024×768 に合わせる**と余白の黒帯・見切れが出ない。canvas 描画域は 800×600）。実機 image に**日本語フォント無し**で和文ラベルは □ になる（**ASCII は正常描画**。動作証跡 JSON はラベルを英数字にすると豆腐を避けられる）。
   - **HDMI 接続済みでも `weston-screenshooter` が `unauthorized` で撮れないことがある**（`Output capture error: unauthorized` — この weston ビルドは screenshooter プロトコルを許可していない。2026-06-09、HDMI=connected でも発生を実証）。**HDMI の有無に関わらず動作証跡は上記 VNC 経路が確実**。VNC は `QT_QPA_PLATFORM=vnc` で**別インスタンス**を立てるだけ（weston には繋がない）なので、**HDMI モニタ表示用の weston インスタンスを止めずに並行起動**して撮れる（撮影後は VNC 側だけ pid 指定で kill すればモニタ表示は維持される）。
@@ -158,9 +151,9 @@ Task 23（Yocto SDK で `hmi_runtime` をクロスビルド）用の WSL2 環境
   - **SDK に qtopcua が既に包含**：`meta-toolchain-qt6`（`~/qt6-sdk/`）は `Qt6OpcUa` の cmake ファイル・ライブラリ・open62541 backend plugin（`libopen62541_backend.so`）を包含しており、**SDK 再ビルドなしでクロスビルド可**（`find ~/qt6-sdk/sysroots -name '*OpcUa*'` で確認）。ビルドは `HMI_BUILD_DIR=/home/ubuntu/build-yocto-op6 HMI_SRC_DIR=/mnt/c/repo/hmi-platform bash scripts/yocto/cross-build.sh`（build dir を専用名にすると既存 yocto build dir の CMake キャッシュ衝突を回避）。
   - **実機 image に `libQt6SerialBus.so.6` が存在しない**：`hmi_runtime`（`ModbusController` も含む）起動時に `error while loading shared libraries: libQt6SerialBus.so.6` で即死。scarthgap の `imx-image-full` に `qtserialbus`/`qtserialport` が未同梱のため。Yocto deb から取り出して実機に転送・`dpkg -i` で対処。**インストール順**：`libsocketcan2` → `libqt6serialport6` → `libqt6serialbus6`（依存解決順。SerialBus は SerialPort と socketcan に依存）。
   - **WSL から scp がハングする**：WSL2 内で `scp root@<board-ip>:/tmp/...` を呼ぶと known_hosts 未登録によるホストキー確認の対話待ちでハング。回避：**Windows 母艦から直接 scp**。WSL 内ファイルは `\\wsl$\Ubuntu-22.04\home\ubuntu\...` の UNC パスで Windows から参照できるので `scp -O -o StrictHostKeyChecking=no "\\wsl$\Ubuntu-22.04\...\file.deb" root@<board-ip>:/tmp/` で転送する（PowerShell 5.1 の `&&` 非対応に注意。`scp ...; if ($?) {...}` で連結）。
-  - **実機ネットワーク（link-local のみの場合）**：mDNS が失敗したらシリアルで `ip addr show eth0` で link-local IP を確認し `ip addr add 192.168.1.211/24 dev eth0` で静的 IP 付与。Windows 母艦の送信元 IF アドレス（例 `192.168.1.210`）と同サブネットにする。
-  - **test_server.py の全 IF バインド**：引数なしだと `127.0.0.1:4840` のみリッスンで実機から到達不可。`python test_server.py --host 192.168.1.210` で起動すると `0.0.0.0:4840` でリッスンして実機から接続可能になる。
-  - **実機 VNC キャプチャ（OPC-UA 証跡）**：`QT_QPA_PLATFORM='vnc:size=1280x720'` で起動し `python scripts/yocto/vnc-capture.py 192.168.1.211 5900 out.png 192.168.1.210` でキャプチャ（第 4 引数は送信元 IP）。証跡：`Docs/screenshots/op6-runtime.png`（Counter/Temperature/Running/Setpoint の OPC-UA ライブ値が実機で表示）。
+  - **実機ネットワーク（link-local のみの場合）**：mDNS が失敗したらシリアルで `ip addr show eth0` で link-local IP を確認し `ip addr add <実機の IP>/24 dev eth0` で静的 IP 付与。Windows 母艦の送信元 IF アドレスと同じサブネットにする。
+  - **test_server.py の全 IF バインド**：引数なしだと `127.0.0.1:4840` のみリッスンで実機から到達不可。`python test_server.py --host <PC の IP>` で起動すると `0.0.0.0:4840` でリッスンして実機から接続可能になる。
+  - **実機 VNC キャプチャ（OPC-UA 証跡）**：`QT_QPA_PLATFORM='vnc:size=1280x720'` で起動し `python scripts/yocto/vnc-capture.py <実機の IP> 5900 out.png <PC の IP>` でキャプチャ（第 4 引数は送信元 IP）。証跡：`Docs/screenshots/op6-runtime.png`（Counter/Temperature/Running/Setpoint の OPC-UA ライブ値が実機で表示）。
 - 詳細手順は [scripts/yocto/README.md](../../scripts/yocto/README.md)、設計判断は [phase3b-runtime-plan.md](../../Docs/archive/phase3b-runtime-plan.md)。
 
 ---
@@ -175,9 +168,9 @@ Task 23（Yocto SDK で `hmi_runtime` をクロスビルド）用の WSL2 環境
   レビューは ChatGPT Codex（GitHub App）。詳細は CLAUDE.md「Codex 連携 / PR ワークフロー」。
 - **【暫定】GitHub Actions CI が 2026-06-07 12:26 UTC 以降、全 run 即時失敗中**（main push 含む全ブランチ。ジョブが runner 未割当のまま約 4 秒で failure・ステップ実行ゼロ・ログ無し＝404。2026-06-10 切り分け）。PR の変更内容とは無関係のインフラ起因で、**Actions の無料枠 / 支出上限切れの疑い**（`main` push 毎に macOS 10x / Windows 2x ジョブが走る設定のため消費が速い）。オーナーの Billing 設定でのみ確認・解消可能。この間の「テスト緑」は Web セッション内 `ctest` の結果で CI 緑ではない。**赤 CI を自分の PR のせいと誤診しないこと**。
 - **【CI コスト削減（2026-06-10）】上記の課金消費を止めるため、`.github/workflows/ci.yml` の自動トリガ（`pull_request` / `push`）をコメントアウトし、`workflow_dispatch`（手動実行）のみに切替えた**。
-- **【自動 CI 復活（2026-06-18）】上記コスト問題を解消する形で、Proxmox 上の self-hosted runner に linux ジョブを載せ替えて自動 CI を復活した**（計画・進捗の正本は [Docs/archive/ci-self-hosted-plan.md](../../Docs/archive/ci-self-hosted-plan.md)）。
-  - **runner 箱**：Proxmox `pve`（VE 9.1.6 / 192.168.40.99）の **LXC CT 101 `gh-runner`**（Ubuntu 24.04 / 4 vCPU・4GB・swap2GB / rootfs 32GB(local-lvm) / net vmbr0 DHCP=192.168.40.209 / unprivileged / nesting=1 / onboot=1）。CI 依存（[ci.yml](../../.github/workflows/ci.yml) の Linux deps + cmake/build-essential/curl/git/python3/sudo）導入済。
-  - **runner 本体**：actions/runner v2.335.1 を `runner` ユーザーで登録（labels `self-hosted` `Linux` `X64` `qt` / name `gh-runner-lxc`）→ `svc.sh` で systemd 常駐（`actions.runner.hang-up33-hmi-platform.gh-runner-lxc.service`、enabled・自動起動）。`runner` の NOPASSWD sudo は `apt-get` のみに限定。
-  - **ci.yml 構成**：**linux ジョブ＝`runs-on: [self-hosted, linux]`**（毎 PR / main push 自動・課金 0・主ゲート）。**desktop（mac 10x / win 2x）は `workflow_dispatch` か PR `ci-desktop` ラベル時のみ**（main push では走らない）。Qt は `install-qt-action` の `modules: "qtserialbus qtserialport"`（SerialBus 必須）。
-  - **runner 操作（母艦から）**：`ssh root@192.168.40.99` → `pct exec 101 -- bash -c "cd /home/runner/actions-runner && ./svc.sh status|start|stop"`。GitHub 側状態は `gh api repos/hang-up33/hmi-platform/actions/runners`。
-  - **セキュリティ前提**：**private リポ限定**。public 化 / fork PR 許可時は linux の `runs-on` を fork→GitHub-hosted へ逃がす条件式に差し替える（[Docs/archive/ci-self-hosted-plan.md](../../Docs/archive/ci-self-hosted-plan.md)「セキュリティ注意」）。
+- **【自動 CI 復活（2026-06-18）】上記コスト問題を解消する形で、自前のサーバ上の self-hosted runner に linux ジョブを載せ替えて自動 CI を復活した**（計画・進捗の正本は [Docs/archive/ci-self-hosted-plan.md](../../Docs/archive/ci-self-hosted-plan.md)）。
+  - **runner 箱**：自前の仮想化サーバ上の LXC コンテナ（Ubuntu 24.04）。CI 依存（[ci.yml](../../.github/workflows/ci.yml) の Linux deps + cmake/build-essential/curl/git/python3/sudo）導入済。接続先などの詳細は手元のメモで管理し、リポジトリには書かない。
+  - **runner 本体**：actions/runner を専用ユーザーで登録し（labels `self-hosted` `Linux` `X64` `qt`）、`svc.sh` で systemd 常駐させる。専用ユーザーの NOPASSWD sudo は `apt-get` のみに限定。
+  - **ci.yml 構成**：linux ジョブは、private のときだけ `[self-hosted, linux]`、public のときは `ubuntu-24.04` を選ぶ（毎 PR / main push 自動・主ゲート）。desktop（mac 10x / win 2x）は、private のときは `workflow_dispatch` か PR `ci-desktop` ラベル時のみ、public のときは毎回走る。Qt は `install-qt-action` の `modules: "qtserialbus qtserialport"`（SerialBus 必須）。
+  - **runner 操作**：コンテナ内の `actions-runner` ディレクトリで `./svc.sh status|start|stop`。GitHub 側の状態は Settings → Actions → Runners で見る。
+  - **セキュリティ前提**：self-hosted runner は private リポジトリにだけ登録する。public リポジトリでは fork の PR がワークフローを書き換えられるので、ci.yml の条件式は防御にならない。public リポジトリには runner を登録しないこと（[Docs/v1-release-plan.md](../../Docs/v1-release-plan.md) V1-4）。

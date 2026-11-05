@@ -87,7 +87,7 @@ hmi-platform/
 │   ├─ yocto/README.md          [人]    現行  Yocto クロスビルド・i.MX8MP 実機展開の手順
 │   └─ opcua/README.md          [人]    現行  OPC-UA 手動テストサーバの起動手順
 │
-└─ .github/workflows/ci.yml     [人+AI] 現行  CI 構成（linux=self-hosted / desktop=ラベル時のみ）
+└─ .github/workflows/ci.yml     [人+AI] 現行  CI 構成（private は自前 runner・ラベル時のみ desktop、public は標準 runner・毎回 desktop）
 ```
 
 ---

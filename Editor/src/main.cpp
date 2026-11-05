@@ -18,10 +18,13 @@
 #include <Spix/QtQmlBot.h>
 #endif
 
+/// @post Editor_main_main_Post1 `--version` を付けて起動すると、ルート CMake の
+///       project(VERSION) と同じ版数（例 1.0.0）を「hmi_editor <版数>」の形で標準出力に出して終わる
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
     app.setApplicationName("hmi_editor");
+    app.setApplicationVersion(QStringLiteral(HMI_VERSION));
 
     // Task 16 / 19: CLI 引数のセットアップ。
     //   --e2e             : E2E テスト用 Spix エンドポイントを有効化（Task 16）
@@ -33,6 +36,7 @@ int main(int argc, char *argv[])
     QCommandLineParser parser;
     parser.setApplicationDescription("HMI Editor");
     parser.addHelpOption();
+    parser.addVersionOption();
     QCommandLineOption e2eOpt(QStringLiteral("e2e"),
                               QStringLiteral("E2E テスト用エンドポイントを有効化する"));
     QCommandLineOption e2ePortOpt(QStringLiteral("e2e-port"),

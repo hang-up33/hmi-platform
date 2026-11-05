@@ -55,6 +55,9 @@ function(hmi_add_simulator_like_executable target)
         target_compile_definitions(${target} PRIVATE HMI_HAS_OPCUA)
     endif()
 
+    # V1-6: ルート CMake の project(VERSION) を `--version` で出せるよう渡す。
+    target_compile_definitions(${target} PRIVATE HMI_VERSION="${PROJECT_VERSION}")
+
     # Task 16: E2E テスト用 Spix エンドポイント。`--e2e` 起動時のみ
     # 実際にネットワークを開くため、リンクしても通常起動には影響しない。
     # Windows MinGW では AnyRPC の libstdc++ 衝突により無効化される
