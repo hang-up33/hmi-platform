@@ -1,6 +1,6 @@
-# リファクタリング計画（承認済み・v1.0 公開まで中断）
+# リファクタリング計画（承認済み・一区切り。残りは保留）
 
-> **ステータス（2026-11-05 追記）：v1.0 公開（2026-11-09）まで中断し、公開後に RF-E から再開する（[v1-release-plan.md](v1-release-plan.md)）。**
+> **ステータス（2026-11-05 更新）：RF-A / RF-B / RF-D / RF-E（Button / Label / SimpleButton）/ RF-G が完了し、v1.0 に含める（#178・#180 をユーザー指示でマージ）。RF-E の残り種別と RF-F は保留で、v1.0 公開後に必要なら再評価する（[v1-release-plan.md](v1-release-plan.md) D3）。**
 >
 > **ステータス：承認済み・RF-A から着手中（2026-07-22 にユーザーから「リファクタリング進めて」の指示で承認）。** もともとは `[Future]`（Phase 11 が終わったら見直す）扱いだったが、ユーザーの明示的な指示で Phase 11（残りタスク W-E）と並行して進めることにした。1 タスク = 1 PR で進め、README / CLAUDE.md などの常駐文書の同期も各タスクの PR でやる。
 
@@ -73,8 +73,8 @@ graph LR
 |---|---|---|---|
 | RF-A | ✅ 完了 | — | ツールバー→`EditorToolbar.qml`・ダイアログ 4 つ→`EditorDialogs.qml` を抽出（Main.qml 2,712→2,533 行）。着手時に W-D の D&D ゴースト（`Overlay.overlay` 親化）が Editor の全クリックを奪い E2E 4 件が落ちる不具合を発見し同 PR で修正 |
 | RF-B | ✅ 完了 | — | インスペクタ本体（`ScrollView` 以下の全 `InspectorSection`）と**インスペクタ専用のヘルパー**（フォーカス集約 `widgetEditFieldFocused` / `inspectorFieldFocused`、型判定 `selectedIsXxx` / `selectedSupportsClickAction`、アクション・バインディング・系列・幾何の編集関数、`ColorSwatch`）を `InspectorPanel.qml` へ抽出（Main.qml 2,533→346 行）。Project レベルの変数定義（`projectVariables` と編集ヘルパー）とダイアログ起動は Window 所有のまま `editorRoot` 経由で呼ぶ。既存挙動不変（全 30 緑）+ 回帰テスト `tst_inspector_panel.qml`（6 件）を追加 |
-| RF-G | ✅ 完了 | — | インスペクタの各セクションを `Inspector<Name>Section.qml`（10 ファイル）へ、色スウォッチを `ColorSwatch.qml` へ分割。InspectorPanel.qml 2,372→435 行。各セクションは受け口 `editorInspector` でパネルを参照し、入力欄のフォーカスは `editFieldFocused` で集約。Main.qml から呼ばれる `syncActionToInspector` 等はパネルに転送関数として残した（外部 API 不変）。objectName 99 個すべて不変。回帰テスト 2 件（フォーカス集約・転送）を追加し `tst_inspector_panel` 8 件 / 全 13 テスト緑 |
+| RF-G | ✅ 完了 | #180 | インスペクタの各セクションを `Inspector<Name>Section.qml`（10 ファイル）へ、色スウォッチを `ColorSwatch.qml` へ分割。InspectorPanel.qml 2,372→435 行。各セクションは受け口 `editorInspector` でパネルを参照し、入力欄のフォーカスは `editFieldFocused` で集約。Main.qml から呼ばれる `syncActionToInspector` 等はパネルに転送関数として残した（外部 API 不変）。objectName 99 個すべて不変。回帰テスト 2 件（フォーカス集約・転送）を追加し `tst_inspector_panel` 8 件 / 全 13 テスト緑 |
 | RF-C | 取り下げ | — | 重複は意図的設計（parseValidated 集約済み + Shared 非昇格方針）のため除外 |
 | RF-D | ✅ 完了 | — | 種別メタ（許可リスト + 既定サイズ + 既定文字）を `Canvas.qml` の `widgetTypeTable` 1 箇所へ集約。`normalizeWidgetType`（キー存在で許可判定）/ `addWidget`（isTrend/isMeter 分岐と text 三項連鎖を廃止）/ `addPresetWidget`（サイズ既定）が参照。既存挙動不変（全 26 緑）+ Trend 既定サイズの回帰テストを追加 |
-| RF-E | Button/Label/SimpleButton 完了（NumericField/Trend/Meter は保留） | #178 | Button/Label で方式 (a)（Shared/Widgets への型別ホスト QML）/ (b)（Simulator 側ヘルパー止まり）を試作比較し (a) を採用。`ButtonHost.qml`/`LabelHost.qml`/`SimpleButtonHost.qml` へ集約（Canvas.qml 1,244→1,240 行 / SimulatorCanvas.qml 532→492 行）。読み書き両用 binding を持つ NumericField、binding 非対応の Trend/Meter は非対称性の吸収コストが見合わず対象外（別途検討。詳細・参考資産は [rf-e-remaining-widgets-deferred](../.claude/rules/project-rf-e-remaining-widgets-deferred.md)） |
+| RF-E | Button/Label/SimpleButton 完了（NumericField/Trend/Meter は保留） | #178 | Button/Label で方式 (a)（Shared/Widgets への型別ホスト QML）/ (b)（Simulator 側ヘルパー止まり）を試作比較し (a) を採用。`ButtonHost.qml`/`LabelHost.qml`/`SimpleButtonHost.qml` へ集約（Canvas.qml 1,244→1,240 行 / SimulatorCanvas.qml 532→492 行）。読み書き両用 binding を持つ NumericField、読み取り binding は持つが多プロパティ（系列・目盛り等）の Trend/Meter は非対称性の吸収コストが見合わず対象外（別途検討。詳細・参考資産は [rf-e-remaining-widgets-deferred](../.claude/rules/project-rf-e-remaining-widgets-deferred.md)） |
 | RF-F | 保留 | — | [widgetmodel-refactor-deferred](../.claude/rules/project-widgetmodel-refactor-deferred.md) を継続 |

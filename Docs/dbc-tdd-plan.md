@@ -8,7 +8,7 @@
 
 手順の規約（記法・段階の切り替え条件）の正本は [.claude/rules/dbc-tdd.md](../.claude/rules/dbc-tdd.md)。本書は導入計画と進捗を持つ。
 
-> 本計画は機能追加ではなく**開発プロセスの改善**で、フェーズタスク（[phase-status.md](phase-status.md)）とは独立に進める。進行中のリファクタリング計画（[refactoring-plan.md](refactoring-plan.md)）の順序は変えない。
+> 本計画は機能追加ではなく**開発プロセスの改善**で、フェーズタスク（[phase-status.md](phase-status.md)）とは独立に進める。リファクタリング計画（[refactoring-plan.md](refactoring-plan.md)・一区切り）とも独立。**DT-2 以降は v1.0 公開（2026-11-09）までの機能凍結が明けてから着手する**（[v1-release-plan.md](v1-release-plan.md)）。
 
 ---
 
@@ -87,7 +87,7 @@ PreToolUse hook が中身を比べられるのは Edit / Write だけで、Bash�
 | DT-3 | hooks と段階切替（警告モード） | `scripts/hooks/tdd-phase-guard.sh`、`check-contract-coverage.sh`、`scripts/tdd/phase.sh`、`.gitignore`、`settings.json` |
 | DT-4 | 実行時の契約チェック + 手本 | `Contract.h` とそのテスト、`VariableData` に契約を付けた例 |
 | DT-5 | 既存手順への組み込み + CI 照合 | `ship-task` フェーズ 1 / `mvp-next-task` / `mvp-task-runner` の更新、`check-contract-tags.py`、ci.yml |
-| DT-6 | 実タスクで試行 → kaizen | 次の実装タスク（RF-E 等）で 3 段階を通し、詰まった点をルールに反映。hook をブロックに上げるか判断 |
+| DT-6 | 実タスクで試行 → kaizen | v1.0 公開後の最初の実装タスクで 3 段階を通し、詰まった点をルールに反映。hook をブロックに上げるか判断 |
 
 ## 適用範囲
 
@@ -101,7 +101,7 @@ PreToolUse hook が中身を比べられるのは Edit / Write だけで、Bash�
 
 | # | 状態 | PR |
 |---|---|---|
-| DT-1 | 進行中 | — |
+| DT-1 | ✅ 完了 | #181 |
 | DT-2 | 未着手 | — |
 | DT-3 | 未着手 | — |
 | DT-4 | 未着手 | — |

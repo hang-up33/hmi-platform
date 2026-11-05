@@ -427,7 +427,7 @@ timeline
 
 ---
 
-## リファクタリング（RF-A〜・v1.0 公開まで中断）
+## リファクタリング（RF-A〜RF-G・一区切り。残りは保留）
 
 **計画書**：[Docs/refactoring-plan.md](refactoring-plan.md)（PR #167 で `[Future]` として起票 → 2026-07-22 ユーザー指示で承認・Phase 11 と並行着手）
 
@@ -440,7 +440,7 @@ timeline
   - **境界の引き方**：各セクションは受け口 `editorInspector`（= パネル）で型判定・選択中 Item を参照する。パネルの `widgetEditFieldFocused` は 30 個超の入力欄 id を直接 OR していたが、id はファイルを跨げないため**各セクションに `editFieldFocused` を置き、パネルはそれを OR する**形にした。入力欄 id を使う関数（`syncGeometryFields` / アクション・バインディングの apply・sync）はセクションへ移し、Main.qml やテストから呼ばれる名前はパネルに**転送関数として残した**（外部 API 不変）。
   - **学び**：Windows で表示スケール 150% のとき、DPI 非対応の PowerShell から `GetWindowRect` + `PrintWindow` で撮ると縮小座標になり、ウィンドウ左上だけが切り取られてインスペクタが写らない。`scripts/windows/capture-app-window.ps1` に `SetProcessDPIAware()` を入れて解消した。
 - ✅ **RF-D: 種別分岐の集約（widgetTypeTable）**。種別ごとの「許可リスト・既定サイズ・既定文字」が `Canvas.qml` の `normalizeWidgetType`（許可リスト）と `addWidget`（`isTrend/isMeter` サイズ分岐 + text 三項連鎖）に散っていたのを、単一の `readonly property var widgetTypeTable`（種別 → `{width, height, text}`）へ集約。`normalizeWidgetType` はキー存在判定、`addWidget` は `meta` 参照、`addPresetWidget` はサイズ既定に同テーブルを使う。**新種別追加時はテーブルに 1 行足すだけ**で 3 関数が追従する。既存挙動は完全不変（全 26 テスト緑）で、従来欠けていた Trend 既定サイズ（240×120）の回帰テストを補った。
-- ✅ **RF-E: delegate 重複の削減（Shared/Widgets への型別ホスト QML化）**。Editor（`Canvas.qml`）/ Simulator（`SimulatorCanvas.qml`）が型ごとに反復定義していた「Schema 値 → Hmi* プロパティ」受け渡しを、`Shared/Widgets/qml/ButtonHost.qml` / `LabelHost.qml` / `SimpleButtonHost.qml`（方式 (a)）へ集約した。**対象は「表示専用 + binding 読取のみ」の 3 種（Button/Label/SimpleButton）に限定**：読み書き両用 binding を持つ NumericField、binding 非対応の Trend/Meter は非対称性の吸収コストが見合わず対象外（別途検討）。Editor（静的値）/ Simulator（`boundValue` で変数追従）の非対称性は Host の `resolveBound` フック（null＝Editor / `wrapper.boundValue` そのまま渡す＝Simulator）で吸収し、String化/bool化（coerce）も Host 側へ集約した。Canvas.qml 1,244→1,240 行 / SimulatorCanvas.qml 532→492 行。objectName・QML ツリー構造・Schema・見た目は完全不変（`ctest` 30/30 緑、E2E 込み）。
+- ✅ **RF-E: delegate 重複の削減（Shared/Widgets への型別ホスト QML化）**。Editor（`Canvas.qml`）/ Simulator（`SimulatorCanvas.qml`）が型ごとに反復定義していた「Schema 値 → Hmi* プロパティ」受け渡しを、`Shared/Widgets/qml/ButtonHost.qml` / `LabelHost.qml` / `SimpleButtonHost.qml`（方式 (a)）へ集約した。**対象は「表示専用 + binding 読取のみ」の 3 種（Button/Label/SimpleButton）に限定**：読み書き両用 binding を持つ NumericField、読み取り binding は持つが多プロパティ（系列・目盛り等）の Trend/Meter は非対称性の吸収コストが見合わず対象外（別途検討）。Editor（静的値）/ Simulator（`boundValue` で変数追従）の非対称性は Host の `resolveBound` フック（null＝Editor / `wrapper.boundValue` そのまま渡す＝Simulator）で吸収し、String化/bool化（coerce）も Host 側へ集約した。Canvas.qml 1,244→1,240 行 / SimulatorCanvas.qml 532→492 行。objectName・QML ツリー構造・Schema・見た目は完全不変（`ctest` 30/30 緑、E2E 込み）。
   - **経緯**：着手前に方式 (a) Shared/Widgets への型別ホスト QML化 / 方式 (b) Simulator 側ヘルパー止まり の 2 方式を Button/Label で試作比較し、(a) を採用（`Docs/refactoring-plan.md` の想定どおり）。
   - **学び**：QML の依存追跡は「関数呼び出しを跨いでも効く」（Task 41 の `boundValue` パターン）だけでなく、**object literal のバインディング式（`widget: ({ text: wrapper.widgetText, ... })`）でも同様に効く**（内部で読んだプロパティが依存として追跡される）。Host を挟んで QML ツリーが 1 段深くなっても、Spix / unit の objectName 探索は再帰的（`hmiEditorWindow/widget_<id>/hmiButton` が元々複数の無名ノードを跨いで解決できている）ため objectName パスは無傷だった。
 
@@ -459,7 +459,9 @@ timeline
 
 **計画書**：[Docs/v1-release-plan.md](v1-release-plan.md)（2026-11-05 ユーザー指示で承認）
 
-- **決定事項**：公開日 2026-11-09（月）、ライセンス MIT、リファクタリング RF-E は公開後に再開。公開までは機能凍結。
+- **決定事項**：公開日 2026-11-09（月）、ライセンス MIT。公開までは機能凍結。
+- **方針変更（同日）**：当初は RF-E を公開後に回す予定だったが、ユーザー指示で未マージの PR 4 件（#178 RF-E・#179・#180 RF-G・#181 DT-1）を最新 main に合わせて衝突を直し、Web の `ctest`（E2E 込み 27/27 緑）を確認してからマージした。RF-E と RF-G は v1.0 に含まれる。
+  - **学び**：Web で `ctest -j4` と並列実行すると E2E の Spix ポートが衝突して 11 件落ちる。E2E は直列（`-j` なし）で回す。
 - **方針**：public 化すると全 git 履歴が読めるようになるため、機微情報の全履歴スキャン（V1-1）と self-hosted runner の廃止（V1-4）を「公開を止める条件」にした。
 
 ---

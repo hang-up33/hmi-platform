@@ -12,12 +12,17 @@
 - **進捗ステータス**: V1-0（計画書）進行中。次タスク = V1-1（全履歴の機微情報スキャン）。
 - **計画書正本**: [Docs/v1-release-plan.md](v1-release-plan.md)「進捗」表
 
-### **リファクタリング計画 (2026-07-22 承認・v1.0 公開まで中断)**
+### **契約→テスト→実装（DbC + テスト先行）の導入 (開発プロセスの改善)**
+
+- **進捗ステータス**: DT-1（計画とルール）完了（#181）。DT-2〜DT-6 は未着手で、v1.0 公開後に着手する。
+- **計画書正本**: [Docs/dbc-tdd-plan.md](dbc-tdd-plan.md)「進捗」表
+
+### **リファクタリング計画 (2026-07-22 承認・一区切り。残りは保留)**
 
 - **概要**: リファクタリング中は機能追加を一切行わず、`Editor/qml/Main.qml` の肥大化と「新しい Widget 種別を足すたびに約 10 箇所を触らないといけない」という散らばりを整理する。1 タスク = 1 PR で進める。
 - **進捗ステータス**:
-  - **RF-A, RF-D, RF-B 完了**: RF-A（ツールバー / ダイアログ抽出）、RF-D（種別テーブル集約）、RF-B（インスペクタ本体 + インスペクタ専用ヘルパーを `InspectorPanel.qml` へ抽出。RF-A と合わせて Main.qml 2,712→346 行）。
-  - **次タスク = RF-E**: Editor / Simulator の delegate 重複削減（着手時に方式 (a)/(b) を試作比較）。**v1.0 公開（11/9）の後に再開する。**
+  - **RF-A, RF-B, RF-D, RF-E, RF-G 完了**: RF-A（ツールバー / ダイアログ抽出）、RF-B（インスペクタ本体を `InspectorPanel.qml` へ抽出。Main.qml 2,712→346 行）、RF-D（種別テーブル集約）、RF-E（Button / Label / SimpleButton の delegate を `Shared/Widgets` の型別ホスト QML へ集約・#178）、RF-G（`InspectorPanel.qml` をセクション単位のファイルへ分割。2,372→435 行・#180）。
+  - **保留**: RF-E の残り種別（NumericField / Trend / Meter）と RF-F（`widgetModel` のモデル化）。v1.0 公開後に必要になったら再評価する。
 - **計画書正本**: [Docs/refactoring-plan.md](refactoring-plan.md)「進捗」表
 
 > **新機能のフェーズタスクは Phase 11 で全部やり終えている。** 次のフェーズは「まだ承認前の候補」の中からユーザーと相談して範囲を決めてから着手する（勝手には始めない）。

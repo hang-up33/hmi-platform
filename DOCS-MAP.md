@@ -54,7 +54,7 @@ hmi-platform/
 │   ├─ requirements.md          [人]    現行  上記への案内（旧版は archive/requirements-legacy.md）
 │   ├─ workflow.md              [人+AI] 現行  開発ルール・PR ワークフロー
 │   ├─ v1-release-plan.md       [人+AI] 現行  v1.0 公開（OSS 化）の計画・進捗表
-│   ├─ refactoring-plan.md      [人+AI] 現行  リファクタリング計画（v1.0 公開まで中断）
+│   ├─ refactoring-plan.md      [人+AI] 現行  リファクタリング計画（一区切り。残りは保留）
 │   ├─ dbc-tdd-plan.md          [人+AI] 現行  契約→テスト→実装の開発手順の導入計画・進捗表
 │   ├─ phase7-modbus-plan.md    [人+AI] 現行  Modbus（実機作業 MB-5/6 が未完のため現行）
 │   ├─ claude-web-dev.md        [人+AI] 現行  Claude on the Web での開発環境手順
@@ -94,7 +94,7 @@ hmi-platform/
 | [Docs/architecture.md](Docs/architecture.md) | 43 | Editor / Simulator / Runtime とモジュール構成 |
 | [Docs/phase-status.md](Docs/phase-status.md) | 49 | フェーズ進捗の正本 |
 | [Docs/workflow.md](Docs/workflow.md) | 55 | ブランチ規約・PR・レビュー・完了基準 |
-| [Docs/refactoring-plan.md](Docs/refactoring-plan.md) | 76 | 進行中のリファクタリング計画と進捗表 |
+| [Docs/refactoring-plan.md](Docs/refactoring-plan.md) | 80 | リファクタリング計画と進捗表（一区切り。残りは保留） |
 | [Docs/dbc-tdd-plan.md](Docs/dbc-tdd-plan.md) | 109 | 契約→テスト→実装の開発手順の導入計画と進捗表 |
 | [Docs/claude-web-dev.md](Docs/claude-web-dev.md) | 102 | Claude on the Web での開発セットアップ |
 | [Docs/phase7-modbus-plan.md](Docs/phase7-modbus-plan.md) | 153 | Modbus TCP。MB-5/6（実機）が未完 |
