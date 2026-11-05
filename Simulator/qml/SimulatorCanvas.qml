@@ -225,67 +225,41 @@ Item {
                                                                         : buttonComponent
                 }
 
+                // Task RF-E: Button/Label の「Schema 値 → HmiXxx プロパティ」
+                // 受け渡しを Shared/Widgets の ButtonHost / LabelHost へ委譲する
+                // （SimpleButton も同様に simpleButtonComponent で SimpleButtonHost を使う）。
+                // Simulator は Task 41 の boundValue をそのまま resolveBound へ渡すだけで、
+                // binding 追従（text/backgroundColor/textColor/checked）の String化/bool化は
+                // Host 側が面倒を見る。JSON キー名とのマッピング（radius→cornerRadius 等）は
+                // ここ（widget オブジェクト組み立て）で従来どおり解決する。
                 Component {
                     id: buttonComponent
-                    HmiButton {
+                    ButtonHost {
                         // Task 30: E2E（Spix）から hmiSimulatorWindow/widget_<id>/hmiButton の
                         // パスで text / backgroundColor 等の描画値を getStringProperty 検証
-                        // できるよう objectName を付与する（widget_<id> wrapper 命名と対）。
-                        objectName: "hmiButton"
+                        // できる（objectName "hmiButton" は Host 内の HmiButton に付与済み。
+                        // Host を挟んでも Spix / unit の探索は再帰的なのでパスは変わらない）。
                         anchors.fill: parent
-                        // Task 41: text / backgroundColor / textColor は binding があれば
-                        // 変数の現在値へ追従し、無ければ modelData の静的値を使う
-                        // （binding property の選択肢＝Editor の inspectorBindingPropCombo と対）。
-                        text: {
-                            const v = wrapper.boundValue("text")
-                            return v !== undefined ? String(v)
-                                : (wrapper.modelData.text !== undefined ? wrapper.modelData.text : "")
-                        }
-                        tag: wrapper.modelData.tag !== undefined ? wrapper.modelData.tag : ""
-                        // Task 28: スタイル属性も HmiButton へ渡す（Editor delegate と対）。
-                        // 未指定（空 / 0）は HmiButton 側で既定外観にフォールバックされる。
-                        // Runtime は本ソースを共有するため、これだけで実機にも反映される。
-                        // Task 41: 色は binding があれば変数へ追従（無ければ静的値）。
-                        backgroundColor: {
-                            const v = wrapper.boundValue("backgroundColor")
-                            return v !== undefined ? String(v)
-                                : (wrapper.modelData.backgroundColor !== undefined ? wrapper.modelData.backgroundColor : "")
-                        }
-                        textColor: {
-                            const v = wrapper.boundValue("textColor")
-                            return v !== undefined ? String(v)
-                                : (wrapper.modelData.textColor !== undefined ? wrapper.modelData.textColor : "")
-                        }
-                        fontSize: wrapper.modelData.fontSize !== undefined ? wrapper.modelData.fontSize : 0
-                        // Task 31: ボーダー＋角丸も HmiButton へ渡す（Editor delegate と対）。
-                        // 角丸は radius（JSON キー）→ cornerRadius（HmiButton 入力名）にマップ。
-                        // 未指定（空 / -1）は HmiButton 側で既定外観にフォールバックされる。
-                        borderColor: wrapper.modelData.borderColor !== undefined ? wrapper.modelData.borderColor : ""
-                        borderWidth: wrapper.modelData.borderWidth !== undefined ? wrapper.modelData.borderWidth : -1
-                        cornerRadius: wrapper.modelData.radius !== undefined ? wrapper.modelData.radius : -1
-                        // Task 33: フォント詳細も HmiButton へ渡す（Editor delegate と対）。
-                        // 未指定（false / 空文字）は HmiButton 側で既定（太字/斜体なし・既定フォント）になる。
-                        fontBold: wrapper.modelData.fontBold !== undefined ? wrapper.modelData.fontBold : false
-                        fontItalic: wrapper.modelData.fontItalic !== undefined ? wrapper.modelData.fontItalic : false
-                        fontFamily: wrapper.modelData.fontFamily !== undefined ? wrapper.modelData.fontFamily : ""
-                        // Task 34: 配置 + 不透明度も HmiButton へ渡す（Editor delegate と対）。
-                        // 不透明度は JSON キー opacity → HmiButton.widgetOpacity（組込み衝突回避）。
-                        // 未指定（空 / -1）は HmiButton 側で既定（中央寄せ・不透明度 1.0）になる。
-                        hAlign: wrapper.modelData.hAlign !== undefined ? wrapper.modelData.hAlign : ""
-                        vAlign: wrapper.modelData.vAlign !== undefined ? wrapper.modelData.vAlign : ""
-                        widgetOpacity: wrapper.modelData.opacity !== undefined ? wrapper.modelData.opacity : -1
-                        // Task 42: 状態別スタイルも HmiButton へ渡す（Editor delegate と対）。
-                        // enabled は JSON キー enabled → HmiButton.widgetEnabled（組込み衝突回避）。
-                        // 未指定は既定（enabled=true / checkable=false / checked=false）になる。
-                        widgetEnabled: wrapper.modelData.enabled !== undefined ? wrapper.modelData.enabled : true
-                        checkable: wrapper.modelData.checkable !== undefined ? wrapper.modelData.checkable : false
-                        // Task 42: checked は binding があれば変数へ追従（toggleVariable + Binding で
-                        // トグル連動）、無ければ modelData の初期値（静的）を使う。
-                        checked: {
-                            const v = wrapper.boundValue("checked")
-                            return v !== undefined ? VariableStore.coerce("bool", v)
-                                : (wrapper.modelData.checked !== undefined ? wrapper.modelData.checked : false)
-                        }
+                        resolveBound: wrapper.boundValue
+                        widget: ({
+                            text: wrapper.modelData.text !== undefined ? wrapper.modelData.text : "",
+                            tag: wrapper.modelData.tag !== undefined ? wrapper.modelData.tag : "",
+                            backgroundColor: wrapper.modelData.backgroundColor !== undefined ? wrapper.modelData.backgroundColor : "",
+                            textColor: wrapper.modelData.textColor !== undefined ? wrapper.modelData.textColor : "",
+                            fontSize: wrapper.modelData.fontSize !== undefined ? wrapper.modelData.fontSize : 0,
+                            borderColor: wrapper.modelData.borderColor !== undefined ? wrapper.modelData.borderColor : "",
+                            borderWidth: wrapper.modelData.borderWidth !== undefined ? wrapper.modelData.borderWidth : -1,
+                            cornerRadius: wrapper.modelData.radius !== undefined ? wrapper.modelData.radius : -1,
+                            fontBold: wrapper.modelData.fontBold !== undefined ? wrapper.modelData.fontBold : false,
+                            fontItalic: wrapper.modelData.fontItalic !== undefined ? wrapper.modelData.fontItalic : false,
+                            fontFamily: wrapper.modelData.fontFamily !== undefined ? wrapper.modelData.fontFamily : "",
+                            hAlign: wrapper.modelData.hAlign !== undefined ? wrapper.modelData.hAlign : "",
+                            vAlign: wrapper.modelData.vAlign !== undefined ? wrapper.modelData.vAlign : "",
+                            widgetOpacity: wrapper.modelData.opacity !== undefined ? wrapper.modelData.opacity : -1,
+                            widgetEnabled: wrapper.modelData.enabled !== undefined ? wrapper.modelData.enabled : true,
+                            checkable: wrapper.modelData.checkable !== undefined ? wrapper.modelData.checkable : false,
+                            checked: wrapper.modelData.checked !== undefined ? wrapper.modelData.checked : false
+                        })
                         // Task 41: クリックで紐づくアクションを実行する（変数更新 → binding 追従）。
                         // 読み取り専用アプリに初めて「実行」概念が入る箇所。引数 modifiers は使わない。
                         onClicked: wrapper.runClickActions()
@@ -294,37 +268,28 @@ Item {
 
                 Component {
                     id: labelComponent
-                    HmiLabel {
-                        // Task 47: 型分岐の観察用 objectName（HmiButton と対。E2E は hmiLabel で参照）。
-                        objectName: "hmiLabel"
+                    LabelHost {
                         anchors.fill: parent
                         // Task 47: Label の binding 対応プロパティ（text / textColor /
-                        // backgroundColor）は HmiButton と同じ boundValue 経路で変数へ追従させる。
-                        // visible binding は wrapper(Item) 側で共通に効くため、ここでは扱わない。
-                        text: {
-                            const v = wrapper.boundValue("text")
-                            return v !== undefined ? String(v)
-                                : (wrapper.modelData.text !== undefined ? wrapper.modelData.text : "")
-                        }
-                        backgroundColor: {
-                            const v = wrapper.boundValue("backgroundColor")
-                            return v !== undefined ? String(v)
-                                : (wrapper.modelData.backgroundColor !== undefined ? wrapper.modelData.backgroundColor : "")
-                        }
-                        textColor: {
-                            const v = wrapper.boundValue("textColor")
-                            return v !== undefined ? String(v)
-                                : (wrapper.modelData.textColor !== undefined ? wrapper.modelData.textColor : "")
-                        }
-                        fontSize: wrapper.modelData.fontSize !== undefined ? wrapper.modelData.fontSize : 0
-                        fontBold: wrapper.modelData.fontBold !== undefined ? wrapper.modelData.fontBold : false
-                        fontItalic: wrapper.modelData.fontItalic !== undefined ? wrapper.modelData.fontItalic : false
-                        fontFamily: wrapper.modelData.fontFamily !== undefined ? wrapper.modelData.fontFamily : ""
-                        hAlign: wrapper.modelData.hAlign !== undefined ? wrapper.modelData.hAlign : ""
-                        vAlign: wrapper.modelData.vAlign !== undefined ? wrapper.modelData.vAlign : ""
-                        widgetOpacity: wrapper.modelData.opacity !== undefined ? wrapper.modelData.opacity : -1
-                        widgetEnabled: wrapper.modelData.enabled !== undefined ? wrapper.modelData.enabled : true
-                        // Label は表示専用＝onClicked を action 実行へ結線しない（クリックは無反応）。
+                        // backgroundColor）は HmiButton と同じ boundValue 経路で変数へ追従させる
+                        // （Host 側の resolvedText が面倒を見る）。visible binding は wrapper(Item)
+                        // 側で共通に効くため、ここでは扱わない。
+                        resolveBound: wrapper.boundValue
+                        widget: ({
+                            text: wrapper.modelData.text !== undefined ? wrapper.modelData.text : "",
+                            backgroundColor: wrapper.modelData.backgroundColor !== undefined ? wrapper.modelData.backgroundColor : "",
+                            textColor: wrapper.modelData.textColor !== undefined ? wrapper.modelData.textColor : "",
+                            fontSize: wrapper.modelData.fontSize !== undefined ? wrapper.modelData.fontSize : 0,
+                            fontBold: wrapper.modelData.fontBold !== undefined ? wrapper.modelData.fontBold : false,
+                            fontItalic: wrapper.modelData.fontItalic !== undefined ? wrapper.modelData.fontItalic : false,
+                            fontFamily: wrapper.modelData.fontFamily !== undefined ? wrapper.modelData.fontFamily : "",
+                            hAlign: wrapper.modelData.hAlign !== undefined ? wrapper.modelData.hAlign : "",
+                            vAlign: wrapper.modelData.vAlign !== undefined ? wrapper.modelData.vAlign : "",
+                            widgetOpacity: wrapper.modelData.opacity !== undefined ? wrapper.modelData.opacity : -1,
+                            widgetEnabled: wrapper.modelData.enabled !== undefined ? wrapper.modelData.enabled : true
+                        })
+                        // Label は表示専用＝onClicked を action 実行へ結線しない（クリックは無反応。
+                        // LabelHost 内部で clicked は発火するが誰も接続しない＝従来どおり無反応）。
                     }
                 }
 
@@ -480,10 +445,11 @@ Item {
                     }
                 }
 
-                // Task W-B（Phase 11）: SimpleButton の 6 分岐目。Simulator/Runtime はライブ実行＝live:true
+                // Task W-B（Phase 11）: SimpleButton の 6 分岐目。Task RF-E で SimpleButtonHost へ
+                // 委譲する形に変更（Button/Label と同型）。Simulator/Runtime はライブ実行＝live:true
                 //（長押し確定で toggled が出る）。Runtime は本ソース共有で自動継承。
                 //   checked：binding {property:"checked"} の指す変数へ追従（HmiButton と同じ boundValue 経路。
-                //     無 bind 時は modelData.checked〔初期値〕）。
+                //     Host の resolveBound/resolvedBool が面倒を見る。無 bind 時は modelData.checked〔初期値〕）。
                 //   onToggled：長押し確定で得た「次値」を writeBoundValue で checked binding 先の変数へ
                 //     書き戻す（NumericField の valueCommitted → writeBoundValue と**完全同型**の入力 Widget 経路。
                 //     widget は状態を持たず consumer が書き戻す）。**runClickActions は呼ばない**：checked と
@@ -492,28 +458,22 @@ Item {
                 //     checked binding 経路へ一本化する（トグル以外の副作用アクションが要る用途は将来別途）。
                 Component {
                     id: simpleButtonComponent
-                    HmiSimpleButton {
-                        objectName: "hmiSimpleButton"
+                    SimpleButtonHost {
                         anchors.fill: parent
                         live: true
-                        text: {
-                            const v = wrapper.boundValue("text")
-                            return v !== undefined ? String(v)
-                                : (wrapper.modelData.text !== undefined ? wrapper.modelData.text : "TEST")
-                        }
-                        shape: wrapper.modelData.shape !== undefined ? wrapper.modelData.shape : ""
-                        theme: wrapper.modelData.theme !== undefined ? wrapper.modelData.theme : ""
-                        accentColor: wrapper.modelData.accentColor !== undefined ? wrapper.modelData.accentColor : ""
-                        holdMs: wrapper.modelData.holdMs !== undefined ? wrapper.modelData.holdMs : 0
-                        checked: {
-                            const v = wrapper.boundValue("checked")
-                            return v !== undefined ? VariableStore.coerce("bool", v)
-                                : (wrapper.modelData.checked !== undefined ? wrapper.modelData.checked : false)
-                        }
-                        // 共通状態（opacity / enabled）も他 Widget と同型で流す（Codex PR #164 [P2]）。
-                        // enabled=false は淡色表示 + 長押し無効（_beginHold ガード）+ 書き戻し no-op（onToggled ガード）。
-                        widgetOpacity: wrapper.modelData.opacity !== undefined ? wrapper.modelData.opacity : -1
-                        widgetEnabled: wrapper.modelData.enabled !== undefined ? wrapper.modelData.enabled : true
+                        resolveBound: wrapper.boundValue
+                        widget: ({
+                            text: wrapper.modelData.text !== undefined ? wrapper.modelData.text : "TEST",
+                            shape: wrapper.modelData.shape !== undefined ? wrapper.modelData.shape : "",
+                            theme: wrapper.modelData.theme !== undefined ? wrapper.modelData.theme : "",
+                            accentColor: wrapper.modelData.accentColor !== undefined ? wrapper.modelData.accentColor : "",
+                            holdMs: wrapper.modelData.holdMs !== undefined ? wrapper.modelData.holdMs : 0,
+                            checked: wrapper.modelData.checked !== undefined ? wrapper.modelData.checked : false,
+                            // 共通状態（opacity / enabled）も他 Widget と同型で流す（Codex PR #164 [P2]）。
+                            // enabled=false は淡色表示 + 長押し無効（_beginHold ガード）+ 書き戻し no-op（onToggled ガード）。
+                            widgetOpacity: wrapper.modelData.opacity !== undefined ? wrapper.modelData.opacity : -1,
+                            widgetEnabled: wrapper.modelData.enabled !== undefined ? wrapper.modelData.enabled : true
+                        })
                         onToggled: function(value) {
                             // Task 42 と同じ enabled 契約：disabled（enabled=false）の Widget は
                             // ユーザー操作で変数/PLC を書き換えない（Codex PR #164 [P2]）。

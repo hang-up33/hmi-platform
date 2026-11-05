@@ -971,48 +971,42 @@ Item {
                                                                         : buttonComponent
                     }
 
+                    // Task RF-E: Button/Label の「Schema 値 → HmiXxx プロパティ」
+                    // 受け渡しを Shared/Widgets の ButtonHost / LabelHost へ委譲する
+                    // （SimpleButton も同様に simpleButtonComponent で SimpleButtonHost を使う）。
+                    // Editor は静的値をそのまま渡すだけなので resolveBound は渡さない
+                    // （Host 側は resolveBound が null なら常に widget の値を使う）。
+                    // JSON キー名とのマッピング（widgetRadius→cornerRadius 等、Task 31/34/42
+                    // で確立済みの規約）はここ（widget オブジェクト組み立て）で従来どおり解決する。
                     Component {
                         id: buttonComponent
-                        HmiButton {
-                            // Task 47: E2E / unit から型分岐を観察できるよう objectName を付与
-                            //（Simulator 側と同名。HmiLabel は新規 "hmiLabel"）。
-                            objectName: "hmiButton"
+                        ButtonHost {
                             anchors.fill: parent
                             // EditableWidget の content alias は内部 container を指すため、
                             // parent 経由ではなく wrapper の id 経由でメタを参照する
                             // （CLAUDE.md の "default property alias の parent 罠" 参照）。
-                            text: wrapper.widgetText
-                            tag: wrapper.widgetTag
-                            // Task 28: スタイル属性を HmiButton（唯一の真実）へ渡す。
-                            // 空 / 0 は HmiButton 側で既定外観にフォールバックされる。
-                            backgroundColor: wrapper.widgetBackgroundColor
-                            textColor: wrapper.widgetTextColor
-                            fontSize: wrapper.widgetFontSize
-                            // Task 31: ボーダー＋角丸を渡す。角丸は widgetRadius → cornerRadius に
-                            // マップする（HmiButton の公開入力名は radius 衝突回避で cornerRadius）。
-                            // 空 / -1 は HmiButton 側で既定外観にフォールバックされる。
-                            borderColor: wrapper.widgetBorderColor
-                            borderWidth: wrapper.widgetBorderWidth
-                            cornerRadius: wrapper.widgetRadius
-                            // Task 33: フォント詳細を HmiButton へ渡す（空 / false は既定にフォールバック）。
-                            fontBold: wrapper.widgetFontBold
-                            fontItalic: wrapper.widgetFontItalic
-                            fontFamily: wrapper.widgetFontFamily
-                            // Task 34: 配置 + 不透明度を HmiButton へ渡す。不透明度は widgetOpacity
-                            // → HmiButton.widgetOpacity（両者とも組込み opacity 衝突回避でリネーム）。
-                            // 空 / -1 は HmiButton 側で既定（中央寄せ・不透明度 1.0）にフォールバック。
-                            hAlign: wrapper.widgetHAlign
-                            vAlign: wrapper.widgetVAlign
-                            widgetOpacity: wrapper.widgetOpacity
-                            // Task 42: 状態別スタイルを HmiButton へ渡す。enabled → widgetEnabled
-                            // （組込み衝突回避）。Editor では淡色プレビューになるだけで、選択用の
-                            // clicked は MouseArea を止めないため disabled でも選択・編集できる。
-                            widgetEnabled: wrapper.widgetEnabled
-                            checkable: wrapper.widgetCheckable
-                            checked: wrapper.widgetChecked
+                            widget: ({
+                                text: wrapper.widgetText,
+                                tag: wrapper.widgetTag,
+                                backgroundColor: wrapper.widgetBackgroundColor,
+                                textColor: wrapper.widgetTextColor,
+                                fontSize: wrapper.widgetFontSize,
+                                borderColor: wrapper.widgetBorderColor,
+                                borderWidth: wrapper.widgetBorderWidth,
+                                cornerRadius: wrapper.widgetRadius,
+                                fontBold: wrapper.widgetFontBold,
+                                fontItalic: wrapper.widgetFontItalic,
+                                fontFamily: wrapper.widgetFontFamily,
+                                hAlign: wrapper.widgetHAlign,
+                                vAlign: wrapper.widgetVAlign,
+                                widgetOpacity: wrapper.widgetOpacity,
+                                widgetEnabled: wrapper.widgetEnabled,
+                                checkable: wrapper.widgetCheckable,
+                                checked: wrapper.widgetChecked
+                            })
                             // Task 25: ドラッグ用の親 MouseArea は drag.filterChildren 下で
                             // クリックを発火しない（子が消費する）。よってクリック検出は
-                            // HmiButton 側の clicked を中継して選択要求に使う。
+                            // HmiButton 側の clicked を Host 経由で中継して選択要求に使う。
                             // Task 36: modifiers（Shift / Ctrl）を渡して複数選択の加除を可能にする。
                             onClicked: function(modifiers) {
                                 wrapper.selectRequested(wrapper.widgetId, modifiers)
@@ -1022,24 +1016,23 @@ Item {
 
                     Component {
                         id: labelComponent
-                        HmiLabel {
-                            // Task 47: 型分岐の観察用 objectName（HmiButton と対）。
-                            objectName: "hmiLabel"
+                        LabelHost {
                             anchors.fill: parent
-                            // Label は表示専用。HmiButton と同じく wrapper 経由でメタへバインド
-                            // するが、ボーダー / 角丸 / トグル状態 / アクションは持たない
-                            // （Label が使わないメタは渡さない）。
-                            text: wrapper.widgetText
-                            backgroundColor: wrapper.widgetBackgroundColor
-                            textColor: wrapper.widgetTextColor
-                            fontSize: wrapper.widgetFontSize
-                            fontBold: wrapper.widgetFontBold
-                            fontItalic: wrapper.widgetFontItalic
-                            fontFamily: wrapper.widgetFontFamily
-                            hAlign: wrapper.widgetHAlign
-                            vAlign: wrapper.widgetVAlign
-                            widgetOpacity: wrapper.widgetOpacity
-                            widgetEnabled: wrapper.widgetEnabled
+                            // Label は表示専用。ボーダー / 角丸 / トグル状態 / アクションは
+                            // 持たない（Label が使わないメタは渡さない＝従来どおり）。
+                            widget: ({
+                                text: wrapper.widgetText,
+                                backgroundColor: wrapper.widgetBackgroundColor,
+                                textColor: wrapper.widgetTextColor,
+                                fontSize: wrapper.widgetFontSize,
+                                fontBold: wrapper.widgetFontBold,
+                                fontItalic: wrapper.widgetFontItalic,
+                                fontFamily: wrapper.widgetFontFamily,
+                                hAlign: wrapper.widgetHAlign,
+                                vAlign: wrapper.widgetVAlign,
+                                widgetOpacity: wrapper.widgetOpacity,
+                                widgetEnabled: wrapper.widgetEnabled
+                            })
                             // Task 47: 選択中継は Button と同形。クリックで selectRequested を
                             // 発火して Canvas の選択集合へ加除する（Label も EditableWidget の
                             // 選択枠・リサイズハンドルが効く）。Label に action 実行は無い。
@@ -1163,28 +1156,31 @@ Item {
                         }
                     }
 
-                    // Task W-B（Phase 11）: SimpleButton の 6 分岐目。Editor キャンバスは設計面なので
+                    // Task W-B（Phase 11）: SimpleButton の 6 分岐目。Task RF-E で SimpleButtonHost
+                    // へ委譲する形に変更（Button/Label と同型）。Editor キャンバスは設計面なので
                     // live:false（長押しを動かさず静的プレビュー・進捗 0 固定）。形状 / テーマ / 差し色 /
                     // 長押し時間 / ON-OFF（checked）を wrapper メタから流す（未指定は空 / 0 で HmiSimpleButton
                     // 側の resolved* が既定へ解決）。選択中継は他 Widget と同形。
                     Component {
                         id: simpleButtonComponent
-                        HmiSimpleButton {
-                            objectName: "hmiSimpleButton"
+                        SimpleButtonHost {
                             anchors.fill: parent
                             live: false
-                            text: wrapper.widgetText
-                            shape: wrapper.widgetShape
-                            theme: wrapper.widgetTheme
-                            accentColor: wrapper.widgetAccentColor
-                            holdMs: wrapper.widgetHoldMs
-                            checked: wrapper.widgetChecked
-                            // 共通状態（opacity / enabled）も他 Widget と同型で流す（Codex PR #164 [P2]）。
-                            widgetOpacity: wrapper.widgetOpacity
-                            widgetEnabled: wrapper.widgetEnabled
+                            widget: ({
+                                text: wrapper.widgetText,
+                                shape: wrapper.widgetShape,
+                                theme: wrapper.widgetTheme,
+                                accentColor: wrapper.widgetAccentColor,
+                                holdMs: wrapper.widgetHoldMs,
+                                checked: wrapper.widgetChecked,
+                                // 共通状態（opacity / enabled）も他 Widget と同型で流す（Codex PR #164 [P2]）。
+                                widgetOpacity: wrapper.widgetOpacity,
+                                widgetEnabled: wrapper.widgetEnabled
+                            })
                             onClicked: function(modifiers) {
                                 wrapper.selectRequested(wrapper.widgetId, modifiers)
                             }
+                            // Editor は toggled を接続しない（設計面なので状態遷移を書き戻さない）。
                         }
                     }
                 }

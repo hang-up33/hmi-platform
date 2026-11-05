@@ -17,6 +17,11 @@ qt_add_qml_module(hmi_widgets STATIC
         qml/HmiMeter.qml
         qml/HmiSimpleButton.qml
         qml/VariableStore.qml
+        # Task RF-E: Button/Label/SimpleButton の delegate ロジックを集約したホスト QML
+        # （表示専用 + binding 読取のみの種別が対象。NumericField/Trend/Meter は対象外）
+        qml/ButtonHost.qml
+        qml/LabelHost.qml
+        qml/SimpleButtonHost.qml
 )
 
 if(BUILD_TESTING)
