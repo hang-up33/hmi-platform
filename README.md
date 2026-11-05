@@ -157,7 +157,7 @@ scp -O ~/build-yocto/Runtime/hmi_runtime root@<board-ip>:/tmp/hmi_runtime
 
 ## 現在地
 
-- **現在地**: **v1.0 公開準備（2026-11-05 承認）着手中 — 2026-11-09（月）に MIT ライセンスの OSS として公開予定**。11/9 まで機能凍結し、機微情報の確認・ライセンス・CI の公開対応を進める。次タスク = V1-1（全履歴の機微情報スキャン）。進捗の正本は [Docs/v1-release-plan.md](Docs/v1-release-plan.md)。
+- **現在地**: **v1.0 公開準備（2026-11-05 承認）着手中 — 2026-11-09（月）に MIT ライセンスの OSS として公開予定**。11/9 まで機能凍結し、機微情報の確認・ライセンス・CI の公開対応を進める。V1-0（計画書）と V1-1（機微情報の棚卸し）完了、次タスク = V1-2（`LICENSE` とライセンス一覧）。進捗の正本は [Docs/v1-release-plan.md](Docs/v1-release-plan.md)。
   - **契約→テスト→実装（DbC + テスト先行）の導入**：DT-1（計画とルール）完了、DT-2〜DT-6 は v1.0 公開後。正本は [Docs/dbc-tdd-plan.md](Docs/dbc-tdd-plan.md)。
   - **リファクタリング計画（2026-07-22 承認）一区切り — RF-A / RF-B / RF-D / RF-E / RF-G 完了**。機能追加はせず、`Editor/qml/Main.qml` の肥大化（2,712→346 行）と型分岐の散在を解消した。RF-E〔Button / Label / SimpleButton の delegate を `Shared/Widgets` の型別ホスト QML へ集約〕と RF-G〔`InspectorPanel.qml` をセクション単位へ分割〕も v1.0 に含める。RF-E の残り種別と RF-F は保留。進捗の正本は [Docs/refactoring-plan.md](Docs/refactoring-plan.md)。
   - **Phase 11 / Widget サンプルパレット（ドラッグ&ドロップ追加）＋ 初号「シンプルボタン」完了（W-A〜W-E クローズ）**。issue #155「シンプル・イズ・ベスト版 HMI ボタン（ベゼル無し）」を新 Widget 種別 `SimpleButton`（`HmiSimpleButton.qml`）として QML で忠実再現し、**見た目そのままの Widget サンプルをインスペクタに並べてキャンバスへ D&D で追加**する汎用パレット UX を新設した（将来他 Widget もパレット化）。Canvas 自描画で新 Qt 依存ゼロ（Meter/Trend 同方針）。W-A〔Schema 拡張〕/ W-B〔HmiSimpleButton 描画 + delegate 6 分岐目〕/ W-C〔サンプルパレット〕/ W-D〔パレット→キャンバス D&D 追加〕/ W-E〔インスペクタ型対応（シンプルボタン詳細＝形状 / テーマ / 差し色 / 長押し時間）+ cross-app E2E `e2e_simple_button_live` + スクショ同期〕すべて完了（Web `ctest` 27/27 緑）。次フェーズは未承認候補から選定（自動着手しない）。進捗の正本は [Docs/archive/phase11-widget-palette-plan.md](Docs/archive/phase11-widget-palette-plan.md)。
