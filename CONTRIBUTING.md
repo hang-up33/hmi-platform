@@ -23,6 +23,7 @@ ctest --test-dir build --output-on-failure
 - Modbus や OPC-UA の E2E テストは、Python のパッケージ（`pymodbus` / `asyncua`）が無いと自動で SKIP になる。
 - OPC-UA の E2E テストは、Qt OPC UA が入っているときだけ登録される。
 - Windows（MinGW）では E2E テストは既定で無効になる。
+- 画面の操作を録画しながら主な流れを確かめる受け入れ試験もある（Linux のみ）。手順は [scripts/acceptance/README.md](scripts/acceptance/README.md) にある。
 
 ## PR の出し方
 

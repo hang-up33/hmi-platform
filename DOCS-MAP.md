@@ -85,6 +85,7 @@ hmi-platform/
 │   └─ settings.json                    プラグイン・hooks 設定
 │
 ├─ scripts/
+│   ├─ acceptance/README.md     [人]    現行  録画付き受け入れ試験の実行方法
 │   ├─ yocto/README.md          [人]    現行  Yocto クロスビルド・i.MX8MP 実機展開の手順
 │   └─ opcua/README.md          [人]    現行  OPC-UA 手動テストサーバの起動手順
 │
@@ -105,6 +106,7 @@ hmi-platform/
 | [Docs/dbc-tdd-plan.md](Docs/dbc-tdd-plan.md) | 109 | 契約→テスト→実装の開発手順の導入計画と進捗表 |
 | [Docs/claude-web-dev.md](Docs/claude-web-dev.md) | 102 | Claude on the Web での開発セットアップ |
 | [Docs/phase7-modbus-plan.md](Docs/phase7-modbus-plan.md) | 153 | Modbus TCP。MB-5/6（実機）が未完 |
+| [scripts/acceptance/README.md](scripts/acceptance/README.md) | 56 | 録画付き受け入れ試験の実行方法と出力 |
 | [scripts/yocto/README.md](scripts/yocto/README.md) | 144 | Yocto SDK クロスビルド・実機転送・VNC キャプチャ |
 | [scripts/opcua/README.md](scripts/opcua/README.md) | 45 | OPC-UA テストサーバの起動 |
 

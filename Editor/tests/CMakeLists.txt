@@ -48,6 +48,22 @@ set_tests_properties(inv_Main_Inv1_shortcutsBindAllStandardKeys PROPERTIES
     PASS_REGULAR_EXPRESSION "\\[screenshot\\]"
     FAIL_REGULAR_EXPRESSION "Only binding to one of multiple key bindings")
 
+# offscreen では StandardKey に割り当たるキーが 1 つだけのことがあり、上の試験では警告が出ない。
+# Linux の xcb では Delete に複数のキーが割り当たるので、xvfb-run があれば xcb でも同じことを確かめる。
+# xcb を起動できない環境（xcb 系ライブラリが無いなど）では SKIP になる。
+find_program(HMI_XVFB_RUN xvfb-run)
+if(HMI_XVFB_RUN)
+    add_test(NAME inv_Main_Inv1_shortcutsBindAllStandardKeys_xcb
+             COMMAND ${HMI_XVFB_RUN} -a $<TARGET_FILE:hmi_editor>
+                     --screenshot ${CMAKE_CURRENT_BINARY_DIR}/inv_Main_Inv1_xcb.png)
+    set_tests_properties(inv_Main_Inv1_shortcutsBindAllStandardKeys_xcb PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=xcb"
+        PASS_REGULAR_EXPRESSION "\\[screenshot\\]"
+        # xcb 系ライブラリや xauth が無い環境では、試験できないので SKIP にする
+        SKIP_REGULAR_EXPRESSION "Could not load the Qt platform plugin;no Qt platform plugin could be initialized;xauth command not found"
+        FAIL_REGULAR_EXPRESSION "Only binding to one of multiple key bindings")
+endif()
+
 # V1-6: `--version` がルート CMake の project(VERSION) を出すことを確かめる
 # （契約 Editor_main_main_Post1）。QGuiApplication を作るので offscreen で起動する。
 add_test(NAME post_Editor_main_main_Post1_printsProjectVersion

@@ -244,7 +244,7 @@ Window {
     // Task 29: Delete キーで選択中 Widget を削除する。Shortcut なら個別 Item の
     // フォーカス・Keys ハンドリングを増やさず Window 全体に効かせられる。
     Shortcut {
-        sequence: StandardKey.Delete
+        sequences: [StandardKey.Delete]
         enabled: canvas.selectedWidgetIds.length > 0 && !inspector.inspectorFieldFocused
         onActivated: canvas.deleteWidgets(canvas.selectedWidgetIds)
     }
