@@ -38,6 +38,16 @@ target_link_libraries(tst_hmi_editor_qml
 # （Task 12 で確立した運用）。
 add_test(NAME tst_hmi_editor_qml COMMAND tst_hmi_editor_qml -platform offscreen)
 
+# ショートカットが StandardKey のすべてのキーに束縛されていることを確かめる（契約 Main_Inv1）。
+# Editor を起動してスクショを 1 枚撮り、その間に Qt の警告が出ないことを見る。
+# 起動に失敗したときに素通りしないよう、保存できたことも確かめる。
+add_test(NAME inv_Main_Inv1_shortcutsBindAllStandardKeys
+         COMMAND $<TARGET_FILE:hmi_editor> --screenshot ${CMAKE_CURRENT_BINARY_DIR}/inv_Main_Inv1.png)
+set_tests_properties(inv_Main_Inv1_shortcutsBindAllStandardKeys PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+    PASS_REGULAR_EXPRESSION "\\[screenshot\\]"
+    FAIL_REGULAR_EXPRESSION "Only binding to one of multiple key bindings")
+
 # V1-6: `--version` がルート CMake の project(VERSION) を出すことを確かめる
 # （契約 Editor_main_main_Post1）。QGuiApplication を作るので offscreen で起動する。
 add_test(NAME post_Editor_main_main_Post1_printsProjectVersion

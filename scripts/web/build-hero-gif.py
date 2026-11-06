@@ -29,10 +29,11 @@ OUT_GIF = os.path.join(ROOT, "Docs/screenshots/editor.gif")
 CAPTURE = os.path.join(ROOT, "scripts/capture-app-screenshot-linux.sh")
 
 # 各マイルストーンで "ここまで widget を置いた" 状態を見せる累積カット数 (中間段階)。
-# atlas-dashboard-demo.json の widgets 配列は組み上げ順 (ヘッダ -> ステータス ->
-# KPI タイル -> 機械ステータス盤 -> 操作 -> トレンド) に並んでいるので前方スライスで段階を作る。
+# atlas-dashboard-demo.json の widgets 配列は組み上げ順 (地とヘッダ -> 警報バナー ->
+# 生産 -> 設備の状態 -> 操作 -> トレンド -> 温度メーター -> 長押し起動) に並んでいるので
+# 前方スライスで段階を作る。
 # 最終フレームは実行時に widget 総数へ自動で揃えるため (main 参照)、末尾値の手動更新は不要。
-MILESTONES = [1, 3, 6, 9, 12, 15, 18, 21, 33, 36, 39]
+MILESTONES = [3, 7, 22, 40, 49, 53, 57]
 
 
 def main():
