@@ -160,5 +160,5 @@ flowchart TD
 | V1-4 | ✅ 完了 | — | linux ジョブは public では `ubuntu-24.04`、private では自前の runner を選ぶ。desktop ジョブは public では毎回走る。標準 runner での緑は公開直後に確認する |
 | V1-5 | ✅ 完了 | — | dev-environment の自宅環境の詳細（ディスク・runner の接続先・LAN の IP・MAC）を一般化。文書の PR リンクを外し、`insights/` を削除。README に英語の概要・対象環境・AI で開発したことを追記。AI 向け設定とアイコンは残す |
 | V1-6 | ✅ 完了 | — | ルート CMake を `VERSION 1.0.0` にし、Editor / Simulator / Runtime が `--version` で版数を出す。契約 → テスト → 実装の順で進め、テスト 3 本を追加（Web の `ctest` 30/30 緑） |
-| V1-7 | 🔄 進行中 | — | 11/8。Linux は 11/5 に GitHub からの新しいクローンで確認済み（ビルド成功・`ctest` 30/30 緑）。macOS は 11/6 に main（aafb419）の新しいクローンで確認済み（ビルド成功・`ctest` 34/34 緑・`--version` が 1.0.0。Modbus と OPC-UA の E2E 4 件は skipped）。Go / No-Go の 2・3・5 とリンク切れも確認済み。残りは Windows の `ctest`、gitleaks での秘密情報スキャン、公開当日の再確認 |
+| V1-7 | 🔄 進行中 | — | 11/8。Linux は 11/5 に GitHub からの新しいクローンで確認済み（ビルド成功・`ctest` 30/30 緑）。macOS は 11/6 に main（aafb419）の新しいクローンで確認済み（ビルド成功・`ctest` 34/34 緑・`--version` が 1.0.0。Modbus と OPC-UA の E2E 4 件は skipped）。Go / No-Go の 2・3・5 とリンク切れも確認済み。Windows は 11/8 に main（5e4dcaf）に試験の修正を加えた作業ツリーでビルド成功・`ctest` 17/17 緑（Windows ではショートカットの試験に `QT_FORCE_STDERR_LOGGING=1` を足し、標準エラーの文字列を見られるよう直した）。残りは gitleaks での秘密情報スキャン、公開当日の再確認 |
 | V1-8 | 未着手 | — | 11/8・ユーザー作業。履歴の置き換えは 11/5 にリハーサル済み |

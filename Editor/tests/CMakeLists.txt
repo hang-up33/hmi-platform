@@ -43,8 +43,14 @@ add_test(NAME tst_hmi_editor_qml COMMAND tst_hmi_editor_qml -platform offscreen)
 # 起動に失敗したときに素通りしないよう、保存できたことも確かめる。
 add_test(NAME inv_Main_Inv1_shortcutsBindAllStandardKeys
          COMMAND $<TARGET_FILE:hmi_editor> --screenshot ${CMAKE_CURRENT_BINARY_DIR}/inv_Main_Inv1.png)
+set(_inv_main_env "QT_QPA_PLATFORM=offscreen")
+if(WIN32)
+    # Windows の GUI アプリは、環境変数が無いと Qt のログを標準エラーへ出さない。
+    # 警告の文字列を見られるように、標準エラーへの出力を強制する。
+    list(APPEND _inv_main_env "QT_FORCE_STDERR_LOGGING=1")
+endif()
 set_tests_properties(inv_Main_Inv1_shortcutsBindAllStandardKeys PROPERTIES
-    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+    ENVIRONMENT "${_inv_main_env}"
     PASS_REGULAR_EXPRESSION "\\[screenshot\\]"
     FAIL_REGULAR_EXPRESSION "Only binding to one of multiple key bindings")
 
