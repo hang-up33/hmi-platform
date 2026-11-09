@@ -173,4 +173,4 @@ Task 23（Yocto SDK で `hmi_runtime` をクロスビルド）用の WSL2 環境
   - **runner 本体**：actions/runner を専用ユーザーで登録し（labels `self-hosted` `Linux` `X64` `qt`）、`svc.sh` で systemd 常駐させる。専用ユーザーの NOPASSWD sudo は `apt-get` のみに限定。
   - **ci.yml 構成**：linux ジョブは、private のときだけ `[self-hosted, linux]`、public のときは `ubuntu-24.04` を選ぶ（毎 PR / main push 自動・主ゲート）。desktop（mac 10x / win 2x）は、private のときは `workflow_dispatch` か PR `ci-desktop` ラベル時のみ、public のときは毎回走る。Qt は `install-qt-action` の `modules: "qtserialbus qtserialport"`（SerialBus 必須）。
   - **runner 操作**：コンテナ内の `actions-runner` ディレクトリで `./svc.sh status|start|stop`。GitHub 側の状態は Settings → Actions → Runners で見る。
-  - **セキュリティ前提**：self-hosted runner は private リポジトリにだけ登録する。public リポジトリでは fork の PR がワークフローを書き換えられるので、ci.yml の条件式は防御にならない。public リポジトリには runner を登録しないこと（[Docs/v1-release-plan.md](../../Docs/v1-release-plan.md) V1-4）。
+  - **セキュリティ前提**：self-hosted runner は private リポジトリにだけ登録する。public リポジトリでは fork の PR がワークフローを書き換えられるので、ci.yml の条件式は防御にならない。public リポジトリには runner を登録しないこと（[Docs/archive/v1-release-plan.md](../../Docs/archive/v1-release-plan.md) V1-4）。

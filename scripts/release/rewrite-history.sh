@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # v1.0 公開用：main の履歴から個人のメールとセッション URL を消したクローンを作る。
 # 使い方: bash rewrite-history.sh <元リポジトリの URL かパス> <出力ディレクトリ>
-# 手順の正本は Docs/v1-release-runbook.md。
+# 手順の正本は Docs/archive/v1-release-runbook.md。
 # 置き換え表（mailmap.txt / msg-replace.txt）はこのスクリプトと同じ場所に置く。
 # どちらも個人のメールを含むので、リポジトリには入れない。
 set -euo pipefail

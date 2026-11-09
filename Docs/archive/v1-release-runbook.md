@@ -4,7 +4,7 @@
 
 | ファイル | 置き場所 | 中身 |
 |---|---|---|
-| `rewrite-history.sh` | [scripts/release/](../scripts/release/rewrite-history.sh) | main の履歴からメールとセッション URL を消し、確認まで行うスクリプト |
+| `rewrite-history.sh` | [scripts/release/](../../scripts/release/rewrite-history.sh) | main の履歴からメールとセッション URL を消し、確認まで行うスクリプト |
 | `mailmap.txt` | **リポジトリの外**（ユーザーの手元） | 作者とコミッターの置き換え表。個人のメール入り |
 | `msg-replace.txt` | **リポジトリの外**（ユーザーの手元） | コミットメッセージの置き換え表。個人のメール入り |
 
@@ -48,7 +48,7 @@ ctest --test-dir build-mingw --output-on-failure
 
 ### 4. Go / No-Go
 
-計画書 `Docs/v1-release-plan.md` の「Go / No-Go 判定」をすべて確かめる。1 つでも ❌ なら公開しない。
+計画書 `Docs/archive/v1-release-plan.md` の「Go / No-Go 判定」をすべて確かめる。1 つでも ❌ なら公開しない。
 
 ---
 
