@@ -27,7 +27,7 @@ jobs:
     # public リポジトリでは GitHub 標準の ubuntu-24.04 で動く（外部の人の PR も同じ）。
     # 下の Linux deps のパッケージ名が 24.04 前提なので、ubuntu-latest ではなく版を固定する。
     # private リポジトリでは、課金を避けるため自前の runner で動く。
-    # public リポジトリには自前の runner を登録しないこと（Docs/v1-release-plan.md V1-4）。
+    # public リポジトリには自前の runner を登録しないこと（Docs/archive/v1-release-plan.md V1-4）。
     runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","linux"]') || 'ubuntu-24.04' }}
     timeout-minutes: 45
     steps:

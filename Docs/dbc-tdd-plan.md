@@ -8,7 +8,7 @@
 
 手順の規約（記法・段階の切り替え条件）の正本は [.claude/rules/dbc-tdd.md](../.claude/rules/dbc-tdd.md)。本書は導入計画と進捗を持つ。
 
-> 本計画は機能追加ではなく**開発プロセスの改善**で、フェーズタスク（[phase-status.md](phase-status.md)）とは独立に進める。リファクタリング計画（[refactoring-plan.md](refactoring-plan.md)・一区切り）とも独立。**DT-2 以降は v1.0 公開（2026-11-08）までの機能凍結が明けてから着手する**（[v1-release-plan.md](v1-release-plan.md)）。
+> 本計画は機能追加ではなく**開発プロセスの改善**で、フェーズタスク（[phase-status.md](phase-status.md)）とは独立に進める。リファクタリング計画（[refactoring-plan.md](refactoring-plan.md)・一区切り）とも独立。**DT-2 以降は v1.0 公開（2026-11-08）までの機能凍結が明けてから着手する**（[v1-release-plan.md](archive/v1-release-plan.md)）。
 
 ---
 

@@ -1,6 +1,6 @@
 # リファクタリング計画（承認済み・一区切り。残りは保留）
 
-> **ステータス（2026-11-05 更新）：RF-A / RF-B / RF-D / RF-E（Button / Label / SimpleButton）/ RF-G が完了し、v1.0 に含める（#178・#180 をユーザー指示でマージ）。RF-E の残り種別と RF-F は保留で、v1.0 公開後に必要なら再評価する（[v1-release-plan.md](v1-release-plan.md) D3）。**
+> **ステータス（2026-11-05 更新）：RF-A / RF-B / RF-D / RF-E（Button / Label / SimpleButton）/ RF-G が完了し、v1.0 に含める（#178・#180 をユーザー指示でマージ）。RF-E の残り種別と RF-F は保留で、v1.0 公開後に必要なら再評価する（[v1-release-plan.md](archive/v1-release-plan.md) D3）。**
 >
 > **ステータス：承認済み・RF-A から着手中（2026-07-22 にユーザーから「リファクタリング進めて」の指示で承認）。** もともとは `[Future]`（Phase 11 が終わったら見直す）扱いだったが、ユーザーの明示的な指示で Phase 11（残りタスク W-E）と並行して進めることにした。1 タスク = 1 PR で進め、README / CLAUDE.md などの常駐文書の同期も各タスクの PR でやる。
 

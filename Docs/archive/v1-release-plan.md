@@ -6,7 +6,7 @@
 | 公開形態 | 作者メールを置き換えた履歴を**新しい public リポジトリ**（D9）に push し、タグ `v1.0.0` と GitHub Release を作る。今のリポジトリは private のまま残す |
 | ライセンス | **MIT**（本リポジトリのコード。Qt など依存ライブラリはそれぞれのライセンスのまま） |
 | 承認 | 2026-11-05 ユーザー指示（公開日・MIT を決定） |
-| 状態 | 着手中 |
+| 状態 | 完了（2026-11-09 公開） |
 
 ## 1. 目的と方針
 
@@ -14,7 +14,7 @@ v1.0 は「**今あるものを、安全に・使える形で公開する**」�
 
 - **機能凍結（新機能・リファクタリング）**：公開まで、新機能とリファクタリングの PR は出さない。例外として、凍結前から開いていた #178（RF-E）・#179・#180（RF-G）・#181（DT-1）は 11/5 にユーザー指示で最新 main に合わせ、テストを通してからマージした（D3）。
 - **不具合修正と磨き込みは 11/8 の V1-7 開始まで続けてよい**（11/5 ユーザー指示）。V1-7 を始めたら main へのマージを止める。当日の手順は [v1-release-runbook.md](v1-release-runbook.md)。
-- **リファクタリングは RF-E（Button / Label / SimpleButton）と RF-G まで v1.0 に含める**（11/5 にユーザー指示でマージ済み）。残り（RF-E の残り種別・RF-F）は v1.0 の後に必要なら再評価する（[refactoring-plan.md](refactoring-plan.md)）。
+- **リファクタリングは RF-E（Button / Label / SimpleButton）と RF-G まで v1.0 に含める**（11/5 にユーザー指示でマージ済み）。残り（RF-E の残り種別・RF-F）は v1.0 の後に必要なら再評価する（[refactoring-plan.md](../refactoring-plan.md)）。
 - **公開してから消すことはできない**：新しいリポジトリに載るのは git の全履歴だけだが、公開した瞬間に誰でも読めるようになる。後でファイルを消しても過去のコミットには残る。Issue・PR・Actions のログは今のリポジトリに private のまま残る。だから「機微情報の確認」と「CI の安全対策」は、公開前に必ず終わらせる（公開を止める条件にする）。
 
 ## 2. スケジュール
@@ -48,7 +48,7 @@ gantt
 | **V1-2** | **ライセンス整備**。ルートに `LICENSE`（MIT・著作権者名と年）を置く。依存ライブラリのライセンスを `THIRD_PARTY_NOTICES.md` に一覧化（Qt 6 の各モジュール〔`find_package` と QML の `import` から洗い出す。Core / Gui / Qml / Quick / Network / SerialBus / OpcUa / Test / QuickTest、QtQuick.Controls / Dialogs など〕、Spix、AnyRPC、間接依存として open62541〔Qt OpcUa のバックエンド〕。テスト用 Python パッケージ〔asyncua など〕は「テスト時のみ」と分けて書く。**各ライセンス名は配布元で確認してから書く**）。著作権者名は D8 に従う。README の「ライセンス」節を「準備中」から書き換える | 3 ファイルが main に入る | Web 可 |
 | **V1-3** | **OSS として最低限そろえるファイル**。`CONTRIBUTING.md`（ビルド・テスト・PR の出し方）、`SECURITY.md`（脆弱性は GitHub の非公開報告機能で受け付ける）、`CODE_OF_CONDUCT.md`（Contributor Covenant。連絡先欄には個人メールを書かず、GitHub の機能か公開用の窓口にする）、`CHANGELOG.md`（1.0.0 の内容 = Phase 1〜11 で実装した機能の要約）、`.github/` の Issue / PR テンプレート（短いもの）。CONTRIBUTING には「`.claude/settings.json` のフックは Claude Code 利用時に自動で動く」ことも一言書く。**CHANGELOG とテンプレートは最小限でよく、遅れたら公開後に足してよい** | ファイルが main に入る | Web 可 |
 | **V1-4** | **CI の公開対応（公開を止める条件）**。いまの linux ジョブは自宅 Proxmox の self-hosted runner で動いており、public にすると**外部の人の PR が自宅のマシンでコードを実行できてしまう**。public リポジトリは GitHub 標準の runner が無料で使えるので、public のときは linux ジョブを `ubuntu-24.04` で動かす。private の今のリポジトリでは、公開までは自前の runner を使い続ける。desktop（macOS / Windows）ジョブを自動で回すかは D7 で決める。あわせて、実際の条件と食い違っている `ci.yml` のコメント（「main への push で走る」）も直す。**注意**：private のうちは Actions の無料枠が切れている可能性がある（2026-06 に実際に切れた）ので、標準 runner での緑は public 化の直後に確かめる。**`ci.yml` を直すだけでは足りない**：`pull_request` は PR 側で書き換えたワークフローで動く。runner が登録されていると、fork PR から `self-hosted` に書き戻せてしまう。だから新しいリポジトリには runner を登録しない。今のリポジトリの runner も撤去する（5 節） | linux ジョブが public では `ubuntu-24.04` を選ぶ。新しいリポジトリの runner 登録が 0 件。public 化の直後に linux ジョブが緑 | Web 可（runner の登録解除は V1-8 でユーザーが行う） |
-| **V1-5** | **機微情報の除去と文書の整理**。V1-1 で見つかったものを現在のファイルから消す・一般化する（例：[dev-environment.md](../.claude/rules/dev-environment.md) の自宅環境の詳細〔ディスク構成・Proxmox・LAN〕、計画書中の LAN IP）。AI 向けの設定（`.claude/`・`AGENTS.md`・`CLAUDE.md`）と `branding/`（アイコンが自作か）を公開してよいか決める。`insights/` は削除する（11/5 決定）。ここで消すものは整理のためで、履歴に残っても問題ないものに限る。文書中の `github.com/hang-up33/hmi-platform/pull/N` へのリンクは、新しいリポジトリでは別の PR を指すので外す。README を外部の人向けに見直す。冒頭に英語の短い概要を足す。対象は「Qt6 が動く組込み Linux 向け」と書き、i.MX8M Plus EVK は「動作確認済みの実機」として書く。Claude Code で開発し、Codex でレビューしたことも一言書く | V1-1 の一覧の「対応要」がすべて対応済み | Web 可 |
+| **V1-5** | **機微情報の除去と文書の整理**。V1-1 で見つかったものを現在のファイルから消す・一般化する（例：[dev-environment.md](../../.claude/rules/dev-environment.md) の自宅環境の詳細〔ディスク構成・Proxmox・LAN〕、計画書中の LAN IP）。AI 向けの設定（`.claude/`・`AGENTS.md`・`CLAUDE.md`）と `branding/`（アイコンが自作か）を公開してよいか決める。`insights/` は削除する（11/5 決定）。ここで消すものは整理のためで、履歴に残っても問題ないものに限る。文書中の `github.com/hang-up33/hmi-platform/pull/N` へのリンクは、新しいリポジトリでは別の PR を指すので外す。README を外部の人向けに見直す。冒頭に英語の短い概要を足す。対象は「Qt6 が動く組込み Linux 向け」と書き、i.MX8M Plus EVK は「動作確認済みの実機」として書く。Claude Code で開発し、Codex でレビューしたことも一言書く | V1-1 の一覧の「対応要」がすべて対応済み | Web 可 |
 | **V1-6** | **バージョン番号の付与**。ルート `CMakeLists.txt` の `project()` に `VERSION 1.0.0` を付け、`target_compile_definitions` で Editor / Simulator の `main.cpp` に渡して `QCoreApplication::setApplicationVersion` を呼ぶ（Runtime は Simulator のソースを共有するので Simulator 側の変更で足りる。`--version` で確認できるようにする） | ビルド成功・`ctest` 全緑・`--version` が `1.0.0` を返す | Web 可 |
 | **V1-7** | **公開前検証**。新しいクローンから README の手順どおりにビルドし、`ctest` を全部通す（Linux は Web / CI、macOS と Windows はユーザーのローカル）。README のスクリーンショットとリンク切れを確認する。最後に V1-1 のスキャンを main に対してもう一度かける | 下の「Go / No-Go 判定」がすべて ✅ | Web + ローカル |
 | **V1-8** | **公開作業**（ユーザーが行う。リポジトリ設定はユーザーの権限のため）。手順は 5 節 | public 化・タグ・Release が完了し、ログインしていない状態でクローンとビルドができる | ユーザー |
@@ -61,7 +61,7 @@ gantt
 | D2 | ライセンス | ✅ **MIT**（11/5 決定） |
 | D3 | リファクタリング RF-E | ✅ **v1.0 に含める**（11/5 に「v1.0 の後」から変更。#178・#180 をマージ済み。残り種別と RF-F は v1.0 の後） |
 | D4 | **git 履歴の扱い** | ✅ **作者メールを置き換えた履歴を、新しい public リポジトリに push する**（11/5 決定）。V1-1 で、個人のメールアドレスが多数のコミットの作者情報に入っていると分かった。同じリポジトリで履歴を書き換えても、GitHub の PR が古いコミットを参照し続けて消せないため、リポジトリを分ける。今のリポジトリは private のまま残し、PR とレビューの記録はそちらに置いておく |
-| D5 | **GitHub Issues を有効にするか** | ✅ **有効にする**（11/5 決定）（外部の人が不具合を報告する窓口として）。内部のタスク管理は今まで通り `Docs/` の計画書で行う。決めたら [Docs/agents/issue-tracker.md](agents/issue-tracker.md) と CLAUDE.md の「Issues を使わない」記述を合わせて直す。過去の Issue は今のリポジトリに残り、新しいリポジトリには引き継がれない |
+| D5 | **GitHub Issues を有効にするか** | ✅ **有効にする**（11/5 決定）（外部の人が不具合を報告する窓口として）。内部のタスク管理は今まで通り `Docs/` の計画書で行う。決めたら [Docs/agents/issue-tracker.md](../agents/issue-tracker.md) と CLAUDE.md の「Issues を使わない」記述を合わせて直す。過去の Issue は今のリポジトリに残り、新しいリポジトリには引き継がれない |
 | D6 | **ビルド済みバイナリを配るか** | 推奨：**v1.0 ではソースだけ**にする。バイナリを配ると Qt（LGPL）の再配布の条件を満たす作業が増えるため、v1.1 以降の候補にする |
 | D7 | macOS / Windows の CI を自動にするか | ✅ **public リポジトリでは PR と main への push のたびに自動で回す**（11/5、推奨どおり）。private の今のリポジトリでは、これまでどおり手動とラベルのときだけ回す |
 | D8 | `LICENSE` の著作権者名 | ✅ **ハンドル名 `hang-up33`**（11/5 決定） |
@@ -145,7 +145,7 @@ flowchart TD
 | リファクタリング RF-E の残り種別（NumericField / Trend / Meter）/ RF-F | D3。v1.0 の後に必要なら再評価 |
 | Modbus の MB-5（実 PLC 書込確認）/ MB-6（実機展開） | 実機作業でローカル専用。v1.0 では「既知の未確認事項」として CHANGELOG に書く |
 | ビルド済みバイナリの配布 | D6。v1.1 以降の候補 |
-| 契約→テスト→実装の導入 DT-2〜DT-6（[dbc-tdd-plan.md](dbc-tdd-plan.md)） | 機能凍結のため v1.0 の後。DT-1（計画とルール）だけマージ済み |
+| 契約→テスト→実装の導入 DT-2〜DT-6（[dbc-tdd-plan.md](../dbc-tdd-plan.md)） | 機能凍結のため v1.0 の後。DT-1（計画とルール）だけマージ済み |
 | ドキュメントの英訳 | README 冒頭の英語概要だけにする。全訳は v1.0 の後 |
 | ソースファイルごとのライセンス表記（SPDX ヘッダ） | ルートの `LICENSE` で足りる。必要になったら後で足す |
 
@@ -161,4 +161,4 @@ flowchart TD
 | V1-5 | ✅ 完了 | — | dev-environment の自宅環境の詳細（ディスク・runner の接続先・LAN の IP・MAC）を一般化。文書の PR リンクを外し、`insights/` を削除。README に英語の概要・対象環境・AI で開発したことを追記。AI 向け設定とアイコンは残す |
 | V1-6 | ✅ 完了 | — | ルート CMake を `VERSION 1.0.0` にし、Editor / Simulator / Runtime が `--version` で版数を出す。契約 → テスト → 実装の順で進め、テスト 3 本を追加（Web の `ctest` 30/30 緑） |
 | V1-7 | ✅ 完了（条件付き Go） | — | 11/8。Linux は 11/5 に GitHub からの新しいクローンで確認済み（ビルド成功・`ctest` 30/30 緑）。macOS は 11/6 に main（aafb419）の新しいクローンで確認済み（ビルド成功・`ctest` 34/34 緑・`--version` が 1.0.0。Modbus と OPC-UA の E2E 4 件は skipped）。Go / No-Go の 2・3・5 とリンク切れも確認済み。Windows は 11/8 に main（2d226eb）の新しいクローンでビルド成功・`ctest` 17/17 緑（Windows ではショートカットの試験に `QT_FORCE_STDERR_LOGGING=1` を足し、標準エラーの文字列を見られるよう直した）。11/8 に Linux を main（5e877ba）の新しいクローンで再確認した（ビルド成功・`ctest` 32/32 緑・`--version` が 1.0.0。表示サーバを使う試験 1 件は skipped）。同日、全履歴（541 コミット）と現在のファイルに秘密情報のスキャンをかけ、0 件だった。gitleaks 本体は Web 環境で取得できなかったので、同じ種類の検出パターン（クラウドの鍵・GitHub トークン・秘密鍵・Webhook など）を grep で当てた。現在のファイルにメールと MAC アドレスは無く、IP は V1-1 で公開してよいと決めた PLC の接続例だけ。11/8 にユーザーが条件付きで Go と判定した。1・2・3・4・5 は確認済み。2b と 2c は新しいリポジトリを作るまで確かめられない。2c は V1-8 の手順 3、2b は手順 8 で確かめる。どちらかが ❌ なら public にしない |
-| V1-8 | 未着手 | — | 11/8・ユーザー作業。履歴の置き換えは 11/5 にリハーサル済み |
+| V1-8 | ✅ 完了 | — | 11/9 に公開した。11/5 の置き換え表は残っていなかったので、11/9 に作り直した。置き換え後の履歴に個人のメールは無かった（2c）。新しいリポジトリの runner 登録は 0 件（2b）。最初の CI は private のときの push で自前の runner を待って止まったため、public にした後に手動で動かし直した。Linux（ubuntu-24.04）・macOS・Windows とも緑。ログインせずにクローンしてビルドでき、`ctest` は 32/32 緑だった。旧リポジトリの Archive（手順 15）はユーザーが行う |

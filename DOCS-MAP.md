@@ -59,8 +59,6 @@ hmi-platform/
 │   ├─ requirements/            [人+AI] 現行  関心別の要求仕様書 11 本（REQ/ACC 管理表）。索引は README.md
 │   ├─ requirements.md          [人]    現行  上記への案内（旧版は archive/requirements-legacy.md）
 │   ├─ workflow.md              [人+AI] 現行  開発ルール・PR ワークフロー
-│   ├─ v1-release-plan.md       [人+AI] 現行  v1.0 公開（OSS 化）の計画・進捗表
-│   ├─ v1-release-runbook.md    [人+AI] 現行  v1.0 公開当日の手順書
 │   ├─ refactoring-plan.md      [人+AI] 現行  リファクタリング計画（一区切り。残りは保留）
 │   ├─ dbc-tdd-plan.md          [人+AI] 現行  契約→テスト→実装の開発手順の導入計画・進捗表
 │   ├─ phase7-modbus-plan.md    [人+AI] 現行  Modbus（実機作業 MB-5/6 が未完のため現行）
@@ -71,7 +69,7 @@ hmi-platform/
 │   │   ├─ domain.md                    着手前に読むべき資料の指定
 │   │   └─ issue-tracker.md             GitHub Issues を使わない旨と代替
 │   │
-│   ├─ archive/                 [AI/記録] 完了フェーズの実装指示書 17 本 + 旧要求仕様 1 本（現在の仕様ではない）
+│   ├─ archive/                 [AI/記録] 完了フェーズの実装指示書・v1.0 公開の計画と手順書・旧要求仕様など 20 本（現在の仕様ではない）
 │   │   └─ README.md            [人]    現行  archive の中身一覧
 │   │
 │   ├─ samples/                 [人+AI] 現行  デモ用プロジェクト JSON（9 件）
