@@ -42,3 +42,6 @@ aqtinstall.log
 # ヒーロー GIF の中間フレーム（scripts/web/build-hero-gif.py で再生成可能）
 Docs/screenshots/hero-frames/
 .aider*
+
+# 夜間実装（.github/workflows/atlas-nightly-implement.yml）が書く要約ファイル
+.atlas-summary.txt

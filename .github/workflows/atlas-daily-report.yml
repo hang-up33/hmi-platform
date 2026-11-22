@@ -1,6 +1,6 @@
 name: Atlas daily report
 
-# 平日の毎朝 8:47（日本時間）に、直近24時間の動きを Slack の #ai自律化 へ投稿する。
+# 平日（月〜金）の朝 8:47（日本時間）に、直近の動き（月曜は週末を含む 72 時間）を Slack へ投稿する。
 # AI は使わない。GitHub のデータを集めて定型の文にするだけ。
 # 仕組みと設定は Docs/ai-automation.md を参照。
 on:
@@ -33,7 +33,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          since="$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ)"
+          # 月曜は、金曜の朝からの分（週末を含む 72 時間）を集める。
+          hours=24
+          [ "$(TZ=Asia/Tokyo date +%u)" = "1" ] && hours=72
+          since="$(date -u -d "${hours} hours ago" +%Y-%m-%dT%H:%M:%SZ)"
 
           merged_json="$(gh pr list --state merged --search "merged:>=${since}" \
             --json number,title --limit 50)"
@@ -58,17 +61,20 @@ jobs:
           open_count="$(gh pr list --state open --json number --limit 100 | jq 'length')"
 
           # 次のタスクは、進捗の正本の「現在のフェーズ」にある最初の進捗ステータス行を使う。
-          next_line="$(grep -m1 '進捗ステータス' Docs/phase-status.md | sed -e 's/^- \*\*進捗ステータス\*\*: *//' \
+          next_line="$( (grep -m1 '進捗ステータス' Docs/phase-status.md || true) \
+            | sed -e 's/^- \*\*進捗ステータス\*\*: *//' \
             | python3 -c 'import sys; print(sys.stdin.read().strip()[:70])')"
           [ -n "$next_line" ] || next_line="未記録（Docs/phase-status.md を参照）"
 
           {
             echo "*Atlas 進捗（$(TZ=Asia/Tokyo date +%m/%d)）*"
-            echo "昨日: ${merged_line}"
+            echo "直近: ${merged_line}"
             echo "CI: ${ci_line}"
             echo "未決: 開いている PR は ${open_count} 件"
-            echo "次: ${next_line}"
+            echo "現在地: ${next_line}"
           } > "${RUNNER_TEMP}/report.txt"
+          # Slack の特殊記法（<!channel> など）が効かないように、記号を置き換える。
+          sed -i -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' "${RUNNER_TEMP}/report.txt"
           cat "${RUNNER_TEMP}/report.txt"
 
       - name: Post to Slack
