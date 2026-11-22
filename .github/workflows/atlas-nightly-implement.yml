@@ -1,0 +1,138 @@
+name: Atlas nightly implement
+
+# 平日の毎晩 3:17（日本時間）に、Claude が次の 1 タスクを実装して PR を作り、
+# 結果を Slack の #ai自律化 へ投稿する。マージは人が行う。
+# 仕組みと設定は Docs/ai-automation.md を参照。
+on:
+  schedule:
+    # cron は UTC。日本時間の月〜金 3:17 は、UTC の日〜木 18:17。
+    - cron: "17 18 * * 0-4"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+  id-token: write
+
+concurrency:
+  group: atlas-nightly-implement
+  cancel-in-progress: false
+
+jobs:
+  implement:
+    name: 次の 1 タスクを実装して PR を作る
+    if: github.repository == 'hang-up33/hmi-platform'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 未マージの PR が 3 件以上あるときは、実装せずに通知だけして終わる。
+      - name: Check open PRs
+        id: guard
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          open_count="$(gh pr list --state open --json number --limit 100 | jq 'length')"
+          echo "open_count=${open_count}" >> "$GITHUB_OUTPUT"
+          if [ "${open_count}" -ge 3 ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "未マージの PR が ${open_count} 件あるため、今夜は実装しない。" > "${RUNNER_TEMP}/atlas-summary.txt"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 以降の準備（Python・Linux 依存・Qt）は ci.yml の linux ジョブと同じ。
+      - name: Set up Python
+        if: steps.guard.outputs.skip != 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Linux deps
+        if: steps.guard.outputs.skip != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgl1 libegl1 libegl-mesa0 libxkbcommon0 libfontconfig1 libfreetype6 libdbus-1-3 \
+            libglib2.0-0t64 libx11-6 libxcb1 \
+            libgl-dev libglx-dev libopengl-dev libegl-dev mesa-common-dev \
+            ninja-build fonts-dejavu-core fonts-noto-cjk
+
+      - name: Install Qt
+        if: steps.guard.outputs.skip != 'true'
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.10.0"
+          host: linux
+          target: desktop
+          arch: linux_gcc_64
+          modules: "qtserialbus qtserialport"
+          cache: true
+
+      - name: Configure git identity
+        if: steps.guard.outputs.skip != 'true'
+        run: |
+          git config user.name "atlas-bot"
+          git config user.email "atlas-bot@users.noreply.github.com"
+
+      - name: Implement next task
+        if: steps.guard.outputs.skip != 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            あなたは hmi-platform（コードネーム Atlas）の夜間実装担当である。次の 1 タスクだけを実装し、PR を作る。
+            作業ディレクトリは ${{ github.workspace }}。Qt は QT_ROOT_DIR（${{ env.QT_ROOT_DIR }}）にある。
+
+            手順:
+            1. CLAUDE.md、Docs/phase-status.md、.claude/skills/ship-task/SKILL.md を読む。
+            2. 次のタスクを 1 つ決める。Docs/phase-status.md の「次に何をやるかはユーザーと決める」という記述のとおり、
+               承認済みで未着手のタスクが無い場合は、実装せずに「承認済みの次タスクがない」と要約に書いて終わる。
+            3. ship-task に従って進める。実装、ビルド、ctest、kaizen、進捗文書の同期、PR 作成、Codex レビュー依頼（1 回）まで行う。
+               ビルドは cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR"。
+               ブランチ名は task/<N>-<名>。main へは push しない。
+            4. 契約、テスト、実装の順（.claude/rules/dbc-tdd.md）を守る。PR 本文とコミットに絵文字を入れない。
+            5. マージはしない。ビルドか ctest が通らないときは PR を作らず、失敗内容を要約に書く。
+               サブエージェントや hook が使えない場合は、その工程を飛ばして要約にそう書く。
+            6. 最後に、次の 3 行の要約を ${{ runner.temp }}/atlas-summary.txt に書く。このファイルはコミットしない。
+               各行は短い文にし、造語とカタカナ語を避ける。
+               実装: <何を実装したか。PR の URL を付ける>
+               確認: <ビルドと ctest の結果>
+               判断: <人の判断が要ること。なければ「なし」>
+          claude_args: |
+            --max-turns 120
+            --allowedTools "Read,Glob,Grep,Edit,Write,Bash(git:*),Bash(gh pr:*),Bash(cmake:*),Bash(ninja:*),Bash(ctest:*),Bash(python3:*),Bash(bash scripts/:*),Bash(ls:*),Bash(cat:*),Bash(mkdir:*)"
+
+      - name: Post to Slack
+        if: always()
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ vars.SLACK_CHANNEL_ID }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SLACK_BOT_TOKEN}" ] || [ -z "${SLACK_CHANNEL_ID}" ]; then
+            echo "::error::Secret SLACK_BOT_TOKEN と Variable SLACK_CHANNEL_ID を設定してください（Docs/ai-automation.md）"
+            exit 1
+          fi
+          summary_file="${RUNNER_TEMP}/atlas-summary.txt"
+          if [ -s "${summary_file}" ]; then
+            body="$(cat "${summary_file}")"
+          else
+            body="実装: 要約が作られなかった。失敗または時間切れの可能性がある。"
+          fi
+          text="$(printf '*Atlas 夜間実装（%s）*\n%s\n実行ログ: %s' "$(TZ=Asia/Tokyo date +%m/%d)" "${body}" "${RUN_URL}")"
+          payload="$(jq -n --arg c "${SLACK_CHANNEL_ID}" --arg t "${text}" '{channel: $c, text: $t}')"
+          res="$(curl -sS -X POST https://slack.com/api/chat.postMessage \
+            -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
+            -H 'Content-Type: application/json; charset=utf-8' \
+            --data "${payload}")"
+          echo "${res}" | jq '{ok, error}'
+          [ "$(jq -r '.ok' <<<"${res}")" = "true" ]
