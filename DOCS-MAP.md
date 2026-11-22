@@ -89,7 +89,7 @@ hmi-platform/
 │   └─ opcua/README.md          [人]    現行  OPC-UA 手動テストサーバの起動手順
 │
 ├─ .github/workflows/ci.yml     [人+AI] 現行  CI 構成（private は自前 runner・ラベル時のみ desktop、public は標準 runner・毎回 desktop）
-└─ .github/workflows/atlas-*.yml [人+AI] 現行  AI 自動開発（毎朝の進捗レポートと毎晩の夜間実装）。詳細は Docs/ai-automation.md
+└─ .github/workflows/atlas-*.yml [人+AI] 現行  AI 自動開発（平日の進捗レポートと夜間実装）。詳細は Docs/ai-automation.md
 ```
 
 ---
