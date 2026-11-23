@@ -57,3 +57,6 @@ ChatGPT Codex（GitHub App / Codex CLI）や AI エージェントが、本リ�
    - `Shared/Widgets` を `MODULE_LIBRARY` で作っていないか。
 5. **macOS の Qt バージョン罠**
    - `~/Qt/6.7.0/macos` を `CMAKE_PREFIX_PATH` に指定する変更は、AGL のリンクエラーで壊れるので警告してください。
+6. **仕様とテストの対応**（[.claude/rules/spec-driven-tdd.md](../../.claude/rules/spec-driven-tdd.md)）
+   - 変更した振る舞いに、受け入れ条件（`ACC-`）とテストが対応しているか。仕様書の状態と件数も直っているか。
+   - 既存テストの期待値をゆるめたり削ったりして通していないか。

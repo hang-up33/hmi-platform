@@ -52,6 +52,7 @@ cmake --build build
 4. **既存資産の保護** — フォルダ構成変更禁止・既存コード削除禁止・qmake等代替ビルドシステム導入禁止（対象は**ソース / ビルド構成**。`Docs/` 配下の整理はユーザー承認時に限り可）。
 5. **PR ワークフロー & Codex レビュー** — ブランチは `task/<N>-<名>`、Codex レビューの依頼は 1 PR 1 回。Blocker / Major を直して push し、再依頼しない（[feedback-review-convergence](.claude/rules/feedback-review-convergence.md)）（マージはユーザーが行う）。
 6. **応答スタイル** — 日本語・敬語なし（常体）・簡潔な応答を基本とする。
+7. **仕様 → テスト → 実装** — 本番コードは「`REQ-` / `ACC-` を確かめる → 受け入れ条件ごとのテストを先に書き失敗を確認 → テストに触らず実装 → 仕様の状態を更新」の順で書く（[spec-driven-tdd](.claude/rules/spec-driven-tdd.md)）。
 
 ---
 
