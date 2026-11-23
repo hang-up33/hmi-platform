@@ -38,6 +38,7 @@ flowchart TD
 > **計画書のパス規約**：**進行中** のフェーズ計画は `Docs/` 直下（`Docs/phase*-plan.md`）、
 > **完了済み** は `Docs/archive/` 配下（`Docs/archive/phase*-plan.md`）。新規の計画書は必ず `Docs/` 直下に作り、
 > フェーズ完了時に `Docs/archive/` へ移して本ファイルと [Docs/archive/README.md](Docs/archive/README.md) を更新する。
+> 番号を付ける計画書は、[Docs/id-index.md](Docs/id-index.md) にも 1 行足す。
 
 ```
 hmi-platform/
@@ -107,7 +108,7 @@ hmi-platform/
 | [Docs/dbc-tdd-plan.md](Docs/dbc-tdd-plan.md) | 109 | 契約→テスト→実装の開発手順の導入計画と進捗表 |
 | [Docs/claude-web-dev.md](Docs/claude-web-dev.md) | 102 | Claude on the Web での開発セットアップ |
 | [Docs/ai-automation.md](Docs/ai-automation.md) | 69 | AI 自動開発（進捗レポート・夜間実装）の仕組みと初期設定 |
-| [Docs/id-index.md](Docs/id-index.md) | 42 | タスク・要件の番号の索引 |
+| [Docs/id-index.md](Docs/id-index.md) | 53 | タスク・要件の番号の索引 |
 | [Docs/phase7-modbus-plan.md](Docs/phase7-modbus-plan.md) | 153 | Modbus TCP。MB-5/6（実機）が未完 |
 | [scripts/acceptance/README.md](scripts/acceptance/README.md) | 56 | 録画付き受け入れ試験の実行方法と出力 |
 | [scripts/yocto/README.md](scripts/yocto/README.md) | 144 | Yocto SDK クロスビルド・実機転送・VNC キャプチャ |
@@ -119,7 +120,7 @@ hmi-platform/
 |---|---|---|
 | [Docs/development-history.md](Docs/development-history.md) | 463 | 時系列の開発経緯。「今どうなっているか」ではなく「どう作ってきたか」 |
 | [Docs/requirements/](Docs/requirements/README.md) | 11 本 | 関心別の要求仕様書。各書に REQ/ACC 表。旧版は [archive/requirements-legacy.md](Docs/archive/requirements-legacy.md)（実装状況が古い） |
-| [Docs/archive/](Docs/archive/) | 18 本 | 完了フェーズの実装指示書。仕様書ではない |
+| [Docs/archive/](Docs/archive/) | 20 本 | 完了フェーズの実装指示書。仕様書ではない |
 | [Docs/archive/qml-canvas-structure.md](Docs/archive/qml-canvas-structure.md) | 46 | **⚠️ 内容が実装と乖離**（Canvas.qml は現在 1,244 行） |
 
 ## AI エージェント向け（人間は読まなくてよい）
