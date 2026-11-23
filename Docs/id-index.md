@@ -23,7 +23,6 @@
 | `W-A`〜`W-E` | サンプルパレット・SimpleButton | [Phase 11](archive/phase11-widget-palette-plan.md) | 完了 |
 | `V1-0`〜`V1-8` | v1.0 公開準備 | [v1-release-plan.md](archive/v1-release-plan.md) | 完了 |
 | `RF-A`〜`RF-G` | リファクタリング | [refactoring-plan.md](refactoring-plan.md) | RF-A・B・D・G 完了、RF-E は一部、RF-F は保留、RF-C は取り下げ |
-| `DT-1`〜`DT-6` | 契約→テスト→実装の導入 | [dbc-tdd-plan.md](dbc-tdd-plan.md) | DT-1 完了。DT-2〜6 は未着手 |
 
 ## 要件の番号
 

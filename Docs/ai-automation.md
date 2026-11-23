@@ -23,7 +23,7 @@ flowchart LR
 
 ## 夜間実装の対象を決める
 
-夜間実装は、リポジトリ変数 `ATLAS_NIGHTLY_TASK` に書かれたタスクだけを実装する（例：`DT-2`）。着手するかどうかは、人が決める。
+夜間実装は、リポジトリ変数 `ATLAS_NIGHTLY_TASK` に書かれたタスクだけを実装する。着手するかどうかは、人が決める。
 
 次の場合は、実装せずに Slack へ理由だけを投稿して終わる。Qt も入れない。
 
@@ -39,7 +39,7 @@ flowchart LR
 |---|---|---|
 | Settings → Secrets and variables → Actions → Secrets | `SLACK_BOT_TOKEN` | Slack アプリの Bot トークン（`xoxb-` で始まる）。権限は `chat:write` |
 | 同 → Variables | `SLACK_CHANNEL_ID` | 投稿先の Slack チャンネル ID |
-| 同 → Variables | `ATLAS_NIGHTLY_TASK` | 夜間実装の対象タスクの ID（例：`DT-2`）。空なら実装しない |
+| 同 → Variables | `ATLAS_NIGHTLY_TASK` | 夜間実装の対象タスクの番号（計画書の進捗表にあるもの）。空なら実装しない |
 | 同 → Secrets | `CLAUDE_CODE_OAUTH_TOKEN` | `claude setup-token` で発行したトークン。夜間実装だけが使う |
 | Settings → Actions → General | Workflow permissions | 「Read and write permissions」と「Allow GitHub Actions to create and approve pull requests」を有効にする |
 | Settings → Rules → Rulesets | main の保護 | PR を必須にし、直接 push と force push を禁止する |
