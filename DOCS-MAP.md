@@ -64,6 +64,7 @@ hmi-platform/
 │   ├─ phase7-modbus-plan.md    [人+AI] 現行  Modbus（実機作業 MB-5/6 が未完のため現行）
 │   ├─ claude-web-dev.md        [人+AI] 現行  Claude on the Web での開発環境手順
 │   ├─ ai-automation.md         [人+AI] 現行  AI 自動開発（進捗レポート・夜間実装）の仕組みと初期設定
+│   ├─ id-index.md              [人+AI] 現行  タスク・要件の番号（Task / MB / DT / RF / REQ など）の索引
 │   │
 │   ├─ agents/                  [AI]    現行  エージェント専用の設定・ガイド
 │   │   ├─ review-guidelines.md         Codex のレビュー作法（日本語・指摘の粒度）
@@ -106,6 +107,7 @@ hmi-platform/
 | [Docs/dbc-tdd-plan.md](Docs/dbc-tdd-plan.md) | 109 | 契約→テスト→実装の開発手順の導入計画と進捗表 |
 | [Docs/claude-web-dev.md](Docs/claude-web-dev.md) | 102 | Claude on the Web での開発セットアップ |
 | [Docs/ai-automation.md](Docs/ai-automation.md) | 69 | AI 自動開発（進捗レポート・夜間実装）の仕組みと初期設定 |
+| [Docs/id-index.md](Docs/id-index.md) | 42 | タスク・要件の番号の索引 |
 | [Docs/phase7-modbus-plan.md](Docs/phase7-modbus-plan.md) | 153 | Modbus TCP。MB-5/6（実機）が未完 |
 | [scripts/acceptance/README.md](scripts/acceptance/README.md) | 56 | 録画付き受け入れ試験の実行方法と出力 |
 | [scripts/yocto/README.md](scripts/yocto/README.md) | 144 | Yocto SDK クロスビルド・実機転送・VNC キャプチャ |
