@@ -95,9 +95,9 @@ add_test(NAME tst_hmi_simulator_qml COMMAND tst_hmi_simulator_qml -platform offs
 # V1-6: `--version` がルート CMake の project(VERSION) を出すことを確かめる
 # Runtime は同じ main.cpp から作るので両方を見る。
 foreach(_hmi_app hmi_simulator hmi_runtime)
-    add_test(NAME simulator_printsProjectVersion_${_hmi_app}
+    add_test(NAME printsProjectVersion_${_hmi_app}
              COMMAND $<TARGET_FILE:${_hmi_app}> --version)
-    set_tests_properties(simulator_printsProjectVersion_${_hmi_app} PROPERTIES
+    set_tests_properties(printsProjectVersion_${_hmi_app} PROPERTIES
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_COMMAND_LINE_PARSER_NO_GUI_MESSAGE_BOXES=1"
         PASS_REGULAR_EXPRESSION "hmi_simulator ${PROJECT_VERSION}")
 endforeach()

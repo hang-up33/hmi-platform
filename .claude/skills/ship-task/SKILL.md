@@ -49,6 +49,7 @@ origin: hmi-platform
 
 - 詳細は [mvp-next-task](../mvp-next-task/SKILL.md)。要点：1 タスクずつ / Shared/Schema が唯一の真実 / **フォルダ構成を変更しない・既存コードを削除しない**（既存 Schema・QML・C++ の編集は通常の実装で当然可） / 着手前に影響範囲を箇条書き。
   - **ブランチ作成は環境で分ける**：**Web/リモートはフェーズ 0 で用意した指定作業ブランチをそのまま使い、mvp-next-task の「`main` から `task/<N>-…` を作成」手順は省略する**（環境表のとおり指定ブランチ以外へ push しないため）。**ローカル（macOS/Windows）は mvp-next-task どおり `task/<N>-<短い名>` を作る**。**ただしフェーズ 0 で既に follow-up ブランチ（マージ済み PR の作り直し）や stacked PR の依存派生ブランチを作成/更新済みの場合は、そのブランチをそのまま使い、mvp-next-task の「`main` へ戻って `checkout -b` する」手順は省略する**（`main` 起点で作り直すと、フェーズ 0 で用意したブランチを捨てるか同名で `already exists` になる）。
+- **仕様 → テスト → 実装の順**で書く（[spec-driven-tdd](../../rules/spec-driven-tdd.md)）。`REQ-` / `ACC-` を確かめ、受け入れ条件ごとのテストを先に書いて失敗を確認してから、実装する。
 - 新 Widget 種別など横展開の定番チェック（delegate 型分岐・`renameVariableReferences`・メタ・hero-demo）は [qml-module-conventions](../../rules/qml-module-conventions.md) に集約。該当ファイルを編集すると自動ロードされる。
 
 ### フェーズ 2 — ビルド + テスト

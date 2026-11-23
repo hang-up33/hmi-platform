@@ -34,17 +34,20 @@ origin: hmi-platform
    - 1 タスクのみ。「ついで」リファクタは禁止
    - 影響範囲を箇条書きで列挙してから着手
 
-5. **実装**
+5. **仕様とテストを先に書く**（[spec-driven-tdd](../../rules/spec-driven-tdd.md)）
+   - 変更に当てはまる `REQ-` / `ACC-` を確かめ、受け入れ条件ごとのテストを先に書いて、失敗を確認する
+
+6. **実装**
    - 設計書ルール（[CLAUDE.md](../../../CLAUDE.md) の「開発ルール」セクション）を逐条守る
    - 特に：Shared/Schema を唯一の真実 / フォルダ変更禁止 / 既存コード削除禁止
 
-6. **ビルド検証**
+7. **ビルド検証**
    ```sh
    cmake --build build
    ```
    - 失敗時は [cmake-build-resolver](../../agents/cmake-build-resolver.md) エージェントに委譲
 
-7. **動作確認 + スクリーンショット**
+8. **動作確認 + スクリーンショット**
    - UI 系タスクなら Editor / Simulator を起動して目視（または PID 確認程度の自動検証）
    - **GUI に変化があるタスクは `scripts/capture-app-window.sh` で必ずスクリーンショットを撮る**。**タスクが変化させる対象アプリ（Editor / Simulator）を判断し、起動バイナリとプロセス名を切り替えること**：
      ```sh
@@ -64,13 +67,13 @@ origin: hmi-platform
    - 撮ったスクショは Read ツールで内容を確認してから採用する（黒画面・他ウィンドウが混入していないか）
    - 詳細運用は [screenshot-capture](../screenshot-capture/SKILL.md) スキル参照
 
-8. **進捗反映**
+9. **進捗反映**
    - README.md の進捗表の該当行を ⬜ → ✅ に更新
 
-9. **継続的改善（kaizen）**
+10. **継続的改善（kaizen）**
    - [kaizen-close](../kaizen-close/SKILL.md) スキルを実行し、新たな知見を CLAUDE.md / README / メモリに反映
 
-10. **コミット + push + PR 作成**
+11. **コミット + push + PR 作成**
     - [codex-pr](../codex-pr/SKILL.md) スキルに従い、`Task N: <短い説明>` コミット → push → `gh pr create`（ready-for-review）
     - PR URL を完了報告に含める
     - **マージは Codex レビュー後にユーザーが行う**（Claude は勝手にマージしない）
