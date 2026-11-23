@@ -18,8 +18,8 @@
 #include <Spix/QtQmlBot.h>
 #endif
 
-/// @post Editor_main_main_Post1 `--version` を付けて起動すると、ルート CMake の
-///       project(VERSION) と同じ版数（例 1.0.0）を「hmi_editor <版数>」の形で標準出力に出して終わる
+/// `--version` を付けて起動すると、ルート CMake の project(VERSION) と同じ版数（例 1.0.0）を
+/// 「hmi_editor <版数>」の形で標準出力に出して終わる。
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);

@@ -25,9 +25,9 @@
 #include <Spix/QtQmlBot.h>
 #endif
 
-/// @post Simulator_main_main_Post1 `--version` を付けて起動すると、ルート CMake の
-///       project(VERSION) と同じ版数（例 1.0.0）を「hmi_simulator <版数>」の形で標準出力に出して終わる。
-///       Runtime も同じソースからビルドするので、hmi_runtime にも同じ条件が当てはまる
+/// `--version` を付けて起動すると、ルート CMake の project(VERSION) と同じ版数（例 1.0.0）を
+/// 「hmi_simulator <版数>」の形で標準出力に出して終わる。
+/// Runtime も同じソースからビルドするので、hmi_runtime にも同じことが当てはまる。
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);

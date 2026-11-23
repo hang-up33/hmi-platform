@@ -249,9 +249,9 @@ Window {
         onActivated: canvas.deleteWidgets(canvas.selectedWidgetIds)
     }
 
-    // @invariant Main_Inv1 StandardKey を使う Shortcut は、その OS で StandardKey に割り当てられた
-    //            すべてのキーに束縛される（`sequence` でなく `sequences` に入れる。`sequence` だと
-    //            最初の 1 つしか効かず、Qt が「Only binding to one of multiple key bindings」を出す）
+    // StandardKey を使う Shortcut は、その OS で StandardKey に割り当てられたすべてのキーに束縛する。
+    // `sequence` でなく `sequences` に入れる（`sequence` だと最初の 1 つしか効かず、
+    // Qt が「Only binding to one of multiple key bindings」を出す）。
     // Task 37: コピー / ペースト / 複製のショートカット。コピペは StandardKey で OS 差
     // （macOS = Cmd / Win・Linux = Ctrl）を吸収する。複製は **Ctrl+D を避け Ctrl+Shift+D**
     // にする（Ctrl+D は KDE/GNOME で StandardKey.Delete に含まれ T29 削除と衝突するため）。
