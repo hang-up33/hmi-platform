@@ -48,6 +48,14 @@ flowchart LR
 - API キーを使うときは、`CLAUDE_CODE_OAUTH_TOKEN` の代わりに `ANTHROPIC_API_KEY` を登録する。workflow の `claude_code_oauth_token:` は `anthropic_api_key:` に変える。
 - main の保護は必須である。夜間実装の権限は、Claude が main へ直接 push できる広さになっている。protect しておかないと、プロンプトの禁止だけが頼りになる。
 
+## 確認役
+
+夜間実装が PR を作ったあと、別の Claude が、その PR の本文と差分だけを読み、コメントを 1 件だけ残す。ファイルは書き換えられない。往復は 1 回で終わる。
+
+- 観点：仕様に対応するテストがあるか、期待値をゆるめていないか、仕様書の状態が直っているか、タスクの範囲を超えていないか。
+- 失敗しても、実装の結果や Slack の投稿は止まらない。
+- 効果が薄ければ、workflow の「Review PR (read-only)」の段を消すだけで戻せる。
+
 ## 夜間実装の権限
 
 Claude に許す操作は、ブランチの作成と commit、`task/` ブランチへの push、PR の作成とコメント、ビルドとテストに絞っている。マージ、PR のクローズ、承認、force push は禁止している。
