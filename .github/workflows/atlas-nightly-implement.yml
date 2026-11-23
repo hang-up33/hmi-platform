@@ -109,7 +109,7 @@ jobs:
             2. ship-task のフェーズ 1〜4 に従い、実装、ビルド、ctest、kaizen、進捗文書の同期、PR 作成まで行う。
                ビルドは cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR"。
                ブランチ名は task/${{ vars.ATLAS_NIGHTLY_TASK }}-<短い名>。main へは push しない。
-            3. 契約、テスト、実装の順（.claude/rules/dbc-tdd.md）を守る。PR 本文とコミットに絵文字を入れない。
+            3. 仕様、テスト、実装の順（.claude/rules/spec-driven-tdd.md）を守る。PR 本文とコミットに絵文字を入れない。
             4. PR を作ったら、@codex review のコメントを 1 回だけ投稿して終える。Codex の結果は待たない。修正 push 後の再依頼もしない。
             5. マージ、PR のクローズ、承認はしない。main へ直接 push しない。
             6. ビルドか ctest が通らないときは PR を作らず、失敗内容を要約に書く。
