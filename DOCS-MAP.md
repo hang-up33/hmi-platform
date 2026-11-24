@@ -105,7 +105,7 @@ hmi-platform/
 | [Docs/workflow.md](Docs/workflow.md) | 56 | ブランチ規約・PR・レビュー・完了基準 |
 | [Docs/refactoring-plan.md](Docs/refactoring-plan.md) | 80 | リファクタリング計画と進捗表（一区切り。残りは保留） |
 | [Docs/claude-web-dev.md](Docs/claude-web-dev.md) | 102 | Claude on the Web での開発セットアップ |
-| [Docs/ai-automation.md](Docs/ai-automation.md) | 69 | AI 自動開発（進捗レポート・夜間実装）の仕組みと初期設定 |
+| [Docs/ai-automation.md](Docs/ai-automation.md) | 80 | AI 自動開発（進捗レポート・夜間実装）の仕組みと初期設定 |
 | [Docs/id-index.md](Docs/id-index.md) | 52 | タスク・要件の番号の索引 |
 | [Docs/phase7-modbus-plan.md](Docs/phase7-modbus-plan.md) | 153 | Modbus TCP。MB-5/6（実機）が未完 |
 | [scripts/acceptance/README.md](scripts/acceptance/README.md) | 56 | 録画付き受け入れ試験の実行方法と出力 |

@@ -7,6 +7,7 @@ flowchart LR
   A[GitHub Actions<br/>定期実行] --> B[進捗レポート<br/>AI なし]
   A --> C[夜間実装<br/>Claude]
   C --> D[PR を作成]
+  D --> R[確認役<br/>Claude]
   B --> E[Slack]
   C --> E
   E --> F[人が判断してマージ]
@@ -17,7 +18,7 @@ flowchart LR
 | 名前 | 時刻（日本時間） | 内容 | ファイル |
 |---|---|---|---|
 | 進捗レポート | 平日（月〜金）8:47 | 直近のマージ・CI 失敗・開いている PR を集めて投稿する。月曜は週末を含む 72 時間。AI は使わない | `.github/workflows/atlas-daily-report.yml` |
-| 夜間実装 | 平日（月〜金）の早朝 3:17 | 指定したタスクを 1 つ実装して PR を作り、結果を投稿する | `.github/workflows/atlas-nightly-implement.yml` |
+| 夜間実装 | 平日（月〜金）の早朝 3:17 | 指定したタスクを 1 つ実装して PR を作り、確認役が PR にコメントし、結果を投稿する | `.github/workflows/atlas-nightly-implement.yml` |
 
 どちらも、手動実行（Actions 画面の「Run workflow」）で試せる。
 
@@ -47,6 +48,16 @@ flowchart LR
 - Slack ボットは、投稿先のチャンネルへ招待しておく。
 - API キーを使うときは、`CLAUDE_CODE_OAUTH_TOKEN` の代わりに `ANTHROPIC_API_KEY` を登録する。workflow の `claude_code_oauth_token:` は `anthropic_api_key:` に変える。
 - main の保護は必須である。夜間実装の権限は、Claude が main へ直接 push できる広さになっている。protect しておかないと、プロンプトの禁止だけが頼りになる。
+
+## 確認役
+
+夜間実装が PR を作ったあと、別のジョブで、別の Claude がその PR の本文と差分だけを読み、コメントを 1 件だけ残す。往復は 1 回で終わる。
+
+- 権限は、ファイルの読み取りと、PR へのコメントだけにしている。ファイルの書き換え、マージ、承認の道具は許可していない。
+- 受け取るのは、実装が作った PR の番号 1 つだけ。自分のリポジトリのブランチの PR だけを対象にするので、他の人の PR は読まない。
+- 対象のタスクが決まっていない日や、PR ができなかった日は動かない。
+- 失敗したときは、Slack に知らせる。実装の結果の投稿は、確認役の成否に関わらず出る。
+- 効果が薄ければ、workflow の `review` ジョブを消すだけで戻せる。
 
 ## 夜間実装の権限
 
