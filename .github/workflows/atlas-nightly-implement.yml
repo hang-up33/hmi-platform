@@ -109,6 +109,8 @@ jobs:
 
             手順:
             1. CLAUDE.md、Docs/phase-status.md、.claude/skills/ship-task/SKILL.md を読む。
+               タスクの番号が `REQ-` で始まるときは、Docs/requirements/ の該当する要件の行と、その `ACC-`（受け入れ条件）を仕様として使う。
+               仕様に書かれた範囲を超えて実装しない。1 回で収まらない大きさなら、最初の 1 区切りだけを実装し、残りを要約に書く。
             2. ship-task のフェーズ 1〜4 に従い、実装、ビルド、ctest、kaizen、進捗文書の同期、PR 作成まで行う。
                ビルドは cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR"。
                ブランチ名は task/${{ vars.ATLAS_NIGHTLY_TASK }}-<短い名>。main へは push しない。
