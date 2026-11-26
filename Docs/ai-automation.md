@@ -24,13 +24,17 @@ flowchart LR
 
 ## 夜間実装の対象を決める
 
-夜間実装は、リポジトリ変数 `ATLAS_NIGHTLY_TASK` に書かれたタスクだけを実装する。着手するかどうかは、人が決める。
+夜間実装は、[nightly-queue.md](nightly-queue.md) に並べた要件番号だけを実装する。一覧に載せることが、着手の承認になる。
+
+- 上から順に、要求仕様書で「未実装」のままで、PR がまだ開いていない最初の番号を、毎晩 1 つ選ぶ。
+- 実装済みの番号は、一覧に残してよい。自動で飛ばされる。
+- あなたの作業は、一覧に番号を足すだけ。1 回ごとに変数を変える必要はない。
+- 変数 `ATLAS_NIGHTLY_TASK` が空でなければ、一覧より優先して、その番号だけを対象にする。一時的に上書きしたいときに使う。
 
 次の場合は、実装せずに Slack へ理由だけを投稿して終わる。Qt も入れない。
 
-- 変数が空のとき。
+- 対象が見つからないとき（一覧が空か、すべて実装済み・進行中）。
 - `task/` で始まるブランチの PR が、すでに 2 件以上開いているとき。
-- そのタスクのブランチ（`task/<ID>-*`）が、すでにあるとき。
 
 ## 最初に必要な設定
 
@@ -40,7 +44,7 @@ flowchart LR
 |---|---|---|
 | Settings → Secrets and variables → Actions → Secrets | `SLACK_BOT_TOKEN` | Slack アプリの Bot トークン（`xoxb-` で始まる）。権限は `chat:write` |
 | 同 → Variables | `SLACK_CHANNEL_ID` | 投稿先の Slack チャンネル ID |
-| 同 → Variables | `ATLAS_NIGHTLY_TASK` | 夜間実装の対象タスクの番号。要件番号（例：`REQ-PRJ-007`）か、計画書の進捗表にある番号。空なら実装しない |
+| 同 → Variables | `ATLAS_NIGHTLY_TASK` | 任意。一覧より優先する対象の番号。普段は空にしておく |
 | 同 → Secrets | `CLAUDE_CODE_OAUTH_TOKEN` | `claude setup-token` で発行したトークン。夜間実装だけが使う |
 | Settings → Actions → General | Workflow permissions | 「Read and write permissions」と「Allow GitHub Actions to create and approve pull requests」を有効にする |
 | Settings → Rules → Rulesets | main の保護 | PR を必須にし、直接 push と force push を禁止する |

@@ -34,15 +34,18 @@ jobs:
         with:
           fetch-depth: 0
 
+      # 今夜の対象を決める。Docs/nightly-queue.md の上から順に、次の条件を満たす最初の要件番号を選ぶ。
+      #   - 要求仕様書の該当行が「未実装」である
+      #   - その番号の PR（ブランチ task/<番号>-）が、まだ開いていない
+      # 変数 ATLAS_NIGHTLY_TASK が空でなければ、一覧より優先して、その番号だけを対象にする。
       # 次の場合は、実装せずに終える（Qt の導入も省く）。
-      #   - リポジトリ変数 ATLAS_NIGHTLY_TASK が空（対象のタスクが決まっていない）
+      #   - 対象が見つからない（一覧が空、またはすべて実装済み・進行中）
       #   - task/ で始まるブランチの PR が、すでに 2 件以上開いている
-      #   - 対象のタスクのブランチが、すでにある（同じタスクを繰り返さない）
       - name: Check guard
         id: guard
         env:
           GH_TOKEN: ${{ github.token }}
-          TASK: ${{ vars.ATLAS_NIGHTLY_TASK }}
+          OVERRIDE: ${{ vars.ATLAS_NIGHTLY_TASK }}
         run: |
           set -euo pipefail
           summary="${GITHUB_WORKSPACE}/.atlas-summary.txt"
@@ -50,20 +53,36 @@ jobs:
             echo "skip=true" >> "$GITHUB_OUTPUT"
             echo "$1" > "${summary}"
           }
-          if [ -z "${TASK}" ]; then
-            skip "実装: 今夜は実装しない。対象のタスクが決まっていない（変数 ATLAS_NIGHTLY_TASK が空）。"
-            exit 0
-          fi
-          open_task_prs="$(gh pr list --state open --json headRefName --limit 100 \
-            | jq '[.[] | select(.headRefName | startswith("task/"))] | length')"
+          open_prs="$(gh pr list --state open --json headRefName --limit 100)"
+          open_task_prs="$(jq '[.[] | select(.headRefName | startswith("task/"))] | length' <<<"${open_prs}")"
           if [ "${open_task_prs}" -ge 2 ]; then
             skip "実装: 今夜は実装しない。task/ の未マージ PR が ${open_task_prs} 件ある。"
             exit 0
           fi
-          if git ls-remote --exit-code --heads origin "task/${TASK}-*" > /dev/null 2>&1; then
-            skip "実装: 今夜は実装しない。${TASK} のブランチがすでにある。"
+          if [ -n "${OVERRIDE}" ]; then
+            candidates="${OVERRIDE}"
+          else
+            candidates="$( (grep -oE '^- (REQ-[A-Z]+-[0-9]+)' Docs/nightly-queue.md || true) | sed 's/^- //')"
+          fi
+          task=""
+          for id in ${candidates}; do
+            if [[ "${id}" == REQ-* ]]; then
+              row="$( (grep -h "^| ${id} " Docs/requirements/*.md || true) | head -n1)"
+              if [ -z "${row}" ] || [[ "${row}" != *未実装* ]]; then
+                continue
+              fi
+            fi
+            if jq -e --arg t "task/${id}-" '[.[] | select(.headRefName | startswith($t))] | length > 0' <<<"${open_prs}" > /dev/null; then
+              continue
+            fi
+            task="${id}"
+            break
+          done
+          if [ -z "${task}" ]; then
+            skip "実装: 今夜は実装しない。対象が見つからない（一覧が空か、すべて実装済み・進行中）。"
             exit 0
           fi
+          echo "task=${task}" >> "$GITHUB_OUTPUT"
           echo "skip=false" >> "$GITHUB_OUTPUT"
 
       # 以降の準備（Python・Linux 依存・Qt）は ci.yml の linux ジョブと同じ。
@@ -104,7 +123,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
             REPO: ${{ github.repository }}
-            あなたは hmi-platform（コードネーム Atlas）の夜間実装担当である。タスク ${{ vars.ATLAS_NIGHTLY_TASK }} だけを実装し、PR を作る。
+            あなたは hmi-platform（コードネーム Atlas）の夜間実装担当である。タスク ${{ steps.guard.outputs.task }} だけを実装し、PR を作る。
             作業ディレクトリは ${{ github.workspace }}。Qt は QT_ROOT_DIR（${{ env.QT_ROOT_DIR }}）にある。
 
             手順:
@@ -113,7 +132,7 @@ jobs:
                仕様に書かれた範囲を超えて実装しない。1 回で収まらない大きさなら、最初の 1 区切りだけを実装し、残りを要約に書く。
             2. ship-task のフェーズ 1〜4 に従い、実装、ビルド、ctest、kaizen、進捗文書の同期、PR 作成まで行う。
                ビルドは cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR"。
-               ブランチ名は task/${{ vars.ATLAS_NIGHTLY_TASK }}-<短い名>。main へは push しない。
+               ブランチ名は task/${{ steps.guard.outputs.task }}-<短い名>。main へは push しない。
             3. 仕様、テスト、実装の順（.claude/rules/spec-driven-tdd.md）を守る。PR 本文とコミットに絵文字を入れない。
             4. PR を作ったら、@codex review のコメントを 1 回だけ投稿して終える。Codex の結果は待たない。修正 push 後の再依頼もしない。
             5. マージ、PR のクローズ、承認はしない。main へ直接 push しない。
@@ -138,7 +157,7 @@ jobs:
         if: ${{ !cancelled() && steps.guard.outputs.skip != 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
-          TASK: ${{ vars.ATLAS_NIGHTLY_TASK }}
+          TASK: ${{ steps.guard.outputs.task }}
           OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
