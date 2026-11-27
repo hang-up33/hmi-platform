@@ -54,7 +54,7 @@ upload_one() {
     echo "[slack-post] 画像の送信に失敗: HTTP ${code}" >&2
     return 1
   fi
-  jq -n --arg id "${file_id}" --arg t "${name}" '{id: $id, title: $t}'
+  jq -n --arg id "${file_id}" --arg t "${name%.*}" '{id: $id, title: $t}'
 }
 
 if [ "${#images[@]}" -gt 0 ]; then

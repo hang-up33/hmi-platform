@@ -199,37 +199,28 @@ jobs:
             echo "::notice::build/ にビルドが無いため、画面は撮らない"
             exit 0
           fi
-          scripts/capture-app-screenshot-linux.sh -a simulator -o "${RUNNER_TEMP}/shots/simulator.png" -j "${demo}" || true
-          scripts/capture-app-screenshot-linux.sh -a editor -o "${RUNNER_TEMP}/shots/editor.png" -j "${demo}" || true
+          timeout 90 scripts/capture-app-screenshot-linux.sh -a simulator -o "${RUNNER_TEMP}/shots/Simulator.png" -j "${demo}" || true
+          timeout 90 scripts/capture-app-screenshot-linux.sh -a editor -o "${RUNNER_TEMP}/shots/Editor.png" -j "${demo}" || true
           ls -l "${RUNNER_TEMP}/shots" || true
 
-      # 投稿は、main にある投稿用のスクリプトで行う（実装のブランチのスクリプトは、トークンを渡さずに済むよう使わない）。
-      - name: Post to Slack
+      # 投稿は、別のジョブ（notify）で行う。トークンを持つジョブに、実装のブランチのコードを動かさせないため。
+      # ここでは、要約と画像を 1 つのフォルダにまとめて、データとして渡すだけにする。
+      - name: Stage notify files
         if: always()
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-          SLACK_CHANNEL_ID: ${{ vars.SLACK_CHANNEL_ID }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          set -euo pipefail
-          if [ -z "${SLACK_BOT_TOKEN}" ] || [ -z "${SLACK_CHANNEL_ID}" ]; then
-            echo "::error::Secret SLACK_BOT_TOKEN と Variable SLACK_CHANNEL_ID を設定してください（Docs/ai-automation.md）"
-            exit 1
-          fi
-          summary_file="${GITHUB_WORKSPACE}/.atlas-summary.txt"
-          if [ -s "${summary_file}" ]; then
-            body="$(cat "${summary_file}")"
-          else
-            body="実装: 要約が作られなかった。失敗または時間切れの可能性がある。"
-          fi
-          # Slack の特殊記法（<!channel> など）が効かないように、記号を置き換える。
-          body="$(printf '%s' "${body}" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g')"
-          printf '*Atlas 夜間実装（%s）*\n%s\n実行ログ: %s\n' "$(TZ=Asia/Tokyo date +%m/%d)" "${body}" "${RUN_URL}" > "${RUNNER_TEMP}/slack-body.txt"
-          git fetch -q origin main
-          git show origin/main:scripts/ci/slack-post.sh > "${RUNNER_TEMP}/slack-post.sh"
-          shopt -s nullglob
-          images=("${RUNNER_TEMP}"/shots/*.png)
-          bash "${RUNNER_TEMP}/slack-post.sh" "${RUNNER_TEMP}/slack-body.txt" "${images[@]}"
+          mkdir -p "${RUNNER_TEMP}/notify"
+          cp "${GITHUB_WORKSPACE}/.atlas-summary.txt" "${RUNNER_TEMP}/notify/summary.txt" 2>/dev/null || true
+          cp "${RUNNER_TEMP}"/shots/*.png "${RUNNER_TEMP}/notify/" 2>/dev/null || true
+          ls -l "${RUNNER_TEMP}/notify"
+
+      - name: Upload notify files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-notify
+          path: ${{ runner.temp }}/notify
+          if-no-files-found: ignore
+          retention-days: 3
 
   # 確認役：実装した PR を読み、コメントを 1 件だけ残す。
   # 実装とは別のジョブで動かし、権限を読み取りと PR へのコメントだけにする。
@@ -292,3 +283,52 @@ jobs:
             -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
             -H 'Content-Type: application/json; charset=utf-8' \
             --data "${payload}" | jq '{ok, error}'
+
+  # 通知：Slack へ、実装の結果を文章と画像で投稿する。
+  # main のコードだけを取得し、実装のジョブが作った要約と画像は、データとして読む。
+  notify:
+    name: Slack へ通知する
+    needs: implement
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Download notify files
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: atlas-notify
+          path: notify
+
+      - name: Post to Slack
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ vars.SLACK_CHANNEL_ID }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SLACK_BOT_TOKEN}" ] || [ -z "${SLACK_CHANNEL_ID}" ]; then
+            echo "::error::Secret SLACK_BOT_TOKEN と Variable SLACK_CHANNEL_ID を設定してください（Docs/ai-automation.md）"
+            exit 1
+          fi
+          if [ -s notify/summary.txt ]; then
+            body="$(head -c 3000 notify/summary.txt)"
+          else
+            body="実装: 要約が作られなかった。失敗または時間切れの可能性がある。"
+          fi
+          # Slack の特殊記法（<!channel> など）が効かないように、記号を置き換える。
+          body="$(printf '%s' "${body}" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g')"
+          printf '*Atlas 夜間実装（%s）*\n%s\n実行ログ: %s\n' "$(TZ=Asia/Tokyo date +%m/%d)" "${body}" "${RUN_URL}" > "${RUNNER_TEMP}/slack-body.txt"
+          images=()
+          for name in Simulator Editor; do
+            [ -f "notify/${name}.png" ] && images+=("notify/${name}.png")
+          done
+          bash scripts/ci/slack-post.sh "${RUNNER_TEMP}/slack-body.txt" "${images[@]}"

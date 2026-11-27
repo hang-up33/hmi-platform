@@ -50,7 +50,7 @@ flowchart LR
 
 | 場所 | 項目 | 値 |
 |---|---|---|
-| Settings → Secrets and variables → Actions → Secrets | `SLACK_BOT_TOKEN` | Slack アプリの Bot トークン（`xoxb-` で始まる）。権限は `chat:write` |
+| Settings → Secrets and variables → Actions → Secrets | `SLACK_BOT_TOKEN` | Slack アプリの Bot トークン（`xoxb-` で始まる）。権限は `chat:write`（画像を付けるなら `files:write` も） |
 | 同 → Variables | `SLACK_CHANNEL_ID` | 投稿先の Slack チャンネル ID |
 | 同 → Variables | `ATLAS_NIGHTLY_TASK` | 任意。一覧より優先する対象の番号。普段は空にしておく |
 | 同 → Secrets | `CLAUDE_CODE_OAUTH_TOKEN` | `claude setup-token` で発行したトークン。夜間実装だけが使う |
@@ -67,8 +67,8 @@ flowchart LR
 
 - 撮るのは、デモ用のプロジェクト（`Docs/samples/atlas-dashboard-demo.json`）を開いた Simulator と Editor の 2 枚。
 - 実装しなかった日や、ビルドが無い日は、画像なしで文章だけを投稿する。
-- 画像の投稿には、Slack ボットの権限 `files:write` が要る。権限がなくても、文章だけで投稿されるので、止まらない。
-- 投稿は、main にある `scripts/ci/slack-post.sh` で行う。実装のブランチのスクリプトは使わない。
+- 画像の投稿には、Slack ボットの権限 `files:write` が要る。権限がない、ボットがチャンネルに入っていないなど、画像を付けられないときは、文章だけで投稿する。止まらない。
+- 投稿は、別のジョブ（`notify`）が、main のコードだけを取得して行う。実装のジョブが作った要約と画像は、データとして渡す。トークンを持つジョブで、実装のブランチのコードを動かさないため。
 
 ## 確認役
 
