@@ -18,19 +18,31 @@ flowchart LR
 | 名前 | 時刻（日本時間） | 内容 | ファイル |
 |---|---|---|---|
 | 進捗レポート | 平日（月〜金）8:47 | 直近のマージ・CI 失敗・開いている PR を集めて投稿する。月曜は週末を含む 72 時間。AI は使わない | `.github/workflows/atlas-daily-report.yml` |
-| 夜間実装 | 平日（月〜金）の早朝 3:17 | 指定したタスクを 1 つ実装して PR を作り、確認役が PR にコメントし、結果を投稿する | `.github/workflows/atlas-nightly-implement.yml` |
+| 夜間実装 | 平日（月〜金）の早朝 3:17 | 一覧から選んだ要件を 1 つ実装して PR を作り、確認役が PR にコメントし、結果を投稿する | `.github/workflows/atlas-nightly-implement.yml` |
 
 どちらも、手動実行（Actions 画面の「Run workflow」）で試せる。
 
 ## 夜間実装の対象を決める
 
-夜間実装は、リポジトリ変数 `ATLAS_NIGHTLY_TASK` に書かれたタスクだけを実装する。着手するかどうかは、人が決める。
+夜間実装は、[nightly-queue.md](nightly-queue.md) に並べた要件番号だけを実装する。一覧に載せることが、着手の承認になる。あなたの作業は、一覧に番号を足すだけ。
+
+選び方は次のとおり。
+
+- 上から順に、次の条件をすべて満たす最初の番号を、毎晩 1 つ選ぶ。
+  - 要求仕様書で、その要件が「未実装」のままである。
+  - その番号の PR（ブランチ `task/<番号>-`）が、開いていない。
+  - その番号の PR が、マージされずに閉じられていない。
+- 数えるのは、自分のリポジトリのブランチの PR だけ。fork の PR は数えない。
+- 実装が 1 回で終わらず、マージ後も「未実装」のままなら、次の夜にも同じ番号が選ばれる。残りから始める。
+- 却下した番号を再開するには、変数 `ATLAS_NIGHTLY_TASK` でその番号を指定する。変数の指定では、却下済みの判定を行わない。実行したあと、変数を空に戻す。
+- 実装済みの番号は、一覧に残してよい。自動で飛ばされる。
+
+変数 `ATLAS_NIGHTLY_TASK` が空でなければ、一覧より優先して、その番号 1 つだけを対象にする。一時的に上書きしたいときに使う。
 
 次の場合は、実装せずに Slack へ理由だけを投稿して終わる。Qt も入れない。
 
-- 変数が空のとき。
+- 対象が見つからないとき（一覧が空か、すべて実装済み・進行中・却下済み）。
 - `task/` で始まるブランチの PR が、すでに 2 件以上開いているとき。
-- そのタスクのブランチ（`task/<ID>-*`）が、すでにあるとき。
 
 ## 最初に必要な設定
 
@@ -40,7 +52,7 @@ flowchart LR
 |---|---|---|
 | Settings → Secrets and variables → Actions → Secrets | `SLACK_BOT_TOKEN` | Slack アプリの Bot トークン（`xoxb-` で始まる）。権限は `chat:write` |
 | 同 → Variables | `SLACK_CHANNEL_ID` | 投稿先の Slack チャンネル ID |
-| 同 → Variables | `ATLAS_NIGHTLY_TASK` | 夜間実装の対象タスクの番号。要件番号（例：`REQ-PRJ-007`）か、計画書の進捗表にある番号。空なら実装しない |
+| 同 → Variables | `ATLAS_NIGHTLY_TASK` | 任意。一覧より優先する対象の番号。普段は空にしておく |
 | 同 → Secrets | `CLAUDE_CODE_OAUTH_TOKEN` | `claude setup-token` で発行したトークン。夜間実装だけが使う |
 | Settings → Actions → General | Workflow permissions | 「Read and write permissions」と「Allow GitHub Actions to create and approve pull requests」を有効にする |
 | Settings → Rules → Rulesets | main の保護 | PR を必須にし、直接 push と force push を禁止する |
@@ -55,7 +67,7 @@ flowchart LR
 
 - 権限は、ファイルの読み取りと、PR へのコメントだけにしている。ファイルの書き換え、マージ、承認の道具は許可していない。
 - 受け取るのは、実装が作った PR の番号 1 つだけ。自分のリポジトリのブランチの PR だけを対象にするので、他の人の PR は読まない。
-- 対象のタスクが決まっていない日や、PR ができなかった日は動かない。
+- 対象が見つからない日や、PR ができなかった日は動かない。
 - 失敗したときは、Slack に知らせる。実装の結果の投稿は、確認役の成否に関わらず出る。
 - 効果が薄ければ、workflow の `review` ジョブを消すだけで戻せる。
 
