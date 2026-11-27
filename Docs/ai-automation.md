@@ -57,9 +57,18 @@ flowchart LR
 | Settings → Actions → General | Workflow permissions | 「Read and write permissions」と「Allow GitHub Actions to create and approve pull requests」を有効にする |
 | Settings → Rules → Rulesets | main の保護 | PR を必須にし、直接 push と force push を禁止する |
 
-- Slack ボットは、投稿先のチャンネルへ招待しておく。
+- Slack ボットは、投稿先のチャンネルへ招待しておく。画像を付けるには、ボットの権限に `files:write` も足す。
 - API キーを使うときは、`CLAUDE_CODE_OAUTH_TOKEN` の代わりに `ANTHROPIC_API_KEY` を登録する。workflow の `claude_code_oauth_token:` は `anthropic_api_key:` に変える。
 - main の保護は必須である。夜間実装の権限は、Claude が main へ直接 push できる広さになっている。protect しておかないと、プロンプトの禁止だけが頼りになる。
+
+## 画面の画像
+
+夜間実装が終わると、実装後のアプリの画面を撮り、Slack の投稿に画像で付ける。
+
+- 撮るのは、デモ用のプロジェクト（`Docs/samples/atlas-dashboard-demo.json`）を開いた Simulator と Editor の 2 枚。
+- 実装しなかった日や、ビルドが無い日は、画像なしで文章だけを投稿する。
+- 画像の投稿には、Slack ボットの権限 `files:write` が要る。権限がなくても、文章だけで投稿されるので、止まらない。
+- 投稿は、main にある `scripts/ci/slack-post.sh` で行う。実装のブランチのスクリプトは使わない。
 
 ## 確認役
 

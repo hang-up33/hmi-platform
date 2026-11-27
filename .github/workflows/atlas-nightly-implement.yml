@@ -184,6 +184,26 @@ jobs:
               '[.[] | select((.headRefName | startswith($t)) and .headRepositoryOwner.login == $o)] | sort_by(.createdAt) | last | .number // empty')"
           echo "pr_number=${n}" >> "$GITHUB_OUTPUT"
 
+      # 実装後のアプリの画面を撮る。デモ用のプロジェクト（Docs/samples/atlas-dashboard-demo.json）を開いて、
+      # Simulator と Editor を 1 枚ずつ撮り、Slack に画像で付ける。撮れなかったときは、画像なしで投稿する。
+      # 撮るのは、実装のあとのビルド（build/）。ビルドが無い日（実装しなかった日・失敗した日）は何もしない。
+      - name: Capture screenshots
+        if: ${{ !cancelled() && steps.guard.outputs.skip != 'true' }}
+        continue-on-error: true
+        timeout-minutes: 5
+        run: |
+          set -uo pipefail
+          mkdir -p "${RUNNER_TEMP}/shots"
+          demo="Docs/samples/atlas-dashboard-demo.json"
+          if [ ! -x build/Simulator/hmi_simulator ]; then
+            echo "::notice::build/ にビルドが無いため、画面は撮らない"
+            exit 0
+          fi
+          scripts/capture-app-screenshot-linux.sh -a simulator -o "${RUNNER_TEMP}/shots/simulator.png" -j "${demo}" || true
+          scripts/capture-app-screenshot-linux.sh -a editor -o "${RUNNER_TEMP}/shots/editor.png" -j "${demo}" || true
+          ls -l "${RUNNER_TEMP}/shots" || true
+
+      # 投稿は、main にある投稿用のスクリプトで行う（実装のブランチのスクリプトは、トークンを渡さずに済むよう使わない）。
       - name: Post to Slack
         if: always()
         env:
@@ -204,14 +224,12 @@ jobs:
           fi
           # Slack の特殊記法（<!channel> など）が効かないように、記号を置き換える。
           body="$(printf '%s' "${body}" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g')"
-          text="$(printf '*Atlas 夜間実装（%s）*\n%s\n実行ログ: %s' "$(TZ=Asia/Tokyo date +%m/%d)" "${body}" "${RUN_URL}")"
-          payload="$(jq -n --arg c "${SLACK_CHANNEL_ID}" --arg t "${text}" '{channel: $c, text: $t}')"
-          res="$(curl -sS -X POST https://slack.com/api/chat.postMessage \
-            -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
-            -H 'Content-Type: application/json; charset=utf-8' \
-            --data "${payload}")"
-          echo "${res}" | jq '{ok, error}'
-          [ "$(jq -r '.ok' <<<"${res}")" = "true" ]
+          printf '*Atlas 夜間実装（%s）*\n%s\n実行ログ: %s\n' "$(TZ=Asia/Tokyo date +%m/%d)" "${body}" "${RUN_URL}" > "${RUNNER_TEMP}/slack-body.txt"
+          git fetch -q origin main
+          git show origin/main:scripts/ci/slack-post.sh > "${RUNNER_TEMP}/slack-post.sh"
+          shopt -s nullglob
+          images=("${RUNNER_TEMP}"/shots/*.png)
+          bash "${RUNNER_TEMP}/slack-post.sh" "${RUNNER_TEMP}/slack-body.txt" "${images[@]}"
 
   # 確認役：実装した PR を読み、コメントを 1 件だけ残す。
   # 実装とは別のジョブで動かし、権限を読み取りと PR へのコメントだけにする。

@@ -38,7 +38,7 @@ post_text_only() {
 
 # 画像を 1 枚アップロードし、{"id": ..., "title": ...} を標準出力へ出す。失敗したら 1 を返す。
 upload_one() {
-  local path="$1" name size res upload_url file_id
+  local path="$1" name size res upload_url file_id code
   name="$(basename "${path}")"
   size="$(wc -c < "${path}" | tr -d ' ')"
   res="$(curl -sS -X POST "${api}/files.getUploadURLExternal" "${auth[@]}" \
@@ -49,7 +49,11 @@ upload_one() {
   fi
   upload_url="$(jq -r '.upload_url' <<<"${res}")"
   file_id="$(jq -r '.file_id' <<<"${res}")"
-  curl -sS -X POST "${upload_url}" --data-binary "@${path}" -o /dev/null
+  code="$(curl -sS -X POST "${upload_url}" --data-binary "@${path}" -o /dev/null -w '%{http_code}')"
+  if [ "${code}" != "200" ]; then
+    echo "[slack-post] 画像の送信に失敗: HTTP ${code}" >&2
+    return 1
+  fi
   jq -n --arg id "${file_id}" --arg t "${name}" '{id: $id, title: $t}'
 }
 
