@@ -27,6 +27,11 @@ images=("$@")
 api="https://slack.com/api"
 auth=(-H "Authorization: Bearer ${SLACK_BOT_TOKEN}")
 
+# 応答が空や壊れた JSON でも落ちないように、値を取り出す。取り出せなければ空を返す。
+jqs() {
+  jq -r "$1" 2>/dev/null || true
+}
+
 post_text_only() {
   local payload res
   payload="$(jq -n --arg c "${SLACK_CHANNEL_ID}" --rawfile t "${body_file}" '{channel: $c, text: $t}')"
@@ -42,14 +47,14 @@ upload_one() {
   name="$(basename "${path}")"
   size="$(wc -c < "${path}" | tr -d ' ')"
   res="$(curl -sS -X POST "${api}/files.getUploadURLExternal" "${auth[@]}" \
-    --data-urlencode "filename=${name}" --data-urlencode "length=${size}")"
-  if [ "$(jq -r '.ok' <<<"${res}")" != "true" ]; then
-    echo "[slack-post] アップロード先の取得に失敗: $(jq -r '.error' <<<"${res}")" >&2
+    --data-urlencode "filename=${name}" --data-urlencode "length=${size}" || true)"
+  if [ "$(jqs '.ok' <<<"${res}")" != "true" ]; then
+    echo "[slack-post] アップロード先の取得に失敗: $(jqs '.error' <<<"${res}")" >&2
     return 1
   fi
-  upload_url="$(jq -r '.upload_url' <<<"${res}")"
-  file_id="$(jq -r '.file_id' <<<"${res}")"
-  code="$(curl -sS -X POST "${upload_url}" --data-binary "@${path}" -o /dev/null -w '%{http_code}')"
+  upload_url="$(jqs '.upload_url' <<<"${res}")"
+  file_id="$(jqs '.file_id' <<<"${res}")"
+  code="$(curl -sS -X POST "${upload_url}" --data-binary "@${path}" -o /dev/null -w '%{http_code}' || true)"
   if [ "${code}" != "200" ]; then
     echo "[slack-post] 画像の送信に失敗: HTTP ${code}" >&2
     return 1
@@ -76,12 +81,12 @@ if [ "${#images[@]}" -gt 0 ]; then
     payload="$(jq -n --arg c "${SLACK_CHANNEL_ID}" --rawfile t "${body_file}" --argjson f "${files_json}" \
       '{files: $f, channel_id: $c, initial_comment: $t}')"
     res="$(curl -sS -X POST "${api}/files.completeUploadExternal" "${auth[@]}" \
-      -H 'Content-Type: application/json; charset=utf-8' --data "${payload}")"
-    if [ "$(jq -r '.ok' <<<"${res}")" = "true" ]; then
+      -H 'Content-Type: application/json; charset=utf-8' --data "${payload}" || true)"
+    if [ "$(jqs '.ok' <<<"${res}")" = "true" ]; then
       echo "[slack-post] 画像付きで投稿した"
       exit 0
     fi
-    echo "[slack-post] 画像付きの投稿に失敗: $(jq -r '.error' <<<"${res}")" >&2
+    echo "[slack-post] 画像付きの投稿に失敗: $(jqs '.error' <<<"${res}")（通信の失敗を含む）" >&2
   fi
   echo "[slack-post] 画像なしで投稿し直す" >&2
 fi
